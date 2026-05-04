@@ -191,6 +191,15 @@ class ProductoRepository implements ProductoRepositoryInterface
             ->get();
     }
 
+    public function getMostStockProducts($limit = 5)
+    {
+        return Producto::where('estadoProductoWeb', 'DISPONIBLE')
+            ->withSum('Inventario as total_stock', 'stock')
+            ->orderByDesc('total_stock')
+            ->take($limit)
+            ->get();
+    }
+
     //Valida si un producto tiene un numero de serie registrado
     public function validateSerial($id, $serial)
     {
