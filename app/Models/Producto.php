@@ -56,6 +56,10 @@ class Producto extends Model
         'gananciaExtra' => 'float',
         'usar_tc_fijo' => 'boolean'
     ];
+
+    protected $attributes = [
+        'usar_tc_fijo' => true, // Por defecto usa el TC de la API de SUNAT
+    ];
     
     public static function boot()
     {

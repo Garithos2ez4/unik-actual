@@ -115,6 +115,8 @@ use App\Services\LicenciaServiceInterface;
 use App\Services\LicenciaService;
 use App\Repositories\LicenciaRepository;
 use App\Repositories\LicenciaRepositoryInterface;
+use App\Repositories\RegistroUpdateRepository;
+use App\Repositories\RegistroUpdateRepositoryInterface;
 use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
@@ -179,6 +181,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ClienteServiceInterface::class,ClienteService::class);
         $this->app->bind(TipoDocumentoRepositoryInterface::class,TipoDocumentoRepository::class);
         $this->app->bind(ClienteRepositoryInterface::class,ClienteRepository::class);
+        $this->app->bind(RegistroUpdateRepositoryInterface::class,RegistroUpdateRepository::class);
 
     }
 

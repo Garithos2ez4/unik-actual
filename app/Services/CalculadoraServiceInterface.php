@@ -10,4 +10,8 @@ interface CalculadoraServiceInterface
     public function getComisionByRelation($table);
     public function getAllLabelCategory(); 
     public function allComision();
+    public function updateTipoCambio($backup);
+    public function getApiDolar();
+    public function obtenerCambioDolar();
+    public function obtenerCambioDolarFijo();
 }

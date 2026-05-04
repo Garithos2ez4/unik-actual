@@ -33,6 +33,12 @@ class CalculadoraRepository implements CalculadoraRepositoryInterface
         return $calc;
     }
 
+    public function updateTC($tc){
+        $calc = Calculadora::first();
+        $calc->update(['tasaCambio' => $tc]);
+        return $calc;
+    }
+
     public function findById(){
         return Calculadora::find(2);
     }

@@ -127,10 +127,11 @@
                     </div>
                 <div class="col-md-8"></div>
                 </br>
-                <div id="div-precio-total-fijo" style="display: none;">
-                    <label for="precio-total-fijo" class="form-label">Precio Total en Soles / Tasa Fija ({{$tasaFija}})</label>
-                    <input type="number" id="precio-total-fijo" value="" class="form-control" disabled>
+                <div id="div-precio-total-sunat" class="mb-2">
+                    <label for="precio-total-sunat" class="form-label">Precio Total en Soles (TC SUNAT: {{$tc}})</label>
+                    <input type="number" id="precio-total-sunat" value="" class="form-control" disabled>
                 </div>
+                
             </div>
         </div>
         <div class="mb-3 col-md-6 col-lg-6">
@@ -143,7 +144,7 @@
                     name="usar_tc_fijo"
                     id="usar_tc_fijo"
                     value="1"
-                    {{ old('usar_tc_fijo', $producto->usar_tc_fijo) ? 'checked' : '' }}
+                    {{ old('usar_tc_fijo', $producto->usar_tc_fijo ?? 1) ? 'checked' : '' }}
                     disabled>
 
                 <label class="form-check-label" for="usar_tc_fijo">
@@ -152,7 +153,7 @@
             </div>
 
             <small class="text-muted">
-                Activado: Usa TC fijo interno | Desactivado: Usa TC SUNAT
+                Activado: Precio principal usa TC SUNAT (API) | Desactivado: Precio principal usa TC Fijo ({{$tasaFija}})
             </small>
         </div>
     </div>
@@ -353,78 +354,81 @@
 
     {{-- Script para manejar el Precio Total Fijo --}}
     <script>
-    function actualizarPrecioTotalFijo() {
-        const divTotal = document.getElementById('div-total-price');
-        const precioTotalFijoInput = document.getElementById('precio-total-fijo');
+    const TC_SUNAT   = {{ $tc }};       // Tasa de cambio SUNAT (ej. 3.52)
+    const TC_FIJO    = {{ $tasaFija }}; // Tasa de cambio fija interna (ej. 3.80)
+
+    function getPrecioEnDolares() {
+        const divTotal       = document.getElementById('div-total-price');
         const selectTipoPrecio = document.getElementById('select-tipoprecio');
-        const usarTcFijo = document.getElementById('usar_tc_fijo');
-        
-        // Solo calcular si el checkbox "Usar Tipo de Cambio Fijo" está activado
-        if (usarTcFijo && !usarTcFijo.checked) {
-            return;
+        if (!divTotal || divTotal.children.length === 0) return null;
+
+        const primerPrecioTotal = divTotal.querySelector('input[type="number"]');
+        if (!primerPrecioTotal || !primerPrecioTotal.value) return null;
+
+        let precioEnDolares = parseFloat(primerPrecioTotal.value);
+        const moneda = selectTipoPrecio ? selectTipoPrecio.value : 'DOLAR';
+
+        // Si la moneda es SOL, revertir a dólares usando TC SUNAT
+        if (moneda === 'SOL') {
+            precioEnDolares = precioEnDolares / TC_SUNAT;
         }
-        
-        if (divTotal && divTotal.children.length > 0 && precioTotalFijoInput) {
-            // Obtener el primer precio total de las plataformas
-            const primerPrecioTotal = divTotal.querySelector('input[type="number"]');
-            if (primerPrecioTotal && primerPrecioTotal.value) {
-                let precioEnDolares = parseFloat(primerPrecioTotal.value);
-                
-                // Si la moneda seleccionada es SOL, convertir el precio a dólares
-                const monedaSeleccionada = selectTipoPrecio ? selectTipoPrecio.value : 'DOLAR';
-                if (monedaSeleccionada === 'SOL') {
-                    precioEnDolares = precioEnDolares / {{$tc}};
-                }
-                
-                // El precio total fijo SIEMPRE se basa en: precio_dólares × tasa fija
-                const precioFijo = precioEnDolares * {{$tasaFija}};
-                precioTotalFijoInput.value = precioFijo.toFixed(2);
-            }
-            
-            // Ahora convertir los precios totales de las plataformas a la moneda seleccionada
-            if (monedaSeleccionada === 'SOL') {
-                divTotal.querySelectorAll('input[type="number"]').forEach(function(input) {
-                    // Excluir el precio total fijo
-                    if (input.id !== 'precio-total-fijo') {
-                        const valorDolar = parseFloat(input.value);
-                        if (!isNaN(valorDolar)) {
-                            input.value = (valorDolar * {{$tc}}).toFixed(2);
-                        }
-                    }
-                });
-            }
+        return precioEnDolares;
+    }
+
+    function actualizarPrecioTotalFijo() {
+        const usarTcFijo         = document.getElementById('usar_tc_fijo');
+        const precioSunatInput   = document.getElementById('precio-total-sunat');
+        const precioFijoInput    = document.getElementById('precio-total-fijo');
+
+        const precioEnDolares = getPrecioEnDolares();
+        if (precioEnDolares === null) return;
+
+        // Precio con TC SUNAT (siempre se calcula)
+        if (precioSunatInput) {
+            precioSunatInput.value = (precioEnDolares * TC_SUNAT).toFixed(2);
+        }
+
+        // Precio con TC Fijo (siempre se calcula)
+        if (precioFijoInput) {
+            precioFijoInput.value = (precioEnDolares * TC_FIJO).toFixed(2);
         }
     }
 
-    function togglePrecioTotalFijo() {
-        const usarTcFijo = document.getElementById('usar_tc_fijo');
-        const divPrecioTotalFijo = document.getElementById('div-precio-total-fijo');
-        
-        if (usarTcFijo && divPrecioTotalFijo) {
-            if (usarTcFijo.checked) {
-                divPrecioTotalFijo.style.display = 'block';
-                actualizarPrecioTotalFijo();
-            } else {
-                divPrecioTotalFijo.style.display = 'none';
-            }
+    function toggleTipoCambio() {
+        const usarTcFijo       = document.getElementById('usar_tc_fijo');
+        const precioSunatInput = document.getElementById('precio-total-sunat');
+        const precioFijoInput  = document.getElementById('precio-total-fijo');
+        const labelSunat       = document.querySelector('label[for="precio-total-sunat"]');
+        const labelFijo        = document.querySelector('label[for="precio-total-fijo"]');
+
+        if (!usarTcFijo) return;
+
+        if (usarTcFijo.checked) {
+            // Switch ON → TC SUNAT es el precio principal
+            if (labelSunat) labelSunat.innerHTML = 'Precio Total en Soles (TC SUNAT: {{ $tc }}) <span class="badge bg-success">En uso</span>';
+            if (labelFijo)  labelFijo.innerHTML  = 'Precio Total en Soles / Tasa Fija ({{ $tasaFija }}) <span class="badge bg-secondary">Referencia</span>';
+            if (precioSunatInput) { precioSunatInput.classList.add('border-success'); precioSunatInput.classList.remove('border-warning'); }
+            if (precioFijoInput)  { precioFijoInput.classList.remove('border-warning'); }
+        } else {
+            // Switch OFF → TC Fijo es el precio principal
+            if (labelSunat) labelSunat.innerHTML = 'Precio Total en Soles (TC SUNAT: {{ $tc }}) <span class="badge bg-secondary">Referencia</span>';
+            if (labelFijo)  labelFijo.innerHTML  = 'Precio Total en Soles / Tasa Fija ({{ $tasaFija }}) <span class="badge bg-warning text-dark">En uso</span>';
+            if (precioSunatInput) { precioSunatInput.classList.remove('border-success'); }
+            if (precioFijoInput)  { precioFijoInput.classList.add('border-warning'); }
         }
+
+        actualizarPrecioTotalFijo();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Escuchar cuando calcPrices termine (evento personalizado)
         document.addEventListener('calcPricesCompleted', function() {
             actualizarPrecioTotalFijo();
         });
 
-        // Escuchar el cambio del checkbox "Usar Tipo de Cambio Fijo"
         const usarTcFijo = document.getElementById('usar_tc_fijo');
         if (usarTcFijo) {
-            usarTcFijo.addEventListener('change', function() {
-                togglePrecioTotalFijo();
-            });
-            
-            // Estado inicial al cargar
-            togglePrecioTotalFijo();
+            usarTcFijo.addEventListener('change', toggleTipoCambio);
+            toggleTipoCambio(); // Estado inicial al cargar
         }
     });
     </script>

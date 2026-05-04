@@ -7,4 +7,5 @@ interface CalculadoraRepositoryInterface
     public function update(array $data);
     public function findById();
     public function updateTasaFija(array $data);
+    public function updateTC($tc);
 }
