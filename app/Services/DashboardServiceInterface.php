@@ -9,7 +9,7 @@ interface DashboardServiceInterface
     public function getTotalProducts();
     public function getStockMinProducts();
     public function getOldPublicaciones();
-    public function getMostStockProducts($limit = 5);
+    public function getMostSoldProducts($limit = 5);
     public function getNuevosInventario();
     public function getEntregadosInventario();
     public function getDevolucionesInventario();

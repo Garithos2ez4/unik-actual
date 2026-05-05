@@ -36,11 +36,11 @@
                 <div class="col-md-12 mt-3">
                     <div class="row border shadow rounded-3 pt-2 pb-2">
                         <div class="col-12">
-                            <h4 class="mb-0">Productos con más stock</h4>
-                            <small class="text-secondary">Productos con mayor cantidad disponible.</small>
+                            <h4 class="mb-0">Productos más vendidos</h4>
+                            <small class="text-secondary">Productos con mayor cantidad de ventas.</small>
                         </div>
                         <div class="col-12">
-                            @foreach ($productosMostStock as $prod)
+                            @foreach ($productosMostSold as $prod)
                                 <div class="row border ms-1 me-1 rounded pt-2 pb-2 mb-2">
                                     <div class="col-3 col-md-2 pe-0 text-center">
                                         <img 
@@ -61,7 +61,7 @@
                                         <p class="mt-0 mb-0">{{$prod->modelo}} <em class="text-secondary">({{$prod->MarcaProducto->nombreMarca}})</em></p>
                                     </div>
                                     <div class="col-3 col-md-4 text-end">
-                                        <h5 class="mt-0 mb-0 text-success">Stock: {{(int)$prod->total_stock}}</h5>
+                                        <h5 class="mt-0 mb-0 text-success">Ventas: {{$prod->total_ventas}}</h5>
                                     </div>
                                 </div>
                             @endforeach

@@ -57,8 +57,8 @@ class DashboardService implements DashboardServiceInterface
         return $this->publicacionRepository->getOldPublicaciones(5);
     }
 
-    public function getMostStockProducts($limit = 5){
-        return $this->productoRepository->getMostStockProducts($limit);
+    public function getMostSoldProducts($limit = 5){
+        return $this->productoRepository->getMostSoldProducts($limit);
     }
 
     public function getNuevosInventario(){

@@ -29,7 +29,7 @@ class HomeController extends Controller
         //variables del controlador
         $productosStockMin = $this->dashboardService->getStockMinProducts()->total();
         $totalProductos = $this->dashboardService->getTotalProducts();
-        $productosMostStock = $this->dashboardService->getMostStockProducts();
+        $productosMostSold = $this->dashboardService->getMostSoldProducts();
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -49,7 +49,7 @@ class HomeController extends Controller
                                                     'colors' => $colors,
                                                     'productos' => $totalProductos,
                                                     'stockMin' => $productosStockMin,
-                                                    'productosMostStock' => $productosMostStock
+                                                    'productosMostSold' => $productosMostSold
                                                 ])->render(),
             ]);
         }
@@ -61,7 +61,7 @@ class HomeController extends Controller
                                     'colors' => $colors,
                                     'productos' => $totalProductos,
                                     'stockMin' => $productosStockMin,
-                                    'productosMostStock' => $productosMostStock
+                                    'productosMostSold' => $productosMostSold
                                 ]);
     }
 

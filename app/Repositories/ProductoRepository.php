@@ -191,14 +191,18 @@ class ProductoRepository implements ProductoRepositoryInterface
             ->get();
     }
 
-    public function getMostStockProducts($limit = 5)
+    public function getMostSoldProducts($limit = 5)
     {
-        return Producto::where('estadoProductoWeb', 'DISPONIBLE')
-            ->withSum('Inventario as total_stock', 'stock')
-            ->orderByDesc('total_stock')
+        return Producto::join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
+            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
+            ->join('EgresoProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
+            ->select('Producto.*', \Illuminate\Support\Facades\DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+            ->groupBy('Producto.idProducto')
+            ->orderByDesc('total_ventas')
             ->take($limit)
             ->get();
     }
+
 
     //Valida si un producto tiene un numero de serie registrado
     public function validateSerial($id, $serial)

@@ -39,7 +39,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function getEgresosByMonth($date,$cant){
         Carbon::setLocale('es');
         $carbonMonth = Carbon::createFromFormat('Y-m', $date);
-        return $this->egresoRepository->getAllByMonth($carbonMonth->month,$cant);
+        return $this->egresoRepository->getAllByMonth($carbonMonth->year, $carbonMonth->month, $cant);
     }
 
     public function searchAjaxRegistro($serial){

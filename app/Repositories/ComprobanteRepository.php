@@ -29,8 +29,8 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
     public function getAllByMonth($month,$cant,$querys)
     {
         $query = Comprobante::query();
-        $query->whereMonth('fechaRegistro', $month)
-                ->whereYear('fechaRegistro', $month);
+        $query->whereMonth('fechaRegistro', $month->month)
+                ->whereYear('fechaRegistro', $month->year);
         
         if(isset($querys)){
             if(isset($querys['usuario'])){
@@ -69,29 +69,29 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
 
     public function getUsuariosByMonth($month){
         return Comprobante::select('idUser')->distinct()
-                            ->whereMonth('fechaRegistro', $month)
-                            ->whereYear('fechaRegistro', $month)
+                            ->whereMonth('fechaRegistro', $month->month)
+                            ->whereYear('fechaRegistro', $month->year)
                             ->get();
     }
 
     public function getProveedoresByMonth($month){
         return Comprobante::select('idProveedor')->distinct()
-                        ->whereMonth('fechaRegistro', $month)
-                        ->whereYear('fechaRegistro', $month)
+                        ->whereMonth('fechaRegistro', $month->month)
+                        ->whereYear('fechaRegistro', $month->year)
                         ->get();
     }
 
     public function getDocumentosByMonth($month){
         return Comprobante::select('idTipoComprobante')->distinct()
-                            ->whereMonth('fechaRegistro', $month)
-                            ->whereYear('fechaRegistro', $month)
+                            ->whereMonth('fechaRegistro', $month->month)
+                            ->whereYear('fechaRegistro', $month->year)
                             ->get();
     }
 
     public function getEstadosByMonth($month){
         return Comprobante::select('estado')->distinct()
-                            ->whereMonth('fechaRegistro', $month)
-                            ->whereYear('fechaRegistro', $month)
+                            ->whereMonth('fechaRegistro', $month->month)
+                            ->whereYear('fechaRegistro', $month->year)
                             ->get();
     }
     

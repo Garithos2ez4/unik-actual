@@ -41,7 +41,7 @@ class IngresoProductoRepository implements IngresoProductoRepositoryInterface
                 ->join('DetalleComprobante','DetalleComprobante.idDetalleComprobante','=','RegistroProducto.idDetalleComprobante')
                 ->join('Comprobante','Comprobante.idComprobante','=','DetalleComprobante.idComprobante');
 
-        $query->whereYear('IngresoProducto.fechaIngreso', $month)->whereMonth('IngresoProducto.fechaIngreso', $month);
+        $query->whereYear('IngresoProducto.fechaIngreso', $month->year)->whereMonth('IngresoProducto.fechaIngreso', $month->month);
 
         if(isset($querys)){
             if(isset($querys['usuario'])){
@@ -98,8 +98,8 @@ class IngresoProductoRepository implements IngresoProductoRepositoryInterface
     public function getUsersByMonth($month){
         return IngresoProducto::select('IngresoProducto.idUser')->distinct()
                                 ->join('RegistroProducto','RegistroProducto.idRegistro','=','IngresoProducto.idRegistro')
-                                ->whereYear('IngresoProducto.fechaIngreso', $month)
-                                ->whereMonth('IngresoProducto.fechaIngreso',$month)
+                                ->whereYear('IngresoProducto.fechaIngreso', $month->year)
+                                ->whereMonth('IngresoProducto.fechaIngreso', $month->month)
                                 ->get();
     }
 
@@ -108,15 +108,16 @@ class IngresoProductoRepository implements IngresoProductoRepositoryInterface
                                 ->join('RegistroProducto','RegistroProducto.idRegistro','=','IngresoProducto.idRegistro')
                                 ->join('DetalleComprobante','DetalleComprobante.idDetalleComprobante','=','RegistroProducto.idDetalleComprobante')
                                 ->join('Comprobante','Comprobante.idComprobante','=','DetalleComprobante.idComprobante')
-                                ->whereYear('IngresoProducto.fechaIngreso', $month)
-                                ->whereMonth('IngresoProducto.fechaIngreso',$month)
+                                ->whereYear('IngresoProducto.fechaIngreso', $month->year)
+                                ->whereMonth('IngresoProducto.fechaIngreso', $month->month)
                                 ->get();
     }
 
     public function getAlmacenesByMonth($month){
         return IngresoProducto::select('RegistroProducto.idAlmacen')->distinct()
                                 ->join('RegistroProducto','RegistroProducto.idRegistro','=','IngresoProducto.idRegistro')
-                                ->whereMonth('IngresoProducto.fechaIngreso',$month)
+                                ->whereYear('IngresoProducto.fechaIngreso', $month->year)
+                                ->whereMonth('IngresoProducto.fechaIngreso', $month->month)
                                 ->get();
     }
 
@@ -124,8 +125,8 @@ class IngresoProductoRepository implements IngresoProductoRepositoryInterface
         return IngresoProducto::select('RegistroProducto.estado')->distinct()
                                 ->join('RegistroProducto','RegistroProducto.idRegistro','=','IngresoProducto.idRegistro')
                                 ->where('RegistroProducto.estado', '<>', 'INVALIDO')
-                                ->whereYear('IngresoProducto.fechaIngreso', $month)
-                                ->whereMonth('IngresoProducto.fechaIngreso',$month)
+                                ->whereYear('IngresoProducto.fechaIngreso', $month->year)
+                                ->whereMonth('IngresoProducto.fechaIngreso', $month->month)
                                 ->get();
     }
     

@@ -32,7 +32,7 @@
                 <h2><a href="{{ route('documentos', [$fecha->format('Y-m')]) }}" class="text-secondary"><i
                             class="bi bi-arrow-left-circle"></i></a> <i class="bi bi-file-earmark-minus-fill"></i>
                     Egresos<span
-                        class="text-capitalize text-secondary fw-light"><em>({{ $fecha->translatedFormat('F') }})</em></span>
+                        class="text-capitalize text-secondary fw-light"><em>({{ $fecha->translatedFormat('F Y') }})</em></span>
                 </h2>
             </div>
 

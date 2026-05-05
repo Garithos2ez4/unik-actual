@@ -24,7 +24,7 @@ interface ProductoRepositoryInterface
     public function total();
     public function getStockMinProducts();
     public function getProductsWithStock();
-    public function getMostStockProducts($limit = 5);
+    public function getMostSoldProducts($limit = 5);
     public function getMarcasByColumn($column, $data);
     public function getMarcasBySearchTerm($query);
     public function getEstadosByColumn($column, $data);

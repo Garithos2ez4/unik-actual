@@ -16,8 +16,9 @@ function validateEgreso() {
 
 function handleBtnRegistrar() {
     let btnRegEgreso = document.getElementById('btnRegistrarEgreso');
-
-    btnRegEgreso.disabled = validateEgreso();
+    if (btnRegEgreso) {
+        btnRegEgreso.disabled = validateEgreso();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -25,7 +26,10 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-document.getElementById('check-sku-egreso').addEventListener('change', handleBtnRegistrar);
+let checkSkuEgreso = document.getElementById('check-sku-egreso');
+if (checkSkuEgreso) {
+    checkSkuEgreso.addEventListener('change', handleBtnRegistrar);
+}
 
 let allInputsEgreso = document.querySelectorAll('.input-egreso');
 allInputsEgreso.forEach(function (x) {

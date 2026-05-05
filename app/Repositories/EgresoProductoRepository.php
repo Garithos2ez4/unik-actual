@@ -26,8 +26,9 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
         return EgresoProducto::where($column,'=', $data)->get();
     }
     
-    public function getAllByMonth($month,$cant){
-        return EgresoProducto::whereMonth('fechaDespacho', $month)
+    public function getAllByMonth($year, $month, $cant){
+        return EgresoProducto::whereYear('fechaDespacho', $year)
+                                    ->whereMonth('fechaDespacho', $month)
                                     ->orderBy('fechaDespacho','desc')
                                     ->paginate($cant);
     }
