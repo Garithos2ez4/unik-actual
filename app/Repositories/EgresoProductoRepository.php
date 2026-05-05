@@ -17,18 +17,18 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
     public function getOne($column, $data)
     {
         $this->validateColumns($column);
-        return EgresoProducto::where($column,'=', $data)->first();
+        return EgresoProducto::query()->where($column,'=', $data, 'and')->first();
     }
 
     public function getAllByColumn($column, $data)
     {
         $this->validateColumns($column);
-        return EgresoProducto::where($column,'=', $data)->get();
+        return EgresoProducto::query()->where($column,'=', $data, 'and')->get();
     }
     
     public function getAllByMonth($year, $month, $cant){
-        return EgresoProducto::whereYear('fechaDespacho', $year)
-                                    ->whereMonth('fechaDespacho', $month)
+        return EgresoProducto::query()->whereYear('fechaDespacho', '=', $year, 'and')
+                                    ->whereMonth('fechaDespacho', '=', $month, 'and')
                                     ->orderBy('fechaDespacho','desc')
                                     ->paginate($cant);
     }
@@ -36,24 +36,24 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
     public function searchOne($column, $data)
     {
         $this->validateColumns($column);
-        return EgresoProducto::where($column, 'LIKE', '%' . $data . '%')->first();
+        return EgresoProducto::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->first();
     }
 
     public function searchList($column, $data)
     {
         $this->validateColumns($column);
-        return EgresoProducto::where($column, 'LIKE', '%' . $data . '%')->get();
+        return EgresoProducto::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->get();
     }
 
     public function getEgresoBySerial($serial,$cant)
     {
-        return EgresoProducto::join('RegistroProducto','RegistroProducto.idRegistro','=','EgresoProducto.idRegistro')
+        return EgresoProducto::query()->join('RegistroProducto','RegistroProducto.idRegistro','=','EgresoProducto.idRegistro', 'inner', false)
                             ->where(function($query){
-                                $query->where('RegistroProducto.estado','=','ENTREGADO')
-                                        ->orWhere('RegistroProducto.estado','=','DEVOLUCION')
-                                        ->orWhere('RegistroProducto.estado','=','GARANTIA');
+                                $query->where('RegistroProducto.estado','=','ENTREGADO', 'and')
+                                        ->orWhere('RegistroProducto.estado','=','DEVOLUCION', 'and')
+                                        ->orWhere('RegistroProducto.estado','=','GARANTIA', 'and');
                             })
-                            ->where('RegistroProducto.numeroSerie','LIKE', '%' . $serial . '%')
+                            ->where('RegistroProducto.numeroSerie','LIKE', '%' . $serial . '%', 'and')
                             ->take($cant)
                             ->get();
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class ProductoRepository implements ProductoRepositoryInterface
     public function getOne($column, $data)
     {
         $this->validateColumn($column);
-        return Producto::where($column, '=', $data)->first();
+        return Producto::query()->where($column, '=', $data)->first();
     }
 
     //Devuelve el producto mas recientemente creado (Id mas alto)
@@ -50,7 +51,7 @@ class ProductoRepository implements ProductoRepositoryInterface
     public function getAllByColumn($column, $data)
     {
         $this->validateColumn($column);
-        return Producto::where($column, '=', $data)->get();
+        return Producto::query()->where($column, '=', $data)->get();
     }
 
     /**
@@ -83,7 +84,7 @@ class ProductoRepository implements ProductoRepositoryInterface
     {
         $this->validateColumn($column);
 
-        $query = Producto::where($column, 'LIKE', '%' . $data . '%');
+        $query = Producto::query()->where($column, 'LIKE', '%' . $data . '%');
 
         $this->applyFilters($query, $filtros);
 
@@ -94,57 +95,52 @@ class ProductoRepository implements ProductoRepositoryInterface
     public function searchOne($column, $data)
     {
         $this->validateColumn($column);
-        return Producto::where($column, 'LIKE', '%' . $data . '%')->first();
+        return Producto::query()->where($column, 'LIKE', '%' . $data . '%')->first();
     }
 
     //Devuelve todos los productos donde la columna contiene el termino de la busqueda.
     public function searchList($column, $data)
     {
         $this->validateColumn($column);
-        return Producto::where($column, 'LIKE', '%' . $data . '%')->get();
+        return Producto::query()->where($column, 'LIKE', '%' . $data . '%')->get();
     }
 
     //Devuelve los primeros 'cont' productos donde la columna contiene el termino de la busqueda.
     public function searchTakeList($column, $data, $cont)
     {
         $this->validateColumn($column);
-        return Producto::where($column, 'LIKE', '%' . $data . '%')->take($cont)->get();
+        return Producto::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->take($cont)->get();
     }
 
     //Devuelve IDs de marcas distintas para productos que coinciden con un filtro de columna y dato
     public function getMarcasByColumn($column, $data)
     {
         $this->validateColumn($column);
-        return Producto::select('idMarca')->distinct()
-            ->where($column, '=', $data)->get();
+        return Producto::query()->select('idMarca')->distinct()
+            ->where($column, '=', $data, 'and')->get();
     }
 
     //Devuelve marcas asociadas a productos que coinciden con un termino de busqueda
     public function getMarcasBySearchTerm($query)
     {
-        return MarcaProducto::whereIn('idMarca', function ($subquery) use ($query) {
+        return MarcaProducto::query()->whereIn('idMarca', function ($subquery) use ($query) {
             $subquery->select('idMarca')
                 ->from('Producto')
-                ->where('nombreProducto', 'LIKE', '%' . $query . '%')
-                ->orWhere('modelo', 'LIKE', '%' . $query . '%')
-                ->orWhere('codigoProducto', 'LIKE', '%' . $query . '%')
-                ->orWhere('partNumber', 'LIKE', '%' . $query . '%');
-        })->get()->sortBy('nombreMarca');
+                ->where('nombreProducto', 'LIKE', '%' . $query . '%', 'and')
+                ->orWhere('modelo', 'LIKE', '%' . $query . '%', 'and')
+                ->orWhere('codigoProducto', 'LIKE', '%' . $query . '%', 'and')
+                ->orWhere('partNumber', 'LIKE', '%' . $query . '%', 'and');
+        }, 'and', false)->get()->sortBy('nombreMarca');
     }
 
     //Devuelve estados distintos para productos que coinciden con un filtro de columna y dato
     public function getEstadosByColumn($column, $data)
     {
         $this->validateColumn($column);
-        return Producto::select('estadoProductoWeb')->distinct()
-            ->where($column, '=', $data)->get();
+        return Producto::query()->select('estadoProductoWeb')->distinct()
+            ->where($column, '=', $data, 'and')->get();
     }
 
-    /**
-     * ELIMINADO: getCodes() era un duplicado exacto de getProductsCodes().
-     * Se mantiene solo getProductsCodes(). El servicio que usaba getCodes()
-     * ahora apunta a getProductsCodes().
-     */
     public function getProductsCodes()
     {
         return Producto::select('idGrupo', DB::raw('MAX(codigoProducto) as codigoProducto'))
@@ -154,51 +150,44 @@ class ProductoRepository implements ProductoRepositoryInterface
     //Devuelve el total de productos disponibles
     public function total()
     {
-        return Producto::where('estadoProductoWeb', '=', 'DISPONIBLE')->count();
+        return Producto::query()->where('estadoProductoWeb', '=', 'DISPONIBLE', 'and')->count();
     }
 
-    /**
-     * Usaba raw SQL con JOIN y GROUP BY.
-     * AHORA: Se convierte a Query Builder con whereHas.
-     * BENEFICIO: Más legible, mantenible, y aprovecha el query builder de Laravel.
-     */
+
     public function getStockMinProducts()
     {
-        return Producto::where('estadoProductoWeb', 'DISPONIBLE')
+        return Producto::query()->where('estadoProductoWeb', '=', 'DISPONIBLE', 'and')
             ->whereHas('Inventario', function ($query) {
                 $query->select(DB::raw('SUM(stock)'))
                     ->from('Inventario')
                     ->whereColumn('Inventario.idProducto', 'Producto.idProducto')
                     ->havingRaw('SUM(stock) > 0')
                     ->havingRaw('SUM(stock) < Producto.stockMin');
-            })
+            }, '>=', 1)
             ->paginate(50);
     }
 
-    /**
-     * Ejecutaba raw SQL, luego hacía Producto::find() por cada resultado (problema N+1).
-     * AHORA: whereHas con eager loading de Inventario.
-     * BENEFICIO: De 101 queries se reduce a 2 queries.
-     */
+
     public function getProductsWithStock()
     {
-        return Producto::where('estadoProductoWeb', 'DISPONIBLE')
+        return Producto::query()->where('estadoProductoWeb', '=', 'DISPONIBLE', 'and')
             ->whereHas('Inventario', function ($query) {
-                $query->where('stock', '>', 0);
-            })
-            ->with('Inventario')
-            ->orderBy('codigoProducto')
-            ->get();
+                $query->where('stock', '>', 0, 'and');
+            }, '>=', 1)
+            ->with(['Inventario' => function ($query) {
+                $query->where('stock', '>', 0, 'and');
+            }])
+            ->paginate(50);
     }
 
     public function getMostSoldProducts($limit = 5)
     {
-        return Producto::join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
-            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
-            ->join('EgresoProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
-            ->select('Producto.*', \Illuminate\Support\Facades\DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+        return Producto::query()->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto', 'inner', false)
+            ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante', 'inner', false)
+            ->join('EgresoProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro', 'inner', false)
+            ->select('Producto.*', DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
             ->groupBy('Producto.idProducto')
-            ->orderByDesc('total_ventas')
+            ->orderBy('total_ventas', 'desc')
             ->take($limit)
             ->get();
     }
@@ -207,7 +196,7 @@ class ProductoRepository implements ProductoRepositoryInterface
     //Valida si un producto tiene un numero de serie registrado
     public function validateSerial($id, $serial)
     {
-        return Producto::join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+        return Producto::join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto', 'inner', false)
             ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
             ->where('RegistroProducto.estado', '<>', 'INVALIDO')
             ->where('Producto.idProducto', '=', $id)
@@ -293,8 +282,8 @@ class ProductoRepository implements ProductoRepositoryInterface
     }
 
     /**
-    * CAMBIO: Son conceptos distintos. fillable ≠ columnas de búsqueda.
-    */
+     * CAMBIO: Son conceptos distintos. fillable ≠ columnas de búsqueda.
+     */
     private function validateColumn($column)
     {
         if (!in_array($column, $this->searchableColumns)) {

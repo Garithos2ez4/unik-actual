@@ -17,20 +17,20 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
     public function getOne($column, $data)
     {
         $this->validateColumns($column);
-        return Comprobante::where($column,'=', $data)->first();
+        return Comprobante::query()->where($column,'=', $data)->first();
     }
 
     public function getAllByColumn($column, $data)
     {
         $this->validateColumns($column);
-        return Comprobante::where($column,'=', $data)->get();
+        return Comprobante::query()->where($column,'=', $data)->get();
     }
     
-    public function getAllByMonth($month,$cant,$querys)
+    public function getAllByMonth(\Carbon\Carbon $month,$cant,$querys)
     {
         $query = Comprobante::query();
-        $query->whereMonth('fechaRegistro', $month->month)
-                ->whereYear('fechaRegistro', $month->year);
+        $query->whereMonth('fechaRegistro', '=', $month->month, 'and')
+                ->whereYear('fechaRegistro', '=', $month->year, 'and');
         
         if(isset($querys)){
             if(isset($querys['usuario'])){
@@ -52,46 +52,46 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
     public function searchOne($column, $data)
     {
         $this->validateColumns($column);
-        return Comprobante::where($column, 'LIKE', '%' . $data . '%')->first();
+        return Comprobante::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->first();
     }
 
     public function searchList($column, $data)
     {
         $this->validateColumns($column);
-        return Comprobante::where($column, 'LIKE', '%' . $data . '%')->get();
+        return Comprobante::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->get();
     }
 
     public function searchTakeList($column, $data,$cant)
     {
         $this->validateColumns($column);
-        return Comprobante::where($column, 'LIKE', '%' . $data . '%')->take($cant)->get();
+        return Comprobante::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->take($cant)->get();
     }
 
-    public function getUsuariosByMonth($month){
+    public function getUsuariosByMonth(\Carbon\Carbon $month){
         return Comprobante::select('idUser')->distinct()
-                            ->whereMonth('fechaRegistro', $month->month)
-                            ->whereYear('fechaRegistro', $month->year)
+                            ->whereMonth('fechaRegistro', '=', $month->month, 'and')
+                            ->whereYear('fechaRegistro', '=', $month->year, 'and')
                             ->get();
     }
 
-    public function getProveedoresByMonth($month){
+    public function getProveedoresByMonth(\Carbon\Carbon $month){
         return Comprobante::select('idProveedor')->distinct()
-                        ->whereMonth('fechaRegistro', $month->month)
-                        ->whereYear('fechaRegistro', $month->year)
+                        ->whereMonth('fechaRegistro', '=', $month->month, 'and')
+                        ->whereYear('fechaRegistro', '=', $month->year, 'and')
                         ->get();
     }
 
-    public function getDocumentosByMonth($month){
+    public function getDocumentosByMonth(\Carbon\Carbon $month){
         return Comprobante::select('idTipoComprobante')->distinct()
-                            ->whereMonth('fechaRegistro', $month->month)
-                            ->whereYear('fechaRegistro', $month->year)
+                            ->whereMonth('fechaRegistro', '=', $month->month, 'and')
+                            ->whereYear('fechaRegistro', '=', $month->year, 'and')
                             ->get();
     }
 
-    public function getEstadosByMonth($month){
+    public function getEstadosByMonth(\Carbon\Carbon $month){
         return Comprobante::select('estado')->distinct()
-                            ->whereMonth('fechaRegistro', $month->month)
-                            ->whereYear('fechaRegistro', $month->year)
+                            ->whereMonth('fechaRegistro', '=', $month->month, 'and')
+                            ->whereYear('fechaRegistro', '=', $month->year, 'and')
                             ->get();
     }
     
@@ -114,10 +114,10 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
     }
     
     public function validateDuplicity($number,$type,$idProveedor){
-        $validate = Comprobante::where('estado','<>','INVALIDO')
-                                ->where('numeroComprobante','=',$number)
-                                ->where('idTipoComprobante','=',$type)
-                                ->where('idProveedor','=',$idProveedor)->first();
+        $validate = Comprobante::query()->where('estado','<>','INVALIDO', 'and')
+                                ->where('numeroComprobante','=',$number, 'and')
+                                ->where('idTipoComprobante','=',$type, 'and')
+                                ->where('idProveedor','=',$idProveedor, 'and')->first();
         if($validate){
             return true;
         }else{
@@ -130,9 +130,9 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
     }
 
     public function getAllRegistrosByComprobanteId($id){
-        return Comprobante::join('DetalleComprobante','DetalleComprobante.idComprobante','=','Comprobante.idComprobante')
-                ->join('RegistroProducto','DetalleComprobante.idDetalleComprobante','=','RegistroProducto.idDetalleComprobante')
-                ->select('RegistroProducto.*')->where('Comprobante.idComprobante','=',$id)->get();
+        return Comprobante::query()->join('DetalleComprobante','DetalleComprobante.idComprobante','=','Comprobante.idComprobante', 'inner', false)
+                ->join('RegistroProducto','DetalleComprobante.idDetalleComprobante','=','RegistroProducto.idDetalleComprobante', 'inner', false)
+                ->select('RegistroProducto.*')->where('Comprobante.idComprobante','=',$id, 'and')->get();
     }
     
     private function validateColumns($column){

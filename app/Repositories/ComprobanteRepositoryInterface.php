@@ -5,7 +5,7 @@ interface ComprobanteRepositoryInterface
 {
     public function getOne($column,$data);
     public function getAllByColumn($column,$data);
-    public function getAllByMonth($month,$cant,$querys);
+    public function getAllByMonth(\Carbon\Carbon $month,$cant,$querys);
     public function searchOne($column,$data);
     public function searchList($column,$data);
     public function searchTakeList($column, $data,$cant);
@@ -15,8 +15,8 @@ interface ComprobanteRepositoryInterface
     public function validateDuplicity($number,$type,$idProveedor);
     public function getLast();
     public function getAllRegistrosByComprobanteId($id);
-    public function getUsuariosByMonth($month);
-    public function getProveedoresByMonth($month);
-    public function getDocumentosByMonth($month);
-    public function getEstadosByMonth($month);
+    public function getUsuariosByMonth(\Carbon\Carbon $month);
+    public function getProveedoresByMonth(\Carbon\Carbon $month);
+    public function getDocumentosByMonth(\Carbon\Carbon $month);
+    public function getEstadosByMonth(\Carbon\Carbon $month);
 }
