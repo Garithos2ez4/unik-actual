@@ -143,7 +143,7 @@ class ProductoRepository implements ProductoRepositoryInterface
 
     public function getProductsCodes()
     {
-        return Producto::select('idGrupo', DB::raw('MAX(codigoProducto) as codigoProducto'))
+        return Producto::select(['idGrupo', DB::raw('MAX(codigoProducto) as codigoProducto')])
             ->groupBy('idGrupo')->get();
     }
 
@@ -223,11 +223,6 @@ class ProductoRepository implements ProductoRepositoryInterface
         return $query->paginate($perPage);
     }
 
-    /**
-     * getPaginationNull() usaba whereRaw('1=0') — hack confuso.
-     * getEmptyPagination() crea un LengthAwarePaginator vacío explícitamente.
-     * Sin queries innecesarios, intención clara.
-     */
     public function getEmptyPagination($perPage = 10)
     {
         return new LengthAwarePaginator(
@@ -237,6 +232,23 @@ class ProductoRepository implements ProductoRepositoryInterface
             1,
             ['path' => request()->url(), 'query' => request()->query()]
         );
+    }
+
+    // Verifica si ya existe un producto con el mismo modelo (case-insensitive)
+    // $excludeId permite excluir un producto al editar (para que no se compare consigo mismo)
+    public function existsByModelo(string $modelo, $excludeId = null): bool
+    {
+        if (empty($modelo)) {
+            return false;
+        }
+
+        $query = Producto::query()->whereRaw('LOWER(modelo) = ?', [strtolower($modelo)], 'and');
+
+        if ($excludeId) {
+            $query->where('idProducto', '!=', $excludeId, 'and');
+        }
+
+        return $query->exists();
     }
 
     //Crea un nuevo producto

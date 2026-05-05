@@ -30,4 +30,6 @@ interface ProductoRepositoryInterface
     public function getEstadosByColumn($column, $data);
     /** RENOMBRADO: getPaginationNull() → getEmptyPagination() */
     public function getEmptyPagination($perPage = 10);
+    /** Verifica si ya existe un producto con el mismo modelo (case-insensitive) */
+    public function existsByModelo(string $modelo, $excludeId = null): bool;
 }

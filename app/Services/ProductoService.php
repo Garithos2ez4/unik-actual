@@ -187,6 +187,12 @@ class ProductoService implements ProductoServiceInterface
                 $array['estadoProductoWeb'] = 'AGOTADO';
             }
         }
+
+        // Validar que no exista otro producto con el mismo modelo (case-insensitive)
+        if (!empty($array['modelo']) && $this->productoRepository->existsByModelo($array['modelo'])) {
+            throw new \InvalidArgumentException('Ya existe un producto con el modelo "' . $array['modelo'] . '". No se permite duplicados.');
+        }
+
         try{
             $newProducto = $this->productoRepository->create($array);
             
@@ -403,5 +409,10 @@ class ProductoService implements ProductoServiceInterface
     {
         preg_match("/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([a-zA-Z0-9_-]{11})/", $url, $matches);
         return $matches[1] ?? null;
+    }
+
+    public function existsByModelo(string $modelo, $excludeId = null): bool
+    {
+        return $this->productoRepository->existsByModelo($modelo, $excludeId);
     }
 }   

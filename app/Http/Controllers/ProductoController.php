@@ -263,7 +263,7 @@ class ProductoController extends Controller
                 if(isset($nombre, $upc, $modelo, $partnumber)){
                     $validateNombre = $this->productoService->getOneProductByColumn('nombreProducto',$nombre);
                     $validateUpc = $this->productoService->getOneProductByColumn('UPC',$upc);
-                    $validateModelo = $this->productoService->getOneProductByColumn('modelo',$modelo);
+                    $validateModelo = $this->productoService->existsByModelo($modelo);
                     $validatePartNumber = $this->productoService->getOneProductByColumn('partNumber',$partnumber);
                 }else{
                     $this->headerService->sendFlashAlerts('Error en los datos','Revisa los campos enviados','error','btn-danger');
@@ -434,6 +434,10 @@ class ProductoController extends Controller
                     }
 
                     if($request->has('modelo')){
+                        if(!empty($modelo) && $this->productoService->existsByModelo($modelo, decrypt($idProducto))){
+                            $this->headerService->sendFlashAlerts('Modelo existente','Ya se encuentra registrado con otro producto','info','btn-warning');
+                            return redirect()->back();
+                        }
                         $arrayProduct['modelo'] = $modelo;
                     }
 

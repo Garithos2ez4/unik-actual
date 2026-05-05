@@ -28,4 +28,5 @@ interface ProductoServiceInterface
     public function filtroMarcas($column,$data);
     public function filtroEstados($column,$data);
     public function getYoutubeVideoId(?string $url): ?string;
+    public function existsByModelo(string $modelo, $excludeId = null): bool;
 }
