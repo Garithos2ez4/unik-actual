@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ class PublicacionRepository implements PublicacionRepositoryInterface
         // Define las columnas válidas
         $this->modelColumns = (new Publicacion())->getFillable();
     }
-    
+
     public function all()
     {
         return Publicacion::all();
@@ -22,50 +23,55 @@ class PublicacionRepository implements PublicacionRepositoryInterface
     public function getOne($column, $data)
     {
         $this->validateColumns($column);
-        return Publicacion::where($column,'=', $data)->first();
+        return Publicacion::where($column, '=', $data, 'and')->first();
     }
 
     public function getAllByColumn($column, $data)
     {
         $this->validateColumns($column);
-        return Publicacion::where($column,'=', $data)->get();
+        return Publicacion::where($column, '=', $data, 'and')->get();
     }
 
     public function searchOne($column, $data)
     {
         $this->validateColumns($column);
-        return Publicacion::where($column, 'LIKE', '%' . $data . '%')->first();
+        return Publicacion::where($column, 'LIKE', '%' . $data . '%', 'and')->first();
     }
 
     public function searchList($column, $data)
     {
         $this->validateColumns($column);
-        return Publicacion::where($column, 'LIKE', '%' . $data . '%')->get();
-    }
-    
-    public function getByMonth($month,$year){
-        return Publicacion::whereMonth('fechaPublicacion', $month)
-                      ->whereYear('fechaPublicacion', $year)
-                      ->get();
+        return Publicacion::where($column, 'LIKE', '%' . $data . '%', 'and')->get();
     }
 
-    public function searchByEgreso($data,$cant){
-        return Publicacion::where('estado','<>',-1)->where('sku', 'LIKE', "%{$data}%")->take($cant)->get();
+    public function getByMonth($month, $year)
+    {
+        return Publicacion::whereMonth('fechaPublicacion', $month, 'and', 'inner')
+            ->whereYear('fechaPublicacion', $year, 'and')
+            ->get();
     }
 
-    public function validateSkuDuplicity($sku,$idPlataforma){
-        return Publicacion::join('CuentasPlataforma','CuentasPlataforma.idCuentaPlataforma','=','Publicacion.idCuentaPlataforma')
-                                    ->where('Publicacion.sku','=',$sku)
-                                    ->where('CuentasPlataforma.idPlataforma','=',$idPlataforma)->first();
+    public function searchByEgreso($data, $cant)
+    {
+        return Publicacion::where('estado', '<>', -1, 'and')->where('sku', 'LIKE', "%{$data}%", "and")->take($cant)->get();
     }
 
-    public function getOldPublicaciones($cantidad){
+    public function validateSkuDuplicity($sku, $idPlataforma)
+    {
+        return Publicacion::join('CuentasPlataforma', 'CuentasPlataforma.idCuentaPlataforma', '=', 'Publicacion.idCuentaPlataforma', 'inner', false)
+            ->where('Publicacion.sku', '=', $sku)
+            ->where('CuentasPlataforma.idPlataforma', '=', $idPlataforma)->first();
+    }
+
+    public function getOldPublicaciones($cantidad)
+    {
         return Publicacion::orderBy('fechaPublicacion', 'asc')
-                            ->take($cantidad)
-                            ->get();
+            ->take($cantidad)
+            ->get();
     }
 
-    public function getMostSoldPublicaciones($limit = 5){
+    public function getMostSoldPublicaciones($limit = 5)
+    {
         return Publicacion::query()
             ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion', 'inner', false)
             ->select('Publicacion.*', DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
@@ -86,12 +92,14 @@ class PublicacionRepository implements PublicacionRepositoryInterface
         $publicacion->update($data);
         return $publicacion;
     }
-    
-    public function getLast(){
-        return Publicacion::select('idPublicacion')->orderBy('idPublicacion','desc')->first();
+
+    public function getLast()
+    {
+        return Publicacion::select('idPublicacion')->orderBy('idPublicacion', 'desc')->first();
     }
-    
-    private function validateColumns($column){
+
+    private function validateColumns($column)
+    {
         if (!in_array($column, $this->modelColumns)) {
             throw new \InvalidArgumentException("La columna '$column' no es válida.");
         }

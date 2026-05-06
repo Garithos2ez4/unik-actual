@@ -26,17 +26,13 @@
     @if (session('title') && session('message') && session('icon') && session('button'))
     <script>
         Swal.fire({
-            title: '{{ session('
-            title ') }}!',
-            text: '{{ session('
-            message ') }}',
-            icon: '{{ session('
-            icon ') }}',
+            title: "{{ session('title') }}!",
+            text: "{{ session('message') }}",
+            icon: "{{ session('icon') }}",
             iconColor: '#00b1b9',
             confirmButtonText: 'Aceptar',
             customClass: {
-                confirmButton: '{{ session('
-                button ') }}'
+                confirmButton: "{{ session('button') }}"
             }
         });
     </script>
@@ -69,7 +65,7 @@
                                 <div class="col-md-12 mt-1">
                                     <small>
                                         <a href="#"
-                                            onclick="getIdPass({{ $user->idUser }},'id-modal-bandeja'); return false;"
+                                            onclick="getIdPass('{{ $user->idUser }}','id-modal-bandeja'); return false;"
                                             class=" text-decoration-none text-secondary link-hover"
                                             data-bs-toggle="modal" data-bs-target="#modalBandeja">
                                             <i class="bi bi-journal-bookmark-fill"></i> Pendientes
@@ -79,7 +75,7 @@
                                 <div class="col-md-12 mt-1">
                                     <small>
                                         <a href="#"
-                                            onclick="getIdPass({{ $user->idUser }},'id-modal-password'); return false;"
+                                            onclick="getIdPass('{{ $user->idUser }}','id-modal-password'); return false;"
                                             class="text-decoration-none text-secondary link-hover"
                                             data-bs-toggle="modal" data-bs-target="#modalNewPass">
                                             <i class="bi bi-arrow-clockwise"></i> Reestablecer Contrase&ntildea

@@ -8,7 +8,8 @@ use Exception;
 
 class InventarioRepository implements InventarioRepositoryInterface
 {
-    protected $modelColumns;
+    /** @var array<string> */
+    protected array $modelColumns;
 
     public function __construct()
     {
@@ -21,39 +22,39 @@ class InventarioRepository implements InventarioRepositoryInterface
         return Inventario::all();
     }
 
-    public function getOne($column, $data)
+    public function getOne(string $column, mixed $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column, '=', $data)->first();
+        return Inventario::where($column, '=', $data, 'and')->first();
     }
 
-    public function getAllByColumn($column, $data)
+    public function getAllByColumn(string $column, mixed $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column, '=', $data)->get();
+        return Inventario::where($column, '=', $data, 'and')->get();
     }
 
     public function getAllWhereFindStock()
     {
-        return Inventario::where('stock', '>', 0)->get();
+        return Inventario::where('stock', '>', 0, 'and')->get();
     }
 
-    public function getAllByColumnWhereFindStock($column, $data)
+    public function getAllByColumnWhereFindStock(string $column, mixed $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column, '=', $data)->where('stock', '>', 0)->get();
+        return Inventario::where($column, '=', $data, 'and')->where('stock', '>', 0, 'and')->get();
     }
 
-    public function searchOne($column, $data)
+    public function searchOne(string $column, mixed $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column, 'LIKE', '%' . $data . '%')->first();
+        return Inventario::where($column, 'LIKE', '%' . $data . '%', 'and')->first();
     }
 
-    public function searchList($column, $data)
+    public function searchList(string $column, mixed $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column, 'LIKE', '%' . $data . '%')->get();
+        return Inventario::where($column, 'LIKE', '%' . $data . '%', 'and')->get();
     }
 
     public function create(array $productoData)
@@ -61,9 +62,9 @@ class InventarioRepository implements InventarioRepositoryInterface
         return Inventario::create($productoData);
     }
 
-    public function update($idProducto, array $data)
+    public function update(mixed $idProducto, array $data)
     {
-        $inventarios = Inventario::where('idProducto', '=', $idProducto)->get();
+        $inventarios = Inventario::where('idProducto', '=', $idProducto, 'and')->get();
         foreach ($inventarios as $inventario) {
             foreach ($data as $almacen => $stock) {
                 if ($inventario->idAlmacen == $almacen) {
@@ -79,11 +80,11 @@ class InventarioRepository implements InventarioRepositoryInterface
         return $inventarios;
     }
 
-    public function addStock($idProducto, $idAlmacen)
+    public function addStock(mixed $idProducto, mixed $idAlmacen)
     {
         try {
-            $inventario = Inventario::where('idProducto', $idProducto)
-                ->where('idAlmacen', $idAlmacen)
+            $inventario = Inventario::where('idProducto', '=', $idProducto, 'and')
+                ->where('idAlmacen', '=', $idAlmacen, 'and')
                 ->first();
 
             if (!$inventario) {
@@ -102,11 +103,11 @@ class InventarioRepository implements InventarioRepositoryInterface
         }
     }
 
-    public function removeStock($idProducto, $idAlmacen)
+    public function removeStock(mixed $idProducto, mixed $idAlmacen)
     {
         try {
-            $inventario = Inventario::where('idProducto', '=', $idProducto)
-                ->where('idAlmacen', '=', $idAlmacen)
+            $inventario = Inventario::where('idProducto', '=', $idProducto, 'and')
+                ->where('idAlmacen', '=', $idAlmacen, 'and')
                 ->first();
 
             if ($inventario) {
@@ -127,7 +128,7 @@ class InventarioRepository implements InventarioRepositoryInterface
         }
     }
 
-    private function validateColumns($column)
+    private function validateColumns(string $column)
     {
         if (!in_array($column, $this->modelColumns)) {
             throw new \InvalidArgumentException("La columna '$column' no es válida.");
