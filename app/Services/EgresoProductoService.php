@@ -151,8 +151,20 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $data['observacion'] = $observacion;
 
         if($transaction == 'devolucion'){
-            $data['estado'] = 'DEVOLUCION';
-            $data['fechaMovimiento'] = now();
+            $registro = $modelEgreso->RegistroProducto;
+            
+            // Solo sumamos al stock si el estado no era ya DEVOLUCION (evita duplicados)
+            if($registro->estado != 'DEVOLUCION'){
+                $data['estado'] = 'DEVOLUCION';
+                $data['fechaMovimiento'] = now();
+                
+                // Obtener ID de producto y Almacén
+                $idProducto = $registro->DetalleComprobante->Producto->idProducto;
+                $idAlmacen = $registro->idAlmacen;
+                
+                // Sumar de nuevo al inventario
+                $this->inventarioRepository->addStock($idProducto, $idAlmacen);
+            }
         }
         $this->registroRepository->update($modelEgreso->idRegistro,$data);
     }

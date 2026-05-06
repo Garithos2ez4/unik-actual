@@ -65,6 +65,16 @@ class PublicacionRepository implements PublicacionRepositoryInterface
                             ->get();
     }
 
+    public function getMostSoldPublicaciones($limit = 5){
+        return Publicacion::query()
+            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion', 'inner', false)
+            ->select('Publicacion.*', DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+            ->groupBy('Publicacion.idPublicacion')
+            ->orderBy('total_ventas', 'desc')
+            ->take($limit)
+            ->get();
+    }
+
     public function create(array $data)
     {
         return Publicacion::create($data);

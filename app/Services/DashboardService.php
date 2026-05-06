@@ -61,6 +61,10 @@ class DashboardService implements DashboardServiceInterface
         return $this->productoRepository->getMostSoldProducts($limit);
     }
 
+    public function getMostSoldPublicaciones($limit = 5){
+        return $this->publicacionRepository->getMostSoldPublicaciones($limit);
+    }
+
     public function getNuevosInventario(){
         return $this->registroRepository->getAllByColumnByThisMonth('estado','NUEVO',250);
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ class InventarioRepository implements InventarioRepositoryInterface
         // Define las columnas válidas
         $this->modelColumns = (new Inventario())->getFillable();
     }
-    
+
     public function all()
     {
         return Inventario::all();
@@ -23,22 +24,24 @@ class InventarioRepository implements InventarioRepositoryInterface
     public function getOne($column, $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column,'=', $data)->first();
+        return Inventario::where($column, '=', $data)->first();
     }
 
     public function getAllByColumn($column, $data)
     {
         $this->validateColumns($column);
-        return Inventario::where($column,'=', $data)->get();
+        return Inventario::where($column, '=', $data)->get();
     }
 
-    public function getAllWhereFindStock(){
-        return Inventario::where('stock','>',0)->get();
+    public function getAllWhereFindStock()
+    {
+        return Inventario::where('stock', '>', 0)->get();
     }
 
-    public function getAllByColumnWhereFindStock($column,$data){
+    public function getAllByColumnWhereFindStock($column, $data)
+    {
         $this->validateColumns($column);
-        return Inventario::where($column,'=',$data)->where('stock','>',0)->get();
+        return Inventario::where($column, '=', $data)->where('stock', '>', 0)->get();
     }
 
     public function searchOne($column, $data)
@@ -60,28 +63,29 @@ class InventarioRepository implements InventarioRepositoryInterface
 
     public function update($idProducto, array $data)
     {
-        $inventarios = Inventario::where('idProducto','=',$idProducto)->get();
-        foreach($inventarios as $inventario){
-            foreach($data as $almacen => $stock){
-                if($inventario->idAlmacen == $almacen){
+        $inventarios = Inventario::where('idProducto', '=', $idProducto)->get();
+        foreach ($inventarios as $inventario) {
+            foreach ($data as $almacen => $stock) {
+                if ($inventario->idAlmacen == $almacen) {
                     $array = array();
                     $array['idAlmacen'] = $almacen;
                     $array['stock'] = $stock;
-                    
+
                     $inventario->update($array);
                 }
             }
         }
-        
+
         return $inventarios;
     }
-    
-    public function addStock($idProducto, $idAlmacen) {
+
+    public function addStock($idProducto, $idAlmacen)
+    {
         try {
             $inventario = Inventario::where('idProducto', $idProducto)
                 ->where('idAlmacen', $idAlmacen)
                 ->first();
-    
+
             if (!$inventario) {
                 // Crear registro si no existe
                 $inventario = Inventario::create([
@@ -90,35 +94,41 @@ class InventarioRepository implements InventarioRepositoryInterface
                     'stock' => 0
                 ]);
             }
-    
+
             $inventario->stock++;
             $inventario->save();
-    
         } catch (Exception $e) {
             throw new Exception('Error en la operación: ' . $e->getMessage());
         }
     }
-    
-    public function removeStock($idProducto,$idAlmacen){
-        try{
+
+    public function removeStock($idProducto, $idAlmacen)
+    {
+        try {
             $inventario = Inventario::where('idProducto', '=', $idProducto)
-            ->where('idAlmacen', '=', $idAlmacen)
-            ->first();
+                ->where('idAlmacen', '=', $idAlmacen)
+                ->first();
 
             if ($inventario) {
-                $inventario->stock--;
-                $inventario->save();
+                if ($inventario->stock > 0) {
+                    $inventario->stock--;
+                    $inventario->save();
+                } else {
+                    // Evitar que baje de 0
+                    $inventario->stock = 0;
+                    $inventario->save();
+                }
             } else {
                 // Manejo si no se encuentra el inventario
                 throw new Exception('Inventario no encontrado.');
             }
-        }catch(Exception $e){
+        } catch (Exception $e) {
             throw new Exception('Error en la operacion.');
         }
-        
     }
-    
-    private function validateColumns($column){
+
+    private function validateColumns($column)
+    {
         if (!in_array($column, $this->modelColumns)) {
             throw new \InvalidArgumentException("La columna '$column' no es válida.");
         }

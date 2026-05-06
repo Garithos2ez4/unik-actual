@@ -30,6 +30,7 @@ class HomeController extends Controller
         $productosStockMin = $this->dashboardService->getStockMinProducts()->total();
         $totalProductos = $this->dashboardService->getTotalProducts();
         $productosMostSold = $this->dashboardService->getMostSoldProducts();
+        $publicacionesMostSold = $this->dashboardService->getMostSoldPublicaciones();
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -49,7 +50,8 @@ class HomeController extends Controller
                                                     'colors' => $colors,
                                                     'productos' => $totalProductos,
                                                     'stockMin' => $productosStockMin,
-                                                    'productosMostSold' => $productosMostSold
+                                                    'productosMostSold' => $productosMostSold,
+                                                    'publicacionesMostSold' => $publicacionesMostSold
                                                 ])->render(),
             ]);
         }
@@ -61,7 +63,8 @@ class HomeController extends Controller
                                     'colors' => $colors,
                                     'productos' => $totalProductos,
                                     'stockMin' => $productosStockMin,
-                                    'productosMostSold' => $productosMostSold
+                                    'productosMostSold' => $productosMostSold,
+                                    'publicacionesMostSold' => $publicacionesMostSold
                                 ]);
     }
 

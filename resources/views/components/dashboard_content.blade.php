@@ -110,8 +110,31 @@ $gradientString = implode(', ', $gradientParts);
                 <div class="col-md-12 mt-3">
                     <div class="row border shadow rounded-3 pt-2 pb-2">
                         <div class="col-md-12">
-                            <h4 class="mb-0">Reclamos</h4>
-                            <small class="text-secondary">Libro de reclamaciones</small>
+                            <h4 class="mb-0">Top 3 SKU</h4>
+                            <small class="text-secondary">SKU con más ventas</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <ul class="list-group list-group-flush">
+                                @foreach ($publicacionesMostSold->take(3) as $index => $topPub)
+                                <li class="list-group-item px-1">
+                                    <div class="row align-items-center">
+                                        <div class="col-2 text-center">
+                                            <span class="badge rounded-pill {{ $index === 0 ? 'bg-warning text-dark' : ($index === 1 ? 'bg-secondary' : 'bg-dark') }}" style="font-size: 0.9rem;">
+                                                #{{ $index + 1 }}
+                                            </span>
+                                        </div>
+                                        <div class="col-6 px-0">
+                                            <strong class="d-block" style="font-size: 0.85rem;">{{ $topPub->sku }}</strong>
+                                            <small class="text-secondary text-truncate d-block" style="max-width: 100%;">{{ $topPub->titulo }}</small>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <span class="text-success fw-bold">{{ $topPub->total_ventas }}</span>
+                                            <small class="d-block text-secondary">egresos</small>
+                                        </div>
+                                    </div>
+                                </li>
+                                @endforeach
+                            </ul>
                         </div>
                     </div>
                 </div>

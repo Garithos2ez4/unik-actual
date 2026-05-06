@@ -15,4 +15,5 @@ interface PublicacionRepositoryInterface
     public function getLast();
     public function searchByEgreso($serial,$cant);
     public function getOldPublicaciones($cantidad);
+    public function getMostSoldPublicaciones($limit = 5);
 }
