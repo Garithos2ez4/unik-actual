@@ -78,12 +78,26 @@
                                     <small><strong></strong></small>
                                     <p class="mb-0"><small id="modal-egreso-usuario"></small></p>
                                 </div>
-                                <div class="col-md-12 mt-1" id="modal-egreso-publicidad">
+                                <div class="col-md-6 mt-1" id="modal-egreso-publicidad">
                                     
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label fw-bold">Observacion:</label>
-                                    <textarea class="form-control" maxlength="500" id="modal-egreso-observacion" name="observacion"></textarea>
+                                <div id="container-campos-devolucion">
+                                    <div class="col-md-12 mt-2">
+                                        <label class="form-label fw-bold mb-0">Fecha de Retorno F&iacute;sico:</label>
+                                        <input type="date" name="fecha_devolucion" id="modal-egreso-fecha-devolucion" class="form-control mb-2" required>
+                                    </div>
+                                    <div class="col-md-12 mt-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="check-fallo-entrega-egreso">
+                                            <label class="form-check-label text-primary fw-bold" style="cursor: pointer" for="check-fallo-entrega-egreso">
+                                                Fallo de entrega (Autocompletar)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mt-2">
+                                    <label class="form-label fw-bold mb-0 mt-1">Observacion:</label>
+                                    <textarea class="form-control" maxlength="500" id="modal-egreso-observacion" name="observacion" required></textarea>
                                 </div>
                             </div>
                         </div>

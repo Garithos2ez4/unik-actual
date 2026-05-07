@@ -86,9 +86,26 @@ function searchEgreso(inputElement) {
                     divRow.classList.add('row', 'w-100');
 
                     let colSerie = document.createElement('div');
-                    colSerie.classList.add('col-md-12');
-                    colSerie.textContent = item.numeroSerie;
-
+                    colSerie.classList.add('col-md-12', 'd-flex', 'justify-content-between', 'align-items-center');
+                    
+                    let spanSerie = document.createElement('span');
+                    spanSerie.textContent = item.numeroSerie;
+                    
+                    let spanEstado = document.createElement('span');
+                    spanEstado.classList.add('badge');
+                    spanEstado.style.fontSize = '10px';
+                    
+                    // Colores según estado
+                    if (item.estado === 'ENTREGADO') spanEstado.classList.add('bg-success');
+                    else if (item.estado === 'DEVOLUCION') spanEstado.classList.add('bg-warning', 'text-dark');
+                    else if (item.estado === 'GARANTIA') spanEstado.classList.add('bg-danger');
+                    else spanEstado.classList.add('bg-secondary');
+                    
+                    spanEstado.textContent = item.estado;
+                    
+                    colSerie.appendChild(spanSerie);
+                    colSerie.appendChild(spanEstado);
+                    
                     let colProducto = document.createElement('div');
                     colProducto.classList.add('col-md-12');
                     let smallProducto = document.createElement('em');
@@ -156,11 +173,27 @@ function viewModalEgreso(json){
     labelUsuario.textContent = json.usuario;
     hiddenIdEgreso.value = json.idEgreso;
 
-    if(json.estado == 'DEVOLUCION'){
+    let containerDevolucion = document.getElementById('container-campos-devolucion');
+    let inputFechaDevolucion = document.getElementById('modal-egreso-fecha-devolucion');
+
+    if(json.estado == 'DEVOLUCION' || json.estado == 'GARANTIA'){
         btnDevolucionEgreso.style.display = 'none';
+        containerDevolucion.style.display = 'none';
+        inputFechaDevolucion.required = false; 
     }else{
         btnDevolucionEgreso.style.display = 'block';
+        containerDevolucion.style.display = 'block';
+        inputFechaDevolucion.required = true;
     }
+
+    // Detectar si la observación contiene "Fallo de entrega" para marcar el checkbox
+    if (json.observacion && json.observacion.includes("Fallo de entrega")) {
+        document.getElementById('check-fallo-entrega-egreso').checked = true;
+    } else {
+        document.getElementById('check-fallo-entrega-egreso').checked = false;
+    }
+    
+    inputFechaDevolucion.value = ''; // Limpiar fecha cada vez que se abre para venta activa
 
     if(json.estado == 'ENTREGADO'){
         divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Compra:</strong> '+stringDate(json.fechaCompra)+'</small></p>'+
@@ -198,9 +231,23 @@ function formDetailEgreso(transaction){
     let formEgreso =  document.getElementById('form-detail-egreso');
     let hiddenTransaction = document.getElementById('modal-egreso-transaccion');
 
+    if (transaction === 'devolucion' && !formEgreso.checkValidity()) {
+        formEgreso.reportValidity();
+        return;
+    }
+
     hiddenTransaction.value = transaction;
     formEgreso.submit();
 }
+
+document.getElementById('check-fallo-entrega-egreso').addEventListener('change', function() {
+    let textarea = document.getElementById('modal-egreso-observacion');
+    if(this.checked) {
+        textarea.value = (textarea.value.trim() === "") ? "Fallo de entrega" : textarea.value + " - Fallo de entrega";
+    } else {
+        textarea.value = textarea.value.replace(" - Fallo de entrega", "").replace("Fallo de entrega", "").trim();
+    }
+});
 
 function stringDate(date){
     let fecha = new Date(date);

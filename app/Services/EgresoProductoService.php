@@ -85,17 +85,30 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function searchAjaxEgreso($serie,$cant){
         $egresos = $this->egresoRepository->getEgresoBySerial($serie,$cant);
         $result = $egresos->map(function($details) {
+                        $devolucion = $details->Devoluciones->first();
+                        
+                        if ($devolucion) {
+                            $estadoHistorico = $devolucion->tipo;
+                        } else {
+                            $ultimoEgresoId = $details->RegistroProducto->Egresos->max('idEgreso');
+                            if ($ultimoEgresoId > $details->idEgreso) {
+                                $estadoHistorico = 'DEVOLUCION';
+                            } else {
+                                $estadoHistorico = $details->RegistroProducto->estado;
+                            }
+                        }
+                        
                         return [
                                 'idEgreso' => $details->idEgreso,
                                 'nombreProducto' => $details->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
                                 'codigoProducto' => $details->RegistroProducto->DetalleComprobante->Producto->codigoProducto,
                                 'numeroSerie' => $details->RegistroProducto->numeroSerie,
-                                'estado' => $details->RegistroProducto->estado,
+                                'estado' => $estadoHistorico,
                                 'fechaCompra' => $details->fechaCompra,
                                 'fechaDespacho' => $details->fechaDespacho,
-                                'fechaMovimiento' => $details->RegistroProducto->fechaMovimiento,
+                                'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
                                 'usuario' => $details->Usuario->user,
-                                'observacion' => $details->RegistroProducto->observacion,
+                                'observacion' => $devolucion ? $devolucion->motivo : $details->RegistroProducto->observacion,
                                 'cuenta' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->nombreCuenta : null,
                                 'sku' => $details->Publicacion ? $details->Publicacion->sku : null,
                                 'numeroOrden' => $details->numeroOrden,
@@ -130,24 +143,37 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     throw new \Exception("La serie {$registro->numeroSerie} no se puede vender porque esta en estado {$registro->estado}.");
                 }
 
-                $validateRegistro = $this->egresoRepository->getOne('idRegistro',$idRegistro);
+                // REGLA DE NEGOCIO: Validar historial de Devoluciones/Garantías
+                $ultimaDevolucion = \App\Models\Devolucion::where('idRegistro', $idRegistro)
+                                            ->latest('created_at')
+                                            ->first();
+
+                if ($ultimaDevolucion) {
+                    // 1. Validar aptitud para venta si fue garantía
+                    if ($ultimaDevolucion->tipo === 'GARANTIA' && !$ultimaDevolucion->aptoParaVenta) {
+                        throw new \Exception("La serie {$registro->numeroSerie} proviene de GARANTA y no ha sido marcada como apta para la venta. El rea tcnica debe actualizar el detalle de reparacin.");
+                    }
+
+                    // 2. Validar fechas: No se puede vender antes de ser devuelto físicamente
+                    $fechaVenta = \Carbon\Carbon::parse($data['fechaCompra']);
+                    // Usamos fechaDevolucion si existe, sino created_at
+                    $fechaRetorno = $ultimaDevolucion->fechaDevolucion ? \Carbon\Carbon::parse($ultimaDevolucion->fechaDevolucion) : $ultimaDevolucion->created_at;
+
+                    if ($fechaVenta->lt($fechaRetorno->startOfDay())) {
+                        throw new \Exception("Error en serie {$registro->numeroSerie}: La fecha de venta ({$fechaVenta->format('d/m/Y')}) no puede ser anterior a la fecha de su retorno físico ({$fechaRetorno->format('d/m/Y')}).");
+                    }
+                }
                 
                 $idAlmacen = $registro->idAlmacen;
                 $data['idRegistro'] = $idRegistro;
                 $data['idUser'] = $this->headerService->getModelUser()->idUser;
+                $data['idEgreso'] = $this->getNewIdEgreso(); // Generamos un ID nuevo
+                
+                $this->egresoRepository->create($data); // Guardamos la nueva venta
     
                 $arrayRegistro =['estado' => 'ENTREGADO',
-                                'fechaMovimiento' => now()];
-                
-                if($validateRegistro){
-                    // RECICLAJE: Si ya existe un egreso (producto devuelto), lo actualizamos
-                    // Esto evita el error de Duplicate Entry en idRegistro
-                    $validateRegistro->update($data);
-                } else {
-                    // Si es nuevo, creamos el registro
-                    $data['idEgreso'] = $this->getNewIdEgreso();
-                    $this->egresoRepository->create($data);
-                }
+                                'fechaMovimiento' => now(),
+                                'observacion' => '']; // Limpiamos la observación para la nueva venta
 
                 $this->registroRepository->update($idRegistro,$arrayRegistro);
                 $productos[] = $this->updateStock($idAlmacen,$idRegistro);
@@ -158,27 +184,49 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         return $productos;
     }
 
-    public function updateEgreso($transaction,$idEgreso,$observacion){
+    public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null){
         $modelEgreso = $this->egresoRepository->getOne('idEgreso',$idEgreso);
-        $data['observacion'] = $observacion;
+        $registro = $modelEgreso->RegistroProducto;
+        $tipoTransaccion = strtoupper($transaction); // 'DEVOLUCION', 'GARANTIA' o 'UPDATE'
 
-        if($transaction == 'devolucion'){
-            $registro = $modelEgreso->RegistroProducto;
-            
-            // Solo sumamos al stock si el estado no era ya DEVOLUCION (evita duplicados)
-            if($registro->estado != 'DEVOLUCION'){
-                $data['estado'] = 'DEVOLUCION';
-                $data['fechaMovimiento'] = now();
-                
-                // Obtener ID de producto y Almacén
-                $idProducto = $registro->DetalleComprobante->Producto->idProducto;
-                $idAlmacen = $registro->idAlmacen;
-                
-                // Sumar de nuevo al inventario
-                $this->inventarioRepository->addStock($idProducto, $idAlmacen);
-            }
+        // Si es una actualización simple de observación
+        if ($tipoTransaccion === 'UPDATE') {
+            $this->registroRepository->update($registro->idRegistro, ['observacion' => $observacion]);
+            return;
         }
-        $this->registroRepository->update($modelEgreso->idRegistro,$data);
+
+        // Si es una Devolución o Garantía, procesamos si el estado no era ya el mismo
+        if($registro->estado != $tipoTransaccion){
+            
+            // Preparamos la observación con la fecha concatenada
+            $fechaFormateada = $fechaDevolucion ? \Carbon\Carbon::parse($fechaDevolucion)->format('d/m/Y') : now()->format('d/m/Y');
+            $observacionFinal = $observacion . " - " . $fechaFormateada;
+
+            // 1. Creamos el registro en la nueva tabla de devoluciones
+            \App\Models\Devolucion::create([
+                'idEgreso'   => $idEgreso,
+                'idRegistro' => $registro->idRegistro,
+                'idUser'     => $this->headerService->getModelUser()->idUser,
+                'tipo'       => $tipoTransaccion,
+                'plataforma' => $plataforma,
+                'motivo'     => $observacionFinal,
+                'fechaDevolucion' => $fechaDevolucion,
+                'aptoParaVenta' => ($tipoTransaccion === 'DEVOLUCION') ? true : false, 
+            ]);
+
+            // 2. Actualizamos el estado del producto físico
+            $dataRegistro = [
+                'estado' => $tipoTransaccion,
+                'fechaMovimiento' => $fechaDevolucion ?? now(),
+                'observacion' => $observacionFinal // Guardamos la observación formateada
+            ];
+            $this->registroRepository->update($registro->idRegistro, $dataRegistro);
+            
+            // 3. Retornamos el stock al inventario
+            $idProducto = $registro->DetalleComprobante->Producto->idProducto;
+            $idAlmacen = $registro->idAlmacen;
+            $this->inventarioRepository->addStock($idProducto, $idAlmacen);
+        }
     }
 
     private function updateStock($idAlmacen,$idRegistro){

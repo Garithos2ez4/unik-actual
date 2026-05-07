@@ -51,16 +51,31 @@
                             </div>
                             <div class="col-5 col-md-4 col-lg-2">
                                 @php
+                                    $devolucion = $egreso->Devoluciones->first();
+                                    
+                                    // Fallback para registros antiguos (antes de crear la tabla devoluciones)
+                                    // Si este no es el ultimo egreso del producto, asumimos que fue devuelto.
+                                    $esDevueltoLegado = false;
+                                    if (!$devolucion) {
+                                        $ultimoEgresoId = $egreso->RegistroProducto->Egresos->max('idEgreso');
+                                        if ($ultimoEgresoId > $egreso->idEgreso) {
+                                            $esDevueltoLegado = true;
+                                        }
+                                    }
+
+                                    $state = $devolucion ? $devolucion->tipo : ($esDevueltoLegado ? 'DEVOLUCION' : $egreso->RegistroProducto->estado);
+                                    $observacionFinal = $devolucion ? $devolucion->motivo : $egreso->RegistroProducto->observacion;
+
                                     $egresoJson = [
                                         'idEgreso' => $egreso->idEgreso,
                                         'nombreProducto' => $egreso->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
                                         'numeroSerie' => $egreso->RegistroProducto->numeroSerie,
-                                        'estado' => $egreso->RegistroProducto->estado,
+                                        'estado' => $state,
                                         'fechaCompra' => $egreso->fechaCompra,
                                         'fechaDespacho' => $egreso->fechaDespacho,
-                                        'fechaMovimiento' => $egreso->RegistroProducto->fechaMovimiento,
+                                        'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $egreso->RegistroProducto->fechaMovimiento) : $egreso->RegistroProducto->fechaMovimiento,
                                         'usuario' => $egreso->Usuario->user,
-                                        'observacion' => $egreso->RegistroProducto->observacion,
+                                        'observacion' => $observacionFinal,
                                         'cuenta' => $egreso->Publicacion ? $egreso->Publicacion->CuentasPlataforma->nombreCuenta : null,
                                         'sku' => $egreso->Publicacion ? $egreso->Publicacion->sku : null,
                                         'numeroOrden' => $egreso->numeroOrden,
@@ -73,9 +88,6 @@
                                     <small>{{ $egreso->RegistroProducto->numeroSerie }}</small>
                                 </a>
                             </div>
-                            @php
-                                $state = $egreso->RegistroProducto->estado
-                            @endphp
                             <div class="col-md-1 d-none d-lg-block {{$state == 'NUEVO' ? 'text-sistema-uno' : (
                                                                     $state == 'ENTREGADO' ? 'text-green' : (
                                                                     $state == 'DEVOLUCION' ? 'text-warning' : (

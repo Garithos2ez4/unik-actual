@@ -11,5 +11,5 @@ interface EgresoProductoServiceInterface
     public function getPublicacion($sku);
     public function createEgreso(array $data, array $registros);
     public function getAllAlmacenes();
-    public function updateEgreso($transaction,$idEgreso,$observacion);
+    public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null);
 }

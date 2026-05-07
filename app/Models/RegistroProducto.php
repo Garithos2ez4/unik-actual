@@ -22,12 +22,16 @@ class RegistroProducto extends Model
                             'observacion'
                             ];
 
-    
     protected $hidden = [
         
     ];
 
-    
+    protected $appends = ['ultima_devolucion'];
+
+    public function getUltimaDevolucionAttribute()
+    {
+        return $this->Devoluciones()->latest('created_at')->first();
+    }
     protected $casts = [
         'idRegistro' => 'int',
         'idComprobante' => 'int',
@@ -55,6 +59,11 @@ class RegistroProducto extends Model
         return $this->belongsTo(EgresoProducto::class,'idRegistro','idRegistro');
     }
 
+    public function Egresos()
+    {
+        return $this->hasMany(EgresoProducto::class, 'idRegistro', 'idRegistro');
+    }
+
     public function Garantia(){
         return $this->hasMany(Garantia::class,'idRegistro','idRegistro');
      }
@@ -69,5 +78,8 @@ class RegistroProducto extends Model
     /**
      * Obtener las relaciones del modelo.
      */
-    
+    public function Devoluciones()
+    {
+        return $this->hasMany(Devolucion::class, 'idRegistro', 'idRegistro');
+    }
 }

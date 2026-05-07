@@ -56,5 +56,8 @@ class EgresoProducto extends Model
     /**
      * Obtener las relaciones del modelo.
      */
-    
+    public function Devoluciones()
+    {
+        return $this->hasMany(Devolucion::class, 'idEgreso', 'idEgreso');
+    }
 }

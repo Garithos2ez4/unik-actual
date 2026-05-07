@@ -111,7 +111,45 @@ function dataModalDetalle(json) {
     });
 
     state.dataset.originalState = state.value;
-    document.getElementById('check-fallo-entrega').checked = false; // Resetear checkbox
+    
+    // Auto-detectar "Fallo de entrega" para marcar el checkbox al abrir
+    if (json.observacion && json.observacion.includes("Fallo de entrega")) {
+        document.getElementById('check-fallo-entrega').checked = true;
+    } else {
+        document.getElementById('check-fallo-entrega').checked = false;
+    }
+    
+    // Logica para mostrar informacion de devolucion
+    let devInfoBlock = document.getElementById('devolucion-info-block');
+    let devMotivo = document.getElementById('devolucion-motivo');
+    let devApto = document.getElementById('devolucion-apto');
+    
+    if (json.registro_producto.ultima_devolucion) {
+        let dev = json.registro_producto.ultima_devolucion;
+        devInfoBlock.classList.remove('d-none');
+        
+        let fechaDev = new Date(dev.fechaDevolucion ? dev.fechaDevolucion + 'T00:00:00' : dev.created_at);
+        let fDay = fechaDev.getDate().toString().padStart(2, '0');
+        let fMonth = (fechaDev.getMonth() + 1).toString().padStart(2, '0');
+        let fYear = fechaDev.getFullYear();
+        
+        devMotivo.innerHTML = `<strong>Fecha Retorno:</strong> ${fDay}/${fMonth}/${fYear}<br><strong>Motivo:</strong> ${dev.motivo}`;
+        if (dev.plataforma) {
+            devMotivo.innerHTML += ` <br><strong>Plataforma:</strong> ${dev.plataforma}`;
+        }
+        
+        if (dev.aptoParaVenta) {
+            devApto.textContent = "S";
+            devApto.classList.remove('text-danger');
+            devApto.classList.add('text-success');
+        } else {
+            devApto.textContent = "No";
+            devApto.classList.remove('text-success');
+            devApto.classList.add('text-danger');
+        }
+    } else {
+        devInfoBlock.classList.add('d-none');
+    }
     if (stateJson === 'DEVOLUCION') {
         state.disabled = false;
     } else if (stateJson === 'ENTREGADO' || stateJson === 'GARANTIA') {

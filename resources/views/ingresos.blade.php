@@ -179,6 +179,13 @@
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="col-12 mt-3 d-none" id="devolucion-info-block">
+                                <div class="alert alert-warning mb-0 p-2">
+                                    <h6 class="alert-heading mb-1"><i class="bi bi-info-circle"></i> Info. Devolucin previa</h6>
+                                    <small id="devolucion-motivo" class="d-block mb-1"></small>
+                                    <small class="d-block"><strong>Apto Venta:</strong> <span id="devolucion-apto"></span></small>
+                                </div>
+                            </div>
                             <div class="col-12 mt-2">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="check-fallo-entrega">
