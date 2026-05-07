@@ -31,6 +31,25 @@ class HomeController extends Controller
         $totalProductos = $this->dashboardService->getTotalProducts();
         $productosMostSold = $this->dashboardService->getMostSoldProducts();
         $publicacionesMostSold = $this->dashboardService->getMostSoldPublicaciones();
+        
+        // Nueva lógica para productos top del mes (Solo ventas que NO han sido devueltas)
+        $productosMostSoldMonth = \App\Models\Producto::query()
+            ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+            ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->join('EgresoProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+            ->select('Producto.*', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
+            ->whereNotExists(function ($query) {
+                $query->select(\DB::raw(1))
+                    ->from('devoluciones')
+                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+            })
+            ->groupBy('Producto.idProducto')
+            ->orderBy('total_ventas', 'desc')
+            ->take(3)
+            ->get();
+
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -51,6 +70,7 @@ class HomeController extends Controller
                                                     'productos' => $totalProductos,
                                                     'stockMin' => $productosStockMin,
                                                     'productosMostSold' => $productosMostSold,
+                                                    'productosMostSoldMonth' => $productosMostSoldMonth,
                                                     'publicacionesMostSold' => $publicacionesMostSold
                                                 ])->render(),
             ]);
@@ -64,6 +84,7 @@ class HomeController extends Controller
                                     'productos' => $totalProductos,
                                     'stockMin' => $productosStockMin,
                                     'productosMostSold' => $productosMostSold,
+                                    'productosMostSoldMonth' => $productosMostSoldMonth,
                                     'publicacionesMostSold' => $publicacionesMostSold
                                 ]);
     }

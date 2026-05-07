@@ -138,6 +138,37 @@ $gradientString = implode(', ', $gradientParts);
                         </div>
                     </div>
                 </div>
+                <div class="col-md-12 mt-3">
+                    <div class="row border shadow rounded-3 pt-2 pb-2">
+                        <div class="col-md-12">
+                            <h4 class="mb-0">Productos Top del Mes</h4>
+                            <small class="text-secondary">Productos con más ventas este mes</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <ul class="list-group list-group-flush">
+                                @foreach ($productosMostSoldMonth->take(3) as $index => $topProd)
+                                <li class="list-group-item px-1">
+                                    <div class="row align-items-center">
+                                        <div class="col-2 text-center">
+                                            <span class="badge rounded-pill {{ $index === 0 ? 'bg-primary' : ($index === 1 ? 'bg-info text-dark' : 'bg-secondary') }}" style="font-size: 0.9rem;">
+                                                #{{ $index + 1 }}
+                                            </span>
+                                        </div>
+                                        <div class="col-6 px-0">
+                                            <strong class="d-block text-truncate" style="font-size: 0.85rem;" title="{{ $topProd->nombreProducto }}">{{ $topProd->nombreProducto }}</strong>
+                                            <small class="text-secondary text-truncate d-block" style="max-width: 100%;">{{ $topProd->codigoProducto }}</small>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <span class="text-primary fw-bold">{{ $topProd->total_ventas }}</span>
+                                            <small class="d-block text-secondary">uds.</small>
+                                        </div>
+                                    </div>
+                                </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-6 col-lg-3 mt-3">
