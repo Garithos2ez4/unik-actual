@@ -21,7 +21,7 @@
         <div class="col-3 col-md-5 col-lg-3 text-end">
             <input type="month" class="form-control hidde-month" id="month" name="month" value="{{$fecha->format('Y-m')}}">
             <button class="btn btn-light border d-md-none" onclick="hiddeInputDate('month')">
-                <i class="bi bi-calendar3"></i>  <!-- Ícono de calendario -->
+                <i class="bi bi-calendar3"></i> <!-- Ícono de calendario -->
             </button>
         </div>
         <div class="col-10 col-lg-6">
@@ -31,10 +31,10 @@
         </div>
         <div class="col-2 col-lg-6 text-end">
             @foreach ($user->Accesos as $vista)
-                @if($vista->idVista == 8)
-                <a class="btn btn-success" data-bs-toggle="modal" data-bs-target="#ingresoModal"><i
+            @if($vista->idVista == 8)
+            <a class="btn btn-success" data-bs-toggle="modal" data-bs-target="#ingresoModal"><i
                     class="bi bi-file-earmark-plus"></i><span class="d-none d-md-inline"> Nuevo Registro</span></a>
-                @endif
+            @endif
             @endforeach
         </div>
     </div>
@@ -42,7 +42,7 @@
         <div class="row mb-2">
             <div class="col-6 col-md-3 col-lg-2">
                 <small>Usuario</small>
-                <select class="form-select form-select-sm filtro-componente" name="filtro[usuario]" >
+                <select class="form-select form-select-sm filtro-componente" name="filtro[usuario]">
                     <option value="">Todos</option>
                     @foreach ($filtros['users'] as $usuario)
                     <option value="{{$usuario->idUser}}">{{$usuario->Usuario->user}}</option>
@@ -51,7 +51,7 @@
             </div>
             <div class="col-6 col-md-3 col-lg-2">
                 <small>Proveedores</small>
-                <select class="form-select form-select-sm filtro-componente"  name="filtro[proveedor]">
+                <select class="form-select form-select-sm filtro-componente" name="filtro[proveedor]">
                     <option value="">Todos</option>
                     @foreach ($filtros['proveedores'] as $proveedor)
                     <option value="{{$proveedor->idProveedor}}">{{$proveedor->nombreProveedor}}</option>
@@ -60,7 +60,7 @@
             </div>
             <div class="col-6 col-md-3 col-lg-2">
                 <small>Almac&eacute;n</small>
-                <select class="form-select form-select-sm filtro-componente"  name="filtro[almacen]">
+                <select class="form-select form-select-sm filtro-componente" name="filtro[almacen]">
                     <option value="">Todos</option>
                     @foreach ($filtros['almacenes'] as $almacen)
                     <option value="{{$almacen->idAlmacen}}">{{$almacen->descripcion}}</option>
@@ -69,7 +69,7 @@
             </div>
             <div class="col-6 col-md-3 col-lg-2">
                 <small>Estado</small>
-                <select class="form-select form-select-sm filtro-componente"  name="filtro[estado]">
+                <select class="form-select form-select-sm filtro-componente" name="filtro[estado]">
                     <option value="">Todos</option>
                     @foreach ($filtros['estados'] as $estado)
                     <option value="{{$estado->estado}}">{{$estado->estado}}</option>
@@ -83,60 +83,61 @@
     </div>
     <!-- Modal -->
     @foreach ($user->Accesos as $vista)
-        @if($vista->idVista == 8)
-        <form action="{{route('insertcomprobante')}}" method="POST">
-            @csrf
-            <div class="modal fade" id="ingresoModal" tabindex="-1" aria-labelledby="ingresoModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="ingresoModalLabel">Nuevo Registro</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-6 col-md-6">
-                                    <label>Proveedor</label>
-                                    <select class="form-select" id="proveedor-select" name="proveedor">
-                                        <option value="" {{old('proveedor')=='' ? 'selected' : '' }}>-Elige un proveedor-
-                                        </option>
-                                        @foreach($proveedores as $proveedor)
-                                        <option value="{{$proveedor['idProveedor']}}"
-                                            {{old('proveedor')==$proveedor['idProveedor'] ? 'selected' : '' }}>
-                                            {{$proveedor['nombreProveedor']}}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-6 col-md-6">
-                                    <label>Documento</label>
-                                    <select class="form-select" id="documento-select" name="tipocomprobante">
-                                        <option value="" {{old('tipocomprobante')=='' ? 'selected' : '' }}>-Elige un
-                                            documento-</option>
-                                        @foreach($documentos as $doc)
-                                        <option value="{{$doc->idTipoComprobante}}" {{old('tipocomprobante')==$doc->
+    @if($vista->idVista == 8)
+    <form action="{{route('insertcomprobante')}}" method="POST">
+        @csrf
+        <div class="modal fade" id="ingresoModal" tabindex="-1" aria-labelledby="ingresoModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="ingresoModalLabel">Nuevo Registro</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-6 col-md-6">
+                                <label>Proveedor</label>
+                                <select class="form-select" id="proveedor-select" name="proveedor">
+                                    <option value="" {{old('proveedor')=='' ? 'selected' : '' }}>-Elige un proveedor-
+                                    </option>
+                                    @foreach($proveedores as $proveedor)
+                                    <option value="{{$proveedor['idProveedor']}}"
+                                        {{old('proveedor')==$proveedor['idProveedor'] ? 'selected' : '' }}>
+                                        {{$proveedor['nombreProveedor']}}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-6">
+                                <label>Documento</label>
+                                <select class="form-select" id="documento-select" name="tipocomprobante">
+                                    <option value="" {{old('tipocomprobante')=='' ? 'selected' : '' }}>-Elige un
+                                        documento-</option>
+                                    @foreach($documentos as $doc)
+                                    <option value="{{$doc->idTipoComprobante}}" {{old('tipocomprobante')==$doc->
                                             idTipoComprobante ? 'selected' : ''}}>{{$doc->descripcion}}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label>Nro Documento</label>
-                                    <input type="text" class="form-control" id="documento-number" name="numerocomprobante"
-                                        value="{{old('numerocomprobante')}}">
-                                </div>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label>Nro Documento</label>
+                                <input type="text" class="form-control" id="documento-number" name="numerocomprobante"
+                                    value="{{old('numerocomprobante')}}">
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-success" id="btn-save"><i class="bi bi-floppy"></i>
-                                Registrar</button>
-                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-success" id="btn-save"><i class="bi bi-floppy"></i>
+                            Registrar</button>
                     </div>
                 </div>
             </div>
-        </form>
-        @endif
+        </div>
+    </form>
+    @endif
     @endforeach
-    
+
     <form action="{{route('updateregistro')}}" method="POST">
         @csrf
         <div class="modal fade" id="detalleModal" tabindex="-1" aria-labelledby="detalleModalLabel" aria-hidden="false">
@@ -172,12 +173,19 @@
                                 <label class="form-label fw-bold">Estado:</label>
                                 <select id="state-modal-detail" name="estado" class="form-select">
                                     @foreach ($estados as $estado)
-                                    <option value="{{$estado['value']}}" {{$estado['value']=='NUEVO' || $estado['value']=='ENTREGADO' || $estado['value']=='DEVOLUCION' ? 'disabled' :''}}>
-                                        {{$estado['name']}}</option>
+                                    <option value="{{$estado['value']}}" {{$estado['value']=='ENTREGADO' ? 'disabled' :''}}>
+                                        {{$estado['name']}}
+                                    </option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-12">
+                            <div class="col-12 mt-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="check-fallo-entrega">
+                                    <label class="form-check-label text-primary fw-bold" style="cursor: pointer" for="check-fallo-entrega">
+                                        Fallo de entrega (Autocompletar)
+                                    </label>
+                                </div>
                                 <strong>Observaciones</strong>
                                 <textarea name="observacion" maxlength="500" placeholder="Sin observaciones"
                                     id="obs-modal-detail" class="form-control"></textarea>

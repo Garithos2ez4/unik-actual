@@ -87,12 +87,17 @@ class EgresoController extends Controller
                                         'fechaCompra' => $fechapedido,
                                         'fechaDespacho' => $fechadespacho];
                         
-                        $productos = $this->egresoService->createEgreso($arrayEgreso,$registros);
-                        foreach($productos as $producto){
-                            $this->productoService->validateState($producto->idProducto);
+                        try {
+                            $productos = $this->egresoService->createEgreso($arrayEgreso,$registros);
+                            foreach($productos as $producto){
+                                $this->productoService->validateState($producto->idProducto);
+                            }
+                            $this->headerService->sendFlashAlerts('Egreso registrado','Operacion exitosa','success','btn-success');
+                            return back();
+                        } catch (\Exception $e) {
+                            $this->headerService->sendFlashAlerts('Error al registrar egreso', $e->getMessage(), 'error', 'btn-danger');
+                            return back();
                         }
-                        $this->headerService->sendFlashAlerts('Egreso registrado','Operacion exitosa','success','btn-success');
-                        return back();
                         
                 }else{
                     $this->headerService->sendFlashAlerts('Datos incompletos','Verifica que los datos ingresados existan','info','btn-warning');

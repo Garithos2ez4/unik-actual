@@ -123,20 +123,32 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $productos = array();
         if(!empty($data) && !empty($registros)){
             foreach($registros as $idRegistro){
-                $validateRegistro = $this->egresoRepository->getOne('idRegistro',$idRegistro);
-                if($validateRegistro){
-                    continue;
-                }
                 $registro = $this->registroRepository->getOne('idRegistro',$idRegistro);
+
+                // Validamos que el producto est en un estado vendible (NUEVO)
+                if ($registro->estado !== 'NUEVO') {
+                    throw new \Exception("La serie {$registro->numeroSerie} no se puede vender porque esta en estado {$registro->estado}.");
+                }
+
+                $validateRegistro = $this->egresoRepository->getOne('idRegistro',$idRegistro);
+                
                 $idAlmacen = $registro->idAlmacen;
                 $data['idRegistro'] = $idRegistro;
-                $data['idEgreso'] = $this->getNewIdEgreso();
                 $data['idUser'] = $this->headerService->getModelUser()->idUser;
     
                 $arrayRegistro =['estado' => 'ENTREGADO',
                                 'fechaMovimiento' => now()];
                 
-                $this->egresoRepository->create($data);
+                if($validateRegistro){
+                    // RECICLAJE: Si ya existe un egreso (producto devuelto), lo actualizamos
+                    // Esto evita el error de Duplicate Entry en idRegistro
+                    $validateRegistro->update($data);
+                } else {
+                    // Si es nuevo, creamos el registro
+                    $data['idEgreso'] = $this->getNewIdEgreso();
+                    $this->egresoRepository->create($data);
+                }
+
                 $this->registroRepository->update($idRegistro,$arrayRegistro);
                 $productos[] = $this->updateStock($idAlmacen,$idRegistro);
                 
