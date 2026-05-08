@@ -85,34 +85,18 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function searchAjaxEgreso($serie,$cant){
         $egresos = $this->egresoRepository->getEgresoBySerial($serie,$cant);
         $result = $egresos->map(function($details) {
-                        $devolucion = $details->Devoluciones->first();
-                        
-                        if ($devolucion) {
-                            $estadoHistorico = $devolucion->tipo;
-                        } else {
-                            $ultimoEgresoId = $details->RegistroProducto->Egresos->max('idEgreso');
-                            if ($ultimoEgresoId > $details->idEgreso) {
-                                $estadoHistorico = 'DEVOLUCION';
-                            } else {
-                                $estadoHistorico = $details->RegistroProducto->estado;
-                            }
-                        }
-                        
                         return [
                                 'idEgreso' => $details->idEgreso,
+                                'idRegistro' => $details->idRegistro,
+                                'idPublicacion' => $details->idPublicacion,
                                 'nombreProducto' => $details->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
-                                'codigoProducto' => $details->RegistroProducto->DetalleComprobante->Producto->codigoProducto,
                                 'numeroSerie' => $details->RegistroProducto->numeroSerie,
-                                'estado' => $estadoHistorico,
-                                'fechaCompra' => $details->fechaCompra,
-                                'fechaDespacho' => $details->fechaDespacho,
-                                'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
-                                'usuario' => $details->Usuario->user,
-                                'observacion' => $devolucion ? $devolucion->motivo : $details->RegistroProducto->observacion,
-                                'cuenta' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->nombreCuenta : null,
-                                'sku' => $details->Publicacion ? $details->Publicacion->sku : null,
+                                'sku' => $details->Publicacion ? $details->Publicacion->sku : 'N/A',
                                 'numeroOrden' => $details->numeroOrden,
-                                'imagenPublicacion' => $details->Publicacion ? asset('storage/'.$details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null
+                                'idPlataforma' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->idPlataforma : null,
+                                'idCuentaPlataforma' => $details->idPublicacion ? $details->Publicacion->idCuentaPlataforma : null,
+                                'nombreCuenta' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->nombreCuenta : 'VENTA DIRECTA',
+                                'nombrePlataforma' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->Plataforma->nombrePlataforma : 'TIENDA'
                         ];
                     });
         return $result;

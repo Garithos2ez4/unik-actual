@@ -26,6 +26,11 @@
                     <h3>{{$plata->nombrePlataforma}}</h3>
                 </div>
                 <div class="col-3 col-md-2 text-end">
+                  @if($plata->nombrePlataforma == 'Falabella')
+                    <a href="{{ route('plataformas.falabella.seller') }}" class="btn btn-primary mt-1 me-1">
+                      <i class="bi bi-box-arrow-in-right"></i> Seller Center
+                    </a>
+                  @endif
                   <button class="btn btn-warning mt-1" type="button" data-bs-toggle="modal" data-bs-target="#cuentasModal" onclick='sendDataModalAcount("{{$plata->nombrePlataforma}}",@json($plata->CuentasPlataforma))'>
                     <i class="bi bi-people-fill"></i>
                   </button>

@@ -132,6 +132,13 @@
                         <input type="number" id="precio-total-sunat" value="" class="form-control" disabled>
                     </div>
 
+                    <!-- 👇 NUEVO CONTENEDOR PARA EL TC FIJO 👇 -->
+                    <div id="div-precio-total-fijo" class="mb-2">
+                        <label for="precio-total-fijo" class="form-label">Precio Total en Soles / Tasa Fija ({{$tasaFija}})</label>
+                        <input type="number" id="precio-total-fijo" value="" class="form-control" disabled>
+                    </div>
+                    <!-- 👆 FIN DEL NUEVO CONTENEDOR 👆 -->
+
                 </div>
             </div>
             <div class="mb-3 col-md-6 col-lg-6">

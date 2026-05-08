@@ -26,6 +26,8 @@ use App\Services\IngresoProductoServiceInterface;
 use App\Services\IngresoProductoService;
 use App\Services\PublicacionServiceInterface;
 use App\Services\PublicacionService;
+use App\Services\ReclamoPlataformaServiceInterface;
+use App\Services\ReclamoPlataformaService;
 
 use App\Repositories\CalculadoraRepositoryInterface;
 use App\Repositories\CalculadoraRepository;
@@ -141,6 +143,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(EgresoProductoServiceInterface::class,EgresoProductoService::class);
         $this->app->bind(ConfiguracionServiceInterface::class,ConfiguracionService::class);
         $this->app->bind(PdfServiceInterface::class,PdfService::class);
+        $this->app->bind(ReclamoPlataformaServiceInterface::class,ReclamoPlataformaService::class);
 
         $this->app->bind(CalculadoraRepositoryInterface::class, CalculadoraRepository::class);
         $this->app->bind(UsuarioRepositoryInterface::class, UsuarioRepository::class);

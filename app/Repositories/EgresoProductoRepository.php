@@ -45,17 +45,19 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
         return EgresoProducto::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->get();
     }
 
-    public function getEgresoBySerial($serial,$cant)
+    public function getEgresoBySerial($query, $cant)
     {
-        return EgresoProducto::query()->join('RegistroProducto','RegistroProducto.idRegistro','=','EgresoProducto.idRegistro', 'inner', false)
-                            ->where(function($query){
-                                $query->where('RegistroProducto.estado','=','ENTREGADO', 'and')
-                                        ->orWhere('RegistroProducto.estado','=','DEVOLUCION', 'and')
-                                        ->orWhere('RegistroProducto.estado','=','GARANTIA', 'and');
-                            })
-                            ->where('RegistroProducto.numeroSerie','LIKE', '%' . $serial . '%', 'and')
-                            ->take($cant)
-                            ->get();
+        return EgresoProducto::query()
+            ->join('RegistroProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
+            ->leftJoin('Publicacion', 'Publicacion.idPublicacion', '=', 'EgresoProducto.idPublicacion')
+            ->where(function($q) use ($query) {
+                $q->where('RegistroProducto.numeroSerie', 'LIKE', '%' . $query . '%')
+                  ->orWhere('EgresoProducto.numeroOrden', 'LIKE', '%' . $query . '%')
+                  ->orWhere('Publicacion.sku', 'LIKE', '%' . $query . '%');
+            })
+            ->select('EgresoProducto.*')
+            ->take($cant)
+            ->get();
     }
     
     public function create(array $data)

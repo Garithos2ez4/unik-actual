@@ -118,7 +118,7 @@
                     <li class="list-group-item bg-sistema-uno menu-border"><a href="{{ route('calculadora') }}"
                             class="btn text-light">Calculadora <i class="bi bi-calculator"></i></a></li>
                     @php
-                    $order = [2, 1, 4, 5, 3, 6, 7]; // Orden personalizado
+                    $order = [2, 1, 4, 11, 5, 3, 6, 7]; // Orden personalizado, 11 es Reclamos
                     @endphp
 
                     @foreach ($order as $idVista)
@@ -143,8 +143,31 @@
                     @break
 
                     @case(4)
-                    <li class="list-group-item bg-sistema-uno menu-border"><a href="{{ route('plataformas') }}"
-                            class="btn text-light">Plataformas <i class="bi bi-shop"></i></a></li>
+                    <li class="list-group-item bg-sistema-uno menu-border">
+                        <a href="{{ route('plataformas') }}" class="btn text-light">Plataformas <i class="bi bi-shop"></i></a>
+                        <ul class="list-unstyled ps-3 mt-1">
+                            <li>
+                                <a href="{{ route('plataformas.falabella.orders') }}" class="btn btn-sm text-info py-0">
+                                    <i class="bi bi-chevron-right"></i> Sincronización
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('plataformas.falabella.productos') }}" class="btn btn-sm text-info py-0">
+                                    <i class="bi bi-chevron-right"></i> Catálogo
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('plataformas.falabella.picking') }}" class="btn btn-sm text-info py-0">
+                                    <i class="bi bi-chevron-right"></i> Lista de Picking
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('plataformas.falabella.etiquetas') }}" class="btn btn-sm text-info py-0">
+                                    <i class="bi bi-chevron-right"></i> Etiquetas
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                     @break
 
                     @case(5)
@@ -166,6 +189,12 @@
                     <li class="list-group-item bg-sistema-uno menu-border"><a href="{{ route('configweb') }}"
                             class="btn text-light">Configuraci&oacuten <i class="bi bi-gear-fill"></i></a></li>
                     @break
+                    @case(11)
+                    <li class="list-group-item bg-sistema-uno menu-border">
+                        <a href="{{ route('reclamos.index') }}" class="btn text-light">Reclamos <i class="bi bi-exclamation-triangle-fill text-warning"></i></a>
+                    </li>
+                    @break
+
                     @endswitch
                     @endif
                     @endforeach
