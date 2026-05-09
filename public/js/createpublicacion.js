@@ -89,3 +89,62 @@ document.getElementById('search').addEventListener('input', function () {
         document.getElementById('suggestions').innerHTML = ''; // Limpiar si hay menos de 3 caracteres
     }
 });
+
+function searchPublicacion(inputElement) {
+    let query = inputElement.value;
+    let suggestions = document.getElementById('suggestions-sku');
+
+    function handleClickOutsideSku(event) {
+        if (!suggestions.contains(event.target) && event.target !== inputElement) {
+            suggestions.innerHTML = '';
+            document.removeEventListener('click', handleClickOutsideSku);
+        }
+    }
+
+    document.addEventListener('click', handleClickOutsideSku);
+
+    if (query.length > 2) {
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', `/searchpublicacion?query=${query}`, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                suggestions.innerHTML = '';
+
+                data.forEach(item => {
+                    let li = document.createElement('li');
+                    li.classList.add('list-group-item', 'pe-0', 'hover-sistema-uno', 'text-truncate');
+                    li.style.cursor = "pointer";
+                    li.style.fontSize = "12px";
+
+                    let divRow = document.createElement('div');
+                    divRow.classList.add('row', 'w-100');
+
+                    let colSku = document.createElement('div');
+                    colSku.classList.add('col-md-12', 'fw-bold');
+                    colSku.textContent = item.sku;
+
+                    let colTitulo = document.createElement('div');
+                    colTitulo.classList.add('col-md-12', 'text-secondary');
+                    colTitulo.textContent = item.titulo;
+                    colTitulo.style.fontSize = '10px';
+
+                    divRow.appendChild(colSku);
+                    divRow.appendChild(colTitulo);
+                    li.appendChild(divRow);
+
+                    li.addEventListener('click', function () {
+                        inputElement.value = item.sku;
+                        suggestions.innerHTML = '';
+                        dissableButton();
+                    });
+
+                    suggestions.appendChild(li);
+                });
+            }
+        };
+        xhr.send();
+    } else {
+        suggestions.innerHTML = '';
+    }
+}

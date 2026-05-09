@@ -24,7 +24,10 @@
         </div>
         <div class="col-md-3 mb-2">
             <label class="form-label">SKU:</label>
-            <input type="text" value="{{old('sku')}}" name="sku" class="form-control" aria-describedby="basic-addon1" id="sku-public">
+            <div style="position:relative">
+                <input type="text" value="{{old('sku')}}" name="sku" oninput="searchPublicacion(this)" class="form-control" aria-describedby="basic-addon1" id="sku-public" autocomplete="off">
+                <ul class="list-group w-100" id="suggestions-sku" style="position:absolute;z-index:1000"></ul>
+            </div>
         </div>
         <div class="col-md-4 mb-2">
             <label class="form-label">Producto:</label>

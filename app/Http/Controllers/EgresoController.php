@@ -117,9 +117,19 @@ class EgresoController extends Controller
                 $idegreso = $request->input('idegreso');
                 $observacion = $request->input('observacion');
                 $fechaDevolucion = $request->input('fecha_devolucion');
+                $sku = $request->input('sku');
+                $nro_orden = $request->input('nro_orden');
+                $fecha_compra = $request->input('fecha_compra');
+                $fecha_despacho = $request->input('fecha_despacho');
 
                 if(isset($transaccion) && isset($idegreso)){
-                    $this->egresoService->updateEgreso($transaccion,$idegreso,$observacion, null, $fechaDevolucion);
+                    $dataEgreso = [
+                        'sku' => $sku,
+                        'numeroOrden' => $nro_orden,
+                        'fechaCompra' => $fecha_compra,
+                        'fechaDespacho' => $fecha_despacho
+                    ];
+                    $this->egresoService->updateEgreso($transaccion,$idegreso,$observacion, null, $fechaDevolucion, $dataEgreso);
 
                     $this->headerService->sendFlashAlerts('Operacion exitosa','No hubo ningún error en la operacion','success','btn-success');
                     return back();

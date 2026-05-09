@@ -85,18 +85,36 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function searchAjaxEgreso($serie,$cant){
         $egresos = $this->egresoRepository->getEgresoBySerial($serie,$cant);
         $result = $egresos->map(function($details) {
+                        $devolucion = $details->Devoluciones->first();
+                        
+                        // Lógica de estado igual que en el componente lista_egresos
+                        $esDevueltoLegado = false;
+                        if (!$devolucion) {
+                            $ultimoEgresoId = $details->RegistroProducto->Egresos->max('idEgreso');
+                            if ($ultimoEgresoId > $details->idEgreso) {
+                                $esDevueltoLegado = true;
+                            }
+                        }
+
+                        $state = $devolucion ? $devolucion->tipo : ($esDevueltoLegado ? 'DEVOLUCION' : $details->RegistroProducto->estado);
+                        $observacionFinal = $devolucion ? $devolucion->motivo : $details->RegistroProducto->observacion;
+
                         return [
                                 'idEgreso' => $details->idEgreso,
                                 'idRegistro' => $details->idRegistro,
                                 'idPublicacion' => $details->idPublicacion,
                                 'nombreProducto' => $details->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
                                 'numeroSerie' => $details->RegistroProducto->numeroSerie,
-                                'sku' => $details->Publicacion ? $details->Publicacion->sku : 'N/A',
+                                'sku' => $details->Publicacion ? $details->Publicacion->sku : null,
                                 'numeroOrden' => $details->numeroOrden,
-                                'idPlataforma' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->idPlataforma : null,
-                                'idCuentaPlataforma' => $details->idPublicacion ? $details->Publicacion->idCuentaPlataforma : null,
-                                'nombreCuenta' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->nombreCuenta : 'VENTA DIRECTA',
-                                'nombrePlataforma' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->Plataforma->nombrePlataforma : 'TIENDA'
+                                'fechaCompra' => $details->fechaCompra,
+                                'fechaDespacho' => $details->fechaDespacho,
+                                'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
+                                'usuario' => $details->Usuario->user,
+                                'observacion' => $observacionFinal,
+                                'estado' => $state,
+                                'cuenta' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->nombreCuenta : null,
+                                'imagenPublicacion' => $details->Publicacion ? asset('storage/'.$details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null
                         ];
                     });
         return $result;
@@ -168,10 +186,26 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         return $productos;
     }
 
-    public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null){
+    public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null, $dataEgreso = []){
         $modelEgreso = $this->egresoRepository->getOne('idEgreso',$idEgreso);
         $registro = $modelEgreso->RegistroProducto;
         $tipoTransaccion = strtoupper($transaction); // 'DEVOLUCION', 'GARANTIA' o 'UPDATE'
+
+        // Si hay datos para actualizar en el egreso (fecha, sku, nro_orden)
+        if (!empty($dataEgreso)) {
+            $updateData = [];
+            if (isset($dataEgreso['sku'])) {
+                $publicacion = $this->getPublicacion($dataEgreso['sku']);
+                $updateData['idPublicacion'] = $publicacion ? $publicacion->idPublicacion : null;
+            }
+            if (isset($dataEgreso['fechaCompra'])) $updateData['fechaCompra'] = $dataEgreso['fechaCompra'];
+            if (isset($dataEgreso['fechaDespacho'])) $updateData['fechaDespacho'] = $dataEgreso['fechaDespacho'];
+            if (isset($dataEgreso['numeroOrden'])) $updateData['numeroOrden'] = $dataEgreso['numeroOrden'];
+
+            if (!empty($updateData)) {
+                $this->egresoRepository->update($idEgreso, $updateData);
+            }
+        }
 
         // Si es una actualización simple de observación
         if ($tipoTransaccion === 'UPDATE') {

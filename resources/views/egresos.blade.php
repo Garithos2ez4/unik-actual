@@ -1,11 +1,11 @@
-@extends('layouts.app')
+    @extends('layouts.app')
 
-@section('title', 'Egresos')
-@php
+    @section('title', 'Egresos')
+    @php
     setlocale(LC_TIME, 'es_ES.UTF-8');
-@endphp
+    @endphp
 
-@section('content')
+    @section('content')
     <div class="container">
         <div class="bg-secondary" id="hidden-body"
             style="position:fixed;left:0;width:100vw;height:100vh;z-index:998;opacity:0.5;display:none">
@@ -25,7 +25,7 @@
                 <input type="month" class="form-control hidde-month" id="month" name="month"
                     value="{{ $fecha->format('Y-m') }}">
                 <button class="btn btn-light border d-md-none" onclick="hiddeInputDate('month')">
-                    <i class="bi bi-calendar3"></i>  <!-- Ícono de calendario -->
+                    <i class="bi bi-calendar3"></i> <!-- Ícono de calendario -->
                 </button>
             </div>
             <div class="col-10 col-md-8">
@@ -38,9 +38,9 @@
 
             <div class="col-2 col-md-4 text-end">
                 @foreach ($user->Accesos as $vista)
-                    @if($vista->idVista == 9)
-                    <a class="btn btn-success" href="{{route('createegreso')}}" target="_blank"><i class="bi bi-plus-lg"></i><span class="d-none d-md-inline"> Nuevo Egreso</span> </a>
-                    @endif
+                @if($vista->idVista == 9)
+                <a class="btn btn-success" href="{{route('createegreso')}}" target="_blank"><i class="bi bi-plus-lg"></i><span class="d-none d-md-inline"> Nuevo Egreso</span> </a>
+                @endif
                 @endforeach
             </div>
         </div>
@@ -49,7 +49,7 @@
             <x-lista_egresos :egresos="$egresos" :container="'container-lista-egresos'" />
         </div>
 
-        
+
         <!-- Modal -->
         <form action="{{route('devolucionegreso')}}" method="post" id="form-detail-egreso">
             @csrf
@@ -59,10 +59,17 @@
                     <div class="modal-content">
                         <div class="modal-body">
                             <div class="row">
-                                <div class="col-md-12">
+                                <div class="col-md-12 d-flex justify-content-between align-items-center">
                                     <input type="hidden" id="modal-egreso-transaccion" name="transaccion">
                                     <input type="hidden" id="modal-egreso-id" name="idegreso">
-                                    <h5 id="modal-egreso-titulo"></h5>
+                                    <h5 id="modal-egreso-titulo" class="mb-0"></h5>
+                                    @foreach ($user->Accesos as $vista)
+                                    @if($vista->idVista == 9)
+                                    <button type="button" class="btn btn-sm btn-outline-primary border-0" id="btn-edit-egreso" onclick="toggleEditEgreso()">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                    @endif
+                                    @endforeach
                                 </div>
                                 <div class="col-md-6 text-secondary">
                                     <h6 id="modal-egreso-serialnumber"></h6>
@@ -74,12 +81,39 @@
                                     <p class="mb-0"><strong></strong></p>
                                     <p class="mt-0"><strong></strong></p>
                                 </div>
+                                <div class="col-md-12 mt-2 d-none" id="container-edit-fechas">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold mb-0"><small>Fecha Compra:</small></label>
+                                            <input type="date" name="fecha_compra" id="modal-egreso-edit-fecha-compra" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold mb-0"><small>Fecha Despacho:</small></label>
+                                            <input type="date" name="fecha_despacho" id="modal-egreso-edit-fecha-despacho" class="form-control form-control-sm">
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="col-md-6 text-end">
                                     <small><strong></strong></small>
                                     <p class="mb-0"><small id="modal-egreso-usuario"></small></p>
                                 </div>
-                                <div class="col-md-6 mt-1" id="modal-egreso-publicidad">
-                                    
+                                <div class="col-md-12 mt-1" id="modal-egreso-publicidad">
+
+                                </div>
+                                <div class="col-md-12 mt-2 d-none" id="container-edit-publicacion">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold mb-0"><small>SKU:</small></label>
+                                            <div style="position:relative">
+                                                <input type="text" name="sku" id="modal-egreso-edit-sku" oninput="searchPublicacion(this)" class="form-control form-control-sm" autocomplete="off">
+                                                <ul class="list-group w-100" style="position:absolute;top:100%;z-index:1100" id="suggestions-sku"></ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold mb-0"><small>Nro de Orden:</small></label>
+                                            <input type="text" name="nro_orden" id="modal-egreso-edit-nro-orden" class="form-control form-control-sm">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div id="container-campos-devolucion">
                                     <div class="col-md-12 mt-2">
@@ -118,4 +152,4 @@
         </form>
     </div>
     <script src="{{asset('js/egresos.js')}}"></script>
-@endsection
+    @endsection

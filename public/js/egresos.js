@@ -202,6 +202,25 @@ function viewModalEgreso(json){
         divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Devolución:</strong> '+stringDate(json.fechaMovimiento)+'</small></p>';
     }
 
+    // Poblar campos de edición
+    document.getElementById('modal-egreso-edit-fecha-compra').value = json.fechaCompra ? json.fechaCompra.split('T')[0] : '';
+    document.getElementById('modal-egreso-edit-fecha-despacho').value = json.fechaDespacho ? json.fechaDespacho.split('T')[0] : '';
+    document.getElementById('modal-egreso-edit-sku').value = json.sku || '';
+    document.getElementById('modal-egreso-edit-nro-orden').value = json.numeroOrden || '';
+
+    // Resetear modo edición
+    const containerFechas = document.getElementById('container-edit-fechas');
+    const containerPublicacion = document.getElementById('container-edit-publicacion');
+    const btnEdit = document.getElementById('btn-edit-egreso');
+    
+    containerFechas.classList.add('d-none');
+    containerPublicacion.classList.add('d-none');
+    divFecha.classList.remove('d-none');
+    divPublicacion.classList.remove('d-none');
+    if (btnEdit) {
+        btnEdit.innerHTML = '<i class="bi bi-pencil-fill"></i>';
+    }
+
     if(json.cuenta == null){
         divPublicacion.innerHTML = '<label class="fw-bold">Publicacion:</label>' + '<p class="text-secondary mb-1">Sin publicación</p>';
     }else{
@@ -251,11 +270,90 @@ document.getElementById('check-fallo-entrega-egreso').addEventListener('change',
 
 function stringDate(date){
     let fecha = new Date(date);
-    let day = fecha.getDate().toString().padStart(2, '0');
-    let month = (fecha.getMonth() + 1).toString().padStart(2, '0');
-    let year = fecha.getFullYear();
+    let day = (fecha.getUTCDate()).toString().padStart(2, '0');
+    let month = (fecha.getUTCMonth() + 1).toString().padStart(2, '0');
+    let year = fecha.getUTCFullYear();
 
     return `${day}/${month}/${year}`;
 } 
 
+function toggleEditEgreso() {
+    const containerFechas = document.getElementById('container-edit-fechas');
+    const containerPublicacion = document.getElementById('container-edit-publicacion');
+    const divFecha = document.getElementById('modal-egreso-fecha');
+    const divPublicacion = document.getElementById('modal-egreso-publicidad');
+    const btnEdit = document.getElementById('btn-edit-egreso');
+
+    if (containerFechas.classList.contains('d-none')) {
+        containerFechas.classList.remove('d-none');
+        containerPublicacion.classList.remove('d-none');
+        divFecha.classList.add('d-none');
+        divPublicacion.classList.add('d-none');
+        if (btnEdit) btnEdit.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+    } else {
+        containerFechas.classList.add('d-none');
+        containerPublicacion.classList.add('d-none');
+        divFecha.classList.remove('d-none');
+        divPublicacion.classList.remove('d-none');
+        if (btnEdit) btnEdit.innerHTML = '<i class="bi bi-pencil-fill"></i>';
+    }
+}
+
+function searchPublicacion(inputElement) {
+    let query = inputElement.value;
+    let suggestions = document.getElementById('suggestions-sku');
+
+    function handleClickOutsideSku(event) {
+        if (!suggestions.contains(event.target) && event.target !== inputElement) {
+            suggestions.innerHTML = '';
+            document.removeEventListener('click', handleClickOutsideSku);
+        }
+    }
+
+    document.addEventListener('click', handleClickOutsideSku);
+
+    if (query.length > 2) {
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', `/searchpublicacion?query=${query}`, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                suggestions.innerHTML = '';
+
+                data.forEach(item => {
+                    let li = document.createElement('li');
+                    li.classList.add('list-group-item', 'pe-0', 'hover-sistema-uno', 'text-truncate');
+                    li.style.cursor = "pointer";
+                    li.style.fontSize = "12px";
+
+                    let divRow = document.createElement('div');
+                    divRow.classList.add('row', 'w-100');
+
+                    let colSku = document.createElement('div');
+                    colSku.classList.add('col-md-12', 'fw-bold');
+                    colSku.textContent = item.sku;
+
+                    let colTitulo = document.createElement('div');
+                    colTitulo.classList.add('col-md-12', 'text-secondary');
+                    colTitulo.textContent = item.titulo;
+                    colTitulo.style.fontSize = '10px';
+
+                    divRow.appendChild(colSku);
+                    divRow.appendChild(colTitulo);
+                    li.appendChild(divRow);
+
+                    li.addEventListener('click', function () {
+                        inputElement.value = item.sku;
+                        suggestions.innerHTML = '';
+                    });
+
+                    suggestions.appendChild(li);
+                });
+            }
+        };
+        xhr.send();
+    } else {
+        suggestions.innerHTML = '';
+    }
+}
 
