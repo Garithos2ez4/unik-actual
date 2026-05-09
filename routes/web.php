@@ -20,6 +20,7 @@ use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\GarantiaController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\LicenciaController;
+use App\Http\Controllers\ReclamoPlataformaController;
 
 //scripts
 use App\Http\Controllers\ScriptController;
@@ -45,6 +46,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
     Route::get('/licencias', [LicenciaController::class, 'index'])->name('licencias.index');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
+    Route::get('/home', fn() => redirect()->route('dashboard'))->name('home');
     Route::get('/dashboard/stockmin', [HomeController::class, 'stockMinDashboard'])->name('stockmindashboard');
     Route::get('/dashboard/inventario/{estado}',[HomeController::class,'dashboardInventario'])->name('dashboardinventario');
 
@@ -103,6 +105,32 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/plataformas', [PlataformaController::class, 'index'])->name('plataformas');
     Route::post('/plataforma/updatecuenta', [PlataformaController::class, 'updateCuentas'])->name('updatecuenta');
     Route::post('/plataforma/createcuenta', [PlataformaController::class, 'createCuenta'])->name('createcuenta');
+
+    // FALABELLA
+    Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {
+        Route::get('/productos', [PlataformaController::class, 'falabellaProductos'])->name('productos');
+        Route::get('/seller', [PlataformaController::class, 'sellerFalabella'])->name('seller');
+        Route::get('/orders', [PlataformaController::class, 'falabellaOrders'])->name('orders');
+        Route::get('/order/{order_id}', [PlataformaController::class, 'falabellaOrderDetails'])->name('order-details');
+        Route::post('/sync-orders', [PlataformaController::class, 'syncFalabellaOrders'])->name('sync-orders');
+        Route::get('/picking', [PlataformaController::class, 'falabellaPicking'])->name('picking');
+        Route::get('/picking-pdf', [PlataformaController::class, 'falabellaPickingPdf'])->name('picking.pdf');
+        Route::get('/etiquetas', [PlataformaController::class, 'falabellaEtiquetas'])->name('etiquetas');
+        Route::get('/etiquetas-pdf', [PlataformaController::class, 'falabellaEtiquetasPdf'])->name('etiquetas.pdf');
+        Route::get('/etiquetas-oficiales-pdf', [PlataformaController::class, 'falabellaEtiquetasOficialesPdf'])->name('etiquetas-oficiales.pdf');
+    });
+
+    Route::prefix('reclamos-plataforma')->name('reclamos.')->group(function () {
+        Route::get('/', [ReclamoPlataformaController::class, 'index'])->name('index');
+        Route::get('/historia', [ReclamoPlataformaController::class, 'historia'])->name('historia');
+        Route::get('/search-ajax', [ReclamoPlataformaController::class, 'searchAjax'])->name('search-ajax');
+        Route::get('/create', [ReclamoPlataformaController::class, 'create'])->name('create');
+        Route::post('/store', [ReclamoPlataformaController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [ReclamoPlataformaController::class, 'edit'])->name('edit');
+        Route::post('/update/{id}', [ReclamoPlataformaController::class, 'update'])->name('update');
+        Route::post('/seguimiento/{id}', [ReclamoPlataformaController::class, 'addSeguimiento'])->name('seguimiento.add');
+        Route::post('/diagnostico/{id}', [ReclamoPlataformaController::class, 'addDiagnostico'])->name('diagnostico.add');
+    });
 
     Route::get('/web', [PublicidadController::class, 'index'])->name('publicidad');
     Route::get('/web/empresa/{idEmpresa}', [PublicidadController::class, 'empresa'])->name('empresa-publicidad');

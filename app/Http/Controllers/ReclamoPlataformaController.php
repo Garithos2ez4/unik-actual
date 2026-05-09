@@ -115,13 +115,92 @@ class ReclamoPlataformaController extends Controller
     public function addSeguimiento(Request $request, $id)
     {
         try {
-            $data = $request->all();
-            $data['idUser'] = $this->headerService->getModelUser()->idUser;
-            $this->reclamoService->addSeguimiento($id, $data);
+            $request->validate([
+                'respondioCanal'   => 'required|string',
+                'mensajeRespuesta' => 'required|string',
+                'urlFoto'          => 'nullable|string|max:500',
+                'urlVideo'         => 'nullable|string|max:500'
+            ]);
+
+            $userModel = $this->headerService->getModelUser();
+
+            // 1. Guardar el Seguimiento Padre (incluye el mensaje)
+            $seguimiento = \App\Models\SeguimientoReclamo::create([
+                'idReclamoPlataforma' => $id,
+                'idUser'              => $userModel->idUser,
+                'respondioCanal'      => $request->input('respondioCanal'),
+                'mensajeRespuesta'    => $request->input('mensajeRespuesta')
+            ]);
+
+            // 2. ¿Pegó link de Foto? Lo guardamos
+            if ($request->filled('urlFoto')) {
+                \App\Models\EvidenciaSeguimiento::create([
+                    'idSeguimiento' => $seguimiento->idSeguimiento,
+                    'tipoEvidencia' => 'FOTO',
+                    'urlArchivo'    => $request->input('urlFoto')
+                ]);
+            }
+
+            // 3. ¿Pegó link de Video? Lo guardamos
+            if ($request->filled('urlVideo')) {
+                \App\Models\EvidenciaSeguimiento::create([
+                    'idSeguimiento' => $seguimiento->idSeguimiento,
+                    'tipoEvidencia' => 'VIDEO',
+                    'urlArchivo'    => $request->input('urlVideo')
+                ]);
+            }
+
             return response()->json(['success' => true]);
-        } catch (Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() . ' Línea: ' . $e->getLine()
+            ], 500);
         }
+    }
+
+    public function historia(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $orden = $request->input('orden');
+        $caso = $request->input('caso');
+
+        $reclamos = collect();
+
+        if ($orden || $caso) {
+            $query = \App\Models\ReclamoPlataforma::query();
+            if ($orden) {
+                $query->where('ordenCompra', 'like', "%$orden%");
+            }
+            if ($caso) {
+                $query->where('numeroCaso', 'like', "%$caso%");
+            }
+            $reclamos = $query->with(['Plataforma', 'Seguimientos.Evidencias', 'Diagnosticos'])->get();
+        }
+
+        return view('reclamos.historia', [
+            'user' => $userModel,
+            'reclamos' => $reclamos,
+            'orden' => $orden,
+            'caso' => $caso
+        ]);
+    }
+
+    public function searchAjax(Request $request)
+    {
+        $query = $request->query('query');
+        $field = $request->query('field'); // 'orden' o 'caso'
+
+        if (!$query || strlen($query) < 3) return response()->json([]);
+
+        $results = \App\Models\ReclamoPlataforma::where($field == 'orden' ? 'ordenCompra' : 'numeroCaso', 'like', "%$query%")
+            ->select('idReclamoPlataforma', 'ordenCompra', 'numeroCaso', 'idPlataforma')
+            ->with('Plataforma:idPlataforma,nombrePlataforma')
+            ->distinct()
+            ->limit(10)
+            ->get();
+
+        return response()->json($results);
     }
 
     public function addDiagnostico(Request $request, $id)

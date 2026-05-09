@@ -12,18 +12,15 @@ class SeguimientoReclamo extends Model
     protected $fillable = [
         'idReclamoPlataforma',
         'idUser',
-        'contactoRealizado',
         'respondioCanal',
-        'graboVideo',
-        'tomoFoto'
+        'mensajeRespuesta' // <-- Nuevo campo agregado
     ];
 
-    protected $casts = [
-        'idReclamoPlataforma' => 'int',
-        'idUser' => 'int',
-        'graboVideo' => 'boolean',
-        'tomoFoto' => 'boolean'
-    ];
+    // Relación: Un seguimiento tiene MUCHAS evidencias
+    public function Evidencias()
+    {
+        return $this->hasMany(EvidenciaSeguimiento::class, 'idSeguimiento', 'idSeguimiento');
+    }
 
     public function Reclamo()
     {

@@ -52,8 +52,35 @@ class ReclamoPlataformaService implements ReclamoPlataformaServiceInterface
 
     public function addSeguimiento($idReclamo, array $data)
     {
-        $data['idReclamoPlataforma'] = $idReclamo;
-        return SeguimientoReclamo::create($data);
+        return DB::transaction(function () use ($idReclamo, $data) {
+            $data['idReclamoPlataforma'] = $idReclamo;
+            $seguimiento = SeguimientoReclamo::create($data);
+
+            // Guardamos el mensaje principal en Detalles (lo que antes era contactoRealizado)
+            $seguimiento->Detalles()->create([
+                'tipoEvidencia' => 'NINGUNO',
+                'mensajeRespuesta' => $data['contactoRealizado'],
+                'urlArchivo' => null
+            ]);
+
+            if (!empty($data['urlVideo'])) {
+                $seguimiento->Detalles()->create([
+                    'tipoEvidencia' => 'VIDEO',
+                    'urlArchivo' => $data['urlVideo'],
+                    'mensajeRespuesta' => 'Evidencia de Video'
+                ]);
+            }
+
+            if (!empty($data['urlFoto'])) {
+                $seguimiento->Detalles()->create([
+                    'tipoEvidencia' => 'FOTO',
+                    'urlArchivo' => $data['urlFoto'],
+                    'mensajeRespuesta' => 'Evidencia de Foto'
+                ]);
+            }
+
+            return $seguimiento;
+        });
     }
 
     public function addDiagnostico($idReclamo, array $data)

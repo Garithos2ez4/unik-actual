@@ -46,8 +46,8 @@ class PublicacionRepository implements PublicacionRepositoryInterface
 
     public function getByMonth($month, $year)
     {
-        return Publicacion::whereMonth('fechaPublicacion', $month, 'and', 'inner')
-            ->whereYear('fechaPublicacion', $year, 'and')
+        return Publicacion::whereMonth('fechaPublicacion', $month)
+            ->whereYear('fechaPublicacion', $year)
             ->get();
     }
 

@@ -118,20 +118,32 @@
                                             </div>
                                         </div>
                                         <div class="w-100">
-                                            <div class="d-flex justify-content-between">
-                                                <strong class="text-primary">Vía: {{ $seg->respondioCanal ?? 'N/A' }}</strong>
-                                                <small class="text-muted">{{ $seg->created_at->format('d/m/Y H:i') }}</small>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <strong class="text-primary">Vía: {{ $seg->respondioCanal }}</strong>
+                                                <small class="text-muted">{{ $seg->created_at->format('d/m/Y H:i') }} | Op: {{ $seg->Operador->user ?? 'N/A' }}</small>
                                             </div>
-                                            <p class="mb-1">{{ $seg->contactoRealizado }}</p>
-                                            <div class="mt-1">
-                                                @if($seg->graboVideo) <span class="badge bg-info text-dark me-1"><i class="bi bi-camera-video"></i> Video</span> @endif
-                                                @if($seg->tomoFoto) <span class="badge bg-info text-dark me-1"><i class="bi bi-image"></i> Foto</span> @endif
+
+                                            <!-- Mostramos el mensaje directamente del padre -->
+                                            <div class="p-2 mb-2 bg-light rounded border-start border-3 border-secondary">
+                                                <p class="mb-1 small">{{ $seg->mensajeRespuesta }}</p>
+
+                                                <!-- Iteramos las evidencias si es que hay -->
+                                                @if($seg->Evidencias->count() > 0)
+                                                <div class="mt-2 d-flex gap-2">
+                                                    @foreach($seg->Evidencias as $evidencia)
+                                                    <a href="{{ $evidencia->urlArchivo }}" target="_blank" class="badge bg-info text-dark text-decoration-none">
+                                                        @if($evidencia->tipoEvidencia == 'FOTO') <i class="bi bi-image"></i> Ver Foto
+                                                        @else <i class="bi bi-camera-video"></i> Ver Video
+                                                        @endif
+                                                    </a>
+                                                    @endforeach
+                                                </div>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
                                     @empty
                                     <div class="text-center py-4 text-muted">
-                                        <i class="bi bi-journal-x fs-1"></i>
                                         <p>No hay registros de seguimiento aún.</p>
                                     </div>
                                     @endforelse
@@ -145,18 +157,21 @@
                                     <form id="formSeguimiento">
                                         @csrf
                                         <input type="hidden" name="idReclamoPlataforma" value="{{ $reclamo->idReclamoPlataforma }}">
+
                                         <label class="form-label small fw-bold">Vía de Respuesta</label>
                                         <input type="text" name="respondioCanal" class="form-control form-control-sm mb-2" placeholder="Ej: WhatsApp, Llamada, Correo" required>
-                                        <label class="form-label small fw-bold">Resumen del Contacto</label>
-                                        <textarea name="contactoRealizado" class="form-control form-control-sm mb-3" rows="3" placeholder="Ej: Se envió mensaje por WhatsApp..." required></textarea>
 
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input" type="checkbox" name="graboVideo" value="1">
-                                            <label class="form-check-label small">Se obtuvo Video</label>
+                                        <label class="form-label small fw-bold">Mensaje / Resumen</label>
+                                        <textarea name="mensajeRespuesta" class="form-control form-control-sm mb-3" rows="3" placeholder="Se acordó con el cliente..." required></textarea>
+
+                                        <label class="form-label small fw-bold text-primary">Evidencias Adjuntas (Opcionales)</label>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <span class="input-group-text bg-light" style="width: 80px;"><i class="bi bi-image"></i>&nbsp;Foto</span>
+                                            <input type="url" name="urlFoto" class="form-control" placeholder="Link de Drive, Imgur...">
                                         </div>
-                                        <div class="form-check form-switch mb-3">
-                                            <input class="form-check-input" type="checkbox" name="tomoFoto" value="1">
-                                            <label class="form-check-label small">Se obtuvo Foto</label>
+                                        <div class="input-group input-group-sm mb-3">
+                                            <span class="input-group-text bg-light" style="width: 80px;"><i class="bi bi-camera-video"></i>&nbsp;Video</span>
+                                            <input type="url" name="urlVideo" class="form-control" placeholder="Link de Drive, YouTube...">
                                         </div>
 
                                         <button type="button" onclick="saveSeguimiento()" class="btn btn-warning btn-sm w-100 fw-bold">Guardar Seguimiento</button>
@@ -207,15 +222,32 @@
                                         <input type="hidden" name="idReclamoPlataforma" value="{{ $reclamo->idReclamoPlataforma }}">
 
                                         <!-- Buscador de Producto -->
+                                        <!-- Buscador de Producto -->
                                         <label class="form-label small fw-bold text-primary">Vincular Producto Físico (Serial)</label>
                                         <div class="input-group input-group-sm mb-3" style="position: relative">
-                                            <input type="text" class="form-control" placeholder="Escriba Serial..." id="input-serial-search">
+                                            <input type="text" class="form-control" placeholder="Escriba Serial..." id="input-serial-search"
+                                                @if($reclamo->ProductoFisico)
+                                            value="{{ $reclamo->ProductoFisico->numeroSerie }}" readonly
+                                            @endif
+                                            >
                                             <ul class="list-group w-100 shadow" style="position: absolute; top:100%; z-index: 2000;" id="suggestion-registro"></ul>
                                         </div>
-                                        <input type="hidden" name="idRegistro" id="input-id-registro">
-                                        <div id="product-info" class="p-2 mb-3 bg-light rounded d-none">
-                                            <small class="d-block fw-bold" id="product-name"></small>
-                                            <small class="text-muted" id="product-serial"></small>
+
+                                        <!-- Input oculto que guarda el ID real para la Base de Datos -->
+                                        <input type="hidden" name="idRegistro" id="input-id-registro"
+                                            @if($reclamo->ProductoFisico)
+                                        value="{{ $reclamo->ProductoFisico->idRegistro }}"
+                                        @endif
+                                        >
+
+                                        <!-- Div de información pre-llenado si existe el producto -->
+                                        <div id="product-info" class="p-2 mb-3 bg-light rounded @if(!$reclamo->ProductoFisico) d-none @endif">
+                                            <small class="d-block fw-bold" id="product-name">
+                                                {{ $reclamo->ProductoFisico->nombreProducto ?? '' }}
+                                            </small>
+                                            <small class="text-muted" id="product-serial">
+                                                {{ $reclamo->ProductoFisico->numeroSerie ?? '' }}
+                                            </small>
                                         </div>
 
                                         <label class="form-label small fw-bold">Situación Actual</label>
@@ -267,17 +299,37 @@
 <script>
     // Guardar Seguimiento vía AJAX
     function saveSeguimiento() {
-        const formData = new FormData(document.getElementById('formSeguimiento'));
+        const form = document.getElementById('formSeguimiento');
+
+        // 1. Fuerza al navegador a validar los campos requeridos
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const formData = new FormData(form);
+
         fetch('{{ route("reclamos.seguimiento.add", $reclamo->idReclamoPlataforma) }}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        }).then(r => r.json()).then(data => {
-            if (data.success) location.reload();
-            else alert('Error al guardar seguimiento');
-        });
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json' // Clave para que Laravel responda en JSON si hay error
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    // 2. Aquí te mostrará EXACTAMENTE por qué falló Laravel
+                    alert('Error del Servidor: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error en la petición:', error);
+                alert('Error crítico de red. Revisa la consola F12.');
+            });
     }
 
     // Guardar Diagnóstico vía AJAX
