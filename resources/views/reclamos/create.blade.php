@@ -284,21 +284,21 @@
                             // Autocompletar Plataforma y Cuenta
                             if (item.idPlataforma) {
                                 selectPlataforma.value = item.idPlataforma;
-                                selectCuenta.value = item.idCuentaPlataforma;
-                            } else {
-                                selectPlataforma.value = "6"; // Asumiendo que 6 es Tienda/Otros o similar
-                                selectCuenta.value = ""; 
+                                filterAccounts(); // Poblar las cuentas correspondientes
+                                if (item.idCuentaPlataforma) {
+                                    selectCuenta.value = item.idCuentaPlataforma;
+                                }
                             }
                             
                             // Autocompletar Orden y IDs
-                            inputOrdenCompra.value = item.numeroOrden || '';
+                            inputOrdenCompra.value = item.numeroOrden || 'S/N';
                             inputIdPublicacion.value = item.idPublicacion || '';
                             inputIdRegistro.value = item.idRegistro;
                             
                             // Mostrar Card de Producto
                             textProdName.textContent = item.nombreProducto;
                             textProdSerial.textContent = item.numeroSerie;
-                            textProdSku.textContent = item.sku;
+                            textProdSku.textContent = item.sku || 'N/A';
                             cardProduct.classList.remove('d-none');
                             
                             suggestionEgreso.innerHTML = '';

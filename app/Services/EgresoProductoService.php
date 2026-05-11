@@ -99,6 +99,30 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         $state = $devolucion ? $devolucion->tipo : ($esDevueltoLegado ? 'DEVOLUCION' : $details->RegistroProducto->estado);
                         $observacionFinal = $devolucion ? $devolucion->motivo : $details->RegistroProducto->observacion;
 
+                        $idPlataforma = null;
+                        $idCuentaPlataforma = null;
+                        $nombrePlataforma = 'VENTA DIRECTA';
+                        $nombreCuenta = 'S/C';
+
+                        if ($details->Publicacion) {
+                            $idPlataforma = $details->Publicacion->CuentasPlataforma->idPlataforma;
+                            $idCuentaPlataforma = $details->Publicacion->idCuentaPlataforma;
+                            $nombrePlataforma = $details->Publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
+                            $nombreCuenta = $details->Publicacion->CuentasPlataforma->nombreCuenta;
+                        } else {
+                            // Si es venta directa, buscamos la plataforma "Tienda" (ID 7)
+                            // y la cuenta vinculada al usuario que hizo la venta
+                            $idPlataforma = 7;
+                            $cuentaUsuario = \App\Models\CuentasPlataforma::where('idPlataforma', 7)
+                                            ->where('nombreCuenta', $details->Usuario->user)
+                                            ->first();
+                            if ($cuentaUsuario) {
+                                $idCuentaPlataforma = $cuentaUsuario->idCuentaPlataforma;
+                                $nombrePlataforma = 'Tienda';
+                                $nombreCuenta = $cuentaUsuario->nombreCuenta;
+                            }
+                        }
+
                         return [
                                 'idEgreso' => $details->idEgreso,
                                 'idRegistro' => $details->idRegistro,
@@ -113,7 +137,10 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                                 'usuario' => $details->Usuario->user,
                                 'observacion' => $observacionFinal,
                                 'estado' => $state,
-                                'cuenta' => $details->Publicacion ? $details->Publicacion->CuentasPlataforma->nombreCuenta : null,
+                                'idPlataforma' => $idPlataforma,
+                                'idCuentaPlataforma' => $idCuentaPlataforma,
+                                'nombrePlataforma' => $nombrePlataforma,
+                                'cuenta' => $nombreCuenta,
                                 'imagenPublicacion' => $details->Publicacion ? asset('storage/'.$details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null
                         ];
                     });
