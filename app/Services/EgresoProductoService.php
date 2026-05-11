@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Repositories\AlmacenRepositoryInterface;
@@ -18,15 +19,15 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     protected $inventarioRepository;
     protected $almacenRepository;
 
-    public function __construct(EgresoProductoRepositoryInterface $egresoRepository,
-                                RegistroProductoRepositoryInterface $registroRepository,
-                                PublicacionRepositoryInterface $publicacionRepository,
-                                HeaderServiceInterface $headerService,
-                                ProductoServiceInterface $productoRepository,
-                                InventarioRepositoryInterface $inventarioRepository,
-                                AlmacenRepositoryInterface $almacenRepository
-                                )
-    {
+    public function __construct(
+        EgresoProductoRepositoryInterface $egresoRepository,
+        RegistroProductoRepositoryInterface $registroRepository,
+        PublicacionRepositoryInterface $publicacionRepository,
+        HeaderServiceInterface $headerService,
+        ProductoServiceInterface $productoRepository,
+        InventarioRepositoryInterface $inventarioRepository,
+        AlmacenRepositoryInterface $almacenRepository
+    ) {
         $this->egresoRepository = $egresoRepository;
         $this->registroRepository = $registroRepository;
         $this->publicacionRepository = $publicacionRepository;
@@ -35,36 +36,39 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $this->inventarioRepository = $inventarioRepository;
         $this->almacenRepository = $almacenRepository;
     }
-    
-    public function getEgresosByMonth($date,$cant){
+
+    public function getEgresosByMonth($date, $cant)
+    {
         Carbon::setLocale('es');
         $carbonMonth = Carbon::createFromFormat('Y-m', $date);
         return $this->egresoRepository->getAllByMonth($carbonMonth->year, $carbonMonth->month, $cant);
     }
 
-    public function searchAjaxRegistro($serial){
-        $egresos = $this->registroRepository->searchByEgreso($serial,5);
-        $result = $egresos->map(function($details) {
-                        return [
-                            'nombreProducto' => $details->DetalleComprobante->Producto->nombreProducto,
-                            'codigoProducto' => $details->DetalleComprobante->Producto->codigoProducto,
-                            'idRegistroProducto' => $details->idRegistro,
-                            'numeroSerie' => $details->numeroSerie,
-                            'estado' => $details->estado,
-                            'modelo' => $details->DetalleComprobante->Producto->modelo,
-                            'image' => $details->DetalleComprobante->Producto->imagenProducto1,
-                            'marca' => $details->DetalleComprobante->Producto->MarcaProducto->nombreMarca
-                        ];
-                    });
+    public function searchAjaxRegistro($serial)
+    {
+        $egresos = $this->registroRepository->searchByEgreso($serial, 5);
+        $result = $egresos->map(function ($details) {
+            return [
+                'nombreProducto' => $details->DetalleComprobante->Producto->nombreProducto,
+                'codigoProducto' => $details->DetalleComprobante->Producto->codigoProducto,
+                'idRegistroProducto' => $details->idRegistro,
+                'numeroSerie' => $details->numeroSerie,
+                'estado' => $details->estado,
+                'modelo' => $details->DetalleComprobante->Producto->modelo,
+                'image' => $details->DetalleComprobante->Producto->imagenProducto1,
+                'marca' => $details->DetalleComprobante->Producto->MarcaProducto->nombreMarca
+            ];
+        });
         return $result;
     }
 
-    public function getOneAjaxRegistro($serial){
+    public function getOneAjaxRegistro($serial)
+    {
         $egreso = $this->registroRepository->getByEgreso($serial);
-    
+
         if ($egreso) {
-            $details = $egreso->DetalleComprobante->Producto; 
-            
+            $details = $egreso->DetalleComprobante->Producto;
+
             $result = [
                 'nombreProducto' => $details->nombreProducto,
                 'codigoProducto' => $details->codigoProducto,
@@ -77,95 +81,102 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             ];
             return $result;
         }
-        
+
         return [];
     }
-    
-    
-    public function searchAjaxEgreso($serie,$cant){
-        $egresos = $this->egresoRepository->getEgresoBySerial($serie,$cant);
-        $result = $egresos->map(function($details) {
-                        $devolucion = $details->Devoluciones->first();
-                        
-                        // Lógica de estado igual que en el componente lista_egresos
-                        $esDevueltoLegado = false;
-                        if (!$devolucion) {
-                            $ultimoEgresoId = $details->RegistroProducto->Egresos->max('idEgreso');
-                            if ($ultimoEgresoId > $details->idEgreso) {
-                                $esDevueltoLegado = true;
-                            }
-                        }
 
-                        $state = $devolucion ? $devolucion->tipo : ($esDevueltoLegado ? 'DEVOLUCION' : $details->RegistroProducto->estado);
-                        $observacionFinal = $devolucion ? $devolucion->motivo : $details->RegistroProducto->observacion;
 
-                        $idPlataforma = null;
-                        $idCuentaPlataforma = null;
-                        $nombrePlataforma = 'VENTA DIRECTA';
-                        $nombreCuenta = 'S/C';
+    public function searchAjaxEgreso($serie, $cant)
+    {
+        $egresos = $this->egresoRepository->getEgresoBySerial($serie, $cant);
+        $result = $egresos->map(function ($details) {
+            $devolucion = $details->Devoluciones->first();
 
-                        if ($details->Publicacion) {
-                            $idPlataforma = $details->Publicacion->CuentasPlataforma->idPlataforma;
-                            $idCuentaPlataforma = $details->Publicacion->idCuentaPlataforma;
-                            $nombrePlataforma = $details->Publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
-                            $nombreCuenta = $details->Publicacion->CuentasPlataforma->nombreCuenta;
-                        } else {
-                            // Si es venta directa, buscamos la plataforma "Tienda" (ID 7)
-                            // y la cuenta vinculada al usuario que hizo la venta
-                            $idPlataforma = 7;
-                            $cuentaUsuario = \App\Models\CuentasPlataforma::where('idPlataforma', 7)
-                                            ->where('nombreCuenta', $details->Usuario->user)
-                                            ->first();
-                            if ($cuentaUsuario) {
-                                $idCuentaPlataforma = $cuentaUsuario->idCuentaPlataforma;
-                                $nombrePlataforma = 'Tienda';
-                                $nombreCuenta = $cuentaUsuario->nombreCuenta;
-                            }
-                        }
+            // Lógica de estado igual que en el componente lista_egresos
+            $esDevueltoLegado = false;
+            if (!$devolucion) {
+                $ultimoEgresoId = $details->RegistroProducto->Egresos->max('idEgreso');
+                if ($ultimoEgresoId > $details->idEgreso) {
+                    $esDevueltoLegado = true;
+                }
+            }
 
-                        return [
-                                'idEgreso' => $details->idEgreso,
-                                'idRegistro' => $details->idRegistro,
-                                'idPublicacion' => $details->idPublicacion,
-                                'nombreProducto' => $details->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
-                                'numeroSerie' => $details->RegistroProducto->numeroSerie,
-                                'sku' => $details->Publicacion ? $details->Publicacion->sku : null,
-                                'numeroOrden' => $details->numeroOrden,
-                                'fechaCompra' => $details->fechaCompra,
-                                'fechaDespacho' => $details->fechaDespacho,
-                                'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
-                                'usuario' => $details->Usuario->user,
-                                'observacion' => $observacionFinal,
-                                'estado' => $state,
-                                'idPlataforma' => $idPlataforma,
-                                'idCuentaPlataforma' => $idCuentaPlataforma,
-                                'nombrePlataforma' => $nombrePlataforma,
-                                'cuenta' => $nombreCuenta,
-                                'imagenPublicacion' => $details->Publicacion ? asset('storage/'.$details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null
-                        ];
-                    });
+            $state = $devolucion ? $devolucion->tipo : ($esDevueltoLegado ? 'DEVOLUCION' : $details->RegistroProducto->estado);
+            $observacionFinal = $devolucion ? $devolucion->motivo : $details->RegistroProducto->observacion;
+
+            $idPlataforma = null;
+            $idCuentaPlataforma = null;
+            $nombrePlataforma = 'VENTA DIRECTA';
+            $nombreCuenta = 'S/C';
+
+            if ($details->Publicacion) {
+                $idPlataforma = $details->Publicacion->CuentasPlataforma->idPlataforma;
+                $idCuentaPlataforma = $details->Publicacion->idCuentaPlataforma;
+                $nombrePlataforma = $details->Publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
+                $nombreCuenta = $details->Publicacion->CuentasPlataforma->nombreCuenta;
+            } else {
+                // Si es venta directa, buscamos la plataforma "Tienda" (ID 7)
+                // y la cuenta vinculada al usuario que hizo la venta
+                $idPlataforma = 7;
+                $cuentaUsuario = \App\Models\CuentasPlataforma::where('idPlataforma', 7)
+                    ->where('nombreCuenta', $details->Usuario->user)
+                    ->first();
+                if ($cuentaUsuario) {
+                    $idCuentaPlataforma = $cuentaUsuario->idCuentaPlataforma;
+                    $nombrePlataforma = 'Tienda';
+                    $nombreCuenta = $cuentaUsuario->nombreCuenta;
+                }
+            }
+
+            return [
+                'idEgreso' => $details->idEgreso,
+                'idRegistro' => $details->idRegistro,
+                'idPublicacion' => $details->idPublicacion,
+                'nombreProducto' => $details->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
+                'numeroSerie' => $details->RegistroProducto->numeroSerie,
+                'sku' => $details->Publicacion ? $details->Publicacion->sku : null,
+                'numeroOrden' => $details->numeroOrden,
+                'fechaCompra' => $details->fechaCompra,
+                'fechaDespacho' => $details->fechaDespacho,
+                'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
+                'usuario' => $details->Usuario->user,
+                'observacion' => $observacionFinal,
+                'estado' => $state,
+                'idPlataforma' => $idPlataforma,
+                'idCuentaPlataforma' => $idCuentaPlataforma,
+                'nombrePlataforma' => $nombrePlataforma,
+                'cuenta' => $nombreCuenta,
+                'imagenPublicacion' => $details->Publicacion ? asset('storage/' . $details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null
+            ];
+        });
         return $result;
     }
 
-    public function getRegistro($serial){
+    public function getRegistro($serial)
+    {
         $registro = $this->registroRepository->getByEgreso($serial);
         return $registro;
     }
 
-    public function getPublicacion($sku){
-        $publicacion = $this->publicacionRepository->getOne('sku',$sku);
+    public function getPublicacion($sku)
+    {
+        $publicacion = $this->publicacionRepository->getOne('sku', $sku);
         return $publicacion;
     }
 
-    public function getAllAlmacenes(){
+    public function getAllAlmacenes()
+    {
         return $this->almacenRepository->all();
     }
 
-    public function createEgreso(array $data, array $registros){
+    public function createEgreso(array $data, array $items)
+    {
         $productos = array();
-        if(!empty($data) && !empty($registros)){
-            foreach($registros as $idRegistro){
-                $registro = $this->registroRepository->getOne('idRegistro',$idRegistro);
+        if (!empty($data) && !empty($items)) {
+            foreach ($items as $item) {
+                $idRegistro = $item['idregistro'];
+                $idPublicacion = isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '' ? $item['idpublicacion'] : null;
+                $registro = $this->registroRepository->getOne('idRegistro', $idRegistro);
 
                 // Validamos que el producto est en un estado vendible (NUEVO)
                 if ($registro->estado !== 'NUEVO') {
@@ -174,8 +185,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
                 // REGLA DE NEGOCIO: Validar historial de Devoluciones/Garantías
                 $ultimaDevolucion = \App\Models\Devolucion::where('idRegistro', $idRegistro)
-                                            ->latest('created_at')
-                                            ->first();
+                    ->latest('created_at')
+                    ->first();
 
                 if ($ultimaDevolucion) {
                     // 1. Validar aptitud para venta si fue garantía
@@ -192,29 +203,31 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         throw new \Exception("Error en serie {$registro->numeroSerie}: La fecha de venta ({$fechaVenta->format('d/m/Y')}) no puede ser anterior a la fecha de su retorno físico ({$fechaRetorno->format('d/m/Y')}).");
                     }
                 }
-                
+
                 $idAlmacen = $registro->idAlmacen;
                 $data['idRegistro'] = $idRegistro;
+                $data['idPublicacion'] = $idPublicacion;
                 $data['idUser'] = $this->headerService->getModelUser()->idUser;
                 $data['idEgreso'] = $this->getNewIdEgreso(); // Generamos un ID nuevo
-                
-                $this->egresoRepository->create($data); // Guardamos la nueva venta
-    
-                $arrayRegistro =['estado' => 'ENTREGADO',
-                                'fechaMovimiento' => now(),
-                                'observacion' => '']; // Limpiamos la observación para la nueva venta
 
-                $this->registroRepository->update($idRegistro,$arrayRegistro);
-                $productos[] = $this->updateStock($idAlmacen,$idRegistro);
-                
+                $this->egresoRepository->create($data); // Guardamos la nueva venta
+
+                $arrayRegistro = [
+                    'estado' => 'ENTREGADO',
+                    'fechaMovimiento' => now(),
+                    'observacion' => ''
+                ]; // Limpiamos la observación para la nueva venta
+
+                $this->registroRepository->update($idRegistro, $arrayRegistro);
+                $productos[] = $this->updateStock($idAlmacen, $idRegistro);
             }
-            
         }
         return $productos;
     }
 
-    public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null, $dataEgreso = []){
-        $modelEgreso = $this->egresoRepository->getOne('idEgreso',$idEgreso);
+    public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null, $dataEgreso = [])
+    {
+        $modelEgreso = $this->egresoRepository->getOne('idEgreso', $idEgreso);
         $registro = $modelEgreso->RegistroProducto;
         $tipoTransaccion = strtoupper($transaction); // 'DEVOLUCION', 'GARANTIA' o 'UPDATE'
 
@@ -241,8 +254,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         }
 
         // Si es una Devolución o Garantía, procesamos si el estado no era ya el mismo
-        if($registro->estado != $tipoTransaccion){
-            
+        if ($registro->estado != $tipoTransaccion) {
+
             // Preparamos la observación con la fecha concatenada
             $fechaFormateada = $fechaDevolucion ? \Carbon\Carbon::parse($fechaDevolucion)->format('d/m/Y') : now()->format('d/m/Y');
             $observacionFinal = $observacion . " - " . $fechaFormateada;
@@ -256,7 +269,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'plataforma' => $plataforma,
                 'motivo'     => $observacionFinal,
                 'fechaDevolucion' => $fechaDevolucion,
-                'aptoParaVenta' => ($tipoTransaccion === 'DEVOLUCION') ? true : false, 
+                'aptoParaVenta' => ($tipoTransaccion === 'DEVOLUCION') ? true : false,
             ]);
 
             // 2. Actualizamos el estado del producto físico
@@ -266,7 +279,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'observacion' => $observacionFinal // Guardamos la observación formateada
             ];
             $this->registroRepository->update($registro->idRegistro, $dataRegistro);
-            
+
             // 3. Retornamos el stock al inventario
             $idProducto = $registro->DetalleComprobante->Producto->idProducto;
             $idAlmacen = $registro->idAlmacen;
@@ -274,16 +287,18 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         }
     }
 
-    private function updateStock($idAlmacen,$idRegistro){
-        if($idAlmacen && $idRegistro){
-            $producto = $this->registroRepository->getOne('idRegistro',$idRegistro)
-                        ->DetalleComprobante->Producto;
-            $this->inventarioRepository->removeStock($producto->idProducto,$idAlmacen);
+    private function updateStock($idAlmacen, $idRegistro)
+    {
+        if ($idAlmacen && $idRegistro) {
+            $producto = $this->registroRepository->getOne('idRegistro', $idRegistro)
+                ->DetalleComprobante->Producto;
+            $this->inventarioRepository->removeStock($producto->idProducto, $idAlmacen);
             return $producto;
         }
     }
 
-    private function getNewIdEgreso(){
+    private function getNewIdEgreso()
+    {
         $lastEgreso = $this->egresoRepository->getLast();
         $id = $lastEgreso ? $lastEgreso->idEgreso : 0;
         return $id + 1;

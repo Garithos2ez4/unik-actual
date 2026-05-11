@@ -7,11 +7,11 @@ var path = window.assetUrl;
 
 const cartManager = {
     productosAgregados: 0,
-    agregarProducto: function() {
+    agregarProducto: function () {
         this.productosAgregados++;
         document.getElementById('contador-productos').textContent = `Productos Agregados: ${this.productosAgregados}`;
     },
-    eliminarProducto: function() {
+    eliminarProducto: function () {
         if (this.productosAgregados > 0) {
             this.productosAgregados--;
             document.getElementById('contador-productos').textContent = `Productos Agregados: ${this.productosAgregados}`;
@@ -131,6 +131,7 @@ function checkSku() {
 }
 
 let productosAgregados = [];
+let itemIndex = 0;
 
 function searchRegistro(inputElement) {
     let query = inputElement.value;
@@ -160,11 +161,11 @@ function searchRegistro(inputElement) {
 
 
                 data.forEach(item => {
-                    
-                    if (productosAgregados.includes(item.idRegistroProducto)){
+
+                    if (productosAgregados.includes(item.idRegistroProducto)) {
                         return;
                     }
-                    
+
                     let li = document.createElement('li');
                     li.classList.add('list-group-item', 'pe-0');
                     li.classList.add('hover-sistema-uno', 'text-truncate');
@@ -197,10 +198,10 @@ function searchRegistro(inputElement) {
                         inputElement.value = item.numeroSerie;
                         document.getElementById('hidden-product-serial-number').value = item
                             .idRegistroProducto;
-                        suggestions.innerHTML =''; 
+                        suggestions.innerHTML = '';
                         hiddenBody.style.display = 'none';
                         inputElement.style.zIndex = '1';
-                        createItem(item,query);
+                        createItem(item, query);
                         validateSubmit();
                     });
 
@@ -217,7 +218,7 @@ function searchRegistro(inputElement) {
     }
 }
 
-function createItem(object, query){
+function createItem(object, query) {
     if (object == null || Object.keys(object).length == 0) {
         alertBootstrap('Producto ' + query + ' no encontrado', 'warning');
         return;
@@ -230,8 +231,13 @@ function createItem(object, query){
 
     productosAgregados.push(object.idRegistroProducto);
 
-    let divRowItem = createDiv(['row','pt-2','pb-2','border'], null);
-    let inputHidden = createInput(['body-form','hidden-form'], null, 'hidden', object.idRegistroProducto, 'idregistros[]');
+    let selectedSkuId = document.getElementById('hidden-publicacion-sku').value;
+    let currentIndex = itemIndex++;
+
+    let divRowItem = createDiv(['row', 'pt-2', 'pb-2', 'border'], null);
+    let inputHiddenRegistro = createInput(['body-form', 'hidden-form'], null, 'hidden', object.idRegistroProducto, `items[${currentIndex}][idregistro]`);
+    let inputHiddenSku = createInput([], null, 'hidden', selectedSkuId, `items[${currentIndex}][idpublicacion]`);
+    
     let divColImg = createDiv(['col-1'], null);
     let divColContent = createDiv(['col-11'], null);
     let divRowContent = createDiv(['row'], null);
@@ -276,17 +282,23 @@ function createItem(object, query){
     divColSerial.innerHTML = 'SN: ' + object.numeroSerie;
 
     let divColEstado = createDiv(['col-2', 'text-end'], null);
-
     divColEstado.innerHTML = object.estado;
+
+    let selectedSkuText = document.getElementById('input-sku-egreso').value;
+    let divColSku = createDiv(['col-12', 'mt-1', 'text-primary'], null);
+    divColSku.innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + (selectedSkuText || 'Ninguno') + '</strong></small>';
+
     divRowContent.appendChild(divColTitle);
     divRowContent.appendChild(divColBtnDelete);
     divRowContent.appendChild(divColModelo);
     divRowContent.appendChild(divColCodigo);
-    divRowContent.appendChild(divColSerial); 
+    divRowContent.appendChild(divColSerial);
     divRowContent.appendChild(divColEstado);
+    divRowContent.appendChild(divColSku);
     divColContent.appendChild(divRowContent);
     divRowItem.appendChild(divColImg);
-    divRowItem.appendChild(inputHidden);
+    divRowItem.appendChild(inputHiddenRegistro);
+    divRowItem.appendChild(inputHiddenSku);
     divRowItem.appendChild(divColContent);
     itemEgresoDiv.insertBefore(divRowItem, itemEgresoDiv.firstChild);
 
@@ -297,7 +309,7 @@ function createItem(object, query){
 function validateSerialById(id) {
     let inputHidden = document.querySelectorAll('.hidden-form');
 
-    return Array.from(inputHidden).some(function(x) {
+    return Array.from(inputHidden).some(function (x) {
         return x.value == id;
     });
 }
@@ -308,20 +320,20 @@ function validateSubmit() {
     let inputsCab = document.querySelectorAll('.cab-form');
     let inputBody = document.querySelectorAll('.body-form');
 
-    inputsCab.forEach(function(x) {
+    inputsCab.forEach(function (x) {
         if (x.value === '') {
-            validate = false; 
+            validate = false;
         }
     });
 
-    if(inputBody.length < 1){
-        validate = false; 
+    if (inputBody.length < 1) {
+        validate = false;
     }
 
-    btnSubmitCreateEgreso.disabled = !validate; 
+    btnSubmitCreateEgreso.disabled = !validate;
 }
 
-function scanOperations(){
+function scanOperations() {
     searchCodeToController(getSerial());
 }
 
@@ -332,7 +344,7 @@ function searchCodeToController(query) {
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
             data = JSON.parse(xhr.responseText);
-            createItem(data,query);
+            createItem(data, query);
         }
     };
     xhr.send();
@@ -343,9 +355,9 @@ function searchCodeToController(query) {
 document.getElementById('check-sku-egreso').addEventListener('change', checkSku);
 document.getElementById('check-sku-egreso').addEventListener('change', validateSubmit);
 
-document.addEventListener('DOMContentLoaded',function(){
-    document.querySelectorAll('input').forEach(function(x){
-        x.addEventListener('input',validateSubmit);
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input').forEach(function (x) {
+        x.addEventListener('input', validateSubmit);
     });
     validateSubmit();
 })

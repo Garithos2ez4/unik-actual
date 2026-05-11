@@ -37,9 +37,9 @@ allInputsEgreso.forEach(function (x) {
 });
 
 
-function updateDataRowSerial(object){
+function updateDataRowSerial(object) {
     let imagen = rowSerialExists.querySelector('img');
-    let title =  rowSerialExists.querySelector('h6');
+    let title = rowSerialExists.querySelector('h6');
     let modelo = rowSerialExists.querySelector('span');
     let codigo = rowSerialExists.querySelector('.cod');
     let estado = rowSerialExists.querySelector('p');
@@ -87,25 +87,25 @@ function searchEgreso(inputElement) {
 
                     let colSerie = document.createElement('div');
                     colSerie.classList.add('col-md-12', 'd-flex', 'justify-content-between', 'align-items-center');
-                    
+
                     let spanSerie = document.createElement('span');
                     spanSerie.textContent = item.numeroSerie;
-                    
+
                     let spanEstado = document.createElement('span');
                     spanEstado.classList.add('badge');
                     spanEstado.style.fontSize = '10px';
-                    
+
                     // Colores según estado
                     if (item.estado === 'ENTREGADO') spanEstado.classList.add('bg-success');
                     else if (item.estado === 'DEVOLUCION') spanEstado.classList.add('bg-warning', 'text-dark');
                     else if (item.estado === 'GARANTIA') spanEstado.classList.add('bg-danger');
                     else spanEstado.classList.add('bg-secondary');
-                    
+
                     spanEstado.textContent = item.estado;
-                    
+
                     colSerie.appendChild(spanSerie);
                     colSerie.appendChild(spanEstado);
-                    
+
                     let colProducto = document.createElement('div');
                     colProducto.classList.add('col-md-12');
                     let smallProducto = document.createElement('em');
@@ -119,12 +119,12 @@ function searchEgreso(inputElement) {
 
                     li.addEventListener('click', function () {
                         inputElement.value = item.numeroSerie;
-                        suggestions.innerHTML =''; 
+                        suggestions.innerHTML = '';
                         viewModalEgreso(item);
                     });
 
                     suggestions.appendChild(li);
-                    
+
                 });
             }
         };
@@ -154,7 +154,7 @@ document.getElementById('month').addEventListener('keydown', function (event) {
     }
 });
 
-function viewModalEgreso(json){
+function viewModalEgreso(json) {
     let modalEgreso = new bootstrap.Modal(document.getElementById('detailEgresoModal'));
     let hiddenIdEgreso = document.getElementById('modal-egreso-id');
     let labelTitulo = document.getElementById('modal-egreso-titulo');
@@ -176,11 +176,11 @@ function viewModalEgreso(json){
     let containerDevolucion = document.getElementById('container-campos-devolucion');
     let inputFechaDevolucion = document.getElementById('modal-egreso-fecha-devolucion');
 
-    if(json.estado == 'DEVOLUCION' || json.estado == 'GARANTIA'){
+    if (json.estado == 'DEVOLUCION' || json.estado == 'GARANTIA') {
         btnDevolucionEgreso.style.display = 'none';
         containerDevolucion.style.display = 'none';
-        inputFechaDevolucion.required = false; 
-    }else{
+        inputFechaDevolucion.required = false;
+    } else {
         btnDevolucionEgreso.style.display = 'block';
         containerDevolucion.style.display = 'block';
         inputFechaDevolucion.required = true;
@@ -192,14 +192,14 @@ function viewModalEgreso(json){
     } else {
         document.getElementById('check-fallo-entrega-egreso').checked = false;
     }
-    
+
     inputFechaDevolucion.value = ''; // Limpiar fecha cada vez que se abre para venta activa
 
-    if(json.estado == 'ENTREGADO'){
-        divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Compra:</strong> '+stringDate(json.fechaCompra)+'</small></p>'+
-                            '<p class="mt-0 mb-0"><small><strong>Fecha Despacho:</strong> '+stringDate(json.fechaDespacho)+'</small></p>';
-    }else{
-        divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Devolución:</strong> '+stringDate(json.fechaMovimiento)+'</small></p>';
+    if (json.estado == 'ENTREGADO') {
+        divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Compra:</strong> ' + stringDate(json.fechaCompra) + '</small></p>' +
+            '<p class="mt-0 mb-0"><small><strong>Fecha Despacho:</strong> ' + stringDate(json.fechaDespacho) + '</small></p>';
+    } else {
+        divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Devolución:</strong> ' + stringDate(json.fechaMovimiento) + '</small></p>';
     }
 
     // Poblar campos de edición
@@ -212,7 +212,7 @@ function viewModalEgreso(json){
     const containerFechas = document.getElementById('container-edit-fechas');
     const containerPublicacion = document.getElementById('container-edit-publicacion');
     const btnEdit = document.getElementById('btn-edit-egreso');
-    
+
     containerFechas.classList.add('d-none');
     containerPublicacion.classList.add('d-none');
     divFecha.classList.remove('d-none');
@@ -221,33 +221,33 @@ function viewModalEgreso(json){
         btnEdit.innerHTML = '<i class="bi bi-pencil-fill"></i>';
     }
 
-    if(json.cuenta == null){
+    if (json.cuenta == null) {
         divPublicacion.innerHTML = '<label class="fw-bold">Publicacion:</label>' + '<p class="text-secondary mb-1">Sin publicación</p>';
-    }else{
-        divPublicacion.innerHTML = '<label class="fw-bold">Publicacion:</label>'+
-                                    '<div class="row border rounded-3 ms-1 me-1 pt-2">'+
-                                        '<div class="col-9">' +
-                                            '<h6>'+json.cuenta+'</h6>' +
-                                        '</div>'+
-                                        '<div class="col-3">'+
-                                            '<img src="'+ json.imagenPublicacion +'" alt="imagen" class="w-100 rounded-3">' +
-                                        '</div>'+
-                                        '<div class="col-6">'+
-                                            '<label class="text-secondary"><small>sku:</small></label>'+
-                                            '<p class="mb-1 pt-0"><small>'+ json.sku +'</small></p>'+
-                                        '</div>'+
-                                        '<div class="col-6 text-end">'+
-                                            '<label class="text-secondary"><small>Nro de Orden:</small></label>'+
-                                            '<p class="mb-1 pt-0"><small>'+json.numeroOrden +'</small></p>'+
-                                        '</div>'+
-                                    '</div>';
+    } else {
+        divPublicacion.innerHTML = '<label class="fw-bold">Publicacion:</label>' +
+            '<div class="row border rounded-3 ms-1 me-1 pt-2">' +
+            '<div class="col-9">' +
+            '<h6>' + json.cuenta + '</h6>' +
+            '</div>' +
+            '<div class="col-3">' +
+            '<img src="' + json.imagenPublicacion + '" alt="imagen" class="w-100 rounded-3">' +
+            '</div>' +
+            '<div class="col-6">' +
+            '<label class="text-secondary"><small>sku:</small></label>' +
+            '<p class="mb-1 pt-0"><small>' + json.sku + '</small></p>' +
+            '</div>' +
+            '<div class="col-6 text-end">' +
+            '<label class="text-secondary"><small>Nro de Orden:</small></label>' +
+            '<p class="mb-1 pt-0"><small>' + json.numeroOrden + '</small></p>' +
+            '</div>' +
+            '</div>';
     }
 
     modalEgreso.show();
 }
 
-function formDetailEgreso(transaction){
-    let formEgreso =  document.getElementById('form-detail-egreso');
+function formDetailEgreso(transaction) {
+    let formEgreso = document.getElementById('form-detail-egreso');
     let hiddenTransaction = document.getElementById('modal-egreso-transaccion');
 
     if (transaction === 'devolucion' && !formEgreso.checkValidity()) {
@@ -259,23 +259,23 @@ function formDetailEgreso(transaction){
     formEgreso.submit();
 }
 
-document.getElementById('check-fallo-entrega-egreso').addEventListener('change', function() {
+document.getElementById('check-fallo-entrega-egreso').addEventListener('change', function () {
     let textarea = document.getElementById('modal-egreso-observacion');
-    if(this.checked) {
+    if (this.checked) {
         textarea.value = (textarea.value.trim() === "") ? "Fallo de entrega" : textarea.value + " - Fallo de entrega";
     } else {
         textarea.value = textarea.value.replace(" - Fallo de entrega", "").replace("Fallo de entrega", "").trim();
     }
 });
 
-function stringDate(date){
+function stringDate(date) {
     let fecha = new Date(date);
     let day = (fecha.getUTCDate()).toString().padStart(2, '0');
     let month = (fecha.getUTCMonth() + 1).toString().padStart(2, '0');
     let year = fecha.getUTCFullYear();
 
     return `${day}/${month}/${year}`;
-} 
+}
 
 function toggleEditEgreso() {
     const containerFechas = document.getElementById('container-edit-fechas');
