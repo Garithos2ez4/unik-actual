@@ -163,4 +163,35 @@ class EgresoController extends Controller
 
         return response()->json($results);
     }
+
+    public function importarExcel(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        // Verificar acceso
+        $tieneAcceso = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 9) {
+                $tieneAcceso = true;
+                break;
+            }
+        }
+
+        if (!$tieneAcceso) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        $request->validate([
+            'archivo_excel' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\EgresosImport($this->egresoService), $request->file('archivo_excel'));
+            $this->headerService->sendFlashAlerts('Egresos masivos registrados', 'El archivo Excel se ha procesado exitosamente.', 'success', 'btn-success');
+        } catch (\Exception $e) {
+            $this->headerService->sendFlashAlerts('Error al importar', 'Ocurrió un error: ' . $e->getMessage(), 'error', 'btn-danger');
+        }
+
+        return back();
+    }
 }

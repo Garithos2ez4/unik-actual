@@ -49,6 +49,20 @@ function searchPublicacion(inputElement) {
                 inputElement.style.zIndex = '1000';
                 suggestions.innerHTML = '';
 
+                // AUTO-SELECT si hay una coincidencia exacta (ideal para escáneres)
+                let exactMatch = data.find(item => item.sku.toUpperCase() === query.toUpperCase());
+                if (exactMatch) {
+                    document.getElementById('hidden-publicacion-sku').value = exactMatch.idPublicacion;
+                    validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
+                    validateIconSku.classList.add('bi-check-circle', 'text-success');
+                    applySkuToUnassignedItems(exactMatch.idPublicacion, exactMatch.sku);
+                    validateSubmit();
+                } else {
+                    document.getElementById('hidden-publicacion-sku').value = "";
+                    validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
+                    validateIconSku.classList.remove('bi-check-circle', 'text-success');
+                }
+
                 data.forEach(item => {
                     let li = document.createElement('li');
                     li.classList.add('list-group-item', 'pe-0');
@@ -87,6 +101,7 @@ function searchPublicacion(inputElement) {
                         suggestions.innerHTML = ''; // Limpiar sugerencias después de seleccionar una
                         validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
                         validateIconSku.classList.add('bi-check-circle', 'text-success');
+                        applySkuToUnassignedItems(item.idPublicacion, item.sku);
                         validateSubmit();
                     });
 
@@ -119,6 +134,7 @@ function checkSku() {
         hiddenEgreso.value = 'NULO';
         validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
         validateIconSku.classList.add('bi-check-circle', 'text-success');
+        applySkuToUnassignedItems('NULO', 'No aplica');
     } else {
         inputEgreso.disabled = false;
         inputEgreso.value = '';
@@ -232,12 +248,13 @@ function createItem(object, query) {
     productosAgregados.push(object.idRegistroProducto);
 
     let selectedSkuId = document.getElementById('hidden-publicacion-sku').value;
+
     let currentIndex = itemIndex++;
 
     let divRowItem = createDiv(['row', 'pt-2', 'pb-2', 'border'], null);
     let inputHiddenRegistro = createInput(['body-form', 'hidden-form'], null, 'hidden', object.idRegistroProducto, `items[${currentIndex}][idregistro]`);
-    let inputHiddenSku = createInput([], null, 'hidden', selectedSkuId, `items[${currentIndex}][idpublicacion]`);
-    
+    let inputHiddenSku = createInput(['hidden-sku-item'], null, 'hidden', selectedSkuId, `items[${currentIndex}][idpublicacion]`);
+
     let divColImg = createDiv(['col-1'], null);
     let divColContent = createDiv(['col-11'], null);
     let divRowContent = createDiv(['row'], null);
@@ -260,13 +277,11 @@ function createItem(object, query) {
         'javascript:void(0)',
         [
             () => {
-                // Aquí se elimina el producto y se actualiza el contador
-                divRowItem.remove(); // Elimina el producto del DOM
-                cartManager.eliminarProducto(); // Resta del contador
-                validateSubmit(); // Validamos el estado del formulario
+                divRowItem.remove();
+                cartManager.eliminarProducto();
+                validateSubmit();
 
                 productosAgregados = productosAgregados.filter(id => id !== object.idRegistroProducto);
-
             }
         ]
     );
@@ -285,8 +300,9 @@ function createItem(object, query) {
     divColEstado.innerHTML = object.estado;
 
     let selectedSkuText = document.getElementById('input-sku-egreso').value;
-    let divColSku = createDiv(['col-12', 'mt-1', 'text-primary'], null);
-    divColSku.innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + (selectedSkuText || 'Ninguno') + '</strong></small>';
+    let textColorClass = selectedSkuId ? 'text-success' : 'text-danger';
+    let divColSku = createDiv(['col-12', 'mt-1', 'sku-text-display', textColorClass], null);
+    divColSku.innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + (selectedSkuText || 'FALTA ASIGNAR SKU') + '</strong></small>';
 
     divRowContent.appendChild(divColTitle);
     divRowContent.appendChild(divColBtnDelete);
@@ -302,8 +318,21 @@ function createItem(object, query) {
     divRowItem.appendChild(divColContent);
     itemEgresoDiv.insertBefore(divRowItem, itemEgresoDiv.firstChild);
 
-
     cartManager.agregarProducto();
+}
+
+function applySkuToUnassignedItems(skuId, skuText) {
+    let hiddenSkus = document.querySelectorAll('.hidden-sku-item');
+    let textDisplays = document.querySelectorAll('.sku-text-display');
+
+    hiddenSkus.forEach((hiddenInput, index) => {
+        if (!hiddenInput.value) { // Solo actualiza los que no tienen SKU asignado
+            hiddenInput.value = skuId;
+            textDisplays[index].innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + skuText + '</strong></small>';
+            textDisplays[index].classList.remove('text-danger');
+            textDisplays[index].classList.add('text-success');
+        }
+    });
 }
 
 function validateSerialById(id) {

@@ -97,6 +97,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
+    Route::post('/egresos/importar', [EgresoController::class, 'importarExcel'])->name('egresos.importar');
 
     Route::get('/garantia/creategarantia',[GarantiaController::class,'create'])->name('creategarantia');
     Route::get('/garantias/{date}',[GarantiaController::class,'index'])->name('garantias');
