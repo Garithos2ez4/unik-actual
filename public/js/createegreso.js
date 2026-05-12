@@ -388,5 +388,34 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input').forEach(function (x) {
         x.addEventListener('input', validateSubmit);
     });
+
+    // Validaciones de fecha
+    const inputFechaPedido = document.getElementById('fechapedido');
+    const inputFechaDespacho = document.getElementById('fechadespacho');
+
+    if (inputFechaPedido && inputFechaDespacho) {
+        inputFechaPedido.addEventListener('change', function() {
+            // No permitir fechas anteriores a 2024
+            if (this.value && this.value < '2024-01-01') {
+                alertBootstrap('La fecha de pedido no puede ser anterior al año 2024', 'warning');
+                this.value = '2024-01-01';
+            }
+            // La fecha de despacho no puede ser anterior a la de pedido
+            inputFechaDespacho.min = this.value;
+            if (inputFechaDespacho.value && inputFechaDespacho.value < this.value) {
+                inputFechaDespacho.value = this.value;
+            }
+            validateSubmit();
+        });
+
+        inputFechaDespacho.addEventListener('change', function() {
+            if (inputFechaPedido.value && this.value < inputFechaPedido.value) {
+                alertBootstrap('La fecha de despacho no puede ser anterior a la fecha de pedido', 'warning');
+                this.value = inputFechaPedido.value;
+            }
+            validateSubmit();
+        });
+    }
+
     validateSubmit();
 })

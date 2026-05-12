@@ -75,11 +75,12 @@
             </div>
             <div class="col-2 mb-2">
                 <label>Fecha de pedido</label>
-                <input type="date" name="fechapedido" class="form-control input-egreso cab-form" required>
+                <input type="date" name="fechapedido" id="fechapedido" class="form-control input-egreso cab-form" 
+                    min="2024-01-01" max="{{ date('Y-m-d') }}" required>
             </div>
             <div class="col-2 mb-2">
                 <label>Fecha de despacho</label>
-                <input type="date" name="fechadespacho" class="form-control input-egreso cab-form" required>
+                <input type="date" name="fechadespacho" id="fechadespacho" class="form-control input-egreso cab-form" required>
             </div>
         </div>
         <br>
@@ -96,9 +97,26 @@
             </div>
         </div>
     </form>
+
+    <div class="card bg-light mt-4">
+        <div class="card-body">
+            <h5 class="card-title text-success"><i class="bi bi-file-earmark-excel"></i> Carga Masiva para Atrasos</h5>
+            <form action="{{ route('egresos.importar') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="input-group">
+                    <input type="file" name="archivo_excel" class="form-control" accept=".xlsx, .xls, .csv" required>
+                    <button class="btn btn-success" type="submit">Subir e Importar</button>
+                    <a href="{{ route('egresos.formato') }}" class="btn btn-outline-success" title="Descargar Formato Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Formato
+                    </a>
+                </div>
+                <small class="text-muted">Nota: El Excel debe tener la misma cabecera que muestras en tu imagen (Columnas: Fecha, Movimiento, SERIES, Orden, SKU). Solo se procesarán filas donde Movimiento sea 'Egreso'.</small>
+            </form>
+        </div>
+    </div>
 </div>
 <script>
     window.assetUrl = "{{ asset('storage/') }}";
 </script>
-<script src="{{asset('js/createegreso.js')}}?v=1.1"></script>
+<script src="{{asset('js/createegreso.js')}}?v=1.6"></script>
 @endsection
