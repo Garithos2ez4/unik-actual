@@ -26,7 +26,7 @@ class EgresosImport implements ToCollection, WithHeadingRow
 
         foreach ($rows as $index => $row) {
             $rowArray = $row->toArray();
-            
+
             // Debug inicial para la primera fila de datos
             if ($index === 0) {
                 Log::info("Fila 0 (Data) detectada: " . json_encode($rowArray));
@@ -34,7 +34,7 @@ class EgresosImport implements ToCollection, WithHeadingRow
 
             // Intentamos obtener valores por nombre de columna (slug) o por índice físico
             // Basado en el formato: A=0(Fecha), E=4(Movimiento), H=7(SERIES), I=8(Orden), J=9(SKU)
-            
+
             $movimiento  = $this->getVal($rowArray, 'movimiento', 4);
             $numeroSerie = $this->getVal($rowArray, 'series', 7);
             $numeroOrden = $this->getVal($rowArray, 'orden', 8);
@@ -59,10 +59,10 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 continue; // Si no es egreso, ignoramos silenciosamente
             }
 
-            if (empty($numeroOrden) || empty($numeroSerie)) {
-                Log::warning("Fila $index saltada: Faltan datos críticos (Serie: '$numeroSerie', Orden: '$numeroOrden')");
+            if (empty($numeroSerie)) {
                 continue;
             }
+
 
             $fechaDespacho = $this->transformDate($fecha);
             $registro = RegistroProducto::where('numeroSerie', $numeroSerie)->first();
@@ -90,19 +90,18 @@ class EgresosImport implements ToCollection, WithHeadingRow
                             'idpublicacion' => $idPublicacion
                         ]
                     ];
-                    
+
                     $arrayEgreso = [
                         'numeroOrden' => $numeroOrden,
                         'fechaCompra' => $fechaDespacho,
                         'fechaDespacho' => $fechaDespacho
                     ];
-                    
+
                     $this->egresoService->createEgreso($arrayEgreso, $items);
                     Log::info("Fila $index: Egreso exitoso para Serie $numeroSerie");
                 } catch (\Exception $e) {
                     Log::error("Fila $index: Error al procesar serie {$numeroSerie}: " . $e->getMessage());
                 }
-
             } else {
                 Log::warning("Fila $index saltada: Serie no encontrada en base de datos: " . $numeroSerie);
             }
@@ -122,7 +121,7 @@ class EgresosImport implements ToCollection, WithHeadingRow
     private function transformDate($value, $format = 'Y-m-d')
     {
         if (empty($value)) return now()->format($format);
-        
+
         try {
             if (is_numeric($value)) {
                 return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value))->format($format);

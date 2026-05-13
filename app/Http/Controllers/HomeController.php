@@ -54,6 +54,15 @@ class HomeController extends Controller
             ->where('fechaMaxRespuesta', '<=', now()->addDays(3))
             ->count();
 
+        // Ranking de 5 productos con más stock (Suma de todos los almacenes)
+        $productosMostStock = \App\Models\Producto::query()
+            ->join('Inventario', 'Inventario.idProducto', '=', 'Producto.idProducto')
+            ->select('Producto.*', \DB::raw('SUM(Inventario.stock) as total_stock'))
+            ->groupBy('Producto.idProducto')
+            ->orderBy('total_stock', 'desc')
+            ->take(5)
+            ->get();
+
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -76,7 +85,8 @@ class HomeController extends Controller
                                                     'productosMostSold' => $productosMostSold,
                                                     'productosMostSoldMonth' => $productosMostSoldMonth,
                                                     'publicacionesMostSold' => $publicacionesMostSold,
-                                                    'reclamosUrgentes' => $reclamosUrgentes
+                                                    'reclamosUrgentes' => $reclamosUrgentes,
+                                                    'productosMostStock' => $productosMostStock
                                                 ])->render(),
             ]);
         }
@@ -91,7 +101,8 @@ class HomeController extends Controller
                                     'productosMostSold' => $productosMostSold,
                                     'productosMostSoldMonth' => $productosMostSoldMonth,
                                     'publicacionesMostSold' => $publicacionesMostSold,
-                                    'reclamosUrgentes' => $reclamosUrgentes
+                                    'reclamosUrgentes' => $reclamosUrgentes,
+                                    'productosMostStock' => $productosMostStock
                                 ]);
     }
 

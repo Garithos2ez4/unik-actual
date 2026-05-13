@@ -237,6 +237,37 @@ $gradientString = implode(', ', $gradientParts);
                         </div>
                     </div>
                 </div>
+                <div class="col-md-12 mt-3">
+                    <div class="row border shadow rounded-3 pt-2 pb-2">
+                        <div class="col-md-12">
+                            <h4 class="mb-0">Top 5 Existencias</h4>
+                            <small class="text-secondary">Productos con más stock total</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <ul class="list-group list-group-flush">
+                                @foreach ($productosMostStock as $index => $topStock)
+                                <li class="list-group-item px-1">
+                                    <div class="row align-items-center">
+                                        <div class="col-2 text-center">
+                                            <span class="badge rounded-pill {{ $index === 0 ? 'bg-success' : ($index === 1 ? 'bg-info text-dark' : 'bg-secondary') }}" style="font-size: 0.9rem;">
+                                                #{{ $index + 1 }}
+                                            </span>
+                                        </div>
+                                        <div class="col-6 px-0">
+                                            <strong class="d-block text-truncate" style="font-size: 0.85rem;" title="{{ $topStock->nombreProducto }}">{{ $topStock->nombreProducto }}</strong>
+                                            <small class="text-secondary text-truncate d-block" style="max-width: 100%;">{{ $topStock->codigoProducto }}</small>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <span class="text-success fw-bold">{{ (int)$topStock->total_stock }}</span>
+                                            <small class="d-block text-secondary">uds.</small>
+                                        </div>
+                                    </div>
+                                </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

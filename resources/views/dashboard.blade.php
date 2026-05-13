@@ -4,7 +4,7 @@
 
 @section('content')
     <div id="dashboard-content" >
-        <x-dashboard_content :registros="$registros" :inventario="$inventario" :stock="$stock" :colors="$colors" :productos="$productos" :stockMin="$stockMin" :productosMostSold="$productosMostSold" :productosMostSoldMonth="$productosMostSoldMonth" :publicacionesMostSold="$publicacionesMostSold" :reclamosUrgentes="$reclamosUrgentes"/>
+        <x-dashboard_content :registros="$registros" :inventario="$inventario" :stock="$stock" :colors="$colors" :productos="$productos" :stockMin="$stockMin" :productosMostSold="$productosMostSold" :productosMostSoldMonth="$productosMostSoldMonth" :publicacionesMostSold="$publicacionesMostSold" :reclamosUrgentes="$reclamosUrgentes" :productosMostStock="$productosMostStock"/>
     </div>
     <input type="hidden" id="dashboardurl" value="{{route('dashboard')}}">
     <script src="{{asset('js/dashboard.js')}}"></script>
