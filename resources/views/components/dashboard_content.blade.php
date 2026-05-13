@@ -12,6 +12,19 @@ $gradientString = implode(', ', $gradientParts);
 @endphp
 
 <div class="container">
+    @if(isset($reclamosUrgentes) && $reclamosUrgentes > 0)
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-danger d-flex align-items-center shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-danger"></i>
+                <div>
+                    <h5 class="alert-heading mb-1 fw-bold text-danger">¡Atención! Tienes reclamos por vencer</h5>
+                    <p class="mb-0 text-dark">Hay <strong>{{ $reclamosUrgentes }}</strong> reclamo(s) de devolución/garantía con 3 días o menos para responder. <a href="{{ route('reclamos.index') }}" class="fw-bold text-danger text-decoration-underline">Ir a Reclamos</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
     <br>
     <div class="row">
         <div class="col-md-12 mt-3">

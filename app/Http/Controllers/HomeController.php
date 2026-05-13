@@ -50,6 +50,10 @@ class HomeController extends Controller
             ->take(3)
             ->get();
 
+        $reclamosUrgentes = \App\Models\ReclamoPlataforma::where('estadoGeneral', 'ABIERTO')
+            ->where('fechaMaxRespuesta', '<=', now()->addDays(3))
+            ->count();
+
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -71,7 +75,8 @@ class HomeController extends Controller
                                                     'stockMin' => $productosStockMin,
                                                     'productosMostSold' => $productosMostSold,
                                                     'productosMostSoldMonth' => $productosMostSoldMonth,
-                                                    'publicacionesMostSold' => $publicacionesMostSold
+                                                    'publicacionesMostSold' => $publicacionesMostSold,
+                                                    'reclamosUrgentes' => $reclamosUrgentes
                                                 ])->render(),
             ]);
         }
@@ -85,7 +90,8 @@ class HomeController extends Controller
                                     'stockMin' => $productosStockMin,
                                     'productosMostSold' => $productosMostSold,
                                     'productosMostSoldMonth' => $productosMostSoldMonth,
-                                    'publicacionesMostSold' => $publicacionesMostSold
+                                    'publicacionesMostSold' => $publicacionesMostSold,
+                                    'reclamosUrgentes' => $reclamosUrgentes
                                 ]);
     }
 

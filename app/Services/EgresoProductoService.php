@@ -214,7 +214,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
                 $arrayRegistro = [
                     'estado' => 'ENTREGADO',
-                    'fechaMovimiento' => now(),
+                    'fechaMovimiento' => $data['fechaCompra'],
                     'observacion' => ''
                 ]; // Limpiamos la observación para la nueva venta
 
