@@ -59,51 +59,104 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 continue; // Si no es egreso, ignoramos silenciosamente
             }
 
+            $cantidad       = $this->getVal($rowArray, 'un', 3) ?? 1;
+            $nombreProducto = $this->getVal($rowArray, 'producto', 2);
+            $almacenNombre  = $this->getVal($rowArray, 'almacen', 5);
+            $fechaDespacho  = $this->transformDate($fecha);
+
+            // REQUERIMIENTO: Si NO hay serie, buscar por Nombre y Almacén
             if (empty($numeroSerie)) {
-                continue;
-            }
-
-
-            $fechaDespacho = $this->transformDate($fecha);
-            $registro = RegistroProducto::where('numeroSerie', $numeroSerie)->first();
-
-            if ($registro) {
-                // Solo egresamos si está NUEVO
-                if ($registro->estado !== 'NUEVO') {
-                    Log::warning("Fila $index saltada: La serie $numeroSerie ya no está NUEVA (Estado actual: {$registro->estado})");
+                if (empty($nombreProducto)) {
+                    Log::warning("Fila $index saltada: No tiene Serie ni Nombre de Producto.");
                     continue;
                 }
 
-                // Buscamos la publicación por SKU si la hay
-                $idPublicacion = null;
-                if (!empty($sku) && strtolower($sku) !== 'no aplica') {
-                    $publicacion = Publicacion::where('sku', $sku)->first();
-                    if ($publicacion) {
-                        $idPublicacion = $publicacion->idPublicacion;
+                // Mapeo de almacén (ej: "De Tienda" -> "Tienda")
+                $almacenBusqueda = str_replace(['De ', 'de '], '', $almacenNombre);
+                $almacen = \App\Models\Almacen::where('descripcion', 'LIKE', "%$almacenBusqueda%")->first();
+                $idAlmacen = $almacen ? $almacen->idAlmacen : null;
+
+                // Buscar registros disponibles (NUEVO) por NOMBRE o MODELO
+                $query = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                    ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+                    ->where(function($q) use ($nombreProducto) {
+                        $q->where('Producto.nombreProducto', $nombreProducto)
+                          ->orWhere('Producto.modelo', $nombreProducto);
+                    })
+                    ->where('RegistroProducto.estado', 'NUEVO');
+
+                if ($idAlmacen) {
+                    $query->where('RegistroProducto.idAlmacen', $idAlmacen);
+                }
+
+                $registrosDisponibles = $query->select('RegistroProducto.*')
+                    ->take($cantidad)
+                    ->get();
+
+                if ($registrosDisponibles->count() < $cantidad) {
+                    Log::error("Fila $index: Stock insuficiente para '$nombreProducto'. Pedidos: $cantidad, Encontrados: " . $registrosDisponibles->count());
+                    // Procesamos lo que haya disponible si el usuario lo permite, o saltamos. 
+                    // Por seguridad, procesaremos solo lo que hay.
+                }
+
+                if ($registrosDisponibles->isEmpty()) {
+                    Log::warning("Fila $index: No se encontró stock para '$nombreProducto' en el almacén '$almacenNombre'");
+                    continue;
+                }
+
+                $procesados = 0;
+                foreach ($registrosDisponibles as $registro) {
+                    try {
+                        $idPublicacion = null;
+                        if (!empty($sku) && strtolower($sku) !== 'no aplica') {
+                            $publicacion = Publicacion::where('sku', $sku)->first();
+                            if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
+                        }
+
+                        $items = [['idregistro' => $registro->idRegistro, 'idpublicacion' => $idPublicacion]];
+                        $arrayEgreso = ['numeroOrden' => $numeroOrden, 'fechaCompra' => $fechaDespacho, 'fechaDespacho' => $fechaDespacho];
+                        
+                        $this->egresoService->createEgreso($arrayEgreso, $items);
+                        $procesados++;
+                    } catch (\Exception $e) {
+                        Log::error("Fila $index: Error egresando unidad de $nombreProducto: " . $e->getMessage());
                     }
                 }
+                Log::info("Fila $index: ÉXITO. Producto: '$nombreProducto', Cantidad egresada: $procesados / $cantidad (Almacén: $almacenNombre)");
+                continue; // Pasar a la siguiente fila del Excel
+            }
 
-                try {
-                    $items = [
-                        [
-                            'idregistro' => $registro->idRegistro,
-                            'idpublicacion' => $idPublicacion
-                        ]
-                    ];
+            // REQUERIMIENTO: Si HAY serie, procesar individualmente (soporta comas)
+            $seriesArray = explode(',', $numeroSerie);
+            foreach ($seriesArray as $serieIndividual) {
+                $serieIndividual = trim($serieIndividual);
+                if (empty($serieIndividual)) continue;
 
-                    $arrayEgreso = [
-                        'numeroOrden' => $numeroOrden,
-                        'fechaCompra' => $fechaDespacho,
-                        'fechaDespacho' => $fechaDespacho
-                    ];
+                $registro = RegistroProducto::where('numeroSerie', $serieIndividual)->first();
 
-                    $this->egresoService->createEgreso($arrayEgreso, $items);
-                    Log::info("Fila $index: Egreso exitoso para Serie $numeroSerie");
-                } catch (\Exception $e) {
-                    Log::error("Fila $index: Error al procesar serie {$numeroSerie}: " . $e->getMessage());
+                if ($registro) {
+                    if ($registro->estado !== 'NUEVO') {
+                        Log::warning("Fila $index: La serie $serieIndividual ya no está NUEVA (Estado: {$registro->estado})");
+                        continue;
+                    }
+
+                    $idPublicacion = null;
+                    if (!empty($sku) && strtolower($sku) !== 'no aplica') {
+                        $publicacion = Publicacion::where('sku', $sku)->first();
+                        if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
+                    }
+
+                    try {
+                        $items = [['idregistro' => $registro->idRegistro, 'idpublicacion' => $idPublicacion]];
+                        $arrayEgreso = ['numeroOrden' => $numeroOrden, 'fechaCompra' => $fechaDespacho, 'fechaDespacho' => $fechaDespacho];
+                        $this->egresoService->createEgreso($arrayEgreso, $items);
+                        Log::info("Fila $index: Egreso exitoso para Serie $serieIndividual (Producto: '$nombreProducto')");
+                    } catch (\Exception $e) {
+                        Log::error("Fila $index: Error en serie {$serieIndividual}: " . $e->getMessage());
+                    }
+                } else {
+                    Log::warning("Fila $index saltada: Serie no encontrada: " . $serieIndividual);
                 }
-            } else {
-                Log::warning("Fila $index saltada: Serie no encontrada en base de datos: " . $numeroSerie);
             }
         }
     }

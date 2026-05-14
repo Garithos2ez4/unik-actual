@@ -92,6 +92,51 @@ $gradientString = implode(', ', $gradientParts);
                             </div>
                             @endforeach
                         </div>
+                        <div class="col-12 mt-3 pt-2 border-top">
+                            <h4 class="mb-0">Top 5 Monto Vendido (Mes)</h4>
+                            <small class="text-secondary">Mayores ingresos del mes actual.</small>
+                        </div>
+                        <div class="col-12 mt-2">
+                            @foreach ($publicacionesTopMonto as $pub)
+                            <div class="row border ms-1 me-1 rounded pt-1 pb-1 mb-1 bg-light shadow-sm">
+                                <div class="col-2 text-center pe-0">
+                                    <img src="{{ asset('storage/' . $pub->CuentasPlataforma->Plataforma->imagenPlataforma) }}" 
+                                         class="rounded-circle" 
+                                         style="width: 25px; height: 25px; object-fit: contain;"
+                                         alt="{{ $pub->CuentasPlataforma->Plataforma->nombrePlataforma }}">
+                                </div>
+                                <div class="col-6">
+                                    <h6 class="mb-0 text-truncate" style="font-size: 0.8rem;" title="{{ $pub->titulo }}">{{ $pub->titulo }}</h6>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <strong class="text-primary" style="font-size: 0.85rem;">S/ {{ number_format($pub->total_monto, 2) }}</strong>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+
+                        <div class="col-12 mt-3 pt-2 border-top">
+                            <h4 class="mb-0">Top 5 Monto Vendido (Histórico)</h4>
+                            <small class="text-secondary">Mayores ingresos acumulados.</small>
+                        </div>
+                        <div class="col-12 mt-2">
+                            @foreach ($publicacionesTopMontoHist as $pub)
+                            <div class="row border ms-1 me-1 rounded pt-1 pb-1 mb-1 bg-white shadow-sm">
+                                <div class="col-2 text-center pe-0">
+                                    <img src="{{ asset('storage/' . $pub->CuentasPlataforma->Plataforma->imagenPlataforma) }}" 
+                                         class="rounded-circle" 
+                                         style="width: 25px; height: 25px; object-fit: contain;"
+                                         alt="{{ $pub->CuentasPlataforma->Plataforma->nombrePlataforma }}">
+                                </div>
+                                <div class="col-6">
+                                    <h6 class="mb-0 text-truncate" style="font-size: 0.8rem;" title="{{ $pub->titulo }}">{{ $pub->titulo }}</h6>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <strong class="text-success" style="font-size: 0.85rem;">S/ {{ number_format($pub->total_monto, 2) }}</strong>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </div>

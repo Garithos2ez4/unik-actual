@@ -38,7 +38,8 @@ class Producto extends Model
                             'estadoProductoWeb',
                             'stockMin',
                             'slugProducto',
-                            'usar_tc_fijo' // Valor true o false (1 o 0) para usar un determinado tipo de cambio
+                            'usar_tc_fijo', // Valor true o false (1 o 0) para usar un determinado tipo de cambio
+                            'tc_fijo'
                             ];
 
     
@@ -54,7 +55,8 @@ class Producto extends Model
         'stockMin' => 'int',
         'precioDolar' => 'float',
         'gananciaExtra' => 'float',
-        'usar_tc_fijo' => 'boolean'
+        'usar_tc_fijo' => 'boolean',
+        'tc_fijo' => 'float'
     ];
 
     protected $attributes = [

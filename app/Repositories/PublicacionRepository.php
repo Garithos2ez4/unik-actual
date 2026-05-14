@@ -75,6 +75,11 @@ class PublicacionRepository implements PublicacionRepositoryInterface
         return Publicacion::query()
             ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion', 'inner', false)
             ->select('Publicacion.*', DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('devoluciones')
+                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+            })
             ->groupBy('Publicacion.idPublicacion')
             ->orderBy('total_ventas', 'desc')
             ->take($limit)

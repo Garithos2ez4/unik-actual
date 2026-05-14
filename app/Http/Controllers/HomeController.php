@@ -63,6 +63,36 @@ class HomeController extends Controller
             ->take(5)
             ->get();
 
+        // Top 5 publicaciones con mayor monto vendido (Mes actual)
+        $publicacionesTopMonto = \App\Models\Publicacion::query()
+            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
+            ->whereNotExists(function ($query) {
+                $query->select(\DB::raw(1))
+                    ->from('devoluciones')
+                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+            })
+            ->groupBy('Publicacion.idPublicacion')
+            ->orderBy('total_monto', 'desc')
+            ->take(5)
+            ->get();
+
+        // Top 5 publicaciones con mayor monto vendido (Histórico)
+        $publicacionesTopMontoHist = \App\Models\Publicacion::query()
+            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
+            ->whereNotExists(function ($query) {
+                $query->select(\DB::raw(1))
+                    ->from('devoluciones')
+                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+            })
+            ->groupBy('Publicacion.idPublicacion')
+            ->orderBy('total_monto', 'desc')
+            ->take(5)
+            ->get();
+
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -86,7 +116,9 @@ class HomeController extends Controller
                                                     'productosMostSoldMonth' => $productosMostSoldMonth,
                                                     'publicacionesMostSold' => $publicacionesMostSold,
                                                     'reclamosUrgentes' => $reclamosUrgentes,
-                                                    'productosMostStock' => $productosMostStock
+                                                    'productosMostStock' => $productosMostStock,
+                                                    'publicacionesTopMonto' => $publicacionesTopMonto,
+                                                    'publicacionesTopMontoHist' => $publicacionesTopMontoHist
                                                 ])->render(),
             ]);
         }
@@ -102,7 +134,9 @@ class HomeController extends Controller
                                     'productosMostSoldMonth' => $productosMostSoldMonth,
                                     'publicacionesMostSold' => $publicacionesMostSold,
                                     'reclamosUrgentes' => $reclamosUrgentes,
-                                    'productosMostStock' => $productosMostStock
+                                    'productosMostStock' => $productosMostStock,
+                                    'publicacionesTopMonto' => $publicacionesTopMonto,
+                                    'publicacionesTopMontoHist' => $publicacionesTopMontoHist
                                 ]);
     }
 

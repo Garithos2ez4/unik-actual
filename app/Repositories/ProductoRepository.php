@@ -186,6 +186,11 @@ class ProductoRepository implements ProductoRepositoryInterface
             ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante', 'inner', false)
             ->join('EgresoProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro', 'inner', false)
             ->select('Producto.*', DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('devoluciones')
+                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+            })
             ->groupBy('Producto.idProducto')
             ->orderBy('total_ventas', 'desc')
             ->take($limit)

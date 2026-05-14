@@ -462,6 +462,10 @@ class ProductoController extends Controller
                     }
                     
                     $arrayProduct['usar_tc_fijo'] = $request->boolean('usar_tc_fijo');   
+                    
+                    if($request->has('tc_fijo')){
+                        $arrayProduct['tc_fijo'] = $request->input('tc_fijo');
+                    }
 
                     // Procesar URLs de YouTube y guardar solo el ID
                     // Solo se actualiza si el usuario envió un valor nuevo.

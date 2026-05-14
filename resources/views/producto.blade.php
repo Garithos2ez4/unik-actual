@@ -159,9 +159,11 @@
                     </label>
                 </div>
 
-                <small class="text-muted">
-                    Activado: Precio principal usa TC SUNAT (API) | Desactivado: Precio principal usa TC Fijo ({{$tasaFija}})
-                </small>
+                <div class="mt-2">
+                    <label class="form-label">Tasa de Cambio Personalizada (Opcional):</label>
+                    <input type="number" name="tc_fijo" step="0.01" class="form-control input-edit" id="tc_fijo_personalizado" value="{{$producto->tc_fijo}}" placeholder="Ej: 3.80" disabled>
+                    <small class="text-muted">Si se llena, esta tasa sobreescribir芍 a la tasa fija global cuando se use TC Fijo.</small>
+                </div>
             </div>
         </div>
 
@@ -386,18 +388,25 @@
         const usarTcFijo = document.getElementById('usar_tc_fijo');
         const precioSunatInput = document.getElementById('precio-total-sunat');
         const precioFijoInput = document.getElementById('precio-total-fijo');
+        const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
 
         const precioEnDolares = getPrecioEnDolares();
         if (precioEnDolares === null) return;
+
+        // Determinar qué tasa fija usar (personalizada o global)
+        let tasaFijaUsar = TC_FIJO;
+        if (tcFijoPersonalizado && tcFijoPersonalizado.value && parseFloat(tcFijoPersonalizado.value) > 0) {
+            tasaFijaUsar = parseFloat(tcFijoPersonalizado.value);
+        }
 
         // Precio con TC SUNAT (siempre se calcula)
         if (precioSunatInput) {
             precioSunatInput.value = (precioEnDolares * TC_SUNAT).toFixed(2);
         }
 
-        // Precio con TC Fijo (siempre se calcula)
+        // Precio con TC Fijo (siempre se calcula usando la tasa determinada)
         if (precioFijoInput) {
-            precioFijoInput.value = (precioEnDolares * TC_FIJO).toFixed(2);
+            precioFijoInput.value = (precioEnDolares * tasaFijaUsar).toFixed(2);
         }
     }
 
@@ -407,13 +416,19 @@
         const precioFijoInput = document.getElementById('precio-total-fijo');
         const labelSunat = document.querySelector('label[for="precio-total-sunat"]');
         const labelFijo = document.querySelector('label[for="precio-total-fijo"]');
+        const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
 
         if (!usarTcFijo) return;
+
+        let tasaFijaUsar = TC_FIJO;
+        if (tcFijoPersonalizado && tcFijoPersonalizado.value && parseFloat(tcFijoPersonalizado.value) > 0) {
+            tasaFijaUsar = parseFloat(tcFijoPersonalizado.value);
+        }
 
         if (usarTcFijo.checked) {
             // Switch ON → TC SUNAT es el precio principal
             if (labelSunat) labelSunat.innerHTML = 'Precio Total en Soles (TC SUNAT: {{ $tc }}) <span class="badge bg-success">En uso</span>';
-            if (labelFijo) labelFijo.innerHTML = 'Precio Total en Soles / Tasa Fija ({{ $tasaFija }}) <span class="badge bg-secondary">Referencia</span>';
+            if (labelFijo) labelFijo.innerHTML = `Precio Total en Soles / Tasa Fija (${tasaFijaUsar}) <span class="badge bg-secondary">Referencia</span>`;
             if (precioSunatInput) {
                 precioSunatInput.classList.add('border-success');
                 precioSunatInput.classList.remove('border-warning');
@@ -424,7 +439,7 @@
         } else {
             // Switch OFF → TC Fijo es el precio principal
             if (labelSunat) labelSunat.innerHTML = 'Precio Total en Soles (TC SUNAT: {{ $tc }}) <span class="badge bg-secondary">Referencia</span>';
-            if (labelFijo) labelFijo.innerHTML = 'Precio Total en Soles / Tasa Fija ({{ $tasaFija }}) <span class="badge bg-warning text-dark">En uso</span>';
+            if (labelFijo) labelFijo.innerHTML = `Precio Total en Soles / Tasa Fija (${tasaFijaUsar}) <span class="badge bg-warning text-dark">En uso</span>`;
             if (precioSunatInput) {
                 precioSunatInput.classList.remove('border-success');
             }
@@ -442,9 +457,15 @@
         });
 
         const usarTcFijo = document.getElementById('usar_tc_fijo');
+        const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
+
         if (usarTcFijo) {
             usarTcFijo.addEventListener('change', toggleTipoCambio);
             toggleTipoCambio(); // Estado inicial al cargar
+        }
+
+        if (tcFijoPersonalizado) {
+            tcFijoPersonalizado.addEventListener('input', toggleTipoCambio);
         }
     });
 </script>

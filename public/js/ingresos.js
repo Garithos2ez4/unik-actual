@@ -42,10 +42,10 @@ document.getElementById('search').addEventListener('input', function () {
                     let smallState = document.createElement('small');
                     smallState.textContent = item.Registro.estado;
                     // Color segun estado
-                    if(item.Registro.estado == 'DEVOLUCION') smallState.classList.add('text-warning', 'fw-bold');
-                    if(item.Registro.estado == 'NUEVO') smallState.classList.add('text-sistema-uno');
-                    if(item.Registro.estado == 'ENTREGADO') smallState.classList.add('text-success');
-                    
+                    if (item.Registro.estado == 'DEVOLUCION') smallState.classList.add('text-warning', 'fw-bold');
+                    if (item.Registro.estado == 'NUEVO') smallState.classList.add('text-sistema-uno');
+                    if (item.Registro.estado == 'ENTREGADO') smallState.classList.add('text-success');
+
                     divColState.appendChild(smallState);
 
                     li.addEventListener('click', function () {
@@ -86,12 +86,12 @@ function dataModalDetalle(json) {
     titleProduct.textContent = json.registro_producto.detalle_comprobante.producto.nombreProducto;
     serialNumber.textContent = json.registro_producto.numeroSerie;
     stateJson = json.registro_producto.estado.trim().toUpperCase();
-    
+
     let fecha = new Date(json.registro_producto.fechaMovimiento);
     let day = fecha.getDate().toString().padStart(2, '0');
     let month = (fecha.getMonth() + 1).toString().padStart(2, '0');
     let year = fecha.getFullYear();
-    
+
     proveedor.textContent = json.registro_producto.detalle_comprobante.comprobante.preveedor.nombreProveedor;
     user.textContent = json.usuario.user;
     date.textContent = `${day}/${month}/${year}`;
@@ -101,7 +101,7 @@ function dataModalDetalle(json) {
 
     // Normalizar para quitar acentos para comparar mejor
     let normalizedState = stateJson.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
+
     // Buscar la opcin que coincida con el valor normalizado
     Array.from(state.options).forEach(option => {
         let normalizedOption = option.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -111,33 +111,33 @@ function dataModalDetalle(json) {
     });
 
     state.dataset.originalState = state.value;
-    
+
     // Auto-detectar "Fallo de entrega" para marcar el checkbox al abrir
     if (json.observacion && json.observacion.includes("Fallo de entrega")) {
         document.getElementById('check-fallo-entrega').checked = true;
     } else {
         document.getElementById('check-fallo-entrega').checked = false;
     }
-    
+
     // Logica para mostrar informacion de devolucion
     let devInfoBlock = document.getElementById('devolucion-info-block');
     let devMotivo = document.getElementById('devolucion-motivo');
     let devApto = document.getElementById('devolucion-apto');
-    
+
     if (json.registro_producto.ultima_devolucion) {
         let dev = json.registro_producto.ultima_devolucion;
         devInfoBlock.classList.remove('d-none');
-        
+
         let fechaDev = new Date(dev.fechaDevolucion ? dev.fechaDevolucion + 'T00:00:00' : dev.created_at);
         let fDay = fechaDev.getDate().toString().padStart(2, '0');
         let fMonth = (fechaDev.getMonth() + 1).toString().padStart(2, '0');
         let fYear = fechaDev.getFullYear();
-        
+
         devMotivo.innerHTML = `<strong>Fecha Retorno:</strong> ${fDay}/${fMonth}/${fYear}<br><strong>Motivo:</strong> ${dev.motivo}`;
         if (dev.plataforma) {
             devMotivo.innerHTML += ` <br><strong>Plataforma:</strong> ${dev.plataforma}`;
         }
-        
+
         if (dev.aptoParaVenta) {
             devApto.textContent = "S";
             devApto.classList.remove('text-danger');
@@ -150,9 +150,9 @@ function dataModalDetalle(json) {
     } else {
         devInfoBlock.classList.add('d-none');
     }
-    if (stateJson === 'DEVOLUCION') {
+    if (stateJson === 'DEVOLUCION' || stateJson === 'GARANTIA') {
         state.disabled = false;
-    } else if (stateJson === 'ENTREGADO' || stateJson === 'GARANTIA') {
+    } else if (stateJson === 'ENTREGADO') {
         state.disabled = true;
     } else {
         state.disabled = false;
@@ -232,12 +232,13 @@ document.querySelector('form[action$="updateregistro"]').addEventListener('submi
     let observacion = document.getElementById('obs-modal-detail');
     let originalState = stateSelect.dataset.originalState;
 
-    if (originalState === 'DEVOLUCION' && stateSelect.value === 'NUEVO') {
-        if (observacion.value.trim() === "") {
+    if ((originalState === 'DEVOLUCION' || originalState === 'GARANTIA') && stateSelect.value !== originalState) {
+        let obsValue = observacion.value.trim();
+        if (obsValue === "" || obsValue.length < 10) {
             e.preventDefault();
             Swal.fire({
-                title: "Atencin",
-                text: "Debes llenar obligatoriamente las observaciones para pasar una devolucin a estado Nuevo.",
+                title: "Atención",
+                text: "Debes llenar las observaciones con al menos 10 caracteres para cambiar el estado de este producto.",
                 icon: "warning",
                 confirmButtonText: "Entendido",
                 confirmButtonColor: "#00b1b9"
@@ -247,7 +248,7 @@ document.querySelector('form[action$="updateregistro"]').addEventListener('submi
 });
 
 // Manejador para el checkbox de fallo de entrega
-document.getElementById("check-fallo-entrega").addEventListener("change", function() {
+document.getElementById("check-fallo-entrega").addEventListener("change", function () {
     let obs = document.getElementById("obs-modal-detail");
     if (this.checked) {
         if (obs.value.trim() !== "") {
