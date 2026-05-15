@@ -10,6 +10,12 @@
                 <h3><a href="{{route('productos',[encrypt(1),encrypt(1)])}}" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> NUEVO PRODUCTO:</h3>
             </div>
         </div>
+        @if(isset($productoCopiar) && $productoCopiar)
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="bi bi-info-circle-fill"></i> Copiando datos de: <strong>{{ $productoCopiar->nombreProducto }}</strong> ({{ $productoCopiar->codigoProducto }}). Completa los campos únicos (Modelo, PartNumber, UPC) e imágenes.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        @endif
         <br>
         <form action="{{route('createdetails')}}" id="form-create"  method="POST" enctype="multipart/form-data">
             @csrf
@@ -21,7 +27,7 @@
             </div>
             <div class="mb-3 col-12 col-lg-6">
                 <label class="form-label">Titulo</label>
-                <input type="text" id="name-product" name="name" class="form-control" value="{{ old('name') }}" aria-describedby="basic-addon1" maxlength="200">
+                <input type="text" id="name-product" name="name" class="form-control {{ isset($productoCopiar) ? 'border-warning' : '' }}" value="{{ old('name', isset($productoCopiar) ? '(Copia) ' . $productoCopiar->nombreProducto : '') }}" aria-describedby="basic-addon1" maxlength="200">
             </div>
             <div class="mb-3 col-6 col-lg-3">
             <label for="marca-product" id="marca-label" class="form-label">Marca:</label>
@@ -29,7 +35,7 @@
                     <option value="" {{ old('marca') ? '' : 'selected' }}>-Elige una marca-</option>
                     @foreach($marcas as $marca)
                         <option value="{{ $marca['idMarca'] }}"
-                            {{old('marca') == $marca['idMarca'] ? 'selected' : ''}}>
+                            {{ old('marca', optional($productoCopiar)->idMarca ?? '') == $marca['idMarca'] ? 'selected' : '' }}>
                             {{ $marca['nombreMarca'] }}
                         </option>
                     @endforeach
@@ -41,7 +47,7 @@
                         <option value="" {{ old('grupo') ? '' : 'selected' }}>-Elige un grupo-</option>
                     @foreach($grupos as $grupo)
                         <option value="{{ $grupo['idGrupoProducto'] }}"
-                            {{ old('grupo') == $grupo['idGrupoProducto'] ? 'selected' : '' }}>
+                            {{ old('grupo', optional($productoCopiar)->idGrupo ?? '') == $grupo['idGrupoProducto'] ? 'selected' : '' }}>
                             {{ $grupo['nombreGrupo'] }}
                         </option>
                     @endforeach
@@ -56,23 +62,23 @@
                 </label>
                 <select name="estado" id="estado-product" class="form-select">
                   <option value="" {{ old('estado') ? '' : 'selected' }}>-Elige un estado-</option>
-                  <option value="DISPONIBLE" {{ old('estado') == 'DISPONIBLE' ? 'selected' : '' }}>DISPONIBLE</option>
-                  <option value="AGOTADO" {{ old('estado') == 'AGOTADO' ? 'selected' : '' }}>AGOTADO</option>
-                  <option value="OFERTA" {{ old('estado') == 'OFERTA' ? 'selected' : '' }}>OFERTA</option>
-                  <option value="EXCLUSIVO" {{ old('estado') == 'EXCLUSIVO' ? 'selected' : '' }}>EXCLUSIVO</option>
-                  <option value="DESCONTINUADO" {{ old('estado') == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
+                  <option value="DISPONIBLE" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'DISPONIBLE' ? 'selected' : '' }}>DISPONIBLE</option>
+                  <option value="AGOTADO" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'AGOTADO' ? 'selected' : '' }}>AGOTADO</option>
+                  <option value="OFERTA" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'OFERTA' ? 'selected' : '' }}>OFERTA</option>
+                  <option value="EXCLUSIVO" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'EXCLUSIVO' ? 'selected' : '' }}>EXCLUSIVO</option>
+                  <option value="DESCONTINUADO" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
                 </select>
             </div>
             <div class="mb-3 col-6 col-lg-2">
                 <label for="garantia-product" id="garantia-label" class="form-label">Garantia:</label>
                 <select name="garantia" id="garantia-product" class="form-select">
                   <option value="" {{ old('garantia') ? '' : 'selected' }}>-Elige la garantia-</option>
-                  <option value="No tiene" {{old('garantia') == 'No tiene' ? 'selected' : ''}}>No tiene</option>
-                  <option value="3 meses" {{old('garantia') == '3 meses' ? 'selected' : ''}}>3 meses</option>
-                  <option value="6 meses" {{old('garantia') == '6 meses' ? 'selected' : ''}}>6 meses</option>
-                  <option value="12 meses" {{old('garantia') == '12 meses' ? 'selected' : ''}}>12 meses</option>
-                  <option value="24 meses" {{old('garantia') == '24 meses' ? 'selected' : ''}}>24 meses</option>
-                  <option value="36 meses" {{old('garantia') == '36 meses' ? 'selected' : ''}}>36 meses</option>
+                  <option value="No tiene" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == 'No tiene' ? 'selected' : '' }}>No tiene</option>
+                  <option value="3 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '3 meses' ? 'selected' : '' }}>3 meses</option>
+                  <option value="6 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '6 meses' ? 'selected' : '' }}>6 meses</option>
+                  <option value="12 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '12 meses' ? 'selected' : '' }}>12 meses</option>
+                  <option value="24 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '24 meses' ? 'selected' : '' }}>24 meses</option>
+                  <option value="36 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '36 meses' ? 'selected' : '' }}>36 meses</option>
                 </select>
             </div>
         </div>
@@ -88,14 +94,14 @@
                     <div class="mb-3 col-md-6 col-lg-4">
                         <label for="select-tipoprecio" class="form-label">Moneda:</label>
                         <select class="form-select" onchange="changeTC()" name="tipoprecio" id="select-tipoprecio">
-                            <option value="DOLAR"{{old('tipoprecio') == '' || old('tipoprecio') == 'dolar' ? 'selected' : ''}}>Dolares</option>
-                            <option value="SOL" {{old('tipoprecio') == 'sol' ? 'selected' : ''}}>Soles</option>
+                            <option value="DOLAR" {{ old('tipoprecio', optional($productoCopiar)->tipoPrecio ?? '') == 'DOLAR' ? 'selected' : '' }}>Dolares</option>
+                            <option value="SOL" {{ old('tipoprecio', optional($productoCopiar)->tipoPrecio ?? '') == 'SOL' ? 'selected' : '' }}>Soles</option>
                           </select>
                     </div>
                     <div class="col-lg-8"></div>
                     <div class="mb-3 col-md-6">
                         <label for="precio-producto" class="form-label">Sin IGV:</label>
-                         <input type="number" name="precio" value="{{old('precio') ? old('precio') : 0}}" id="precio-product"  aria-label="Last name" class="form-control  price-product" step="0.01">
+                         <input type="number" name="precio" value="{{ old('precio', optional($productoCopiar)->precioProducto ?? 0) }}" id="precio-product"  aria-label="Last name" class="form-control  price-product" step="0.01">
                     </div>
                     <div class="col-md-6"></div>
                     <div class="mb-3 col-md-6">
@@ -111,7 +117,7 @@
                 <div class="row">
                     <div class="mb-3 col-md-6 col-lg-4">
                         <label for="precio-producto" class="form-label">Utilidad:</label>
-                         <input type="number"  value="{{old('ganancia') ? old('ganancia') : 0}}" name="ganancia" id="precio-product-ganancia"  class="form-control price-product" step="0.01">
+                          <input type="number"  value="{{ old('ganancia', optional($productoCopiar)->gananciaExtra ?? 0) }}" name="ganancia" id="precio-product-ganancia"  class="form-control price-product" step="0.01">
                     </div>
                     <div class="col-lg-8"></div>
                     <div class="mb-3 col-md-6 col-lg-4">
@@ -165,19 +171,19 @@
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <label  class="form-label">Stock Minimo:</label>
-                <input name="stockminimo" value="{{old('stockminimo') ? old('stockminimo') : 0}}" type="number" class="form-control" >
+                 <input name="stockminimo" value="{{ old('stockminimo', optional($productoCopiar)->stockMin ?? 0) }}" type="number" class="form-control" >
             </div>
             <div class="col-6 col-md-4 col-lg-2">
                 <label for="precio-producto" class="form-label">Stock Proveedor:</label>
-                <input name="stockproveedor" value="{{old('stockproveedor') ? old('stockproveedor') : 0}}" type="number" id="stockproveedor-product" class="form-control">
+                 <input name="stockproveedor" value="{{ old('stockproveedor', optional(optional($productoCopiar)->Inventario_Proveedor)->stock ?? 0) }}" type="number" id="stockproveedor-product" class="form-control">
             </div>
             <div class="col-6 col-md-4 col-lg-3">
                 <label for="grupo-product" id="proveedor-label" class="form-label">Proveedor:</label>
                 <select name="proveedor" id="proveedor-product" class="form-select">
                      <option  value=""  {{ old('proveedor') ? '' : 'selected' }}>-Elige un proveedor-</p></option>
                     @foreach($proveedor as $pro)
-                        <option  value="{{ $pro['idProveedor'] }}"
-                            {{ old('proveedor') == $pro['idProveedor'] ? 'selected' : '' }}>
+                         <option  value="{{ $pro['idProveedor'] }}"
+                            {{ old('proveedor', optional(optional($productoCopiar)->Inventario_Proveedor)->idProveedor ?? '') == $pro['idProveedor'] ? 'selected' : '' }}>
                             {{ $pro['nombreProveedor'] }}
                         </option>
                     @endforeach
@@ -193,13 +199,13 @@
             </div>
             <div class="mb-3">
                 <label for="video1">URL del Video de Unike Store (Opcional)</label>
-                <input type="text" name="video1" id="video1" class="form-control" value="{{ old('video1') }}" placeholder="Video Unike Store">
+                 <input type="text" name="video1" id="video1" class="form-control" value="{{ old('video1', optional($productoCopiar)->videoUrl1 ?? '') }}" placeholder="Video Unike Store">
                 placeholde
                 <small class="form-text text-muted">Ingrese la primera URL oficial o de referencia del producto.</small>
             </div>
             <div class="mb-3">
                 <label for="video2">URL del Video de la Marca (Opcional)</label>
-                <input type="text" name="video2" id="video2" class="form-control" value="{{ old('video2') }}" placeholder="Video Marca">
+                 <input type="text" name="video2" id="video2" class="form-control" value="{{ old('video2', optional($productoCopiar)->videoUrl2 ?? '') }}" placeholder="Video Marca">
                 <small class="form-text text-muted">Ingrese la segunda URL oficial o de referencia del producto.</small>
             </div>
         </div>
@@ -234,7 +240,7 @@
         </div>        
         <div class="col-md-6">
             <label for="descripcion-product" class="form-label" >Descripcion:</label>
-            <textarea name="desc" type="text" maxlength="5000" id="descripcion-product" class="form-control" style=" width: 100%;max-height: 500px;overflow-y: auto;" oninput="autoResize(this)">{{old('desc')}}</textarea>
+             <textarea name="desc" type="text" maxlength="5000" id="descripcion-product" class="form-control" style=" width: 100%;max-height: 500px;overflow-y: auto;" oninput="autoResize(this)">{{ old('desc', optional($productoCopiar)->descripcionProducto ?? '') }}</textarea>
         </div>
     </div>
        

@@ -104,14 +104,14 @@ class ProductoController extends Controller
         return redirect()->route('dashboard',['user' => $userModel]);
     }
 
-    public function create(){
+    public function create(Request $request)
+    {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
 
         //variables del controlador
-
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
                 //llamamos a los services
                 $marcas = $this->productoService->getAllLabelMarca();
                 $grupos = $this->productoService->getAllLabelGrupo();
@@ -120,14 +120,21 @@ class ProductoController extends Controller
 
                 $latestProductCodes = $this->productoService->getLastCodesProducts();
 
-                return view('createproducto',['user' => $userModel,
-                                                'marcas' => $marcas,
-                                                'grupos' => $grupos,
-                                                'proveedor' => $proveedor,
-                                                'almacenes' => $almacenes,
-                                                'codigos' => $latestProductCodes,
-                                                'tc' => $this->calculadoraService->getTasaCambio(),]);
+                $productoCopiar = null;
+                if ($request->has('copy_from')) {
+                    $productoCopiar = $this->productoService->getOneProductByColumn('idProducto', $request->copy_from);
+                }
 
+                return view('createproducto', [
+                    'user' => $userModel,
+                    'marcas' => $marcas,
+                    'grupos' => $grupos,
+                    'proveedor' => $proveedor,
+                    'almacenes' => $almacenes,
+                    'codigos' => $latestProductCodes,
+                    'tc' => $this->calculadoraService->getTasaCambio(),
+                    'productoCopiar' => $productoCopiar
+                ]);
             }
         }
         $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
@@ -309,6 +316,11 @@ class ProductoController extends Controller
                         $idProducto = 0;
                         try{
                             try{
+                                $img1 = null;
+                                $img2 = null;
+                                $img3 = null;
+                                $img4 = null;
+
                                 if ($request->hasFile('imgone')) {
                                     $img1 = $request->file('imgone');
                                 }
@@ -356,6 +368,7 @@ class ProductoController extends Controller
                                 $this->productoService->validateState($idProducto);
 
                             }catch(Exception $e){
+                                \Log::error('Error en insert/validate: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
                                 $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error en la transaccion','error','btn-danger');
                                 return back()->withInput();
                             }
@@ -363,6 +376,7 @@ class ProductoController extends Controller
                             return redirect()->route('details',['idProducto' => $idProducto]);
 
                         }catch(Exception $e){
+                            \Log::error('Error general createDetails: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
                             $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error en la transaccion','error','btn-danger');
                             return back()->withInput();
                         }

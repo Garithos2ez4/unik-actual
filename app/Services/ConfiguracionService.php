@@ -39,8 +39,8 @@ class ConfiguracionService implements ConfiguracionServiceInterface
     protected $tipoProductoRepository;
     protected $sugerenciaRepository;
 
-    private $pathMarca = '/home3/unikstor/public_html/images/marcas';
-    private $pathGrupo = '/home3/unikstor/public_html/images/grupos';
+    private $pathMarca;
+    private $pathGrupo;
 
     public function __construct(CategoriaProductoRepositoryInterface $categoriaRepository,
                                 RangoPrecioRepositoryInterface $rangoRepository,
@@ -77,6 +77,9 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         $this->grupoRepository = $grupoRepository;
         $this->tipoProductoRepository = $tipoProductoRepository;
         $this->sugerenciaRepository = $sugerenciaRepository;
+
+        $this->pathMarca = public_path('images/marcas');
+        $this->pathGrupo = public_path('images/grupos');
     }
 
     public function getOneCaracteristica($idCaracteristica){

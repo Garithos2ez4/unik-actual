@@ -37,6 +37,7 @@
                 <h3>Datos generales</h3>
             </div>
             <div class="mb-2 col-6 text-end">
+                <button type="button" class="btn btn-secondary text-light me-2" onclick="confirmarCopia()">Copiar <i class="bi bi-copy"></i></button>
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
             </div>
             <div class="mb-3 col-12 col-lg-6">
@@ -360,6 +361,27 @@
         const baseUrl = "{{ route('seriesXProducto', [$producto->idProducto, 'ALMACEN_ID']) }}";
         const url = baseUrl.replace('ALMACEN_ID', idAlmacen || '');
         window.open(url, '_blank');
+    }
+
+    function confirmarCopia() {
+        Swal.fire({
+            title: '¿Copiar este producto?',
+            text: 'Se creará un nuevo producto con los mismos datos. Deberás completar Modelo, PartNumber, UPC e imágenes.',
+            icon: 'question',
+            iconColor: '#00b1b9',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, copiar',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-success',
+                cancelButton: 'btn btn-secondary'
+            },
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{{ route('createproducto', ['copy_from' => $producto->idProducto]) }}";
+            }
+        });
     }
 </script>
 

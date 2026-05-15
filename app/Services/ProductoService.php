@@ -26,7 +26,7 @@ class ProductoService implements ProductoServiceInterface
     protected $caracteristicasProductoRepository;
     protected $registroRepository;
     
-    private $path = '/home3/unikstor/public_html/images/productos';
+    private $path;
 
     public function __construct(ProductoRepositoryInterface $productoRepository,
                                 MarcaProductoRepositoryInterface $marcaRepository,
@@ -43,6 +43,7 @@ class ProductoService implements ProductoServiceInterface
         $this->marcaRepository = $marcaRepository;
         $this->grupoRepository = $grupoRepository;
         $this->categoriaRepository = $categoriaRepository;
+        $this->path = public_path('images/productos');
         $this->proveedorRepository = $proveedorRepository;
         $this->almacenRepository = $almacenRepository;
         $this->inventarioRepository = $inventarioRepository;
@@ -262,7 +263,7 @@ class ProductoService implements ProductoServiceInterface
         $producto = $this->productoRepository->getOne('idProducto',$id);
         if($producto){
             $agotado = true;
-            $proveedor = $producto->Inventario_Proveedor->stock;
+            $proveedor = optional($producto->Inventario_Proveedor)->stock ?? 0;
             foreach($producto->Inventario as $inventario){
                 if($inventario->stock > 0){
                     $agotado = false;
@@ -366,6 +367,10 @@ class ProductoService implements ProductoServiceInterface
     private function createSeguimiento($idProducto,$array){
         if (!$idProducto) {
             return null;
+        }
+        
+        if (empty($array['idProveedor'])) {
+            return true; // No provider selected, do nothing
         }
         
         try {
