@@ -150,19 +150,17 @@ class ProductoService implements ProductoServiceInterface
         return $productos;
     }
     
-    public function searchProducts($input,$cont,$filtros){
-        $productos = $this->productoRepository->getEmptyPagination();
-        $marca = $this->marcaRepository->searchOne('nombreMarca',$input);
+    public function searchProducts($input, $cont, $filtros)
+    {
+        // 1. Intentamos búsqueda intensiva directamente (ahora es mucho más potente)
+        $productos = $this->productoRepository->searchIntensiveProducts($input, $cont, $filtros);
 
-        if ($marca) {
-            $productos = $this->productoRepository->paginateAllByColumn('idMarca',$marca->idMarca,$cont,$filtros);
-        }
-
-        if($productos->isEmpty()){
-            $productos = $this->productoRepository->searchIntensiveProducts($input,$cont,$filtros);
-        }
-        if($productos->isEmpty()){
-            $productos = $this->productoRepository->searchPaginateList('nombreProducto',$cont,$input,$filtros);
+        // 2. Si no hay resultados, podríamos intentar buscar solo por Marca (por si acaso)
+        if ($productos->isEmpty()) {
+            $marca = $this->marcaRepository->searchOne('nombreMarca', $input);
+            if ($marca) {
+                $productos = $this->productoRepository->paginateAllByColumn('idMarca', $marca->idMarca, $cont, $filtros);
+            }
         }
 
         return $productos;

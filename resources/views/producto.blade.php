@@ -10,12 +10,22 @@
 
 @section('content')
 <div class="container">
+    <!-- Botón flotante para volver -->
+    <div class="d-none d-lg-block" style="position: fixed; top: 90px; left:200px; z-index: 1000;">
+        <a href="{{ route('buscarproducto') }}" class="btn btn-secondary shadow rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;" title="Volver al buscador">
+            <i class="bi bi-arrow-left-circle" style="font-size: 1.5rem;"></i>
+        </a>
+    </div>
+
     <br>
     <form action="{{route('updateproduct',[encrypt($producto->idProducto)])}}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row">
             <div class="col-10 col-lg-6 d-flex align-items-center">
-                <h3><a href="javascript:void(0);" onclick="history.back();" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> PRODUCTO: <span class="text-secondary">{{$producto->codigoProducto}}</span></h3>
+                <h3>
+
+                    PRODUCTO: <span class="text-secondary">{{$producto->codigoProducto}}</span>
+                </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
                 <h5><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
@@ -311,7 +321,7 @@
                 if ($stockAlmacen > 0) {
                 $almacenId = $inv->idAlmacen;
                 $descripcionAlmacen = $inv->almacen->descripcion ?? 'Almac谷n Desconocido';
-                echo '<button class="btn btn-danger mb-2 text-nowrap" onclick="reportSerials(' . $almacenId . ')">';
+                echo '<button type="button" class="btn btn-danger mb-2 text-nowrap" onclick="reportSerials(' . $almacenId . ')">';
                     echo '<i class="bi bi-file-earmark-pdf"></i> Series - ' . $descripcionAlmacen . '</button>';
                 }
                 @endphp
@@ -322,6 +332,7 @@
                 @foreach ($producto->Inventario as $inv)
                 @if ($inv->stock > 0)
                 <button
+                    type="button"
                     class="btn btn-info text-nowrap"
                     data-producto-id="{{ $producto->idProducto }}"
                     data-almacen-id="{{ $inv->idAlmacen }}"

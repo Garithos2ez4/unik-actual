@@ -84,6 +84,11 @@ class ProductoRepository implements ProductoRepositoryInterface
     {
         $this->validateColumn($column);
 
+        // Si la columna es nombreProducto, usamos la lógica de búsqueda intensiva/flexible
+        if ($column === 'nombreProducto') {
+            return $this->searchIntensiveProducts($data, $perPage, $filtros);
+        }
+
         $query = Producto::query()->where($column, 'LIKE', '%' . $data . '%');
 
         $this->applyFilters($query, $filtros);
@@ -215,12 +220,29 @@ class ProductoRepository implements ProductoRepositoryInterface
      */
     public function searchIntensiveProducts($searchTerm, $perPage, $filtros)
     {
-        $query = Producto::query();
+        $query = Producto::query()
+            ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
+            ->select('Producto.*');
 
-        $query->where(function ($q) use ($searchTerm) {
-            $q->where('codigoProducto', 'LIKE', '%' . $searchTerm . '%')
-                ->orWhere('partNumber', 'LIKE', '%' . $searchTerm . '%')
-                ->orWhere('modelo', 'LIKE', '%' . $searchTerm . '%');
+        // Limpiar el término y separar por espacios
+        $words = array_filter(explode(' ', trim($searchTerm)));
+
+        if (empty($words)) {
+            $this->applyFilters($query, $filtros);
+            return $query->paginate($perPage);
+        }
+
+        $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $q->where(function ($sq) use ($word) {
+                    $sq->where('Producto.nombreProducto', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.modelo', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.codigoProducto', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.partNumber', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.UPC', 'LIKE', '%' . $word . '%')
+                        ->orWhere('MarcaProducto.nombreMarca', 'LIKE', '%' . $word . '%');
+                });
+            }
         });
 
         $this->applyFilters($query, $filtros);
