@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const inputFechaDespacho = document.getElementById('fechadespacho');
 
     if (inputFechaPedido && inputFechaDespacho) {
-        inputFechaPedido.addEventListener('change', function() {
+        inputFechaPedido.addEventListener('blur', function() {
             // No permitir fechas anteriores a 2024
             if (this.value && this.value < '2024-01-01') {
                 alertBootstrap('La fecha de pedido no puede ser anterior al año 2024', 'warning');
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
             validateSubmit();
         });
 
-        inputFechaDespacho.addEventListener('change', function() {
+        inputFechaDespacho.addEventListener('blur', function() {
             if (inputFechaPedido.value && this.value < inputFechaPedido.value) {
                 alertBootstrap('La fecha de despacho no puede ser anterior a la fecha de pedido', 'warning');
                 this.value = inputFechaPedido.value;

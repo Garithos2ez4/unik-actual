@@ -100,10 +100,10 @@ $gradientString = implode(', ', $gradientParts);
                             @foreach ($publicacionesTopMonto as $pub)
                             <div class="row border ms-1 me-1 rounded pt-1 pb-1 mb-1 bg-light shadow-sm">
                                 <div class="col-2 text-center pe-0">
-                                    <img src="{{ asset('storage/' . $pub->CuentasPlataforma->Plataforma->imagenPlataforma) }}" 
-                                         class="rounded-circle" 
-                                         style="width: 25px; height: 25px; object-fit: contain;"
-                                         alt="{{ $pub->CuentasPlataforma->Plataforma->nombrePlataforma }}">
+                                    <img src="{{ asset('storage/' . $pub->CuentasPlataforma->Plataforma->imagenPlataforma) }}"
+                                        class="rounded-circle"
+                                        style="width: 25px; height: 25px; object-fit: contain;"
+                                        alt="{{ $pub->CuentasPlataforma->Plataforma->nombrePlataforma }}">
                                 </div>
                                 <div class="col-6">
                                     <h6 class="mb-0 text-truncate" style="font-size: 0.8rem;" title="{{ $pub->titulo }}">{{ $pub->titulo }}</h6>
@@ -123,10 +123,10 @@ $gradientString = implode(', ', $gradientParts);
                             @foreach ($publicacionesTopMontoHist as $pub)
                             <div class="row border ms-1 me-1 rounded pt-1 pb-1 mb-1 bg-white shadow-sm">
                                 <div class="col-2 text-center pe-0">
-                                    <img src="{{ asset('storage/' . $pub->CuentasPlataforma->Plataforma->imagenPlataforma) }}" 
-                                         class="rounded-circle" 
-                                         style="width: 25px; height: 25px; object-fit: contain;"
-                                         alt="{{ $pub->CuentasPlataforma->Plataforma->nombrePlataforma }}">
+                                    <img src="{{ asset('storage/' . $pub->CuentasPlataforma->Plataforma->imagenPlataforma) }}"
+                                        class="rounded-circle"
+                                        style="width: 25px; height: 25px; object-fit: contain;"
+                                        alt="{{ $pub->CuentasPlataforma->Plataforma->nombrePlataforma }}">
                                 </div>
                                 <div class="col-6">
                                     <h6 class="mb-0 text-truncate" style="font-size: 0.8rem;" title="{{ $pub->titulo }}">{{ $pub->titulo }}</h6>
@@ -219,6 +219,39 @@ $gradientString = implode(', ', $gradientParts);
                                         <div class="col-4 text-end">
                                             <span class="text-primary fw-bold">{{ $topProd->total_ventas }}</span>
                                             <small class="d-block text-secondary">uds.</small>
+                                        </div>
+                                    </div>
+
+                                </li>
+                                @endforeach
+                            </ul>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12 mt-3">
+                    <div class="row border shadow rounded-3 pt-2 pb-2">
+                        <div class="col-md-12">
+                            <h4 class="mb-0">Top 3 SKU (Mes)</h4>
+                            <small class="text-secondary">Mayor rotación este mes</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <ul class="list-group list-group-flush">
+                                @foreach ($skusMostSoldMonth as $index => $topSkuMonth)
+                                <li class="list-group-item px-1">
+                                    <div class="row align-items-center">
+                                        <div class="col-2 text-center">
+                                            <span class="badge rounded-pill {{ $index === 0 ? 'bg-warning text-dark' : ($index === 1 ? 'bg-secondary' : 'bg-dark') }}" style="font-size: 0.9rem;">
+                                                #{{ $index + 1 }}
+                                            </span>
+                                        </div>
+                                        <div class="col-6 px-0">
+                                            <strong class="d-block" style="font-size: 0.85rem;" title="{{ $topSkuMonth->sku }}">{{ $topSkuMonth->sku }}</strong>
+                                            <small class="text-secondary text-truncate d-block" style="max-width: 100%;" title="{{ $topSkuMonth->titulo }}">{{ $topSkuMonth->titulo }}</small>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <span class="text-success fw-bold">{{ $topSkuMonth->total_ventas }}</span>
+                                            <small class="d-block text-secondary">egresos</small>
                                         </div>
                                     </div>
                                 </li>

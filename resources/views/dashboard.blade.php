@@ -3,9 +3,9 @@
 @section('title', 'Dashboard')
 
 @section('content')
-    <div id="dashboard-content" >
-        <x-dashboard_content :registros="$registros" :inventario="$inventario" :stock="$stock" :colors="$colors" :productos="$productos" :stockMin="$stockMin" :productosMostSold="$productosMostSold" :productosMostSoldMonth="$productosMostSoldMonth" :publicacionesMostSold="$publicacionesMostSold" :reclamosUrgentes="$reclamosUrgentes" :productosMostStock="$productosMostStock" :publicacionesTopMonto="$publicacionesTopMonto" :publicacionesTopMontoHist="$publicacionesTopMontoHist"/>
-    </div>
-    <input type="hidden" id="dashboardurl" value="{{route('dashboard')}}">
-    <script src="{{asset('js/dashboard.js')}}"></script>
+<div id="dashboard-content">
+    <x-dashboard_content :registros="$registros" :inventario="$inventario" :stock="$stock" :colors="$colors" :productos="$productos" :stockMin="$stockMin" :productosMostSold="$productosMostSold" :productosMostSoldMonth="$productosMostSoldMonth" :skusMostSoldMonth="$skusMostSoldMonth" :publicacionesMostSold="$publicacionesMostSold" :reclamosUrgentes="$reclamosUrgentes" :productosMostStock="$productosMostStock" :publicacionesTopMonto="$publicacionesTopMonto" :publicacionesTopMontoHist="$publicacionesTopMontoHist" />
+</div>
+<input type="hidden" id="dashboardurl" value="{{route('dashboard')}}">
+<script src="{{asset('js/dashboard.js')}}"></script>
 @endsection
