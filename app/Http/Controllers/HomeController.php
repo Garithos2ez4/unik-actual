@@ -215,8 +215,8 @@ class HomeController extends Controller
 
         $tc = $this->calculadoraService->getTasaCambio();
 
-        // Ventas de los últimos 7 días con Monto (S/)
-        $ventas7DiasRaw = \App\Models\EgresoProducto::query()
+        // Ventas del mes actual con Monto (S/)
+        $ventasMesRaw = \App\Models\EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
@@ -226,17 +226,19 @@ class HomeController extends Controller
                 \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades'),
                 \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
             )
-            ->where('EgresoProducto.fechaCompra', '>=', now()->subDays(6)->startOfDay())
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
             ->groupBy(\DB::raw('DATE(EgresoProducto.fechaCompra)'))
             ->orderBy('fecha', 'asc')
             ->get();
 
-        $ventas7Dias = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
-            $found = $ventas7DiasRaw->firstWhere('fecha', $date);
-            $ventas7Dias[] = [
-                'fecha' => now()->subDays($i)->format('d/m'),
+        $ventasMes = [];
+        $diasEnMes = now()->daysInMonth;
+        for ($i = 1; $i <= $diasEnMes; $i++) {
+            $date = now()->startOfMonth()->addDays($i - 1)->format('Y-m-d');
+            $found = $ventasMesRaw->firstWhere('fecha', $date);
+            $ventasMes[] = [
+                'fecha' => now()->startOfMonth()->addDays($i - 1)->format('d/m'),
                 'total' => $found ? $found->total_unidades : 0,
                 'monto' => $found ? $found->total_monto : 0
             ];
@@ -275,12 +277,52 @@ class HomeController extends Controller
             ->orderBy('total_ventas', 'desc')
             ->take(5)
             ->get();
+        // Métricas por plataforma (Mes actual)
+        $metricasPlataformas = \App\Models\EgresoProducto::query()
+            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->leftJoin('CuentasPlataforma', 'Publicacion.idCuentaPlataforma', '=', 'CuentasPlataforma.idCuentaPlataforma')
+            ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
+            ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+            ->select(
+                \DB::raw('COALESCE(Plataforma.nombrePlataforma, "VENTA DIRECTA") as plataforma'),
+                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_pedidos'),
+                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
+            )
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
+            ->groupBy('plataforma')
+            ->orderBy('total_monto', 'desc')
+            ->get();
 
-        return view('analytics', [
+        // Top 5 Productos con más ingresos (Mes actual)
+        $productosMostRevenueMonth = \App\Models\Producto::query()
+            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
+            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
+            ->join('EgresoProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
+            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->select(
+                'Producto.idProducto',
+                'Producto.nombreProducto',
+                'Producto.modelo',
+                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades'),
+                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_ingreso")
+            )
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
+            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
+            ->orderBy('total_ingreso', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('analytics.index', [
             'user' => $userModel,
-            'ventas7Dias' => $ventas7Dias,
+            'ventasMes' => $ventasMes,
             'productosConFallas' => $productosConFallas,
-            'skusMostSoldMonth' => $skusMostSoldMonth
+            'skusMostSoldMonth' => $skusMostSoldMonth,
+            'metricasPlataformas' => $metricasPlataformas,
+            'productosMostRevenueMonth' => $productosMostRevenueMonth
         ]);
     }
 
