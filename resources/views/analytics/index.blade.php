@@ -45,6 +45,11 @@
         <div class="col-lg-6">
             @include('analytics.partials.top_skus')
         </div>
+    <div class="row mt-2">
+        <!-- Hall of Fame: Mejores Meses Históricos -->
+        <div class="col-lg-12">
+            @include('analytics.partials.best_months')
+        </div>
     </div>
 </div>
 

@@ -316,13 +316,31 @@ class HomeController extends Controller
             ->take(5)
             ->get();
 
+        // Top 3 mejores meses de venta (Histórico)
+        $topBestMonths = \App\Models\EgresoProducto::query()
+            ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->select(
+                \DB::raw("DATE_FORMAT(EgresoProducto.fechaCompra, '%Y-%m') as mes_raw"),
+                \DB::raw("DATE_FORMAT(EgresoProducto.fechaCompra, '%M %Y') as mes_nombre"),
+                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
+            )
+            ->whereNotIn('EgresoProducto.numeroOrden', ['2026', '2026/SN'])
+            ->groupBy('mes_raw', 'mes_nombre')
+            ->orderBy('total_monto', 'desc')
+            ->take(3)
+            ->get();
+
         return view('analytics.index', [
             'user' => $userModel,
             'ventasMes' => $ventasMes,
             'productosConFallas' => $productosConFallas,
             'skusMostSoldMonth' => $skusMostSoldMonth,
             'metricasPlataformas' => $metricasPlataformas,
-            'productosMostRevenueMonth' => $productosMostRevenueMonth
+            'productosMostRevenueMonth' => $productosMostRevenueMonth,
+            'topBestMonths' => $topBestMonths
         ]);
     }
 
