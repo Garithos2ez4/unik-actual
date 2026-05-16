@@ -266,6 +266,17 @@ function disabledSerialNumber(check,input){
     updateBtnAdd();
 }
 
+function toggleAllSerials(id, isChecked) {
+    let checks = document.querySelectorAll('.check-serial-' + id);
+    checks.forEach(function(check) {
+        if (check.checked !== isChecked) {
+            check.checked = isChecked;
+            let input = check.closest('.input-group').querySelector('.input-serial');
+            disabledSerialNumber(check, input);
+        }
+    });
+}
+
 document.getElementById('btnIngreso').addEventListener('click', createProductList);
 document.getElementById('btnIngreso').addEventListener('click', updateBtnAdd);
 document.getElementById('modal-input-price').addEventListener('input', validateDisabledRegistro);
