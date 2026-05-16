@@ -62,23 +62,23 @@
                 </label>
                 <select name="estado" id="estado-product" class="form-select">
                   <option value="" {{ old('estado') ? '' : 'selected' }}>-Elige un estado-</option>
-                  <option value="DISPONIBLE" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'DISPONIBLE' ? 'selected' : '' }}>DISPONIBLE</option>
-                  <option value="AGOTADO" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'AGOTADO' ? 'selected' : '' }}>AGOTADO</option>
-                  <option value="OFERTA" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'OFERTA' ? 'selected' : '' }}>OFERTA</option>
-                  <option value="EXCLUSIVO" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'EXCLUSIVO' ? 'selected' : '' }}>EXCLUSIVO</option>
-                  <option value="DESCONTINUADO" {{ old('estado', optional($productoCopiar)->estadoProducto ?? '') == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
+                  <option value="DISPONIBLE" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'DISPONIBLE' ? 'selected' : '' }}>DISPONIBLE</option>
+                  <option value="AGOTADO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'AGOTADO' ? 'selected' : '' }}>AGOTADO</option>
+                  <option value="OFERTA" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'OFERTA' ? 'selected' : '' }}>OFERTA</option>
+                  <option value="EXCLUSIVO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'EXCLUSIVO' ? 'selected' : '' }}>EXCLUSIVO</option>
+                  <option value="DESCONTINUADO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
                 </select>
             </div>
             <div class="mb-3 col-6 col-lg-2">
                 <label for="garantia-product" id="garantia-label" class="form-label">Garantia:</label>
                 <select name="garantia" id="garantia-product" class="form-select">
                   <option value="" {{ old('garantia') ? '' : 'selected' }}>-Elige la garantia-</option>
-                  <option value="No tiene" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == 'No tiene' ? 'selected' : '' }}>No tiene</option>
-                  <option value="3 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '3 meses' ? 'selected' : '' }}>3 meses</option>
-                  <option value="6 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '6 meses' ? 'selected' : '' }}>6 meses</option>
-                  <option value="12 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '12 meses' ? 'selected' : '' }}>12 meses</option>
-                  <option value="24 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '24 meses' ? 'selected' : '' }}>24 meses</option>
-                  <option value="36 meses" {{ old('garantia', optional($productoCopiar)->garantiaProducto ?? '') == '36 meses' ? 'selected' : '' }}>36 meses</option>
+                  <option value="No tiene" {{ old('garantia', optional($productoCopiar)->garantia ?? '') == 'No tiene' ? 'selected' : '' }}>No tiene</option>
+                  <option value="3 meses" {{ old('garantia', optional($productoCopiar)->garantia ?? '') == '3 meses' ? 'selected' : '' }}>3 meses</option>
+                  <option value="6 meses" {{ old('garantia', optional($productoCopiar)->garantia ?? '') == '6 meses' ? 'selected' : '' }}>6 meses</option>
+                  <option value="12 meses" {{ old('garantia', optional($productoCopiar)->garantia ?? '') == '12 meses' ? 'selected' : '' }}>12 meses</option>
+                  <option value="24 meses" {{ old('garantia', optional($productoCopiar)->garantia ?? '') == '24 meses' ? 'selected' : '' }}>24 meses</option>
+                  <option value="36 meses" {{ old('garantia', optional($productoCopiar)->garantia ?? '') == '36 meses' ? 'selected' : '' }}>36 meses</option>
                 </select>
             </div>
         </div>
@@ -86,7 +86,7 @@
             <div class="col-12">
                 <h3>Precios y Costos:</h3>
             </div>
-            <div class="col-6 col-md-6">
+            <div class="col-6 col-md-4">
                 <div class="row">
                     <h5>Precio producto</h5>
                 </div>
@@ -101,7 +101,7 @@
                     <div class="col-lg-8"></div>
                     <div class="mb-3 col-md-6">
                         <label for="precio-producto" class="form-label">Sin IGV:</label>
-                         <input type="number" name="precio" value="{{ old('precio', optional($productoCopiar)->precioProducto ?? 0) }}" id="precio-product"  aria-label="Last name" class="form-control  price-product" step="0.01">
+                         <input type="number" name="precio" value="{{ old('precio', optional($productoCopiar)->precioDolar ?? 0) }}" id="precio-product"  aria-label="Last name" class="form-control  price-product" step="0.01">
                     </div>
                     <div class="col-md-6"></div>
                     <div class="mb-3 col-md-6">
@@ -110,24 +110,48 @@
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-6">
+            <div class="col-6 col-md-4">
                 <div class="row">
                     <h5>Precio venta</h5>
                 </div>
                 <div class="row">
-                    <div class="mb-3 col-md-6 col-lg-4">
+                    <div class="mb-3 col-12">
                         <label for="precio-producto" class="form-label">Utilidad:</label>
                           <input type="number"  value="{{ old('ganancia', optional($productoCopiar)->gananciaExtra ?? 0) }}" name="ganancia" id="precio-product-ganancia"  class="form-control price-product" step="0.01">
                     </div>
-                    <div class="col-lg-8"></div>
-                    <div class="mb-3 col-md-6 col-lg-4">
+                    <div class="mb-3 col-12">
                         <label for="precio-producto" class="form-label">Precio Calculado:</label>
                          <input type="number"  value="" id="precio-product-calculado" class="form-control price-product" step="0.01" disabled>
                     </div>
-                    <div class="col-lg-8"></div>
-                        <div class="row" id="div-total-price">
+                </div>
+            </div>
+
+            <div class="col-12 col-md-4 border-start ps-md-4">
+                <div class="row">
+                    <h5>Configuración de TC</h5>
+                </div>
+                <div class="row">
+                    <div class="mb-3 col-12">
+                        <label class="form-label">Tipo de Cambio:</label>
+                        <div class="form-check form-switch">
+                            <input type="hidden" name="usar_tc_fijo" value="0">
+                            <input class="form-check-input"
+                                type="checkbox"
+                                name="usar_tc_fijo"
+                                id="usar_tc_fijo"
+                                value="1"
+                                {{ old('usar_tc_fijo', optional($productoCopiar)->usar_tc_fijo ?? 1) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="usar_tc_fijo">
+                                Usar TC Fijo / SUNAT
+                            </label>
                         </div>
-                    <div class="col-md-8"></div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Actívalo para usar la tasa oficial de SUNAT o una personalizada.</small>
+                    </div>
+                    
+                    <div class="mb-3 col-12">
+                        <label class="form-label">TC Personalizado:</label>
+                        <input type="number" name="tc_fijo" step="0.01" class="form-control" id="tc_fijo_personalizado" value="{{ old('tc_fijo', optional($productoCopiar)->tc_fijo ?? '') }}" placeholder="Ej: 3.80">
+                    </div>
                 </div>
             </div>
         </div>

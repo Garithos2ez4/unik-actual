@@ -409,8 +409,17 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Ejecutar disableButton() al cargar la p芍gina para establecer el estado inicial del bot車n
+            // Ejecutar disableButton() al cargar la página para establecer el estado inicial del botón
             disableButton();
+
+            // Calcular IGV inicial si hay precio
+            let priceInput = document.getElementById('precio-product');
+            if (priceInput && priceInput.value > 0) {
+                let igvInput = document.getElementById('precio-product-igv');
+                if (igvInput) {
+                    igvInput.value = (priceInput.value * 1.18).toFixed(2);
+                }
+            }
 
             // Agregar listeners a los campos para validar al cambiar
             document.getElementById('name-product').addEventListener('input', disableButton);
