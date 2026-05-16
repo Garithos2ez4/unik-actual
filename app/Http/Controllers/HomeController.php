@@ -111,6 +111,49 @@ class HomeController extends Controller
             ->take(3)
             ->get();
 
+        // Top 5 productos con más fallas (Devoluciones o Defectuosos con observación)
+        $productosConFallas = \App\Models\Producto::query()
+            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
+            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
+            ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
+            ->select('Producto.nombreProducto', 'Producto.modelo', \DB::raw('COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas'))
+            ->where(function($q) {
+                $q->where(function($q2) {
+                    $q2->whereIn('RegistroProducto.estado', ['DEFECTUOSO', 'GARANTIA'])
+                       ->whereNotNull('RegistroProducto.observacion')
+                       ->where('RegistroProducto.observacion', '!=', '');
+                })
+                ->orWhere(function($q2) {
+                    $q2->whereNotNull('devoluciones.idDevolucion')
+                       ->whereNotNull('devoluciones.motivo')
+                       ->where('devoluciones.motivo', '!=', '');
+                });
+            })
+            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
+            ->orderBy('total_fallas', 'desc')
+            ->take(5)
+            ->get();
+
+        // Ventas de los últimos 7 días
+        $ventas7DiasRaw = \App\Models\EgresoProducto::query()
+            ->select(\DB::raw('DATE(fechaCompra) as fecha'), \DB::raw('COUNT(*) as total'))
+            ->where('fechaCompra', '>=', now()->subDays(6)->startOfDay())
+            ->groupBy(\DB::raw('DATE(fechaCompra)'))
+            ->orderBy('fecha', 'asc')
+            ->get();
+
+        // Rellenar días sin ventas
+        $ventas7Dias = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $found = $ventas7DiasRaw->firstWhere('fecha', $date);
+            $ventas7Dias[] = [
+                'fecha' => now()->subDays($i)->format('d/m'),
+                'total' => $found ? $found->total : 0
+            ];
+        }
+
+
         $registros = $this->dashboardService->getRegistrosXEstados();
         $inventario = $this->dashboardService->getAllInventory()->sum('stock');
         $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
@@ -138,7 +181,9 @@ class HomeController extends Controller
                     'reclamosUrgentes' => $reclamosUrgentes,
                     'productosMostStock' => $productosMostStock,
                     'publicacionesTopMonto' => $publicacionesTopMonto,
-                    'publicacionesTopMontoHist' => $publicacionesTopMontoHist
+                    'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
+                    'productosConFallas' => $productosConFallas,
+                    'ventas7Dias' => $ventas7Dias
                 ])->render(),
             ]);
         }
@@ -158,7 +203,84 @@ class HomeController extends Controller
             'reclamosUrgentes' => $reclamosUrgentes,
             'productosMostStock' => $productosMostStock,
             'publicacionesTopMonto' => $publicacionesTopMonto,
-            'publicacionesTopMontoHist' => $publicacionesTopMontoHist
+            'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
+            'productosConFallas' => $productosConFallas,
+            'ventas7Dias' => $ventas7Dias
+        ]);
+    }
+
+    public function analytics()
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        $tc = $this->calculadoraService->getTasaCambio();
+
+        // Ventas de los últimos 7 días con Monto (S/)
+        $ventas7DiasRaw = \App\Models\EgresoProducto::query()
+            ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->select(
+                \DB::raw('DATE(EgresoProducto.fechaCompra) as fecha'),
+                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades'),
+                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
+            )
+            ->where('EgresoProducto.fechaCompra', '>=', now()->subDays(6)->startOfDay())
+            ->groupBy(\DB::raw('DATE(EgresoProducto.fechaCompra)'))
+            ->orderBy('fecha', 'asc')
+            ->get();
+
+        $ventas7Dias = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $found = $ventas7DiasRaw->firstWhere('fecha', $date);
+            $ventas7Dias[] = [
+                'fecha' => now()->subDays($i)->format('d/m'),
+                'total' => $found ? $found->total_unidades : 0,
+                'monto' => $found ? $found->total_monto : 0
+            ];
+        }
+
+        // Top 5 productos con más fallas
+        $productosConFallas = \App\Models\Producto::query()
+            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
+            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
+            ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
+            ->select('Producto.nombreProducto', 'Producto.modelo', \DB::raw('COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas'))
+            ->where(function ($q) {
+                $q->where(function ($q2) {
+                    $q2->whereIn('RegistroProducto.estado', ['DEFECTUOSO', 'GARANTIA'])
+                        ->whereNotNull('RegistroProducto.observacion')
+                        ->where('RegistroProducto.observacion', '!=', '');
+                })
+                    ->orWhere(function ($q2) {
+                        $q2->whereNotNull('devoluciones.idDevolucion')
+                            ->whereNotNull('devoluciones.motivo')
+                            ->where('devoluciones.motivo', '!=', '');
+                    });
+            })
+            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
+            ->orderBy('total_fallas', 'desc')
+            ->take(10) // Traemos 10 para la página de analítica
+            ->get();
+
+        // Top 5 SKUs con más ventas (Mes)
+        $skusMostSoldMonth = \App\Models\Publicacion::query()
+            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->select('Publicacion.sku', 'Publicacion.titulo', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
+            ->groupBy('Publicacion.sku', 'Publicacion.titulo')
+            ->orderBy('total_ventas', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('analytics', [
+            'user' => $userModel,
+            'ventas7Dias' => $ventas7Dias,
+            'productosConFallas' => $productosConFallas,
+            'skusMostSoldMonth' => $skusMostSoldMonth
         ]);
     }
 

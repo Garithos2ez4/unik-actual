@@ -79,9 +79,9 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 // Buscar registros disponibles (NUEVO) por NOMBRE o MODELO
                 $query = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
                     ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-                    ->where(function($q) use ($nombreProducto) {
+                    ->where(function ($q) use ($nombreProducto) {
                         $q->where('Producto.nombreProducto', $nombreProducto)
-                          ->orWhere('Producto.modelo', $nombreProducto);
+                            ->orWhere('Producto.modelo', $nombreProducto);
                     })
                     ->where('RegistroProducto.estado', 'NUEVO');
 
@@ -115,7 +115,7 @@ class EgresosImport implements ToCollection, WithHeadingRow
 
                         $items = [['idregistro' => $registro->idRegistro, 'idpublicacion' => $idPublicacion]];
                         $arrayEgreso = ['numeroOrden' => $numeroOrden, 'fechaCompra' => $fechaDespacho, 'fechaDespacho' => $fechaDespacho];
-                        
+
                         $this->egresoService->createEgreso($arrayEgreso, $items);
                         $procesados++;
                     } catch (\Exception $e) {

@@ -247,6 +247,7 @@ class ProductoController extends Controller
                 $stockminimo = $request->input('stockminimo');
                 $video1 = $request->input('video1');
                 $video2 = $request->input('video2');
+                $tc_fijo = $request->input('tc_fijo');
 
                  // Obtener ID de videos
                 $videoId1 = $this->productoService->getYoutubeVideoId($video1);
@@ -350,8 +351,9 @@ class ProductoController extends Controller
                                 $arrayProduct['descripcionProducto'] = $descripcion;
                                 $arrayProduct['estadoProductoWeb'] = $estado;
                                 $arrayProduct['stockMin'] = $stockminimo;
-                                //Usar tasa de canmbio
+                                //Usar tasa de cambio
                                 $arrayProduct['usar_tc_fijo'] = $request->has('usar_tc_fijo');
+                                $arrayProduct['tc_fijo'] = $tc_fijo;
 
                                 //Videos
                                 $arrayProduct['video1_url'] = $videoId1;

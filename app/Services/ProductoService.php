@@ -259,23 +259,42 @@ class ProductoService implements ProductoServiceInterface
         $this->caracteristicasProductoRepository->deleteSpect($idProducto,$idCaracteristica);
     }
     
-    public function validateState($id){
-        $producto = $this->productoRepository->getOne('idProducto',$id);
-        if($producto){
-            $agotado = true;
-            $proveedor = optional($producto->Inventario_Proveedor)->stock ?? 0;
-            foreach($producto->Inventario as $inventario){
-                if($inventario->stock > 0){
-                    $agotado = false;
+    public function validateState($id)
+    {
+        $producto = $this->productoRepository->getOne('idProducto', $id);
+        if ($producto) {
+            $tieneStock = false;
+            // Verificar stock en todos los almacenes del inventario físico
+            foreach ($producto->Inventario as $inventario) {
+                if ($inventario->stock > 0) {
+                    $tieneStock = true;
+                    break;
                 }
             }
-            if($producto->estadoProductoWeb != 'DESCONTINUADO'){
-                if($agotado && $proveedor < 1){
-                    $array = array();
-                    $array['estadoProductoWeb'] = 'AGOTADO';
-                    
-                    $this->productoRepository->update($producto->idProducto,$array);
+
+            // Verificar también stock del proveedor si existe
+            $stockProveedor = optional($producto->Inventario_Proveedor)->stock ?? 0;
+            if ($stockProveedor > 0) {
+                $tieneStock = true;
+            }
+
+            $estadoActual = $producto->estadoProductoWeb;
+            $nuevoEstado = null;
+
+            if (!$tieneStock) {
+                // Si no hay stock y NO está descontinuado, pasar a AGOTADO
+                if ($estadoActual != 'DESCONTINUADO') {
+                    $nuevoEstado = 'AGOTADO';
                 }
+            } else {
+                // Si HAY stock y estaba AGOTADO, volver a DISPONIBLE
+                if ($estadoActual == 'AGOTADO') {
+                    $nuevoEstado = 'DISPONIBLE';
+                }
+            }
+
+            if ($nuevoEstado && $estadoActual != $nuevoEstado) {
+                $this->productoRepository->update($producto->idProducto, ['estadoProductoWeb' => $nuevoEstado]);
             }
         }
     }

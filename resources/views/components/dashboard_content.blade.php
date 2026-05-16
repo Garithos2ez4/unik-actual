@@ -28,9 +28,35 @@ $gradientString = implode(', ', $gradientParts);
     <br>
     <div class="row">
         <div class="col-md-12 mt-3">
-            <div class="row pt-2 pb-2 border shadow rounded-3">
-                <h4>Inventario</h4>
-                <small class="mb-2 text-secondary">Seguimiento de Productos registrados.</small>
+            <div class="row pt-3 pb-3 border shadow rounded-3 bg-white">
+                <div class="col-md-8">
+                    <h4 class="fw-bold"><i class="bi bi-box-seam me-2"></i>Inventario</h4>
+                    <small class="text-secondary">Seguimiento de Productos registrados y métricas clave.</small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ route('dashboard.analitica') }}" class="btn btn-primary rounded-pill shadow-sm px-4">
+                        <i class="bi bi-bar-chart-line-fill me-1"></i> Ver Detalles Analíticos
+                    </a>
+                </div>
+
+                <div class="col-12 mt-3">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded-3 border shadow-sm h-100">
+                                <h6 class="text-secondary small mb-1 fw-bold uppercase">Ventas Semana</h6>
+                                <h4 class="fw-bold text-primary mb-0">{{ collect($ventas7Dias)->sum('total') }} <small class="fs-6 fw-normal">uds.</small></h4>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded-3 border shadow-sm h-100">
+                                <h6 class="text-secondary small mb-1 fw-bold uppercase">Promedio Diario</h6>
+                                <h4 class="fw-bold text-success mb-0">{{ number_format(collect($ventas7Dias)->avg('total'), 1) }} <small class="fs-6 fw-normal">u/d</small></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 mt-3"></div> <!-- Spacer -->
                 @foreach ($registros as $registro)
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="{{route('dashboardinventario',[encrypt($registro['estado'])])}}" class="text-decoration-none">
@@ -338,6 +364,36 @@ $gradientString = implode(', ', $gradientParts);
                                         <div class="col-4 text-end">
                                             <span class="text-success fw-bold">{{ (int)$topStock->total_stock }}</span>
                                             <small class="d-block text-secondary">uds.</small>
+                                        </div>
+                                    </div>
+                                </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                <div class="col-md-12 mt-3">
+                    <div class="row border shadow rounded-3 pt-2 pb-2">
+                        <div class="col-md-12">
+                            <h4 class="mb-0">Top 5 Fallas</h4>
+                            <small class="text-secondary">Productos con más devoluciones/fallos</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <ul class="list-group list-group-flush">
+                                @foreach ($productosConFallas as $index => $topFalla)
+                                <li class="list-group-item px-1">
+                                    <div class="row align-items-center">
+                                        <div class="col-2 text-center">
+                                            <span class="badge rounded-pill {{ $index === 0 ? 'bg-danger' : ($index === 1 ? 'bg-warning text-dark' : 'bg-secondary') }}" style="font-size: 0.9rem;">
+                                                #{{ $index + 1 }}
+                                            </span>
+                                        </div>
+                                        <div class="col-6 px-0">
+                                            <strong class="d-block text-truncate" style="font-size: 0.85rem;" title="{{ $topFalla->nombreProducto }}">{{ $topFalla->nombreProducto }}</strong>
+                                            <small class="text-secondary text-truncate d-block" style="max-width: 100%;">{{ $topFalla->modelo }}</small>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <span class="text-danger fw-bold">{{ $topFalla->total_fallas }}</span>
+                                            <small class="d-block text-secondary">fallas</small>
                                         </div>
                                     </div>
                                 </li>

@@ -22,6 +22,8 @@ class ComprobanteService implements ComprobanteServiceInterface
     protected $ingresoRepository;
     protected $headerService;
     protected $inventarioRepository;
+    protected $productoService;
+
 
     public function __construct(ComprobanteRepositoryInterface $comprobanteRepository,
                                 AlmacenRepositoryInterface $almacenService,
@@ -30,7 +32,8 @@ class ComprobanteService implements ComprobanteServiceInterface
                                 RegistroProductoRepositoryInterface $registroProductoRepository,
                                 IngresoProductoRepositoryInterface $ingresoRepository,
                                 HeaderServiceInterface $headerService,
-                                InventarioRepositoryInterface $inventarioRepository)
+                                InventarioRepositoryInterface $inventarioRepository,
+                                ProductoServiceInterface $productoService)
     {
         $this->comprobanteRepository = $comprobanteRepository;
         $this->almacenRepository = $almacenService;
@@ -40,6 +43,7 @@ class ComprobanteService implements ComprobanteServiceInterface
         $this->ingresoRepository = $ingresoRepository;
         $this->headerService = $headerService;
         $this->inventarioRepository = $inventarioRepository;
+        $this->productoService = $productoService;
     }
 
     public function getAllRegistrosByComprobanteId($idComprobante){
@@ -229,6 +233,8 @@ class ComprobanteService implements ComprobanteServiceInterface
                         try {
                             $this->insertRegistro($arrayRegistro);
                             $this->addStock($idProducto, $idAlmacen);
+                            // Validar estado del producto (por si estaba AGOTADO)
+                            $this->productoService->validateState($idProducto);
                         } catch (Exception $e) {
                             // Manejo de errores: puedes registrar el error o mostrar un mensaje
                             // Log::error('Error al insertar registro: ' . $e->getMessage());

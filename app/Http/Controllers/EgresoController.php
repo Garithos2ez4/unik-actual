@@ -86,9 +86,6 @@ class EgresoController extends Controller
 
                     try {
                         $productos = $this->egresoService->createEgreso($arrayEgreso, $items);
-                        foreach ($productos as $producto) {
-                            $this->productoService->validateState($producto->idProducto);
-                        }
                         $this->headerService->sendFlashAlerts('Egreso registrado', 'Operacion exitosa', 'success', 'btn-success');
                         return back();
                     } catch (\Exception $e) {

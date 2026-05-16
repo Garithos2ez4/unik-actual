@@ -219,7 +219,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 ]; // Limpiamos la observación para la nueva venta
 
                 $this->registroRepository->update($idRegistro, $arrayRegistro);
-                $productos[] = $this->updateStock($idAlmacen, $idRegistro);
+                $producto = $this->updateStock($idAlmacen, $idRegistro);
+                $productos[] = $producto;
+
+                // Validar estado del producto (por si se agotó)
+                $this->productoRepository->validateState($producto->idProducto);
             }
         }
         return $productos;
@@ -284,6 +288,9 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $idProducto = $registro->DetalleComprobante->Producto->idProducto;
             $idAlmacen = $registro->idAlmacen;
             $this->inventarioRepository->addStock($idProducto, $idAlmacen);
+
+            // Validar estado del producto (por si ahora hay stock)
+            $this->productoRepository->validateState($idProducto);
         }
     }
 
