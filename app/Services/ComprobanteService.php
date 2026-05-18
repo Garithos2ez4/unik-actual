@@ -254,7 +254,10 @@ class ComprobanteService implements ComprobanteServiceInterface
                 throw new \Exception('Producto no encontrado.');
             }
     
-            $parcialCode = 'UNK-' . $product->codigoProducto;
+            $modelOrCode = !empty($product->modelo) ? $product->modelo : $product->codigoProducto;
+            $cleanedModel = mb_strtoupper(str_replace([' ', '-', '.'], '', $modelOrCode));
+            
+            $parcialCode = 'UNK-' . $cleanedModel;
             $validateCode = $this->registroProductoRepository->searchList('numeroSerie', $parcialCode);
             
             $code = $parcialCode . '-' . (100000 + (count($validateCode) + 1));

@@ -133,6 +133,8 @@ class ProductoController extends Controller
                     'almacenes' => $almacenes,
                     'codigos' => $latestProductCodes,
                     'tc' => $this->calculadoraService->getTasaCambio(),
+                    'igv' => $this->calculadoraService->getIgv(),
+                    'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio,
                     'productoCopiar' => $productoCopiar
                 ]);
             }

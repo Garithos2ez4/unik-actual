@@ -22,7 +22,9 @@ class ScriptController extends Controller
     public function createProductScript($tc)
     {
         $latestProductCodes = $this->scriptService->getCodigosProductos();
+        $tasaFija = app(\App\Services\CalculadoraServiceInterface::class)->getTasaFija()->tasaCambio;
         $js = view('js.create-product-scripts',['tc' => $tc,
+                                                'tasaFija' => $tasaFija,
                                                 'codigos' => $latestProductCodes])->render();
 
         return response($js)->header('Content-Type', 'application/javascript');

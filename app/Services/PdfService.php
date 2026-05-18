@@ -52,10 +52,10 @@ class PdfService implements PdfServiceInterface
 
     public function getReportsAlmacen() {
         /**
-         * ANTES: return $this->productoRepository->getProductsWithStock()->sortBy('codigoProducto');
+         * ANTES: return $this->productoRepository->getProductsWithStock()->sortBy('modelo');
          * AHORA: return $this->productoRepository->getProductsWithStock();
          * 
-         * CAMBIO: El repositorio ahora ya retorna la colección ordenada por 'codigoProducto'
+         * CAMBIO: El repositorio ahora ya retorna la colección ordenada por 'modelo'
          * directamente desde la query con orderBy(). El sortBy() de colección aquí era redundante
          * y además ineficiente (ordenar en PHP en lugar de en la BD).
          */
@@ -92,7 +92,7 @@ class PdfService implements PdfServiceInterface
                     $q->where('idAlmacen', $idAlmacen);
                 }
             }])
-            ->orderBy('codigoProducto')
+            ->orderBy('modelo')
             ->get();
 
         return $query;

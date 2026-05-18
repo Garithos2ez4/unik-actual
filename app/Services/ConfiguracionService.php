@@ -78,8 +78,8 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         $this->tipoProductoRepository = $tipoProductoRepository;
         $this->sugerenciaRepository = $sugerenciaRepository;
 
-        $this->pathMarca = public_path('images/marcas');
-        $this->pathGrupo = public_path('images/grupos');
+        $this->pathMarca = public_path('storage/marcas');
+        $this->pathGrupo = public_path('storage/grupos');
     }
 
     public function getOneCaracteristica($idCaracteristica){
@@ -301,15 +301,18 @@ class ConfiguracionService implements ConfiguracionServiceInterface
                 'nombreMarca' => $nombre,
                 'imagenMarca' => ''
                 ];
-        $this->marcaRepository->create($data);
-        $newMarca = $this->marcaRepository->getOne('idMarca',$data['idMarca']);
-        $updateData = ['imagenMarca' => 'marcas/IMGPRO'.$newMarca->slugMarca.'.webp' ];
-        try{
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $this->marcaRepository->create($data);
+            $newMarca = $this->marcaRepository->getOne('idMarca',$data['idMarca']);
+            $updateData = ['imagenMarca' => 'marcas/IMGPRO'.$newMarca->slugMarca.'.webp' ];
             $imgService->createImage($img,$newMarca->slugMarca,$this->pathMarca);
-        }catch(Exception $e){
-            throw new \InvalidArgumentException("Error al crear Imagen de marca");
+            $this->marcaRepository->update($newMarca->idMarca,$updateData);
+            \Illuminate\Support\Facades\DB::commit();
+        } catch(Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            throw new \InvalidArgumentException("Error al crear Imagen de marca: " . $e->getMessage());
         }
-        $this->marcaRepository->update($newMarca->idMarca,$updateData);
     }
 
     public function createGrupoProducto($categoria,$grupo,$tipo,$img){
@@ -321,21 +324,24 @@ class ConfiguracionService implements ConfiguracionServiceInterface
                 'idTipoProducto' => $tipo,
                 'imagenGrupo' => ''
                 ];
-        $this->grupoRepository->create($data);
-        foreach($rangos as $rango){
-            $comisionData = ['idGrupoProducto' => $data['idGrupoProducto'],
-                            'idRango' => $rango->idRango,
-                            'comision' => 0];
-            $this->comisionRepository->create($comisionData);
-        }
-        $newGrupo = $this->grupoRepository->getOne('idGrupoProducto',$data['idGrupoProducto']);
-        $updateData = ['imagenGrupo' => 'grupos/IMGPRO'.$newGrupo->slugGrupo.'.webp' ];
-        try{
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $this->grupoRepository->create($data);
+            foreach($rangos as $rango){
+                $comisionData = ['idGrupoProducto' => $data['idGrupoProducto'],
+                                'idRango' => $rango->idRango,
+                                'comision' => 0];
+                $this->comisionRepository->create($comisionData);
+            }
+            $newGrupo = $this->grupoRepository->getOne('idGrupoProducto',$data['idGrupoProducto']);
+            $updateData = ['imagenGrupo' => 'grupos/IMGPRO'.$newGrupo->slugGrupo.'.webp' ];
             $imgService->createImage($img,$newGrupo->slugGrupo,$this->pathGrupo);
-        }catch(Exception $e){
-            throw new \InvalidArgumentException("Error al crear Imagen de grupo");
+            $this->grupoRepository->update($newGrupo->idGrupoProducto,$updateData);
+            \Illuminate\Support\Facades\DB::commit();
+        } catch(Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            throw new \InvalidArgumentException("Error al crear Imagen de grupo: " . $e->getMessage());
         }
-        $this->grupoRepository->update($newGrupo->idGrupoProducto,$updateData);
     }
 
     public function removeSugerencia($idSugerencia,$tipo){

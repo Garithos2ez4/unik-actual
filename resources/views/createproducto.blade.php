@@ -121,7 +121,18 @@
                     </div>
                     <div class="mb-3 col-12">
                         <label for="precio-producto" class="form-label">Precio Calculado:</label>
-                         <input type="number"  value="" id="precio-product-calculado" class="form-control price-product" step="0.01" disabled>
+                          <input type="number"  value="" id="precio-product-calculado" class="form-control price-product" step="0.01" disabled>
+                    </div>
+                    <div class="row" id="div-total-price">
+                    </div>
+                    </br>
+                    <div id="div-precio-total-sunat" class="mb-2">
+                        <label for="precio-total-sunat" class="form-label">Precio Total en Soles (TC SUNAT: {{ $tc }})</label>
+                        <input type="number" id="precio-total-sunat" value="" class="form-control" disabled>
+                    </div>
+                    <div id="div-precio-total-fijo" class="mb-2">
+                        <label for="precio-total-fijo" class="form-label">Precio Total en Soles / Tasa Fija ({{ $tasaFija }})</label>
+                        <input type="number" id="precio-total-fijo" value="" class="form-control" disabled>
                     </div>
                 </div>
             </div>
@@ -276,6 +287,5 @@
       </form>
       <br>
     </div>
-    <script src="{{ route('js.create-product-scripts',[$tc]) }}"></script>
-    
+     <script src="{{ route('js.create-product-scripts',[$tc]) }}"></script>
 @endsection

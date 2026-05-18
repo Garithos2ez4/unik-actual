@@ -43,7 +43,7 @@ class ProductoService implements ProductoServiceInterface
         $this->marcaRepository = $marcaRepository;
         $this->grupoRepository = $grupoRepository;
         $this->categoriaRepository = $categoriaRepository;
-        $this->path = public_path('images/productos');
+        $this->path = public_path('storage/productos');
         $this->proveedorRepository = $proveedorRepository;
         $this->almacenRepository = $almacenRepository;
         $this->inventarioRepository = $inventarioRepository;
@@ -270,12 +270,6 @@ class ProductoService implements ProductoServiceInterface
                     $tieneStock = true;
                     break;
                 }
-            }
-
-            // Verificar también stock del proveedor si existe
-            $stockProveedor = optional($producto->Inventario_Proveedor)->stock ?? 0;
-            if ($stockProveedor > 0) {
-                $tieneStock = true;
             }
 
             $estadoActual = $producto->estadoProductoWeb;

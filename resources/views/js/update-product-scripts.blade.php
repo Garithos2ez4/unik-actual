@@ -16,7 +16,8 @@
                             let precioCalculado = document.getElementById('precio-product-calculado');
                             let divTotal = document.getElementById('div-total-price');
 
-                            precioCalculado.value = data[0].calculado.toFixed(2);
+                            let gananciaVal = parseFloat(ganancia) || 0;
+                            precioCalculado.value = (data[0].calculado + gananciaVal).toFixed(2);
 
                             divTotal.innerHTML = '';
 
@@ -105,12 +106,12 @@
         document.addEventListener('DOMContentLoaded', calcPrices);
 
         document.getElementById('precio-product-igv').addEventListener('input',removeIgv);
-        document.getElementById('precio-product-igv').addEventListener('blur',calcPrices);
+        document.getElementById('precio-product-igv').addEventListener('input',calcPrices);
 
         document.getElementById('precio-product').addEventListener('input',calcIgv);
-        document.getElementById('precio-product').addEventListener('blur',calcPrices);
+        document.getElementById('precio-product').addEventListener('input',calcPrices);
 
-        document.getElementById('precio-product-ganancia').addEventListener('blur',calcPrices);
+        document.getElementById('precio-product-ganancia').addEventListener('input',calcPrices);
 
         document.getElementById('select-tipoprecio').addEventListener('change', changeTC);
         document.getElementById('select-tipoprecio').addEventListener('change', calcPrices);
