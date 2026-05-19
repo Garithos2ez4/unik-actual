@@ -268,14 +268,21 @@ class ProductoService implements ProductoServiceInterface
     {
         $producto = $this->productoRepository->getOne('idProducto', $id);
         if ($producto) {
-            $tieneStock = false;
+            $tieneStockFisico = false;
             // Verificar stock en todos los almacenes del inventario físico
             foreach ($producto->Inventario as $inventario) {
                 if ($inventario->stock > 0) {
-                    $tieneStock = true;
+                    $tieneStockFisico = true;
                     break;
                 }
             }
+
+            $tieneStockProveedor = false;
+            if ($producto->Inventario_Proveedor && $producto->Inventario_Proveedor->stock > 0) {
+                $tieneStockProveedor = true;
+            }
+
+            $tieneStock = $tieneStockFisico || $tieneStockProveedor;
 
             $estadoActual = $producto->estadoProductoWeb;
             $nuevoEstado = null;
@@ -286,7 +293,7 @@ class ProductoService implements ProductoServiceInterface
                     $nuevoEstado = 'AGOTADO';
                 }
             } else {
-                // Si HAY stock y estaba AGOTADO, volver a DISPONIBLE
+                // Si HAY stock (físico o de proveedor) y estaba AGOTADO, volver a DISPONIBLE
                 if ($estadoActual == 'AGOTADO') {
                     $nuevoEstado = 'DISPONIBLE';
                 }

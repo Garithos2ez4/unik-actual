@@ -141,15 +141,15 @@
             </div>
             <div class="col-6 mb-3">
                 <label class="form-label">Componentes Recepcionados:</label>
-                <textarea class="form-control body-form-garantia" maxlength="100" name="recepcion" required></textarea>
+                <textarea class="form-control body-form-garantia" maxlength="255" name="recepcion" required></textarea>
             </div>
             <div class="col-6 mb-3">
                 <label class="form-label">Estado F&iacute;sico:</label>
-                <textarea class="form-control body-form-garantia" maxlength="100" name="estado" required></textarea>
+                <textarea class="form-control body-form-garantia" maxlength="255" name="estado" required></textarea>
             </div>
             <div class="col-12 mb-3">
                 <label class="form-label">Falla Presentada:</label>
-                <textarea class="form-control body-form-garantia" maxlength="100" name="falla" required></textarea>
+                <textarea class="form-control body-form-garantia" maxlength="255" name="falla" required></textarea>
             </div>
         </div>
         <br>
