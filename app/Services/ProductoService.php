@@ -43,7 +43,12 @@ class ProductoService implements ProductoServiceInterface
         $this->marcaRepository = $marcaRepository;
         $this->grupoRepository = $grupoRepository;
         $this->categoriaRepository = $categoriaRepository;
-        $this->path = public_path('storage/productos');
+        if (app()->environment('local')) {
+            $this->path = public_path('storage/productos');
+        } else {
+            $baseDir = dirname(base_path());
+            $this->path = $baseDir . '/public_html/images/productos';
+        }
         $this->proveedorRepository = $proveedorRepository;
         $this->almacenRepository = $almacenRepository;
         $this->inventarioRepository = $inventarioRepository;

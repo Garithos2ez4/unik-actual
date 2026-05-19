@@ -78,8 +78,15 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         $this->tipoProductoRepository = $tipoProductoRepository;
         $this->sugerenciaRepository = $sugerenciaRepository;
 
-        $this->pathMarca = public_path('storage/marcas');
-        $this->pathGrupo = public_path('storage/grupos');
+        // Determinar dinámicamente la ruta según el entorno para que funcione tanto en local como en producción
+        if (app()->environment('local')) {
+            $this->pathMarca = public_path('storage/marcas');
+            $this->pathGrupo = public_path('storage/grupos');
+        } else {
+            $baseDir = dirname(base_path());
+            $this->pathMarca = $baseDir . '/public_html/images/marcas';
+            $this->pathGrupo = $baseDir . '/public_html/images/grupos';
+        }
     }
 
     public function getOneCaracteristica($idCaracteristica){

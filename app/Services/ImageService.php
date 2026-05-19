@@ -10,6 +10,10 @@ class ImageService
 {
     public function createImage(UploadedFile $file,$name,$destinationPath)
     {
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
         $quality = 80;
         $filename = 'IMGPRO'.$name.'.webp';
         $webpFullPath = $destinationPath . '/' . $filename;
