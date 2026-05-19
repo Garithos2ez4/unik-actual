@@ -132,14 +132,12 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 $serieIndividual = trim($serieIndividual);
                 if (empty($serieIndividual)) continue;
 
-                $registro = RegistroProducto::where('numeroSerie', $serieIndividual)->first();
+                // Buscamos prioritariamente un registro de esta serie que esté NUEVO (disponible para egreso)
+                $registro = RegistroProducto::where('numeroSerie', $serieIndividual)
+                    ->where('estado', 'NUEVO')
+                    ->first();
 
                 if ($registro) {
-                    if ($registro->estado !== 'NUEVO') {
-                        Log::warning("Fila $index: La serie $serieIndividual ya no está NUEVA (Estado: {$registro->estado})");
-                        continue;
-                    }
-
                     $idPublicacion = null;
                     if (!empty($sku) && strtolower($sku) !== 'no aplica') {
                         $publicacion = Publicacion::where('sku', $sku)->first();
@@ -155,7 +153,16 @@ class EgresosImport implements ToCollection, WithHeadingRow
                         Log::error("Fila $index: Error en serie {$serieIndividual}: " . $e->getMessage());
                     }
                 } else {
-                    Log::warning("Fila $index saltada: Serie no encontrada: " . $serieIndividual);
+                    // Si no hay ninguno NUEVO, buscamos el último registro general para dar un warning correcto en los logs
+                    $registroExistente = RegistroProducto::where('numeroSerie', $serieIndividual)
+                        ->orderBy('idRegistro', 'desc')
+                        ->first();
+
+                    if ($registroExistente) {
+                        Log::warning("Fila $index: La serie $serieIndividual ya no está NUEVA (Estado: {$registroExistente->estado})");
+                    } else {
+                        Log::warning("Fila $index saltada: Serie no encontrada: " . $serieIndividual);
+                    }
                 }
             }
         }

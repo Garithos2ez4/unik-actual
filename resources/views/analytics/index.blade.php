@@ -25,29 +25,34 @@
     </div>
 
     <div class="row mt-2">
+        <!-- Productos con Mayor Ingreso (Monto S/) -->
+        <div class="col-lg-6">
+            @include('analytics.partials.top_products_revenue')
+        </div>
+        <!-- Productos Más Vendidos (Cantidad Unidades) -->
+        <div class="col-lg-6">
+            @include('analytics.partials.top_products_qty')
+        </div>
+    </div>
+
+    <div class="row mt-2">
         <!-- Rendimiento por Plataforma -->
         <div class="col-lg-6">
             @include('analytics.partials.platforms')
         </div>
-        <!-- Productos con Mayor Ingreso (NUEVO) -->
-        <div class="col-lg-6">
-            @include('analytics.partials.top_products_revenue')
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Top Fallas Detallado -->
-        <div class="col-lg-6">
-            @include('analytics.partials.failures')
-        </div>
-
         <!-- Top SKUs Mes -->
         <div class="col-lg-6">
             @include('analytics.partials.top_skus')
         </div>
+    </div>
+
     <div class="row mt-2">
+        <!-- Top Fallas Detallado -->
+        <div class="col-lg-6">
+            @include('analytics.partials.failures')
+        </div>
         <!-- Hall of Fame: Mejores Meses Históricos -->
-        <div class="col-lg-12">
+        <div class="col-lg-6">
             @include('analytics.partials.best_months')
         </div>
     </div>

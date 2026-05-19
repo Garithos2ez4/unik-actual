@@ -316,6 +316,29 @@ class HomeController extends Controller
             ->take(5)
             ->get();
 
+        // Top 5 Productos más vendidos por cantidad (Mes actual)
+        $productosMostSoldMonth = \App\Models\Producto::query()
+            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
+            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
+            ->join('EgresoProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
+            ->select(
+                'Producto.idProducto',
+                'Producto.nombreProducto',
+                'Producto.modelo',
+                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades')
+            )
+            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+            ->whereYear('EgresoProducto.fechaCompra', now()->year)
+            ->whereNotExists(function ($query) {
+                $query->select(\DB::raw(1))
+                    ->from('devoluciones')
+                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+            })
+            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
+            ->orderBy('total_unidades', 'desc')
+            ->take(5)
+            ->get();
+
         // Top 3 mejores meses de venta (Histórico)
         $topBestMonths = \App\Models\EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
@@ -340,6 +363,7 @@ class HomeController extends Controller
             'skusMostSoldMonth' => $skusMostSoldMonth,
             'metricasPlataformas' => $metricasPlataformas,
             'productosMostRevenueMonth' => $productosMostRevenueMonth,
+            'productosMostSoldMonth' => $productosMostSoldMonth,
             'topBestMonths' => $topBestMonths
         ]);
     }

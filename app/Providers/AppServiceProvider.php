@@ -196,11 +196,12 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale('es');
         Paginator::useBootstrapFive();
         
-        $almacenes = Cache::remember('almacenes_all', 86400, function () {
-            return Almacen::all();
-        });
-        
-        View::share('almacenes', $almacenes);
+        if (!app()->runningInConsole()) {
+            $almacenes = Cache::remember('almacenes_all', 86400, function () {
+                return Almacen::all();
+            });
+            View::share('almacenes', $almacenes);
+        }
     }
 
 }
