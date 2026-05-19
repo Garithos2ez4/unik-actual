@@ -517,6 +517,7 @@ class ProductoController extends Controller
                     return redirect()->back();
 
                 }catch(Exception $e){
+                    \Log::error('Error en updateProduct: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
                     $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error valida peus hijo ','error','btn-danger');
                     return redirect()->back();
                 }

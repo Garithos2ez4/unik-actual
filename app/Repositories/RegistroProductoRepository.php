@@ -82,6 +82,21 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
             ->first();
     }
 
+    public function searchByGarantia($serial, $cant)
+    {
+        return RegistroProducto::where('estado', '=', 'ENTREGADO')
+            ->where('numeroSerie', 'LIKE', "%{$serial}%")
+            ->take($cant)
+            ->get();
+    }
+
+    public function getByGarantia($serial)
+    {
+        return RegistroProducto::where('estado', '=', 'ENTREGADO')
+            ->where('numeroSerie', '=', $serial)
+            ->first();
+    }
+
     public function validateSerie($idProveedor, $serie)
     {
         $response = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante', 'inner', false)

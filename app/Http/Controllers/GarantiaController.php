@@ -65,4 +65,20 @@ class GarantiaController extends Controller
         $this->headerService->sendFlashAlerts('Ocurrio un error','Hubo un error en la operación','danger','btn-danger');
         return back();
     }
+
+    public function searchRegistro(Request $request)
+    {
+        $query = $request->input('query');
+        $results = $this->garantiaService->searchAjaxRegistro($query);
+
+        return response()->json($results);
+    }
+
+    public function getOneRegistro(Request $request)
+    {
+        $query = $request->input('query');
+        $results = $this->garantiaService->getOneAjaxRegistro($query);
+
+        return response()->json($results);
+    }
 }

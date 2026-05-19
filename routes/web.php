@@ -46,6 +46,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
     Route::get('/licencias', [LicenciaController::class, 'index'])->name('licencias.index');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/analitica', [HomeController::class, 'analytics'])->name('dashboard.analitica');
     Route::get('/home', fn() => redirect()->route('dashboard'))->name('home');
     Route::get('/dashboard/stockmin', [HomeController::class, 'stockMinDashboard'])->name('stockmindashboard');
     Route::get('/dashboard/inventario/{estado}',[HomeController::class,'dashboardInventario'])->name('dashboardinventario');
@@ -94,19 +95,37 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');
     Route::get('/egresos/total', [EgresoController::class, 'getTotalEgresos'])->name('egresos.total');
+    Route::post('/egresos/importar', [EgresoController::class, 'importarExcel'])->name('egresos.importar');
+    Route::get('/egresos/descargar-formato', [EgresoController::class, 'descargarFormato'])->name('egresos.formato');
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
-    Route::post('/egresos/importar', [EgresoController::class, 'importarExcel'])->name('egresos.importar');
 
     Route::get('/garantia/creategarantia',[GarantiaController::class,'create'])->name('creategarantia');
     Route::get('/garantias/{date}',[GarantiaController::class,'index'])->name('garantias');
     Route::post('/garantia/insertgarantia',[GarantiaController::class,'insertGarantia'])->name('insertgarantia');
+    Route::get('/garantia/searchregistro',[GarantiaController::class,'searchRegistro'])->name('garantia.searchregistro');
+    Route::get('/garantia/getoneegreso',[GarantiaController::class,'getOneRegistro'])->name('garantia.getoneegreso');
 
     Route::get('/plataformas', [PlataformaController::class, 'index'])->name('plataformas');
     Route::post('/plataforma/updatecuenta', [PlataformaController::class, 'updateCuentas'])->name('updatecuenta');
     Route::post('/plataforma/createcuenta', [PlataformaController::class, 'createCuenta'])->name('createcuenta');
 
+    // Envios a Provincias
+    Route::prefix('envios-provincias')->name('envios.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\EnvioProvinciaController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\EnvioProvinciaController::class, 'create'])->name('create');
+        Route::post('/store', [\App\Http\Controllers\EnvioProvinciaController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'edit'])->name('edit');
+        Route::put('/update/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'update'])->name('update');
+        Route::get('/pdf', [\App\Http\Controllers\EnvioProvinciaController::class, 'pdf'])->name('pdf');
+        
+        // AJAX Endpoints
+        Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
+        Route::post('/agencia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeAgencia'])->name('agencia.store');
+        Route::post('/provincia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeProvincia'])->name('provincia.store');
+        Route::post('/destino', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeDestino'])->name('destino.store');
+    });
     // FALABELLA
     Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {
         Route::get('/productos', [PlataformaController::class, 'falabellaProductos'])->name('productos');
@@ -119,6 +138,8 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/etiquetas', [PlataformaController::class, 'falabellaEtiquetas'])->name('etiquetas');
         Route::get('/etiquetas-pdf', [PlataformaController::class, 'falabellaEtiquetasPdf'])->name('etiquetas.pdf');
         Route::get('/etiquetas-oficiales-pdf', [PlataformaController::class, 'falabellaEtiquetasOficialesPdf'])->name('etiquetas-oficiales.pdf');
+        Route::get('/devoluciones', [PlataformaController::class, 'falabellaReturns'])->name('devoluciones');
+        Route::post('/sync-devoluciones', [PlataformaController::class, 'syncFalabellaReturns'])->name('sync-devoluciones');
     });
 
     Route::prefix('reclamos-plataforma')->name('reclamos.')->group(function () {

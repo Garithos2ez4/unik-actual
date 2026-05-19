@@ -42,15 +42,59 @@ class GarantiaService implements GarantiaServiceInterface
                 ];
         
         $this->garantiaRepository->create($data);
-        $this->updateStateGarantia($data['idRegistro']);
+        $this->updateStateGarantia($data['idRegistro'], $fallo);
         $response = $this->garantiaRepository->getOne($data['idGarantia']);
         return $response;
     }
 
-    private function updateStateGarantia($idGarantia){
-        if(!empty($idGarantia)){
-            $data = ['estado' => 'GARANTIA'];
-            $this->registroRepository->update($idGarantia,$data);
+    public function searchAjaxRegistro($serial)
+    {
+        $egresos = $this->registroRepository->searchByGarantia($serial, 5);
+        $result = $egresos->map(function ($details) {
+            return [
+                'nombreProducto' => $details->DetalleComprobante->Producto->nombreProducto,
+                'codigoProducto' => $details->DetalleComprobante->Producto->codigoProducto,
+                'idRegistroProducto' => $details->idRegistro,
+                'numeroSerie' => $details->numeroSerie,
+                'estado' => $details->estado,
+                'modelo' => $details->DetalleComprobante->Producto->modelo,
+                'image' => $details->DetalleComprobante->Producto->imagenProducto1,
+                'marca' => $details->DetalleComprobante->Producto->MarcaProducto->nombreMarca
+            ];
+        });
+        return $result;
+    }
+
+    public function getOneAjaxRegistro($serial)
+    {
+        $egreso = $this->registroRepository->getByGarantia($serial);
+
+        if ($egreso) {
+            $details = $egreso->DetalleComprobante->Producto;
+
+            $result = [
+                'nombreProducto' => $details->nombreProducto,
+                'codigoProducto' => $details->codigoProducto,
+                'idRegistroProducto' => $egreso->idRegistro,
+                'numeroSerie' => $egreso->numeroSerie,
+                'estado' => $egreso->estado,
+                'modelo' => $details->modelo,
+                'image' => $details->imagenProducto1,
+                'marca' => $details->MarcaProducto->nombreMarca
+            ];
+            return $result;
+        }
+
+        return [];
+    }
+
+    private function updateStateGarantia($idRegistro, $falla){
+        if(!empty($idRegistro)){
+            $data = [
+                'estado' => 'GARANTIA',
+                'observacion' => $falla
+            ];
+            $this->registroRepository->update($idRegistro,$data);
         }
     }
 

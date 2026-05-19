@@ -27,7 +27,7 @@ let btnRegistroGarantia = document.getElementById('btn-registrar-garantia');
 
     function searchRegistro(query){
         let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/egresos/searchregistro?query=${query}`, true);
+        xhr.open('GET', `/garantia/searchregistro?query=${query}`, true);
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 data = JSON.parse(xhr.responseText);
@@ -46,7 +46,7 @@ let btnRegistroGarantia = document.getElementById('btn-registrar-garantia');
     function getOneRegistro(query) {
         let data = null;
         let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/egresos/getoneegreso?query=${query}`, true);
+        xhr.open('GET', `/garantia/getoneegreso?query=${query}`, true);
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 data = JSON.parse(xhr.responseText);
