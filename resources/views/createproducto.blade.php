@@ -42,18 +42,40 @@
                 </select>
             </div>
             <div class="mb-3 col-6 col-lg-3">
-                <label for="grupo-product" id="grupo-label" class="form-label">Grupo:</label>
+                <label for="grupo-product" id="grupo-label" class="form-label d-flex justify-content-between align-items-center">
+                    <span>Grupo:</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 border-0" data-bs-toggle="modal" data-bs-target="#quickGrupoModal" style="font-size: 0.85rem; font-weight: 500;">
+                        <i class="bi bi-plus-circle-fill"></i> Nuevo
+                    </button>
+                </label>
                 <select name="grupo" id="grupo-product" class="form-select">
                         <option value="" {{ old('grupo') ? '' : 'selected' }}>-Elige un grupo-</option>
                     @foreach($grupos as $grupo)
+                        @php
+                            $gp = \App\Models\GrupoProducto::find($grupo['idGrupoProducto']);
+                            $catName = $gp && $gp->CategoriaProducto ? $gp->CategoriaProducto->nombreCategoria : '';
+                        @endphp
                         <option value="{{ $grupo['idGrupoProducto'] }}"
+                            data-categoria="{{ $catName }}"
                             {{ old('grupo', optional($productoCopiar)->idGrupo ?? '') == $grupo['idGrupoProducto'] ? 'selected' : '' }}>
                             {{ $grupo['nombreGrupo'] }}
                         </option>
                     @endforeach
                 </select>
-                <input type="hidden" name="codigo" value="ERROR" id="codigo-product">
-                <small><i class="bi bi-exclamation-circle"></i> No se podra modificar despues</small>
+                <div id="container-codigo-wrapper" class="mt-2 d-none">
+                    <div class="card border-primary shadow-sm bg-light" style="border-left: 4px solid #0d6efd !important;">
+                        <div class="card-body py-2.5 px-3">
+                            <label for="codigo-product" class="form-label fw-bold text-primary mb-1" style="font-size: 0.85rem;">
+                                <i class="bi bi-key-fill me-1"></i> Código de Producto (Editable)
+                            </label>
+                            <div class="input-group input-group-sm mb-2" style="max-width: 280px;">
+                                <input type="text" name="codigo" value="ERROR" id="codigo-product" class="form-control fw-bold text-uppercase text-center border-2 border-primary py-1.5" placeholder="Ej: LAPGAM" maxlength="10" style="letter-spacing: 1.5px; font-size: 0.95rem;">
+                                <span class="input-group-text bg-white border-primary text-muted fw-semibold" style="font-size: 0.75rem;">6 carac.</span>
+                            </div>
+                            <div id="codigo-product-help" class="fs-7 lh-sm"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="mb-3 col-6 col-lg-2">
                 <label for="estado-product" id="estado-label" class="form-label">
@@ -281,11 +303,73 @@
        
         <div class="row mt-4 pt-4">
               <div class="col-12 text-center">
-                  <button type="submit" onclick="manejarSubmit()"class="btn btn-success " id="btnRegistrar" >Registrar <i class="bi bi-floppy"></i></button>
+                  <button type="submit" class="btn btn-success" id="btnRegistrar">Registrar <i class="bi bi-floppy"></i></button>
               </div>
         </div>
       </form>
       <br>
+
+      <!-- Modal para Creación Rápida de Grupo -->
+      <div class="modal fade" id="quickGrupoModal" tabindex="-1" aria-labelledby="quickGrupoModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content shadow-lg border-0 rounded-4">
+                  <div class="modal-header bg-gradient-primary text-white border-0 py-3 rounded-top-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                      <h5 class="modal-title fw-bold" id="quickGrupoModalLabel">
+                          <i class="bi bi-folder-plus me-2"></i> Crear Nuevo Grupo
+                      </h5>
+                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="btn-close-quick-modal"></button>
+                  </div>
+                  <form id="form-quick-grupo" enctype="multipart/form-data">
+                      @csrf
+                      <div class="modal-body p-4">
+                          <div id="quick-grupo-alert" class="alert alert-danger d-none py-2 px-3 fs-7" role="alert"></div>
+                          
+                          <div class="mb-3">
+                              <label for="quick-categoria" class="form-label fw-semibold">Categoría General</label>
+                              <select id="quick-categoria" name="categoria" class="form-select border-2" required>
+                                  <option value="" selected>- Selecciona la categoría -</option>
+                                  @foreach($categorias as $cat)
+                                      <option value="{{ $cat['idCategoria'] }}">{{ $cat['nombreCategoria'] }}</option>
+                                  @endforeach
+                              </select>
+                          </div>
+                          
+                          <div class="mb-3">
+                              <label for="quick-grupo" class="form-label fw-semibold">Nombre del Grupo</label>
+                              <input type="text" id="quick-grupo" name="grupo" class="form-control border-2" placeholder="Ej: Laptops Premium, Audífonos Gamer" required maxlength="100">
+                          </div>
+                          
+                          <div class="mb-3">
+                              <label for="quick-tipo" class="form-label fw-semibold">Tipo de Producto</label>
+                              <select id="quick-tipo" name="tipo" class="form-select border-2" required>
+                                  <option value="" selected>- Selecciona el tipo -</option>
+                                  @foreach($tipos as $tipoOption)
+                                      <option value="{{ $tipoOption->idTipoProducto }}">{{ $tipoOption->tipoProducto }}</option>
+                                  @endforeach
+                              </select>
+                          </div>
+                          
+                          <div class="mb-3">
+                              <label class="form-label fw-semibold">Imagen del Grupo (Requerido)</label>
+                              <div class="border border-2 border-dashed rounded-3 p-3 text-center bg-light position-relative hover-shadow" id="quick-img-drag-container" style="border-style: dashed !important; cursor: pointer; position: relative;">
+                                  <input type="file" id="quick-img" name="img" accept="image/*" class="position-absolute top-0 start-0 w-100 h-100 opacity-0" style="cursor: pointer; z-index: 2;" required>
+                                  <i class="bi bi-cloud-upload fs-1 text-primary mb-2 d-block" id="quick-img-icon"></i>
+                                  <span class="d-block text-secondary fs-7 fw-medium" id="quick-img-label">Arrastra o haz clic para subir imagen</span>
+                                  <img id="quick-img-preview" src="" alt="Vista Previa" class="w-50 mt-2 border rounded d-none" style="object-fit: cover; max-height: 120px; position: relative; z-index: 3;">
+                              </div>
+                          </div>
+                      </div>
+                      <div class="modal-footer bg-light border-0 py-3 rounded-bottom-4 justify-content-between">
+                          <button type="button" class="btn btn-secondary px-4 py-2" data-bs-dismiss="modal">Cancelar</button>
+                          <button type="submit" class="btn btn-primary px-4 py-2" id="btn-save-quick-grupo">
+                              <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true" id="quick-grupo-spinner"></span>
+                              <span id="quick-grupo-btn-text">Guardar Grupo <i class="bi bi-check2-all"></i></span>
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      </div>
     </div>
      <script src="{{ route('js.create-product-scripts',[$tc]) }}"></script>
 @endsection

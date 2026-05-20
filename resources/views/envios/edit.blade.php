@@ -122,9 +122,9 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Oficina / Sucursal <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
                                 <div class="input-group">
-                                    <select name="idSubAgencia" id="select-subagencia" class="form-select" required {{ $subagencias->isEmpty() ? 'disabled' : '' }}>
+                                    <select name="idSubAgencia" id="select-subagencia" class="form-select" {{ $subagencias->isEmpty() ? 'disabled' : '' }}>
                                         @if($subagencias->isEmpty())
                                             <option value="">Primero elija Agencia y Distrito...</option>
                                         @else

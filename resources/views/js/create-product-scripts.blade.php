@@ -129,45 +129,170 @@
      document.getElementById('estado-product').addEventListener('change',calcPrices);
      document.getElementById('grupo-product').addEventListener('change',calcPrices);
 
-     function manejarSubmit(){
-     if (!validarCodigos()) {
-     event.preventDefault();
-     }
-     }
+       // Cache de códigos
+       const codigos = @json($codigos->mapWithKeys(function($cod) {
+           return [$cod->codigoProducto => $cod->idGrupo];
+       }));
 
-     function validarCodigos() {
-     const selectGrup = document.getElementById('grupo-product');
-     const grupo = selectGrup.value.trim();
-     const nomGrupo = selectGrup.options[selectGrup.selectedIndex].textContent.trim();
+       function getCategoryPrefix(name) {
+           if (!name) return 'UNK';
+           let normalized = name.normalize("NFD")
+                                .replace(/[\u0300-\u036f]/g, "")
+                                .replace(/[^a-zA-Z0-9]/g, "")
+                                .toUpperCase();
+           if (normalized.length < 3) {
+               normalized = (normalized + 'XXX').substring(0, 3);
+           } else {
+               normalized = normalized.substring(0, 3);
+           }
+           return normalized;
+       }
 
-     const inputCod = document.getElementById('codigo-product');
+       function getGroupPrefix(name) {
+           if (!name) return 'UNK';
+           let normalized = name.normalize("NFD")
+                                .replace(/[\u0300-\u036f]/g, "")
+                                .replace(/[^a-zA-Z0-9]/g, "")
+                                .toUpperCase();
+           if (normalized.length < 3) {
+               normalized = (normalized + 'XXX').substring(0, 3);
+           } else {
+               normalized = normalized.substring(0, 3);
+           }
+           return normalized;
+       }
 
-     const codigos = @json($codigos->mapWithKeys(function($cod) {
-     return [$cod->codigoProducto => $cod->idGrupo];
-     }));
+       function actualizarGrupoCodigoPreview() {
+           const selectGrup = document.getElementById('grupo-product');
+           const containerWrapper = document.getElementById('container-codigo-wrapper');
+           const inputCod = document.getElementById('codigo-product');
+           const helpDiv = document.getElementById('codigo-product-help');
 
-     let find = false;
-     let cod = '';
+           if (!selectGrup || !selectGrup.value) {
+               if (containerWrapper) containerWrapper.classList.add('d-none');
+               if (inputCod) inputCod.value = 'ERROR';
+               if (typeof disableButton === 'function') disableButton();
+               return;
+           }
 
-     for (const [codigoProducto, idGrupo] of Object.entries(codigos)) {
-     if (idGrupo == grupo) {
-     cod = codigoProducto;
-     find = true;
-     break;
-     }
-     }
+           const grupo = selectGrup.value.trim();
+           const selectedOption = selectGrup.options[selectGrup.selectedIndex];
+           const categoryName = selectedOption ? (selectedOption.getAttribute('data-categoria') || '') : '';
+           const groupName = selectedOption ? (selectedOption.textContent || '') : '';
 
-     if (!find) {
-     cod = prompt('No se encontró el código para ' + nomGrupo + '. Por favor, ingrese un nuevo código:') + '0000';
-     if (cod == null || cod.trim() == '' || cod.trim().length != 10) {
-     return false;
-     }
-     }
+           let find = false;
+           let cod = '';
+           
+           for (const [codigoProducto, idGrupo] of Object.entries(codigos)) {
+               if (idGrupo == grupo) {
+                   cod = codigoProducto;
+                   find = true;
+                   break;
+               }
+           }
 
-     inputCod.value = cod;
+           if (find) {
+               // El grupo ya tiene productos. Ocultamos el campo editable para evitar confusiones
+               // ya que el backend usará el correlativo secuencial autoincremental de forma automática.
+               if (containerWrapper) containerWrapper.classList.add('d-none');
+               
+               if (inputCod) {
+                   inputCod.maxLength = 10;
+                   if (!inputCod.dataset.lastGroup || inputCod.dataset.lastGroup !== grupo) {
+                       inputCod.value = cod;
+                       inputCod.dataset.lastGroup = grupo;
+                   }
+               }
+           } else {
+               // Nuevo grupo sin productos. Se muestra el campo editable para definir el prefijo inicial de 6 caracteres.
+               if (containerWrapper) containerWrapper.classList.remove('d-none');
+               
+               const catPrefix = getCategoryPrefix(categoryName);
+               const groupPrefix = getGroupPrefix(groupName);
+               const baseCod = catPrefix + groupPrefix;
 
-     return true;
-     }
+               if (inputCod) {
+                   inputCod.maxLength = 6;
+                   if (!inputCod.dataset.lastGroup || inputCod.dataset.lastGroup !== grupo) {
+                       inputCod.value = baseCod;
+                       inputCod.dataset.lastGroup = grupo;
+                   }
+               }
+
+               const currentVal = inputCod ? inputCod.value : baseCod;
+               const expectedFirstCod = currentVal.substring(0, 6) + '0001';
+
+               if (helpDiv) {
+                   helpDiv.innerHTML = `
+                       <div class="alert alert-warning d-flex align-items-center mb-0 py-2 border-0 fs-7" style="background-color: rgba(255, 193, 7, 0.15); color: #856404; border-radius: 8px;">
+                           <div>
+                               <i class="bi bi-exclamation-triangle-fill me-2 fs-6"></i>
+                               <strong>¡Aviso!</strong> Este grupo es nuevo. Se creará el código de producto base como <strong>${currentVal}</strong> (el primer producto se registrará automáticamente como <strong class="text-decoration-underline text-uppercase">${expectedFirstCod}</strong>). Puedes editar estas 6 letras si lo deseas.
+                           </div>
+                       </div>
+                   `;
+               }
+           }
+           
+           if (typeof disableButton === 'function') {
+               disableButton();
+           }
+       }
+
+       function manejarSubmit(e) {
+           const eventObj = e || window.event;
+           if (!validarCodigos()) {
+               if (eventObj) eventObj.preventDefault();
+               return false;
+           }
+           return true;
+       }
+
+       function validarCodigos() {
+           const selectGrup = document.getElementById('grupo-product');
+           if (!selectGrup || !selectGrup.value) return false;
+
+           const inputCod = document.getElementById('codigo-product');
+           if (!inputCod) return false;
+
+           const grupo = selectGrup.value.trim();
+           let find = false;
+           let cod = '';
+           
+           for (const [codigoProducto, idGrupo] of Object.entries(codigos)) {
+               if (idGrupo == grupo) {
+                   cod = codigoProducto;
+                   find = true;
+                   break;
+               }
+           }
+
+           if (find) {
+               // Grupo con productos existentes: ya tiene el código completo de 10 caracteres
+               const codeValue = inputCod.value.trim();
+               const codeRegex = /^[A-Z0-9]{10}$/;
+               return codeRegex.test(codeValue);
+           } else {
+               // Primer producto del grupo: el usuario ingresa exactamente 6 caracteres
+               const codeValue = inputCod.value.trim();
+               const codeRegex = /^[A-Z0-9]{6}$/;
+               if (!codeRegex.test(codeValue)) {
+                   Swal.fire({
+                       title: 'Código Inválido',
+                       text: 'El código de producto debe tener exactamente 6 caracteres alfanuméricos (letras y números). Ej: LAPGAM',
+                       icon: 'warning',
+                       confirmButtonText: 'Aceptar',
+                       customClass: {
+                           confirmButton: 'btn btn-primary'
+                       }
+                   });
+                   return false;
+               }
+
+               return true;
+           }
+       }
+
      const dropAreas = document.querySelectorAll('.img-div');
 
      dropAreas.forEach(function(dropArea) {
@@ -330,12 +455,40 @@
      isValid = false;
      }
 
-     if (grupo == '') {
-     isValid = false;
-     lblgrupo.classList.add('text-danger');
-     }else{
-     lblgrupo.classList.remove('text-danger');
-     }
+       if (grupo == '') {
+       isValid = false;
+       lblgrupo.classList.add('text-danger');
+       }else{
+       lblgrupo.classList.remove('text-danger');
+       
+       const inputCod = document.getElementById('codigo-product');
+       if (inputCod) {
+           const codeVal = inputCod.value.trim();
+           
+           // Verificar si el grupo ya tiene productos en base a los códigos existentes
+           let findGroup = false;
+           for (const [codigoProducto, idGrupo] of Object.entries(codigos)) {
+               if (idGrupo == grupo) {
+                   findGroup = true;
+                   break;
+               }
+           }
+           
+           if (findGroup) {
+               const codeRegex = /^[A-Z0-9]{10}$/;
+               if (!codeRegex.test(codeVal)) {
+                   isValid = false;
+               }
+           } else {
+               const codeRegex = /^[A-Z0-9]{6}$/;
+               if (!codeRegex.test(codeVal)) {
+                   isValid = false;
+               }
+           }
+       } else {
+           isValid = false;
+       }
+       }
 
      if (marca == '') {
      isValid = false;
@@ -432,7 +585,30 @@
      document.getElementById('partnumber-product').addEventListener('input', disableButton);
      document.getElementById('stockproveedor-product').addEventListener('input', disableButton);
      document.getElementById('descripcion-product').addEventListener('input', disableButton);
-     document.getElementById('grupo-product').addEventListener('input', disableButton);
+      const selectGrup = document.getElementById('grupo-product');
+      if (selectGrup) {
+          selectGrup.addEventListener('input', disableButton);
+          selectGrup.addEventListener('change', actualizarGrupoCodigoPreview);
+      }
+      const inputCod = document.getElementById('codigo-product');
+      if (inputCod) {
+          inputCod.addEventListener('input', function() {
+              this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+              actualizarGrupoCodigoPreview();
+              disableButton();
+          });
+      }
+      const formCreate = document.getElementById('form-create');
+      if (formCreate) {
+          formCreate.addEventListener('submit', function(event) {
+              if (!validarCodigos()) {
+                  event.preventDefault();
+              }
+          });
+      }
+     
+     actualizarGrupoCodigoPreview();
+
      document.getElementById('marca-product').addEventListener('input', disableButton);
      document.getElementById('estado-product').addEventListener('input', disableButton);
      document.getElementById('garantia-product').addEventListener('input', disableButton);
@@ -549,4 +725,157 @@
 
       if (tcFijoPersonalizado) {
           tcFijoPersonalizado.addEventListener('input', toggleTipoCambio);
+      }
+
+      // 👇 NUEVO BLOQUE: CREACIÓN RÁPIDA DE GRUPO (AJAX & DRAG-AND-DROP) 👇
+      const quickImgInput = document.getElementById('quick-img');
+      const quickImgContainer = document.getElementById('quick-img-drag-container');
+      const quickImgPreview = document.getElementById('quick-img-preview');
+      const quickImgIcon = document.getElementById('quick-img-icon');
+      const quickImgLabel = document.getElementById('quick-img-label');
+
+      if (quickImgContainer && quickImgInput) {
+          // Resaltar área al arrastrar
+          ['dragenter', 'dragover'].forEach(eventName => {
+              quickImgContainer.addEventListener(eventName, (e) => {
+                  e.preventDefault();
+                  quickImgContainer.classList.add('border-primary', 'bg-light-primary');
+              }, false);
+          });
+
+          ['dragleave', 'drop'].forEach(eventName => {
+              quickImgContainer.addEventListener(eventName, (e) => {
+                  e.preventDefault();
+                  quickImgContainer.classList.remove('border-primary', 'bg-light-primary');
+              }, false);
+          });
+
+          quickImgContainer.addEventListener('drop', (e) => {
+              const dt = e.dataTransfer;
+              const files = dt.files;
+              if (files.length) {
+                  quickImgInput.files = files;
+                  handleQuickImgSelect(files[0]);
+              }
+          }, false);
+
+          quickImgInput.addEventListener('change', (e) => {
+              if (quickImgInput.files.length) {
+                  handleQuickImgSelect(quickImgInput.files[0]);
+              }
+          });
+      }
+
+      function handleQuickImgSelect(file) {
+          if (file && file.type.startsWith('image/')) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                  if (quickImgPreview) {
+                      quickImgPreview.src = e.target.result;
+                      quickImgPreview.classList.remove('d-none');
+                  }
+                  if (quickImgIcon) quickImgIcon.classList.add('d-none');
+                  if (quickImgLabel) quickImgLabel.textContent = file.name;
+              };
+              reader.readAsDataURL(file);
+          }
+      }
+
+      // AJAX Form Submit para el Modal de Grupo
+      const formQuickGrupo = document.getElementById('form-quick-grupo');
+      if (formQuickGrupo) {
+          formQuickGrupo.addEventListener('submit', function(e) {
+              e.preventDefault();
+              
+              const btnSave = document.getElementById('btn-save-quick-grupo');
+              const spinner = document.getElementById('quick-grupo-spinner');
+              const btnText = document.getElementById('quick-grupo-btn-text');
+              const alertEl = document.getElementById('quick-grupo-alert');
+              
+              if (alertEl) {
+                  alertEl.classList.add('d-none');
+                  alertEl.textContent = '';
+              }
+              
+              if (btnSave) btnSave.disabled = true;
+              if (spinner) spinner.classList.remove('d-none');
+              if (btnText) btnText.innerHTML = 'Guardando...';
+              
+              const formData = new FormData(formQuickGrupo);
+              
+              fetch('/producto/creargrupo-rapido', {
+                  method: 'POST',
+                  body: formData,
+                  headers: {
+                      'X-Requested-With': 'XMLHttpRequest'
+                  }
+              })
+              .then(response => {
+                  if (!response.ok) {
+                      return response.json().then(err => { throw err; });
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  if (btnSave) btnSave.disabled = false;
+                  if (spinner) spinner.classList.add('d-none');
+                  if (btnText) btnText.innerHTML = 'Guardar Grupo <i class="bi bi-check2-all"></i>';
+                  
+                  if (data.success) {
+                      const selectGrup = document.getElementById('grupo-product');
+                      if (selectGrup) {
+                          const opt = document.createElement('option');
+                          opt.value = data.grupo.idGrupoProducto;
+                          opt.textContent = data.grupo.nombreGrupo;
+                          opt.setAttribute('data-categoria', data.grupo.nombreCategoria);
+                          selectGrup.appendChild(opt);
+                          selectGrup.value = data.grupo.idGrupoProducto;
+                          
+                          actualizarGrupoCodigoPreview();
+                      }
+                      
+                      const modalEl = document.getElementById('quickGrupoModal');
+                      const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                      modal.hide();
+                      
+                      formQuickGrupo.reset();
+                      if (quickImgPreview) {
+                          quickImgPreview.src = '';
+                          quickImgPreview.classList.add('d-none');
+                      }
+                      if (quickImgIcon) quickImgIcon.classList.remove('d-none');
+                      if (quickImgLabel) quickImgLabel.textContent = 'Arrastra o haz clic para subir imagen';
+                      
+                      Swal.fire({
+                          title: '¡Éxito!',
+                          text: 'El grupo se ha creado correctamente y se ha seleccionado automáticamente.',
+                          icon: 'success',
+                          confirmButtonText: 'Aceptar',
+                          customClass: {
+                              confirmButton: 'btn btn-primary'
+                          }
+                      });
+                  } else {
+                      throw new Error(data.message || 'Ocurrió un error inesperado.');
+                  }
+              })
+              .catch(error => {
+                  if (btnSave) btnSave.disabled = false;
+                  if (spinner) spinner.classList.add('d-none');
+                  if (btnText) btnText.innerHTML = 'Guardar Grupo <i class="bi bi-check2-all"></i>';
+                  
+                  const errMsg = error.message || 'Error al procesar la solicitud.';
+                  if (alertEl) {
+                      alertEl.textContent = errMsg;
+                      alertEl.classList.remove('d-none');
+                  } else {
+                      Swal.fire({
+                          title: 'Error',
+                          text: errMsg,
+                          icon: 'error',
+                          confirmButtonText: 'Cerrar'
+                      });
+                  }
+              });
+          });
       }
