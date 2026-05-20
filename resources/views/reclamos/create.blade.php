@@ -156,7 +156,7 @@
     </div>
 </div>
 
-<x-modal_new_cliente :documentos="$tipoDocumentos"/>
+@include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 
 <script>
     const plataformas = @json($plataformas);

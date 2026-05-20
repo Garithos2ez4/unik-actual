@@ -161,7 +161,7 @@
     </form>
 </div>
 <br>
-<x-modal_new_cliente :documentos="$tipoDocumentos"/>
+@include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 <script>
     function pdfGarantia(url) {
         window.open(url, '', 'width=800,height=600,scrollbars=yes,location=no,toolbar=no,status=no');

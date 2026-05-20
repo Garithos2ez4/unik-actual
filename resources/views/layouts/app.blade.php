@@ -118,7 +118,7 @@
                     <li class="list-group-item bg-sistema-uno menu-border"><a href="{{ route('calculadora') }}"
                             class="btn text-light">Calculadora <i class="bi bi-calculator"></i></a></li>
                     @php
-                    $order = [2, 1, 4, 11, 5, 3, 6, 7]; // Orden personalizado, 11 es Reclamos
+                    $order = [2, 1, 4, 11, 12, 5, 3, 6, 7]; // Orden personalizado, 11 es Reclamos, 12 es Envios
                     @endphp
 
                     @foreach ($order as $idVista)
@@ -146,25 +146,39 @@
                     <li class="list-group-item bg-sistema-uno menu-border">
                         <a href="{{ route('plataformas') }}" class="btn text-light">Plataformas <i class="bi bi-shop"></i></a>
                         <ul class="list-unstyled ps-3 mt-1">
-                            <li>
-                                <a href="{{ route('plataformas.falabella.orders') }}" class="btn btn-sm text-info py-0">
-                                    <i class="bi bi-chevron-right"></i> Sincronización
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('plataformas.falabella.productos') }}" class="btn btn-sm text-info py-0">
-                                    <i class="bi bi-chevron-right"></i> Catálogo
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('plataformas.falabella.picking') }}" class="btn btn-sm text-info py-0">
-                                    <i class="bi bi-chevron-right"></i> Lista de Picking
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('plataformas.falabella.etiquetas') }}" class="btn btn-sm text-info py-0">
-                                    <i class="bi bi-chevron-right"></i> Etiquetas
-                                </a>
+                            <li class="mb-1">
+                                <button class="btn btn-sm text-light fw-bold p-0 border-0 d-flex align-items-center w-100"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseFalabella"
+                                    aria-expanded="false">
+                                    <i class="bi bi-cart-fill me-2"></i> FALABELLA <i class="bi bi-chevron-down small ms-auto me-2"></i>
+                                </button>
+                                <ul class="collapse list-unstyled ps-3 mt-1" id="collapseFalabella">
+                                    <li>
+                                        <a href="{{ route('plataformas.falabella.orders') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Sincronización
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.falabella.productos') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Catálogo
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.falabella.picking') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Lista de Picking
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.falabella.etiquetas') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Etiquetas
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.falabella.devoluciones') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Devoluciones
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         </ul>
                     </li>
@@ -191,7 +205,19 @@
                     @break
                     @case(11)
                     <li class="list-group-item bg-sistema-uno menu-border">
-                        <a href="{{ route('reclamos.index') }}" class="btn text-light">Reclamos <i class="bi bi-exclamation-triangle-fill text-warning"></i></a>
+                        <a href="{{ route('reclamos.index') }}" class="btn text-light w-100 text-start">Reclamos <i class="bi bi-exclamation-triangle-fill text-warning"></i></a>
+                        <ul class="list-unstyled ps-3">
+                            <li>
+                                <a href="{{ route('reclamos.historia') }}" class="btn btn-sm text-info py-0">
+                                    <i class="bi bi-clock-history"></i> Historial Global
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    @break
+                    @case(12)
+                    <li class="list-group-item bg-sistema-uno menu-border">
+                        <a href="{{ route('envios.index') }}" class="btn text-light w-100 text-start">Envíos a Provincia <i class="bi bi-truck text-primary"></i></a>
                     </li>
                     @break
 

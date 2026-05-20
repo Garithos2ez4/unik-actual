@@ -30,7 +30,12 @@ class ClienteRepository implements ClienteRepositoryInterface
 
     public function searchCliente($doc,$cant)
     {
-        return Cliente::where('numeroDocumento','LIKE','%'.$doc.'%')->take($cant)->get();
+        return Cliente::where(function($query) use ($doc) {
+            $query->where('numeroDocumento', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('nombre', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('apellidoPaterno', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('apellidoMaterno', 'LIKE', '%'.$doc.'%');
+        })->take($cant)->get();
     }
 
     public function create(array $data)

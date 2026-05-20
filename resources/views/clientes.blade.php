@@ -82,7 +82,7 @@
     </div>
     
 
-<x-modal_new_cliente :documentos="$tipoDocumentos"/>
+@include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 <script>
 document.getElementById('btn-modal-new-cliente').addEventListener('click',function(x){
     setTimeout(function(){
