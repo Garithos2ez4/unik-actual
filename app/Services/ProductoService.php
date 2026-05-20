@@ -264,7 +264,7 @@ class ProductoService implements ProductoServiceInterface
         $this->caracteristicasProductoRepository->deleteSpect($idProducto,$idCaracteristica);
     }
     
-    public function validateState($id)
+    public function validateState($id, $allowAutoAvailable = false)
     {
         $producto = $this->productoRepository->getOne('idProducto', $id);
         if ($producto) {
@@ -293,8 +293,8 @@ class ProductoService implements ProductoServiceInterface
                     $nuevoEstado = 'AGOTADO';
                 }
             } else {
-                // Si HAY stock (físico o de proveedor) y estaba AGOTADO, volver a DISPONIBLE
-                if ($estadoActual == 'AGOTADO') {
+                // Si HAY stock (físico o de proveedor) y estaba AGOTADO, volver a DISPONIBLE (solo si se permite la transición automática)
+                if ($estadoActual == 'AGOTADO' && $allowAutoAvailable) {
                     $nuevoEstado = 'DISPONIBLE';
                 }
             }

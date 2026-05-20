@@ -234,7 +234,7 @@ class ComprobanteService implements ComprobanteServiceInterface
                             $this->insertRegistro($arrayRegistro);
                             $this->addStock($idProducto, $idAlmacen);
                             // Validar estado del producto (por si estaba AGOTADO)
-                            $this->productoService->validateState($idProducto);
+                            $this->productoService->validateState($idProducto, true);
                         } catch (Exception $e) {
                             // Manejo de errores: puedes registrar el error o mostrar un mensaje
                             // Log::error('Error al insertar registro: ' . $e->getMessage());

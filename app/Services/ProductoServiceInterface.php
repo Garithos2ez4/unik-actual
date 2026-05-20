@@ -8,7 +8,7 @@ interface ProductoServiceInterface
     public function searchProducts($input,$count,$filtros);
     public function insertProduct($array,$proveedor,$img1,$img2,$img3,$img4);
     public function updateProduct($id,$array,$img1,$img2,$img3,$img4);
-    public function validateState($id);
+    public function validateState($id, $allowAutoAvailable = false);
     public function insertOrUpdateCaracteristicas($id,$arrayCreate,$arrayUpdate);
     public function validateDuplicySerial($id,$serial);
     public function getOneLabelGrupo($id);
