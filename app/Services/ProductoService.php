@@ -429,7 +429,13 @@ class ProductoService implements ProductoServiceInterface
     private function generarCodigo($string)
     {
         $category = substr($string, 0, 6);
-        $number = substr($string,6,10);
+        
+        // Si el código recibido es un prefijo de 6 caracteres o menos (primer producto del grupo)
+        if (strlen($string) <= 6) {
+            return $category . "0001";
+        }
+        
+        $number = substr($string, 6, 10);
         $newnumber = str_pad((int)$number + 1, strlen($number), "0", STR_PAD_LEFT);
         return $category.$newnumber;
     }

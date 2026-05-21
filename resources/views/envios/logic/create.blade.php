@@ -276,7 +276,7 @@
                     selectProvincia.disabled = false;
                 })
                 .catch(error => {
-                    console.error("Error cargando provincias:", error);
+                    console.error('Error cargando provincias:', error);
                     selectProvincia.innerHTML = '<option value="">Error al cargar</option>';
                 });
         } else {
@@ -302,7 +302,7 @@
                     selectDestino.disabled = false;
                 })
                 .catch(error => {
-                    console.error("Error cargando destinos:", error);
+                    console.error('Error cargando destinos:', error);
                     selectDestino.innerHTML = '<option value="">Error al cargar</option>';
                 });
         } else {
@@ -327,6 +327,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.length > 0) {
+                        
+                        data.sort((a, b) => a.nombre_oficina.localeCompare(b.nombre_oficina))
+
                         selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
                         data.forEach(sub => {
                             selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${sub.nombre_oficina} (${sub.direccion})</option>`;

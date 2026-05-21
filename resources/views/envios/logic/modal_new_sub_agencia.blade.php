@@ -14,8 +14,14 @@ function prepareSubAgenciaModal() {
     document.getElementById('idAgencia_subagencia').value = idAgencia;
     document.getElementById('idDestino_subagencia').value = idDestino;
     
-    document.getElementById('text-agencia-seleccionada').value = selectAgencia.options[selectAgencia.selectedIndex].text;
-    document.getElementById('text-destino-seleccionado').value = selectDestino.options[selectDestino.selectedIndex].text;
+    const nombreAgencia = selectAgencia.options[selectAgencia.selectedIndex].text.trim().toUpperCase();
+    const nombreDestino = selectDestino.options[selectDestino.selectedIndex].text.trim().toUpperCase();
+
+    document.getElementById('text-agencia-seleccionada').value = nombreAgencia;
+    document.getElementById('text-destino-seleccionado').value = nombreDestino;
+
+    // Auto-rellenar el nombre de la oficina con el formato AGENCIA+DISTRITO
+    document.getElementById('nombre_subagencia').value = `${nombreAgencia} - ${nombreDestino}`;
     
     return true;
 }

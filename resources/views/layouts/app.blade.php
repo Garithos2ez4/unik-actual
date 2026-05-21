@@ -217,7 +217,7 @@
                     @break
                     @case(12)
                     <li class="list-group-item bg-sistema-uno menu-border">
-                        <a href="{{ route('envios.index') }}" class="btn text-light w-100 text-start">Envíos a Provincia <i class="bi bi-truck text-primary"></i></a>
+                        <a href="{{ route('envios.index') }}" class="btn text-light w-100 text-start">Envíos <i class="bi bi-truck "></i></a>
                     </li>
                     @break
 

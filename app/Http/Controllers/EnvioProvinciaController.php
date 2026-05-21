@@ -22,17 +22,22 @@ class EnvioProvinciaController extends Controller
         $this->headerService = $headerService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 12) {
-                $envios = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'CuentaPlataforma', 'Agencia', 'Destino', 'Productos.Producto', 'Detalle'])->orderBy('fecha_envio', 'desc')->get();
+                $fecha = $request->query('fecha', date('Y-m-d'));
+                $envios = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'CuentaPlataforma', 'Agencia', 'Destino', 'Productos.Producto', 'Detalle'
+                ])->whereDate('fecha_envio', $fecha)
+                ->orderBy('fecha_envio', 'desc')
+                ->get();
 
                 return view('envios.index', [
                     'user' => $userModel,
-                    'envios' => $envios
+                    'envios' => $envios,
+                    'fecha' => $fecha
                 ]);
             }
         }
@@ -48,7 +53,7 @@ class EnvioProvinciaController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 12) {
                 $plataformas = Plataforma::with('CuentasPlataforma')->get();
-                $agencias = Agencia::where('estado', 1)->get();
+                $agencias = Agencia::where('estado', 1)->orderBy('nombre', 'asc')->get();
                 $departamentos = Departamento::orderBy('nombre', 'asc')->get();
                 $provincias = Provincia::orderBy('nombre', 'asc')->get();
                 $documentos = \App\Models\TipoDocumento::all();
@@ -115,7 +120,7 @@ class EnvioProvinciaController extends Controller
             if ($acceso->idVista == 12) {
                 $envio = EnvioProvincia::with(['Detalle', 'Destino.Provincia.Departamento', 'Productos.Producto'])->findOrFail($id);
                 $plataformas = Plataforma::with('CuentasPlataforma')->get();
-                $agencias = Agencia::where('estado', 1)->get();
+                $agencias = Agencia::where('estado', 1)->orderBy('nombre', 'asc')->get();
                 $departamentos = Departamento::orderBy('nombre', 'asc')->get();
                 
                 $selectedDeptoId = optional(optional(optional($envio->Destino)->Provincia)->Departamento)->idDepartamento;
@@ -199,9 +204,6 @@ class EnvioProvinciaController extends Controller
                             ->whereDate('fecha_envio', $fecha)
                             ->get();
 
-                // In a real implementation you would render a view to string or pass it to PDF library.
-                // For now, we will just return the blade view. The user will use browser to print as PDF, or we use dompdf if installed.
-                // Assuming we'll use window.print() or similar via blade view.
                 return view('envios.pdf', [
                     'envios' => $envios,
                     'fecha' => $fecha

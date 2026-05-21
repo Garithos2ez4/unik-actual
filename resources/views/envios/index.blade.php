@@ -11,12 +11,12 @@
             <p class="text-muted">Registro de despachos por agencias de transporte a nivel nacional.</p>
         </div>
         <div class="col-md-6 text-end">
-            <form action="{{ route('envios.pdf') }}" method="GET" target="_blank" class="d-inline-block me-2">
+            <form action="{{ route('envios.index') }}" method="GET" class="d-inline-block me-2">
                 <div class="input-group">
-                    <input type="date" name="fecha" class="form-control" value="{{ date('Y-m-d') }}" required>
-                    <button type="submit" class="btn btn-danger shadow-sm">
-                        <i class="bi bi-file-earmark-pdf-fill"></i> Exportar PDF del Día
-                    </button>
+                    <input type="date" name="fecha" class="form-control" value="{{ request('fecha', date('Y-m-d')) }}" onchange="this.form.submit()" required>
+                     <a href="{{route('envios.pdf', ['fecha'=>$fecha ?? date('Y-m-d')])}}" target="_blank" class="btn btn-danger shadow-sm">
+                     <i class="bi bi-file-earmark-pdf-fill"></i> Exportar PDF del Día
+                     </a>
                 </div>
             </form>
             <a href="{{ route('envios.create') }}" class="btn btn-primary shadow-sm">

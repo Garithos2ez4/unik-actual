@@ -117,6 +117,8 @@ class ProductoController extends Controller
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $proveedor = $this->productoService->getAllLabelProveedor();
                 $almacenes = $this->productoService->getAllAlmacen();
+                $categorias = $this->productoService->getAllLabelCategory();
+                $tipos = app(\App\Services\ConfiguracionServiceInterface::class)->getAllTipoProductos();
 
                 $latestProductCodes = $this->productoService->getLastCodesProducts();
 
@@ -129,6 +131,8 @@ class ProductoController extends Controller
                     'user' => $userModel,
                     'marcas' => $marcas,
                     'grupos' => $grupos,
+                    'categorias' => $categorias,
+                    'tipos' => $tipos,
                     'proveedor' => $proveedor,
                     'almacenes' => $almacenes,
                     'codigos' => $latestProductCodes,
@@ -581,5 +585,62 @@ class ProductoController extends Controller
         $results = $precios;
 
         return response()->json($results);
+    }
+
+    public function quickCreateGrupo(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2 || $acceso->idVista == 7) {
+                $categoria = $request->input('categoria');
+                $grupo = $request->input('grupo');
+                $img = $request->file('img');
+                $tipo = $request->input('tipo');
+
+                if (empty($categoria) || empty($grupo) || empty($tipo) || empty($img)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Todos los campos son obligatorios, incluyendo la imagen.'
+                    ], 400);
+                }
+
+                try {
+                    $configService = app(\App\Services\ConfiguracionServiceInterface::class);
+                    $configService->createGrupoProducto($categoria, $grupo, $tipo, $img);
+
+                    $newGrupo = \App\Models\GrupoProducto::orderBy('idGrupoProducto', 'desc')->first();
+
+                    if ($newGrupo) {
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Grupo creado correctamente.',
+                            'grupo' => [
+                                'idGrupoProducto' => $newGrupo->idGrupoProducto,
+                                'nombreGrupo' => $newGrupo->nombreGrupo,
+                                'idCategoria' => $newGrupo->idCategoria,
+                                'nombreCategoria' => optional($newGrupo->CategoriaProducto)->nombreCategoria ?? ''
+                            ]
+                        ]);
+                    }
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se pudo obtener el grupo recién creado.'
+                    ], 500);
+
+                } catch (Exception $e) {
+                    \Log::error('Error in quickCreateGrupo: ' . $e->getMessage());
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Error al crear el grupo: ' . $e->getMessage()
+                    ], 500);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Acceso denegado.'
+        ], 403);
     }
 }
