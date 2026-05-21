@@ -13,10 +13,10 @@
         <div class="col-md-6 text-end">
             <form action="{{ route('envios.index') }}" method="GET" class="d-inline-block me-2">
                 <div class="input-group">
-                    <input type="date" name="fecha" class="form-control" value="{{ request('fecha', date('Y-m-d')) }}" onchange="this.form.submit()" required>
-                     <a href="{{route('envios.pdf', ['fecha'=>$fecha ?? date('Y-m-d')])}}" target="_blank" class="btn btn-danger shadow-sm">
-                     <i class="bi bi-file-earmark-pdf-fill"></i> Exportar PDF del Día
-                     </a>
+                    <input type="date" name="fecha" id="input_fecha" class="form-control" value="{{ request('fecha', date('Y-m-d')) }}" onchange="this.form.submit()" required>
+                    <button type="button" onclick="imprimirSeleccionados()" class="btn btn-danger shadow-sm" title="Imprime los seleccionados, o todo el día si no hay ninguno seleccionado">
+                        <i class="bi bi-file-earmark-pdf-fill"></i> Imprimir Selección / Día
+                    </button>
                 </div>
             </form>
             <a href="{{ route('envios.create') }}" class="btn btn-primary shadow-sm">
@@ -31,7 +31,10 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-dark text-white">
                         <tr>
-                            <th class="ps-3">Agencia</th>
+                            <th class="ps-3" style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" onclick="document.querySelectorAll('.envio-checkbox').forEach(cb => cb.checked = this.checked)" title="Seleccionar todos">
+                            </th>
+                            <th>Agencia</th>
                             <th>Guía</th>
                             <th>Clave</th>
                             <th>Destino</th>
@@ -45,7 +48,10 @@
                     <tbody>
                         @forelse($envios as $envio)
                         <tr>
-                            <td class="ps-3 fw-bold">{{ $envio->Agencia->nombre ?? 'N/A' }}</td>
+                            <td class="ps-3">
+                                <input type="checkbox" class="form-check-input envio-checkbox" value="{{ $envio->idEnvioProvincia }}">
+                            </td>
+                            <td class="fw-bold">{{ $envio->Agencia->nombre ?? 'N/A' }}</td>
                             <td>{{ $envio->numero_guia ?? '-' }}</td>
                             <td>{{ $envio->clave ?? '-' }}</td>
                             <td>
@@ -94,7 +100,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="10" class="text-center py-5">
                                 <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
                                 <p class="mt-2 text-muted">No se han registrado envíos aún.</p>
                             </td>
@@ -106,4 +112,21 @@
         </div>
     </div>
 </div>
+
+<script>
+function imprimirSeleccionados() {
+    // Collect all checked checkboxes
+    let checkboxes = document.querySelectorAll('.envio-checkbox:checked');
+    let seleccionados = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (seleccionados.length > 0) {
+        // Print only selected
+        window.open('{{ route("envios.pdf") }}?ids=' + seleccionados.join(','), '_blank');
+    } else {
+        // Fallback to print the whole day
+        let fecha = document.getElementById('input_fecha').value;
+        window.open('{{ route("envios.pdf") }}?fecha=' + fecha, '_blank');
+    }
+}
+</script>
 @endsection

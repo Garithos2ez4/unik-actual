@@ -199,10 +199,18 @@ class EnvioProvinciaController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 12) {
-                $fecha = $request->query('fecha', date('Y-m-d'));
-                $envios = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'CuentaPlataforma', 'Agencia', 'Destino.Provincia', 'Productos.Producto.GrupoProducto', 'Productos.Producto.MarcaProducto', 'Detalle'])
-                            ->whereDate('fecha_envio', $fecha)
-                            ->get();
+                $ids = $request->query('ids');
+                
+                $query = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'CuentaPlataforma', 'Agencia', 'Destino.Provincia', 'Productos.Producto.GrupoProducto', 'Productos.Producto.MarcaProducto', 'Detalle']);
+
+                if (!empty($ids)) {
+                    $idArray = explode(',', $ids);
+                    $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
+                    $fecha = null;
+                } else {
+                    $fecha = $request->query('fecha', date('Y-m-d'));
+                    $envios = $query->whereDate('fecha_envio', $fecha)->get();
+                }
 
                 return view('envios.pdf', [
                     'envios' => $envios,
