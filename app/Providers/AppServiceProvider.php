@@ -151,6 +151,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PdfServiceInterface::class,PdfService::class);
         $this->app->bind(ReclamoPlataformaServiceInterface::class,ReclamoPlataformaService::class);
         $this->app->bind(VentaServiceInterface::class,VentaService::class);
+        $this->app->bind(\App\Services\EnvioProvinciaServiceInterface::class, \App\Services\EnvioProvinciaService::class);
 
         $this->app->bind(CalculadoraRepositoryInterface::class, CalculadoraRepository::class);
         $this->app->bind(UsuarioRepositoryInterface::class, UsuarioRepository::class);

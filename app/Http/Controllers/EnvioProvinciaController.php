@@ -16,10 +16,12 @@ use Throwable;
 class EnvioProvinciaController extends Controller
 {
     protected $headerService;
+    protected $envioService;
 
-    public function __construct(HeaderServiceInterface $headerService)
+    public function __construct(HeaderServiceInterface $headerService, \App\Services\EnvioProvinciaServiceInterface $envioService)
     {
         $this->headerService = $headerService;
+        $this->envioService = $envioService;
     }
 
     public function index(Request $request)
@@ -80,33 +82,13 @@ class EnvioProvinciaController extends Controller
             $data['idUser'] = $this->headerService->getModelUser()->idUser;
             $data['fecha_envio'] = date('Y-m-d');
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
-
-            $envio = EnvioProvincia::create($data);
-
-            if ($request->filled('dir') || $request->filled('ref')) {
-                \App\Models\EnvioProvinciaDetalle::create([
-                    'idEnvioProvincia' => $envio->idEnvioProvincia,
-                    'dir' => $request->input('dir'),
-                    'ref' => $request->input('ref')
-                ]);
-            }
-
-            // Registrar múltiples productos
             $productos = $request->input('productos', []);
-            foreach ($productos as $prodData) {
-                if (!empty($prodData['idProducto'])) {
-                    \App\Models\EnvioProvinciaProducto::create([
-                        'idEnvioProvincia' => $envio->idEnvioProvincia,
-                        'idProducto' => $prodData['idProducto'],
-                        'cantidad' => $prodData['cantidad'] ?? 1,
-                        'nota_producto' => $prodData['nota_producto'] ?? null
-                    ]);
-                }
-            }
+
+            $this->envioService->createEnvio($data, $productos);
 
             $this->headerService->sendFlashAlerts('Envío registrado', 'Operación exitosa', 'success', 'btn-success');
             return redirect()->route('envios.index');
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->headerService->sendFlashAlerts('Error', $e->getMessage(), 'error', 'btn-danger');
             return redirect()->back()->withInput();
         }
@@ -118,7 +100,7 @@ class EnvioProvinciaController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 12) {
-                $envio = EnvioProvincia::with(['Detalle', 'Destino.Provincia.Departamento', 'Productos.Producto'])->findOrFail($id);
+                $envio = $this->envioService->getEnvioById($id);
                 $plataformas = Plataforma::with('CuentasPlataforma')->get();
                 $agencias = Agencia::where('estado', 1)->orderBy('nombre', 'asc')->get();
                 $departamentos = Departamento::orderBy('nombre', 'asc')->get();
@@ -153,41 +135,15 @@ class EnvioProvinciaController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $envio = EnvioProvincia::findOrFail($id);
             $data = $request->all();
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
-            $envio->update($data);
-
-            if ($request->filled('dir') || $request->filled('ref')) {
-                \App\Models\EnvioProvinciaDetalle::updateOrCreate(
-                    ['idEnvioProvincia' => $envio->idEnvioProvincia],
-                    [
-                        'dir' => $request->input('dir'),
-                        'ref' => $request->input('ref')
-                    ]
-                );
-            } else {
-                \App\Models\EnvioProvinciaDetalle::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
-            }
-
-            // Actualizar múltiples productos
-            \App\Models\EnvioProvinciaProducto::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
-            
             $productos = $request->input('productos', []);
-            foreach ($productos as $prodData) {
-                if (!empty($prodData['idProducto'])) {
-                    \App\Models\EnvioProvinciaProducto::create([
-                        'idEnvioProvincia' => $envio->idEnvioProvincia,
-                        'idProducto' => $prodData['idProducto'],
-                        'cantidad' => $prodData['cantidad'] ?? 1,
-                        'nota_producto' => $prodData['nota_producto'] ?? null
-                    ]);
-                }
-            }
+
+            $this->envioService->updateEnvio($id, $data, $productos);
 
             $this->headerService->sendFlashAlerts('Envío actualizado', 'Operación exitosa', 'success', 'btn-success');
             return redirect()->route('envios.index');
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->headerService->sendFlashAlerts('Error', $e->getMessage(), 'error', 'btn-danger');
             return redirect()->back()->withInput();
         }
@@ -226,10 +182,7 @@ class EnvioProvinciaController extends Controller
     public function storeAgencia(Request $request)
     {
         try {
-            $agencia = Agencia::create([
-                'nombre' => $request->nombre,
-                'estado' => 1
-            ]);
+            $agencia = $this->envioService->createAgencia($request->nombre);
             return response()->json(['success' => true, 'agencia' => $agencia]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
@@ -239,9 +192,7 @@ class EnvioProvinciaController extends Controller
     public function storeProvincia(Request $request)
     {
         try {
-            $provincia = Provincia::create([
-                'nombre' => $request->nombre
-            ]);
+            $provincia = $this->envioService->createProvincia($request->nombre);
             return response()->json(['success' => true, 'provincia' => $provincia]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
@@ -251,14 +202,25 @@ class EnvioProvinciaController extends Controller
     public function storeDestino(Request $request)
     {
         try {
-            $destino = Destino::create([
-                'idProvincia' => $request->idProvincia,
-                'nombre' => $request->nombre
-            ]);
+            $destino = $this->envioService->createDestino($request->idProvincia, $request->nombre);
             return response()->json(['success' => true, 'destino' => $destino]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
         }
+    }
+
+    public function getUltimoEnvioCliente($idCliente)
+    {
+        $ultimoEnvio = $this->envioService->getUltimoEnvioCliente($idCliente);
+
+        if ($ultimoEnvio) {
+            return response()->json([
+                'success' => true,
+                'data' => $ultimoEnvio
+            ]);
+        }
+
+        return response()->json(['success' => false]);
     }
 
     public function buscarRegistro(Request $request)
@@ -367,24 +329,13 @@ class EnvioProvinciaController extends Controller
     public function storeSubAgencia(Request $request)
     {
         try {
-            if ($request->filled('nombre_oficina')) {
-                $existe = SubAgencia::where('idAgencia', $request->idAgencia)
-                    ->where('idDestino', $request->idDestino)
-                    ->where('nombre_oficina', $request->nombre_oficina)
-                    ->first();
-                if ($existe) {
-                    return response()->json(['success' => false, 'message' => 'Ya existe una oficina con este nombre en el destino seleccionado.']);
-                }
-            }
-
-            $subagencia = SubAgencia::create([
-                'idAgencia' => $request->idAgencia,
-                'idDestino' => $request->idDestino,
-                'nombre_oficina' => $request->nombre_oficina,
-                'direccion' => $request->direccion,
-                'telefono' => $request->telefono,
-                'estado' => 1
-            ]);
+            $subagencia = $this->envioService->createSubAgencia(
+                $request->idAgencia,
+                $request->idDestino,
+                $request->nombre_oficina,
+                $request->direccion,
+                $request->telefono
+            );
             return response()->json(['success' => true, 'subagencia' => $subagencia]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);

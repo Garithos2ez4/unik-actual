@@ -111,11 +111,11 @@
         .print-page.layout-1 { grid-template-columns: 1fr; max-width: 20cm; }
         .print-page.layout-1 .rotulo { max-width: 20cm; }
 
-        .print-page.layout-2 { grid-template-columns: 1fr; max-width: 20cm; }
-        .print-page.layout-2 .rotulo { zoom: 0.95; max-width: 20cm; }
+        .print-page.layout-2 { grid-template-columns: 1fr; max-width: 20cm; gap: 10px; }
+        .print-page.layout-2 .rotulo { zoom: 0.75; max-width: 20cm; margin-bottom: 0; }
 
-        .print-page.layout-4 { grid-template-columns: 1fr 1fr; max-width: 28cm; }
-        .print-page.layout-4 .rotulo { zoom: 0.65; margin-bottom: 0; border-width: 4px; }
+        .print-page.layout-4 { grid-template-columns: 1fr 1fr; max-width: 28cm; gap: 10px; }
+        .print-page.layout-4 .rotulo { zoom: 0.50; margin-bottom: 0; border-width: 4px; }
 
         .print-page.layout-6 { grid-template-columns: 1fr 1fr; max-width: 28cm; }
         .print-page.layout-6 .rotulo { zoom: 0.55; margin-bottom: 0; border-width: 3px; }
@@ -148,6 +148,8 @@
             box-sizing: border-box;
             padding: 15px 20px;
             position: relative;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         /* ── Header / Remitente ── */

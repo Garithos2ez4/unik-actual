@@ -55,6 +55,16 @@
                             inputClienteTelefono.value = cliente.telefono || '';
                             inputSearchCliente.value = cliente.numeroDocumento;
                             suggestionCliente.innerHTML = '';
+                            
+                            // Autocompletar último envío
+                            fetch(`/envios-provincias/ultimo-envio-cliente/${cliente.idCliente}`)
+                                .then(response => response.json())
+                                .then(res => {
+                                    if (res.success && res.data) {
+                                        autoCompletarUltimoEnvio(res.data);
+                                    }
+                                })
+                                .catch(err => console.error('Error al obtener último envío:', err));
                         });
                         suggestionCliente.appendChild(li);
                     });
@@ -63,6 +73,46 @@
             suggestionCliente.innerHTML = '';
         }
     });
+
+    async function autoCompletarUltimoEnvio(data) {
+        if (data.idPlataforma) {
+            document.getElementById('idPlataforma').value = data.idPlataforma;
+            filterAccounts();
+            if (data.idCuentaPlataforma) {
+                document.getElementById('idCuentaPlataforma').value = data.idCuentaPlataforma;
+            }
+        }
+
+        if (data.destino && data.destino.provincia && data.destino.provincia.idDepartamento) {
+            document.getElementById('select-departamento').value = data.destino.provincia.idDepartamento;
+            await cargarProvincias(data.destino.provincia.idDepartamento);
+            
+            document.getElementById('select-provincia').value = data.destino.idProvincia;
+            await cargarDestinos(data.destino.idProvincia);
+            
+            document.getElementById('select-destino').value = data.idDestino;
+        }
+
+        if (data.idAgencia) {
+            const selectAgencia = document.querySelector('select[name="idAgencia"]');
+            if(selectAgencia) selectAgencia.value = data.idAgencia;
+            
+            await cargarSubAgencias();
+            
+            if (data.idSubAgencia) {
+                document.getElementById('select-subagencia').value = data.idSubAgencia;
+            }
+        }
+
+        if (data.detalle && data.detalle.dir) document.querySelector('input[name="dir"]').value = data.detalle.dir;
+        if (data.detalle && data.detalle.ref) document.querySelector('input[name="ref"]').value = data.detalle.ref;
+        if (data.dato_adicional) document.querySelector('input[name="dato_adicional"]').value = data.dato_adicional;
+        
+        if (data.pago_destino !== null && data.pago_destino !== undefined) {
+            const pagoDestinoCheck = document.getElementById('pago_destino');
+            if (pagoDestinoCheck) pagoDestinoCheck.checked = !!data.pago_destino;
+        }
+    }
 
     // Lógica de múltiples Productos ("N" Productos)
     let filaIndex = 0;
@@ -266,7 +316,7 @@
             selectProvincia.innerHTML = '<option value="">Cargando...</option>';
             selectProvincia.disabled = true;
 
-            fetch(`/envios-provincias/provincias-por-departamento/${idDepartamento}`)
+            return fetch(`/envios-provincias/provincias-por-departamento/${idDepartamento}`)
                 .then(response => response.json())
                 .then(data => {
                     selectProvincia.innerHTML = '<option value="">Seleccione provincia...</option>';
@@ -282,6 +332,7 @@
         } else {
             selectProvincia.innerHTML = '<option value="">Primero elija departamento...</option>';
             selectProvincia.disabled = true;
+            return Promise.resolve();
         }
     }
 
@@ -292,7 +343,7 @@
             selectDestino.innerHTML = '<option value="">Cargando...</option>';
             selectDestino.disabled = true;
 
-            fetch(`/envios-provincias/destinos-por-provincia/${idProvincia}`)
+            return fetch(`/envios-provincias/destinos-por-provincia/${idProvincia}`)
                 .then(response => response.json())
                 .then(data => {
                     selectDestino.innerHTML = '<option value="">Seleccione destino...</option>';
@@ -308,6 +359,7 @@
         } else {
             selectDestino.innerHTML = '<option value="">Primero elija provincia...</option>';
             selectDestino.disabled = true;
+            return Promise.resolve();
         }
     }
 
@@ -323,12 +375,11 @@
             selectSubAgencia.innerHTML = '<option value="">Cargando oficinas...</option>';
             selectSubAgencia.disabled = true;
 
-            fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
+            return fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.length > 0) {
-                        
-                        data.sort((a, b) => a.nombre_oficina.localeCompare(b.nombre_oficina))
+                        data.sort((a, b) => a.nombre_oficina.localeCompare(b.nombre_oficina));
 
                         selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
                         data.forEach(sub => {
@@ -347,6 +398,7 @@
         } else {
             selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
             selectSubAgencia.disabled = true;
+            return Promise.resolve();
         }
     }
 </script>

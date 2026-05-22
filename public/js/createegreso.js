@@ -128,6 +128,7 @@ function checkSku() {
     let hiddenEgreso = document.getElementById('hidden-publicacion-sku');
     let hiddenPrecio = document.getElementById('hidden-publicacion-precio');
     let inputNumberOrder = document.getElementById('input-numero-orden');
+    let divCliente = document.getElementById('div-cliente-egreso');
 
     if (checkSku.checked) {
         inputEgreso.disabled = true;
@@ -139,6 +140,7 @@ function checkSku() {
         validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
         validateIconSku.classList.add('bi-check-circle', 'text-success');
         applySkuToUnassignedItems('NULO', 'No aplica', '');
+        if (divCliente) divCliente.style.display = 'block';
     } else {
         inputEgreso.disabled = false;
         inputEgreso.value = '';
@@ -148,6 +150,8 @@ function checkSku() {
         hiddenPrecio.value = '';
         validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
         validateIconSku.classList.remove('bi-check-circle', 'text-success');
+        if (divCliente) divCliente.style.display = 'none';
+        clearCliente(); // Limpiar el cliente si se oculta
     }
 }
 
