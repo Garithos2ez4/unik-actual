@@ -72,8 +72,7 @@
             <div class="col-3 mb-2">
                 <label>Cliente (Opcional)</label>
                 <div class="input-group" style="position:relative">
-                    <input type="text" oninput="searchClienteAjax(this)" id="input-cliente-egreso" 
-                        class="form-control input-egreso" placeholder="Nombre o Documento">
+                    <input type="text" oninput="searchClienteAjax(this)" id="input-cliente-egreso" class="form-control input-egreso" placeholder="Nombre o Documento">
                     <div class="input-group-text" id="btn-clear-cliente" style="cursor:pointer; display:none;" onclick="clearCliente()">
                         <i class="bi bi-x"></i>
                     </div>
@@ -89,7 +88,7 @@
             </div>
             <div class="col-2 mb-2">
                 <label>Fecha de pedido</label>
-                <input type="date" name="fechapedido" id="fechapedido" class="form-control input-egreso cab-form" 
+                <input type="date" name="fechapedido" id="fechapedido" class="form-control input-egreso cab-form"
                     min="2024-01-01" max="{{ date('Y-m-d') }}" required>
             </div>
             <div class="col-2 mb-2">

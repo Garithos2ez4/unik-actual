@@ -120,8 +120,8 @@ class EgresoController extends Controller
                             $detallesVenta[] = [
                                 'idRegistro' => $item['idregistro'],
                                 'idPublicacion' => (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') ? $item['idpublicacion'] : null,
-                                // Obtener idProducto usando el idRegistro 
-                                'idProducto' => \App\Models\RegistroProducto::find($item['idregistro'])->idProducto ?? null,
+                                // Obtener idProducto usando el idRegistro a través del DetalleComprobante
+                                'idProducto' => \App\Models\RegistroProducto::with('DetalleComprobante')->find($item['idregistro'])->DetalleComprobante->idProducto ?? null,
                                 'precioVenta' => $item['precioVenta'] ?? 0, // 0 hace que herede auto en el service
                                 'cantidad' => 1
                             ];

@@ -386,10 +386,13 @@ function createItem(object, query) {
     inputPrecio.title = 'Precio Venta';
     
     let selectedSkuPrecio = document.getElementById('hidden-publicacion-precio').value;
-    if(selectedSkuPrecio) {
+    let fallbackPrecio = object.precioSoles || '';
+    inputPrecio.dataset.precioSoles = fallbackPrecio;
+    
+    if(selectedSkuPrecio && selectedSkuPrecio !== 'null' && selectedSkuPrecio !== 'undefined' && selectedSkuPrecio !== 'NULO' && !isNaN(parseFloat(selectedSkuPrecio))) {
         inputPrecio.value = selectedSkuPrecio;
-    } else if(object.precioSoles) {
-        inputPrecio.value = object.precioSoles;
+    } else {
+        inputPrecio.value = fallbackPrecio;
     }
     
     inputPrecio.addEventListener('input', calculateTotalVenta);
@@ -426,17 +429,15 @@ function applySkuToUnassignedItems(skuId, skuText, skuPrecio) {
     let precioInputs = document.querySelectorAll('.input-precio-item');
 
     hiddenSkus.forEach((hiddenInput, index) => {
-        if (!hiddenInput.value) { // Solo actualiza los que no tienen SKU asignado
-            hiddenInput.value = skuId;
-            textDisplays[index].innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + skuText + '</strong></small>';
-            textDisplays[index].classList.remove('text-danger');
-            textDisplays[index].classList.add('text-success');
+        hiddenInput.value = skuId;
+        textDisplays[index].innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + skuText + '</strong></small>';
+        textDisplays[index].classList.remove('text-danger');
+        textDisplays[index].classList.add('text-success');
 
-            if (skuPrecio !== undefined && skuPrecio !== null && skuPrecio !== '') {
-                precioInputs[index].value = skuPrecio;
-            } else {
-                precioInputs[index].value = '';
-            }
+        if (skuPrecio !== undefined && skuPrecio !== null && skuPrecio !== '' && skuPrecio !== 'null' && !isNaN(parseFloat(skuPrecio))) {
+            precioInputs[index].value = skuPrecio;
+        } else {
+            precioInputs[index].value = precioInputs[index].dataset.precioSoles || '';
         }
     });
     calculateTotalVenta();
