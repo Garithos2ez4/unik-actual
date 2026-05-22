@@ -65,9 +65,19 @@ document.getElementById('search').addEventListener('input', function () {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 let data = JSON.parse(xhr.responseText);
                 let suggestions = document.getElementById('suggestions');
+                let inputElement = document.getElementById('search');
                 suggestions.innerHTML = '';
 
-                data.forEach(item => {
+                // Handle click outside to close the suggestions
+                function handleClickOutside(event) {
+                    if (!suggestions.contains(event.target) && event.target !== inputElement) {
+                        suggestions.innerHTML = '';
+                        document.removeEventListener('click', handleClickOutside);
+                    }
+                }
+                document.addEventListener('click', handleClickOutside);
+
+                data.slice(0, 10).forEach(item => {
                     let li = document.createElement('li');
                     li.textContent = item.modelo;
                     li.classList.add('list-group-item');
@@ -75,7 +85,7 @@ document.getElementById('search').addEventListener('input', function () {
                     li.style.cursor = "pointer";
 
                     li.addEventListener('click', function () {
-                        document.getElementById('search').value = this.textContent;
+                        inputElement.value = this.textContent;
                         document.getElementById('hidden-product').value = item.idProducto;
                         suggestions.innerHTML = ''; // Limpiar sugerencias después de seleccionar una
                     });

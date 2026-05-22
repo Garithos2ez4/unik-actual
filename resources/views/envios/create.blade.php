@@ -120,6 +120,16 @@
                                 </div>
                             </div>
 
+                            <!-- Dirección y Referencia -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Dirección (Dir) <span class="text-muted">(Opcional)</span></label>
+                                <input type="text" name="dir" class="form-control" maxlength="100" placeholder="Dirección de envío">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Referencia (Ref) <span class="text-muted">(Opcional)</span></label>
+                                <input type="text" name="ref" class="form-control" maxlength="100" placeholder="Referencia del lugar">
+                            </div>
+
                             <hr class="my-4">
                             <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-file-earmark-text-fill"></i> 2. Información de la Guía</h6>
 
@@ -137,15 +147,7 @@
                                 <input type="text" name="dato_adicional" class="form-control" placeholder="Observaciones">
                             </div>
                             
-                            <!-- Dirección y Referencia -->
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Dirección (Dir) <span class="text-muted">(Opcional)</span></label>
-                                <input type="text" name="dir" class="form-control" maxlength="100" placeholder="Dirección de envío">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Referencia (Ref) <span class="text-muted">(Opcional)</span></label>
-                                <input type="text" name="ref" class="form-control" maxlength="100" placeholder="Referencia del lugar">
-                            </div>
+                            
 
                             <div class="col-md-12 d-flex align-items-center mt-3">
                                 <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #fff8f8;">

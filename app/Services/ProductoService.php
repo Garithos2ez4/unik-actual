@@ -152,7 +152,7 @@ class ProductoService implements ProductoServiceInterface
     }
     
     public function searchAjaxProducts($column,$query){
-        $productos = $this->productoRepository->searchTakeList($column,$query,5);
+        $productos = $this->productoRepository->searchTakeList($column,$query,10);
         return $productos;
     }
     
