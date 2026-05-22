@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Repositories\VentaRepositoryInterface;
 use App\Repositories\DetalleVentaRepositoryInterface;
 use App\Services\HeaderServiceInterface;
+use App\Services\CalculadoraServiceInterface;
 use Illuminate\Support\Facades\DB;
 
 class VentaService implements VentaServiceInterface
@@ -13,17 +14,20 @@ class VentaService implements VentaServiceInterface
     protected $detalleVentaRepository;
     protected $headerService;
     protected $egresoService;
+    protected $calculadoraService;
 
     public function __construct(
         VentaRepositoryInterface $ventaRepository,
         DetalleVentaRepositoryInterface $detalleVentaRepository,
         HeaderServiceInterface $headerService,
-        EgresoProductoServiceInterface $egresoService
+        EgresoProductoServiceInterface $egresoService,
+        CalculadoraServiceInterface $calculadoraService
     ) {
         $this->ventaRepository = $ventaRepository;
         $this->detalleVentaRepository = $detalleVentaRepository;
         $this->headerService = $headerService;
         $this->egresoService = $egresoService;
+        $this->calculadoraService = $calculadoraService;
     }
 
     public function createVenta(array $ventaData, array $detallesData)
@@ -69,8 +73,8 @@ class VentaService implements VentaServiceInterface
                     } else if (!empty($detalle['idProducto'])) {
                         $producto = \App\Models\Producto::find($detalle['idProducto']);
                         if ($producto) {
-                            // Convertir precioDolar a local o usarlo directo, aquí usamos precioDolar por defecto
-                            $precio = $producto->precioDolar;
+                            $tasaCambio = $this->calculadoraService->obtenerCambioDolar() ?? 1;
+                            $precio = $producto->precioDolar * $tasaCambio;
                         }
                     }
                 }

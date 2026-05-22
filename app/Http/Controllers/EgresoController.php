@@ -90,7 +90,9 @@ class EgresoController extends Controller
 
                     try {
                         // 1. Crear el egreso (stock)
-                        $productos = $this->egresoService->createEgreso($arrayEgreso, $items);
+                        $createResult = $this->egresoService->createEgreso($arrayEgreso, $items);
+                        $productos = $createResult['productos'];
+                        $egresosGenerados = $createResult['egresos'];
                         
                         // Determinar el canal dinámicamente basado en la primera publicación válida encontrada
                         $plataformaTienda = \App\Models\Plataforma::find(7);
@@ -119,6 +121,7 @@ class EgresoController extends Controller
                         foreach ($items as $item) {
                             $detallesVenta[] = [
                                 'idRegistro' => $item['idregistro'],
+                                'idEgreso' => $egresosGenerados[$item['idregistro']] ?? null,
                                 'idPublicacion' => (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') ? $item['idpublicacion'] : null,
                                 // Obtener idProducto usando el idRegistro a través del DetalleComprobante
                                 'idProducto' => \App\Models\RegistroProducto::with('DetalleComprobante')->find($item['idregistro'])->DetalleComprobante->idProducto ?? null,
@@ -227,7 +230,7 @@ class EgresoController extends Controller
         ]);
 
         try {
-            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\EgresosImport($this->egresoService), $request->file('archivo_excel'));
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\EgresosImport($this->egresoService, $this->ventaService), $request->file('archivo_excel'));
             $this->headerService->sendFlashAlerts('Egresos masivos registrados', 'El archivo Excel se ha procesado exitosamente.', 'success', 'btn-success');
         } catch (\Exception $e) {
             $this->headerService->sendFlashAlerts('Error al importar', 'Ocurrió un error: ' . $e->getMessage(), 'error', 'btn-danger');

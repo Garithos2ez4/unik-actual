@@ -69,7 +69,7 @@
                         style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
                 </div>
             </div>
-            <div class="col-3 mb-2">
+            <div class="col-3 mb-2" id="div-cliente-egreso" style="display:none;">
                 <label>Cliente (Opcional)</label>
                 <div class="input-group" style="position:relative">
                     <input type="text" oninput="searchClienteAjax(this)" id="input-cliente-egreso" class="form-control input-egreso" placeholder="Nombre o Documento">
@@ -136,5 +136,5 @@
 <script>
     window.assetUrl = "{{ asset('storage/') }}";
 </script>
-<script src="{{asset('js/createegreso.js')}}?v=1.11"></script>
+<script src="{{asset('js/createegreso.js')}}?v=1.15"></script>
 @endsection

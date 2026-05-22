@@ -14,39 +14,35 @@ use Carbon\Carbon;
 class EgresosImport implements ToCollection, WithHeadingRow
 {
     protected $egresoService;
+    protected $ventaService;
 
-    public function __construct(EgresoProductoServiceInterface $egresoService)
+    public function __construct(EgresoProductoServiceInterface $egresoService, \App\Services\VentaServiceInterface $ventaService = null)
     {
         $this->egresoService = $egresoService;
+        $this->ventaService = $ventaService;
     }
 
     public function collection(Collection $rows)
     {
         Log::info("Iniciando importación. Total filas encontradas: " . $rows->count());
 
+        $ordenes = [];
+        $sinOrdenCount = 0;
+
+        // 1. Agrupar filas por Número de Orden
         foreach ($rows as $index => $row) {
             $rowArray = $row->toArray();
 
-            // Debug inicial para la primera fila de datos
             if ($index === 0) {
                 Log::info("Fila 0 (Data) detectada: " . json_encode($rowArray));
             }
 
-            // Intentamos obtener valores por nombre de columna (slug) o por índice físico
-            // Basado en el formato: A=0(Fecha), E=4(Movimiento), H=7(SERIES), I=8(Orden), J=9(SKU)
-
             $movimiento  = $this->getVal($rowArray, 'movimiento', 4);
-            $numeroSerie = $this->getVal($rowArray, 'series', 7);
+            if (empty($movimiento) || strtolower(trim((string)$movimiento)) !== 'egreso') {
+                continue;
+            }
+
             $numeroOrden = $this->getVal($rowArray, 'orden', 8);
-            $sku         = $this->getVal($rowArray, 'sku', 9);
-            $fecha       = $this->getVal($rowArray, 'fecha', 0);
-
-            // Limpieza de datos
-            $movimiento  = $movimiento ? trim((string)$movimiento) : null;
-            $numeroSerie = $numeroSerie ? trim((string)$numeroSerie) : null;
-            $sku         = $sku ? trim((string)$sku) : null;
-
-            // Manejo especial para Números de Orden en formato científico (ej: 2.0E+15)
             if (!empty($numeroOrden)) {
                 if (is_numeric($numeroOrden)) {
                     $numeroOrden = number_format($numeroOrden, 0, '', '');
@@ -54,115 +50,156 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 $numeroOrden = trim((string)$numeroOrden);
             }
 
-            // Validamos que sea un Egreso
-            if (empty($movimiento) || strtolower($movimiento) !== 'egreso') {
-                continue; // Si no es egreso, ignoramos silenciosamente
+            $grupoKey = !empty($numeroOrden) ? $numeroOrden : 'sin_orden_' . ($sinOrdenCount++);
+
+            $ordenes[$grupoKey][] = [
+                'index' => $index,
+                'row' => $rowArray
+            ];
+        }
+
+        // 2. Procesar cada grupo de Orden
+        foreach ($ordenes as $ordenKey => $filasOrden) {
+            $itemsParaEgreso = [];
+            $detallesVentaData = [];
+
+            $primeraFila = $filasOrden[0]['row'];
+            $fechaVenta = $this->transformDate($this->getVal($primeraFila, 'fecha', 0));
+            $numeroOrdenStr = strpos($ordenKey, 'sin_orden_') === 0 ? null : $ordenKey;
+
+            // Mapeo de canal de venta (FB, ML, RIPLEY)
+            $plataformaStr = strtoupper(trim((string)$this->getVal($primeraFila, 'plataforma', 6)));
+            if (str_starts_with($plataformaStr, 'FB') || str_contains($plataformaStr, 'FALABELLA')) {
+                $canal = 'FALABELLA';
+            } elseif (str_starts_with($plataformaStr, 'ML') || str_contains($plataformaStr, 'MERCADO')) {
+                $canal = 'MERCADOLIBRE';
+            } elseif (str_starts_with($plataformaStr, 'RIPLEY')) {
+                $canal = 'RIPLEY';
+            } else {
+                $canal = 'TIENDA';
             }
 
-            $cantidad       = $this->getVal($rowArray, 'un', 3) ?? 1;
-            $nombreProducto = $this->getVal($rowArray, 'producto', 2);
-            $almacenNombre  = $this->getVal($rowArray, 'almacen', 5);
-            $fechaDespacho  = $this->transformDate($fecha);
+            $ventaData = [
+                'idCliente' => null,
+                'numeroOrden' => $numeroOrdenStr,
+                'fechaVenta' => $fechaVenta,
+                'canal' => $canal
+            ];
 
-            // REQUERIMIENTO: Si NO hay serie, buscar por Nombre y Almacén
-            if (empty($numeroSerie)) {
-                if (empty($nombreProducto)) {
-                    Log::warning("Fila $index saltada: No tiene Serie ni Nombre de Producto.");
-                    continue;
-                }
+            foreach ($filasOrden as $filaInfo) {
+                $rowArray = $filaInfo['row'];
+                $index = $filaInfo['index'];
 
-                // Mapeo de almacén (ej: "De Tienda" -> "Tienda")
-                $almacenBusqueda = str_replace(['De ', 'de '], '', $almacenNombre);
-                $almacen = \App\Models\Almacen::where('descripcion', 'LIKE', "%$almacenBusqueda%")->first();
-                $idAlmacen = $almacen ? $almacen->idAlmacen : null;
+                $numeroSerie = $this->getVal($rowArray, 'series', 7);
+                $sku         = $this->getVal($rowArray, 'sku', 9);
+                $numeroSerie = $numeroSerie ? trim((string)$numeroSerie) : null;
+                $sku         = $sku ? trim((string)$sku) : null;
+                $cantidad    = $this->getVal($rowArray, 'un', 3) ?? 1;
+                $nombreProducto = $this->getVal($rowArray, 'producto', 2);
+                $almacenNombre  = $this->getVal($rowArray, 'almacen', 5);
+                $fechaDespacho  = $this->transformDate($this->getVal($rowArray, 'fecha', 0));
 
-                // Buscar registros disponibles (NUEVO) por NOMBRE o MODELO
-                $query = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-                    ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-                    ->where(function ($q) use ($nombreProducto) {
-                        $q->where('Producto.nombreProducto', $nombreProducto)
-                            ->orWhere('Producto.modelo', $nombreProducto);
-                    })
-                    ->where('RegistroProducto.estado', 'NUEVO');
+                if (empty($numeroSerie)) {
+                    if (empty($nombreProducto)) {
+                        Log::warning("Fila $index saltada: No tiene Serie ni Nombre de Producto.");
+                        continue;
+                    }
 
-                if ($idAlmacen) {
-                    $query->where('RegistroProducto.idAlmacen', $idAlmacen);
-                }
+                    $almacenBusqueda = str_replace(['De ', 'de '], '', $almacenNombre);
+                    $almacen = \App\Models\Almacen::where('descripcion', 'LIKE', "%$almacenBusqueda%")->first();
+                    $idAlmacen = $almacen ? $almacen->idAlmacen : null;
 
-                $registrosDisponibles = $query->select('RegistroProducto.*')
-                    ->take($cantidad)
-                    ->get();
+                    $query = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                        ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+                        ->where(function ($q) use ($nombreProducto) {
+                            $q->where('Producto.nombreProducto', $nombreProducto)
+                                ->orWhere('Producto.modelo', $nombreProducto);
+                        })
+                        ->where('RegistroProducto.estado', 'NUEVO');
 
-                if ($registrosDisponibles->count() < $cantidad) {
-                    Log::error("Fila $index: Stock insuficiente para '$nombreProducto'. Pedidos: $cantidad, Encontrados: " . $registrosDisponibles->count());
-                    // Procesamos lo que haya disponible si el usuario lo permite, o saltamos. 
-                    // Por seguridad, procesaremos solo lo que hay.
-                }
+                    if ($idAlmacen) {
+                        $query->where('RegistroProducto.idAlmacen', $idAlmacen);
+                    }
 
-                if ($registrosDisponibles->isEmpty()) {
-                    Log::warning("Fila $index: No se encontró stock para '$nombreProducto' en el almacén '$almacenNombre'");
-                    continue;
-                }
+                    $registrosDisponibles = $query->select('RegistroProducto.*')->take($cantidad)->get();
 
-                $procesados = 0;
-                foreach ($registrosDisponibles as $registro) {
-                    try {
+                    if ($registrosDisponibles->isEmpty()) {
+                        Log::warning("Fila $index: No se encontró stock para '$nombreProducto' en almacén '$almacenNombre'");
+                        continue;
+                    }
+
+                    foreach ($registrosDisponibles as $registro) {
                         $idPublicacion = null;
                         if (!empty($sku) && strtolower($sku) !== 'no aplica') {
                             $publicacion = Publicacion::where('sku', $sku)->first();
                             if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
                         }
 
-                        $items = [['idregistro' => $registro->idRegistro, 'idpublicacion' => $idPublicacion]];
-                        $arrayEgreso = ['numeroOrden' => $numeroOrden, 'fechaCompra' => $fechaDespacho, 'fechaDespacho' => $fechaDespacho];
+                        $itemsParaEgreso[] = [
+                            'idregistro' => $registro->idRegistro,
+                            'idpublicacion' => $idPublicacion
+                        ];
 
-                        $this->egresoService->createEgreso($arrayEgreso, $items);
-                        $procesados++;
-                    } catch (\Exception $e) {
-                        Log::error("Fila $index: Error egresando unidad de $nombreProducto: " . $e->getMessage());
-                    }
-                }
-                Log::info("Fila $index: ÉXITO. Producto: '$nombreProducto', Cantidad egresada: $procesados / $cantidad (Almacén: $almacenNombre)");
-                continue; // Pasar a la siguiente fila del Excel
-            }
-
-            // REQUERIMIENTO: Si HAY serie, procesar individualmente (soporta comas)
-            $seriesArray = explode(',', $numeroSerie);
-            foreach ($seriesArray as $serieIndividual) {
-                $serieIndividual = trim($serieIndividual);
-                if (empty($serieIndividual)) continue;
-
-                // Buscamos prioritariamente un registro de esta serie que esté NUEVO (disponible para egreso)
-                $registro = RegistroProducto::where('numeroSerie', $serieIndividual)
-                    ->where('estado', 'NUEVO')
-                    ->first();
-
-                if ($registro) {
-                    $idPublicacion = null;
-                    if (!empty($sku) && strtolower($sku) !== 'no aplica') {
-                        $publicacion = Publicacion::where('sku', $sku)->first();
-                        if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
-                    }
-
-                    try {
-                        $items = [['idregistro' => $registro->idRegistro, 'idpublicacion' => $idPublicacion]];
-                        $arrayEgreso = ['numeroOrden' => $numeroOrden, 'fechaCompra' => $fechaDespacho, 'fechaDespacho' => $fechaDespacho];
-                        $this->egresoService->createEgreso($arrayEgreso, $items);
-                        Log::info("Fila $index: Egreso exitoso para Serie $serieIndividual (Producto: '$nombreProducto')");
-                    } catch (\Exception $e) {
-                        Log::error("Fila $index: Error en serie {$serieIndividual}: " . $e->getMessage());
+                        $detallesVentaData[] = [
+                            'idRegistro' => $registro->idRegistro,
+                            'idPublicacion' => $idPublicacion,
+                            'idProducto' => $registro->DetalleComprobante->idProducto ?? null,
+                            'precioVenta' => 0, // 0 hace que herede auto en el service de venta
+                            'cantidad' => 1
+                        ];
                     }
                 } else {
-                    // Si no hay ninguno NUEVO, buscamos el último registro general para dar un warning correcto en los logs
-                    $registroExistente = RegistroProducto::where('numeroSerie', $serieIndividual)
-                        ->orderBy('idRegistro', 'desc')
-                        ->first();
+                    $seriesArray = explode(',', $numeroSerie);
+                    foreach ($seriesArray as $serieIndividual) {
+                        $serieIndividual = trim($serieIndividual);
+                        if (empty($serieIndividual)) continue;
 
-                    if ($registroExistente) {
-                        Log::warning("Fila $index: La serie $serieIndividual ya no está NUEVA (Estado: {$registroExistente->estado})");
-                    } else {
-                        Log::warning("Fila $index saltada: Serie no encontrada: " . $serieIndividual);
+                        $registro = RegistroProducto::where('numeroSerie', $serieIndividual)
+                            ->where('estado', 'NUEVO')
+                            ->first();
+
+                        if ($registro) {
+                            $idPublicacion = null;
+                            if (!empty($sku) && strtolower($sku) !== 'no aplica') {
+                                $publicacion = Publicacion::where('sku', $sku)->first();
+                                if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
+                            }
+
+                            $itemsParaEgreso[] = [
+                                'idregistro' => $registro->idRegistro,
+                                'idpublicacion' => $idPublicacion
+                            ];
+
+                            $detallesVentaData[] = [
+                                'idRegistro' => $registro->idRegistro,
+                                'idPublicacion' => $idPublicacion,
+                                'idProducto' => $registro->DetalleComprobante->idProducto ?? null,
+                                'precioVenta' => 0, // Se hereda automáticamente
+                                'cantidad' => 1
+                            ];
+                        } else {
+                            Log::warning("Fila $index: Serie $serieIndividual no está NUEVA o no existe.");
+                        }
                     }
+                }
+            }
+
+            // Realizar los guardados por Grupo
+            if (count($itemsParaEgreso) > 0) {
+                try {
+                    $arrayEgreso = ['numeroOrden' => $numeroOrdenStr, 'fechaCompra' => $fechaVenta, 'fechaDespacho' => $fechaVenta];
+                    $createResult = $this->egresoService->createEgreso($arrayEgreso, $itemsParaEgreso);
+
+                    if ($this->ventaService && isset($createResult['egresos'])) {
+                        $egresosGenerados = $createResult['egresos'];
+                        foreach ($detallesVentaData as &$dv) {
+                            $dv['idEgreso'] = $egresosGenerados[$dv['idRegistro']] ?? null;
+                        }
+                        $this->ventaService->createVenta($ventaData, $detallesVentaData);
+                        Log::info("Orden $ordenKey: Venta generada con " . count($detallesVentaData) . " detalles.");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Orden $ordenKey: Error procesando grupo - " . $e->getMessage());
                 }
             }
         }

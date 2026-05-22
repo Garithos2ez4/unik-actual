@@ -180,6 +180,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function createEgreso(array $data, array $items)
     {
         $productos = array();
+        $egresosGenerados = array();
         if (!empty($data) && !empty($items)) {
             foreach ($items as $item) {
                 $idRegistro = $item['idregistro'];
@@ -219,6 +220,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 $data['idEgreso'] = $this->getNewIdEgreso(); // Generamos un ID nuevo
 
                 $this->egresoRepository->create($data); // Guardamos la nueva venta
+                $egresosGenerados[$idRegistro] = $data['idEgreso'];
 
                 $arrayRegistro = [
                     'estado' => 'ENTREGADO',
@@ -234,7 +236,10 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 $this->productoRepository->validateState($producto->idProducto);
             }
         }
-        return $productos;
+        return [
+            'productos' => $productos,
+            'egresos' => $egresosGenerados
+        ];
     }
 
     public function updateEgreso($transaction, $idEgreso, $observacion, $plataforma = null, $fechaDevolucion = null, $dataEgreso = [])

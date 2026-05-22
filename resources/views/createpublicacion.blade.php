@@ -23,7 +23,7 @@
             <input type="hidden"  name="idplataforma" value="{{$plataforma->idPlataforma}}">
         </div>
         <div class="col-md-3 mb-2">
-            <label class="form-label">SKU:</label>
+            <label class="form-label">SKU: <span id="sku-error" class="text-danger fw-bold" style="display:none; font-size:12px;"><i class="bi bi-exclamation-triangle"></i> Ya existe</span></label>
             <div style="position:relative">
                 <input type="text" value="{{old('sku', request('sku'))}}" name="sku" oninput="searchPublicacion(this)" class="form-control" aria-describedby="basic-addon1" id="sku-public" autocomplete="off">
                 <ul class="list-group w-100" id="suggestions-sku" style="position:absolute;z-index:1000"></ul>
@@ -62,5 +62,5 @@
     </div>
     </form>
 </div>
-<script src="{{asset('js/createpublicacion.js')}}"></script>
+<script src="{{asset('js/createpublicacion.js')}}?v=1.1"></script>
 @endsection

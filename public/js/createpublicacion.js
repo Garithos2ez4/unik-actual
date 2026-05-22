@@ -1,3 +1,5 @@
+let isSkuDuplicate = false;
+
 function validateData() {
     let titulo = document.getElementById('titulo-public').value;
     let sku = document.getElementById('sku-public').value;
@@ -28,6 +30,10 @@ function validateData() {
     }
 
     if (precio == '') {
+        disabled = true;
+    }
+
+    if (isSkuDuplicate) {
         disabled = true;
     }
 
@@ -120,6 +126,19 @@ function searchPublicacion(inputElement) {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 let data = JSON.parse(xhr.responseText);
                 suggestions.innerHTML = '';
+                
+                let exactMatch = data.find(item => item.sku.toLowerCase() === query.toLowerCase());
+                let skuErrorSpan = document.getElementById('sku-error');
+                if (exactMatch) {
+                    isSkuDuplicate = true;
+                    if (skuErrorSpan) skuErrorSpan.style.display = 'inline';
+                    inputElement.classList.add('is-invalid');
+                } else {
+                    isSkuDuplicate = false;
+                    if (skuErrorSpan) skuErrorSpan.style.display = 'none';
+                    inputElement.classList.remove('is-invalid');
+                }
+                dissableButton();
 
                 data.forEach(item => {
                     let li = document.createElement('li');
@@ -156,5 +175,10 @@ function searchPublicacion(inputElement) {
         xhr.send();
     } else {
         suggestions.innerHTML = '';
+        isSkuDuplicate = false;
+        let skuErrorSpan = document.getElementById('sku-error');
+        if (skuErrorSpan) skuErrorSpan.style.display = 'none';
+        inputElement.classList.remove('is-invalid');
+        dissableButton();
     }
 }
