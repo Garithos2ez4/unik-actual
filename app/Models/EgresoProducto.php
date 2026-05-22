@@ -54,6 +54,14 @@ class EgresoProducto extends Model
     }
 
     /**
+     * DetalleVenta vinculado a este egreso (cuando se registra como Venta formal)
+     */
+    public function DetalleVenta()
+    {
+        return $this->hasOne(DetalleVenta::class, 'idEgreso', 'idEgreso');
+    }
+
+    /**
      * Obtener las relaciones del modelo.
      */
     public function Devoluciones()

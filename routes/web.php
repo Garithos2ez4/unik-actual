@@ -12,6 +12,7 @@ use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\PlataformaController;
 use App\Http\Controllers\PublicidadController;
+use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\CalculadoraController;
 use App\Http\Controllers\ClienteController;
@@ -80,15 +81,17 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
     Route::post('/producto/insertorupdatedetails', [ProductoController::class, 'insertOrUpdateDetails'])->name('insertorupdatedetails');
     Route::post('/producto/deletedetail/{idProducto}', [ProductoController::class, 'deleteDetail'])->name('deletedetail');
+    Route::post('/producto/creargrupo-rapido', [ProductoController::class, 'quickCreateGrupo'])->name('quickcreategrupo');
+
 
     Route::get('/traslado', [TrasladoController::class, 'index'])->name('traslados');
     Route::post('/traslado/updateregistroalmacen', [TrasladoController::class, 'updateRegistroAlmacen'])->name('updateregistroalmacen');
 
     Route::get('/documento/searchdocument', [DocumentoController::class, 'searchDocument'])->name('searchdocument');
-    Route::get('/documento/validateseries', [DocumentoController::class, 'validateSeries'])->name('validate.series');
     Route::get('/documento/{id}/{bool}', [DocumentoController::class, 'index'])->name('documento');
     Route::get('/documentos/{date}', [DocumentoController::class, 'list'])->name('documentos');
     Route::post('/documento/deletecomprobante', [DocumentoController::class, 'deleteComprobante'])->name('deletecomprobante');
+    Route::post('/documento/validateseries', [DocumentoController::class, 'validateSeries'])->name('validate.series');
 
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
@@ -100,6 +103,13 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
+ 
+    // Rutas para Ventas
+    Route::prefix('ventas')->name('ventas.')->group(function () {
+        Route::get('/', [VentaController::class, 'index'])->name('index');
+        Route::get('/{id}', [VentaController::class, 'show'])->name('show');
+        Route::post('/store', [VentaController::class, 'store'])->name('store');
+    });
 
     Route::get('/garantia/creategarantia',[GarantiaController::class,'create'])->name('creategarantia');
     Route::get('/garantias/{date}',[GarantiaController::class,'index'])->name('garantias');
@@ -122,13 +132,18 @@ Route::middleware(['validate.session'])->group(function () {
         
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
+        Route::get('/provincias-por-departamento/{idDepartamento}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getProvinciasPorDepartamento'])->name('provincias-por-departamento');
+        Route::get('/destinos-por-provincia/{idProvincia}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getDestinosPorProvincia'])->name('destinos-por-provincia');
+        Route::get('/subagencias-por-agencia-y-destino/{idAgencia}/{idDestino}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getSubAgenciasPorAgenciaYDestino'])->name('subagencias-por-agencia-y-destino');
         Route::post('/agencia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeAgencia'])->name('agencia.store');
+        Route::post('/sub-agencia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeSubAgencia'])->name('subagencia.store');
         Route::post('/provincia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeProvincia'])->name('provincia.store');
         Route::post('/destino', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeDestino'])->name('destino.store');
     });
     // FALABELLA
     Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {
         Route::get('/productos', [PlataformaController::class, 'falabellaProductos'])->name('productos');
+        Route::get('/publicaciones', [PlataformaController::class, 'falabellaPublicaciones'])->name('publicaciones');
         Route::get('/seller', [PlataformaController::class, 'sellerFalabella'])->name('seller');
         Route::get('/orders', [PlataformaController::class, 'falabellaOrders'])->name('orders');
         Route::get('/order/{order_id}', [PlataformaController::class, 'falabellaOrderDetails'])->name('order-details');

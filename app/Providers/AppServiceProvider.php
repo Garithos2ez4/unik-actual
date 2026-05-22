@@ -28,6 +28,8 @@ use App\Services\PublicacionServiceInterface;
 use App\Services\PublicacionService;
 use App\Services\ReclamoPlataformaServiceInterface;
 use App\Services\ReclamoPlataformaService;
+use App\Services\VentaServiceInterface;
+use App\Services\VentaService;
 
 use App\Repositories\CalculadoraRepositoryInterface;
 use App\Repositories\CalculadoraRepository;
@@ -95,6 +97,10 @@ use App\Repositories\TipoProductoRepository;
 use App\Repositories\TipoProductoRepositoryInterface;
 use App\Repositories\VistaRepository;
 use App\Repositories\VistaRepositoryInterface;
+use App\Repositories\VentaRepository;
+use App\Repositories\VentaRepositoryInterface;
+use App\Repositories\DetalleVentaRepository;
+use App\Repositories\DetalleVentaRepositoryInterface;
 use App\Services\ClienteService;
 use App\Services\ClienteServiceInterface;
 use App\Services\ConfiguracionService;
@@ -144,6 +150,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ConfiguracionServiceInterface::class,ConfiguracionService::class);
         $this->app->bind(PdfServiceInterface::class,PdfService::class);
         $this->app->bind(ReclamoPlataformaServiceInterface::class,ReclamoPlataformaService::class);
+        $this->app->bind(VentaServiceInterface::class,VentaService::class);
 
         $this->app->bind(CalculadoraRepositoryInterface::class, CalculadoraRepository::class);
         $this->app->bind(UsuarioRepositoryInterface::class, UsuarioRepository::class);
@@ -185,6 +192,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TipoDocumentoRepositoryInterface::class,TipoDocumentoRepository::class);
         $this->app->bind(ClienteRepositoryInterface::class,ClienteRepository::class);
         $this->app->bind(RegistroUpdateRepositoryInterface::class,RegistroUpdateRepository::class);
+        $this->app->bind(VentaRepositoryInterface::class,VentaRepository::class);
+        $this->app->bind(DetalleVentaRepositoryInterface::class,DetalleVentaRepository::class);
 
     }
 

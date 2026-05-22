@@ -101,7 +101,8 @@ function searchPublicacion(inputElement) {
                         suggestions.innerHTML = ''; // Limpiar sugerencias después de seleccionar una
                         validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
                         validateIconSku.classList.add('bi-check-circle', 'text-success');
-                        applySkuToUnassignedItems(item.idPublicacion, item.sku);
+                        document.getElementById('hidden-publicacion-precio').value = item.precio;
+                        applySkuToUnassignedItems(item.idPublicacion, item.sku, item.precio);
                         validateSubmit();
                     });
 
@@ -113,6 +114,7 @@ function searchPublicacion(inputElement) {
     } else {
         document.getElementById('suggestions-sku').innerHTML = ''; // Limpiar si hay menos de 3 caracteres
         document.getElementById('hidden-publicacion-sku').value = "";
+        document.getElementById('hidden-publicacion-precio').value = "";
         validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
         validateIconSku.classList.remove('bi-check-circle', 'text-success');
         hiddenBody.style.display = 'none';
@@ -124,6 +126,7 @@ function checkSku() {
     let checkSku = document.getElementById('check-sku-egreso');
     let inputEgreso = document.getElementById('input-sku-egreso');
     let hiddenEgreso = document.getElementById('hidden-publicacion-sku');
+    let hiddenPrecio = document.getElementById('hidden-publicacion-precio');
     let inputNumberOrder = document.getElementById('input-numero-orden');
 
     if (checkSku.checked) {
@@ -132,15 +135,17 @@ function checkSku() {
         inputNumberOrder.disabled = true;
         inputNumberOrder.value = checkSku.value;
         hiddenEgreso.value = 'NULO';
+        hiddenPrecio.value = '';
         validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
         validateIconSku.classList.add('bi-check-circle', 'text-success');
-        applySkuToUnassignedItems('NULO', 'No aplica');
+        applySkuToUnassignedItems('NULO', 'No aplica', '');
     } else {
         inputEgreso.disabled = false;
         inputEgreso.value = '';
         inputNumberOrder.disabled = false;
         inputNumberOrder.value = '';
         hiddenEgreso.value = '';
+        hiddenPrecio.value = '';
         validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
         validateIconSku.classList.remove('bi-check-circle', 'text-success');
     }
@@ -234,6 +239,77 @@ function searchRegistro(inputElement) {
     }
 }
 
+// Búsqueda de Cliente
+function searchClienteAjax(inputElement) {
+    let query = inputElement.value;
+
+    function handleClickOutside(event) {
+        let suggestions = document.getElementById('suggestions-cliente');
+        if (!suggestions.contains(event.target) && event.target !== inputElement) {
+            suggestions.innerHTML = '';
+            hiddenBody.style.display = 'none';
+        }
+    }
+
+    document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
+
+    if (query.length > 2) {
+        document.getElementById('hidden-id-cliente').value = "";
+        document.getElementById('btn-clear-cliente').style.display = 'none';
+        
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', `/cliente/searchcliente?query=${query}`, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                let suggestions = document.getElementById('suggestions-cliente');
+                hiddenBody.style.display = 'block';
+                inputElement.style.zIndex = '1000';
+                suggestions.innerHTML = '';
+
+                data.forEach(item => {
+                    let li = document.createElement('li');
+                    li.classList.add('list-group-item', 'pe-0', 'hover-sistema-uno', 'text-truncate');
+                    li.style.cursor = "pointer";
+
+                    let nombreCompleto = item.nombre + (item.apePaterno ? ' ' + item.apePaterno : '');
+                    li.innerHTML = `<strong>${item.numeroDocumento}</strong> - ${nombreCompleto}`;
+
+                    li.addEventListener('click', function () {
+                        inputElement.value = nombreCompleto;
+                        document.getElementById('hidden-id-cliente').value = item.idCliente;
+                        document.getElementById('btn-clear-cliente').style.display = 'block';
+                        
+                        suggestions.innerHTML = '';
+                        hiddenBody.style.display = 'none';
+                        inputElement.style.zIndex = '1';
+                        inputElement.readOnly = true;
+                    });
+
+                    suggestions.appendChild(li);
+                });
+            }
+        };
+        xhr.send();
+    } else {
+        document.getElementById('suggestions-cliente').innerHTML = '';
+        document.getElementById('hidden-id-cliente').value = "";
+        document.getElementById('btn-clear-cliente').style.display = 'none';
+        hiddenBody.style.display = 'none';
+        inputElement.style.zIndex = '1';
+    }
+}
+
+function clearCliente() {
+    let inputElement = document.getElementById('input-cliente-egreso');
+    inputElement.value = '';
+    inputElement.readOnly = false;
+    document.getElementById('hidden-id-cliente').value = '';
+    document.getElementById('btn-clear-cliente').style.display = 'none';
+    document.getElementById('suggestions-cliente').innerHTML = '';
+}
+
 function createItem(object, query) {
     if (object == null || Object.keys(object).length == 0) {
         alertBootstrap('Producto ' + query + ' no encontrado', 'warning');
@@ -280,6 +356,7 @@ function createItem(object, query) {
                 divRowItem.remove();
                 cartManager.eliminarProducto();
                 validateSubmit();
+                calculateTotalVenta();
 
                 productosAgregados = productosAgregados.filter(id => id !== object.idRegistroProducto);
             }
@@ -287,17 +364,37 @@ function createItem(object, query) {
     );
     divColBtnDelete.appendChild(btnDeleteItem);
 
-    let divColModelo = createDiv(['col-4'], null);
+    let divColModelo = createDiv(['col-3'], null);
     divColModelo.innerHTML = 'Modelo: ' + object.modelo;
 
-    let divColCodigo = createDiv(['col-3'], null);
+    let divColCodigo = createDiv(['col-2'], null);
     divColCodigo.innerHTML = 'Codigo: ' + object.codigoProducto;
 
     let divColSerial = createDiv(['col-3'], null);
     divColSerial.innerHTML = 'SN: ' + object.numeroSerie;
 
-    let divColEstado = createDiv(['col-2', 'text-end'], null);
+    let divColEstado = createDiv(['col-2', 'text-center'], null);
     divColEstado.innerHTML = object.estado;
+
+    let divColPrecio = createDiv(['col-2', 'text-end'], null);
+    let inputPrecio = document.createElement('input');
+    inputPrecio.type = 'number';
+    inputPrecio.step = '0.01';
+    inputPrecio.name = `items[${currentIndex}][precioVenta]`;
+    inputPrecio.className = 'form-control form-control-sm border-success text-end input-precio-item';
+    inputPrecio.placeholder = 'Precio Venta';
+    inputPrecio.title = 'Precio Venta';
+    
+    let selectedSkuPrecio = document.getElementById('hidden-publicacion-precio').value;
+    if(selectedSkuPrecio) {
+        inputPrecio.value = selectedSkuPrecio;
+    } else if(object.precioSoles) {
+        inputPrecio.value = object.precioSoles;
+    }
+    
+    inputPrecio.addEventListener('input', calculateTotalVenta);
+
+    divColPrecio.appendChild(inputPrecio);
 
     let selectedSkuText = document.getElementById('input-sku-egreso').value;
     let textColorClass = selectedSkuId ? 'text-success' : 'text-danger';
@@ -310,6 +407,7 @@ function createItem(object, query) {
     divRowContent.appendChild(divColCodigo);
     divRowContent.appendChild(divColSerial);
     divRowContent.appendChild(divColEstado);
+    divRowContent.appendChild(divColPrecio);
     divRowContent.appendChild(divColSku);
     divColContent.appendChild(divRowContent);
     divRowItem.appendChild(divColImg);
@@ -319,11 +417,13 @@ function createItem(object, query) {
     itemEgresoDiv.insertBefore(divRowItem, itemEgresoDiv.firstChild);
 
     cartManager.agregarProducto();
+    calculateTotalVenta();
 }
 
-function applySkuToUnassignedItems(skuId, skuText) {
+function applySkuToUnassignedItems(skuId, skuText, skuPrecio) {
     let hiddenSkus = document.querySelectorAll('.hidden-sku-item');
     let textDisplays = document.querySelectorAll('.sku-text-display');
+    let precioInputs = document.querySelectorAll('.input-precio-item');
 
     hiddenSkus.forEach((hiddenInput, index) => {
         if (!hiddenInput.value) { // Solo actualiza los que no tienen SKU asignado
@@ -331,8 +431,38 @@ function applySkuToUnassignedItems(skuId, skuText) {
             textDisplays[index].innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + skuText + '</strong></small>';
             textDisplays[index].classList.remove('text-danger');
             textDisplays[index].classList.add('text-success');
+
+            if (skuPrecio !== undefined && skuPrecio !== null && skuPrecio !== '') {
+                precioInputs[index].value = skuPrecio;
+            } else {
+                precioInputs[index].value = '';
+            }
         }
     });
+    calculateTotalVenta();
+}
+
+function calculateTotalVenta() {
+    let inputs = document.querySelectorAll('.input-precio-item');
+    let total = 0;
+    
+    inputs.forEach(input => {
+        let val = parseFloat(input.value);
+        if(!isNaN(val)) {
+            total += val;
+        }
+    });
+
+    let contenedor = document.getElementById('contenedor-total-venta');
+    let spanTotal = document.getElementById('span-total-venta');
+    
+    if (inputs.length > 0) {
+        contenedor.style.display = 'block';
+        spanTotal.textContent = total.toFixed(2);
+    } else {
+        contenedor.style.display = 'none';
+        spanTotal.textContent = '0.00';
+    }
 }
 
 function validateSerialById(id) {

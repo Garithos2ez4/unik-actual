@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\ProductoServiceInterface;
+use App\Services\VentaServiceInterface;
 use Exception;
 
 class EgresoController extends Controller
@@ -14,15 +15,18 @@ class EgresoController extends Controller
     protected $headerService;
     protected $egresoService;
     protected $productoService;
+    protected $ventaService;
 
     public function __construct(
         HeaderServiceInterface $headerService,
         EgresoProductoServiceInterface $egresoService,
-        ProductoServiceInterface $productoService
+        ProductoServiceInterface $productoService,
+        VentaServiceInterface $ventaService
     ) {
         $this->headerService = $headerService;
         $this->egresoService = $egresoService;
         $this->productoService = $productoService;
+        $this->ventaService = $ventaService;
     }
 
     public function index($month)
@@ -85,11 +89,51 @@ class EgresoController extends Controller
                     ];
 
                     try {
+                        // 1. Crear el egreso (stock)
                         $productos = $this->egresoService->createEgreso($arrayEgreso, $items);
-                        $this->headerService->sendFlashAlerts('Egreso registrado', 'Operacion exitosa', 'success', 'btn-success');
+                        
+                        // Determinar el canal dinámicamente basado en la primera publicación válida encontrada
+                        $plataformaTienda = \App\Models\Plataforma::find(7);
+                        $canal = $plataformaTienda ? strtoupper(substr($plataformaTienda->nombrePlataforma, 0, 20)) : 'TIENDA';
+                        foreach ($items as $item) {
+                            if (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') {
+                                $publicacion = \App\Models\Publicacion::with('CuentasPlataforma.Plataforma')->find($item['idpublicacion']);
+                                if ($publicacion && $publicacion->CuentasPlataforma && $publicacion->CuentasPlataforma->Plataforma) {
+                                    // Limitar a 20 caracteres por la bbdd
+                                    $canalStr = $publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
+                                    $canal = substr(strtoupper($canalStr), 0, 20);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 2. Preparar los datos para la Venta
+                        $ventaData = [
+                            'idCliente' => $request->input('idCliente'), // puede ser null
+                            'numeroOrden' => $numeroorden == 'No aplica' ? null : $numeroorden,
+                            'fechaVenta' => $fechapedido,
+                            'canal' => $canal
+                        ];
+
+                        $detallesVenta = [];
+                        foreach ($items as $item) {
+                            $detallesVenta[] = [
+                                'idRegistro' => $item['idregistro'],
+                                'idPublicacion' => (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') ? $item['idpublicacion'] : null,
+                                // Obtener idProducto usando el idRegistro 
+                                'idProducto' => \App\Models\RegistroProducto::find($item['idregistro'])->idProducto ?? null,
+                                'precioVenta' => $item['precioVenta'] ?? 0, // 0 hace que herede auto en el service
+                                'cantidad' => 1
+                            ];
+                        }
+
+                        // 3. Crear la Venta
+                        $this->ventaService->createVenta($ventaData, $detallesVenta);
+
+                        $this->headerService->sendFlashAlerts('Egreso y Venta registrados', 'Operacion exitosa', 'success', 'btn-success');
                         return back();
                     } catch (\Exception $e) {
-                        $this->headerService->sendFlashAlerts('Error al registrar egreso', $e->getMessage(), 'error', 'btn-danger');
+                        $this->headerService->sendFlashAlerts('Error al registrar egreso/venta', $e->getMessage(), 'error', 'btn-danger');
                         return back();
                     }
                 } else {

@@ -45,7 +45,7 @@
     <form action="{{ route('insertegreso') }}" method="POST">
         @csrf
         <div class="row">
-            <div class="col-4 mb-2">
+            <div class="col-3 mb-2">
                 <div class="row">
                     <div class="col-6">
                         <label>SKU</label> <i id="sku-modal-egreso-validate" class="bi bi-exclamation-circle text-danger"></i>
@@ -63,12 +63,26 @@
                             value="No aplica">
                     </div>
                     <input type="hidden" id="hidden-publicacion-sku" class="form-control cab-form" value="">
+                    <input type="hidden" id="hidden-publicacion-precio" value="">
 
                     <ul class="list-group" id="suggestions-sku"
                         style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
                 </div>
             </div>
-            <div class="col-4 mb-2">
+            <div class="col-3 mb-2">
+                <label>Cliente (Opcional)</label>
+                <div class="input-group" style="position:relative">
+                    <input type="text" oninput="searchClienteAjax(this)" id="input-cliente-egreso" 
+                        class="form-control input-egreso" placeholder="Nombre o Documento">
+                    <div class="input-group-text" id="btn-clear-cliente" style="cursor:pointer; display:none;" onclick="clearCliente()">
+                        <i class="bi bi-x"></i>
+                    </div>
+                    <input type="hidden" name="idCliente" id="hidden-id-cliente" value="">
+                    <ul class="list-group" id="suggestions-cliente"
+                        style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
+                </div>
+            </div>
+            <div class="col-2 mb-2">
                 <label>Numero de Orden</label>
                 <input type="text" placeholder="Nro de Orden" id="input-numero-orden"
                     name="numeroorden" class="form-control input-egreso cab-form" required>
@@ -87,6 +101,11 @@
         <div class="row">
             <div class="col-12" id="div-items-create-egreso">
 
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-12 text-end">
+                <h4 class="text-success" style="display: none;" id="contenedor-total-venta">Total Venta: <span id="span-total-venta">0.00</span></h4>
             </div>
         </div>
         <br>
@@ -118,5 +137,5 @@
 <script>
     window.assetUrl = "{{ asset('storage/') }}";
 </script>
-<script src="{{asset('js/createegreso.js')}}?v=1.6"></script>
+<script src="{{asset('js/createegreso.js')}}?v=1.11"></script>
 @endsection

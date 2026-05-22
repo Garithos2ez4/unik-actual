@@ -126,21 +126,24 @@ class DocumentoController extends Controller
         return response()->json($results);
     }
     
-    public function validateSeries(Request $request){
-        $base64Data = $request->query('data');
-        $jsonData = base64_decode($base64Data);
-        $data = json_decode($jsonData);
+   public function validateSeries(Request $request)
+{
+    
+    $rawJson = json_decode($request->getContent());
+    
+    $data = $rawJson->data ?? [];
 
-        if (empty($data)) {
-            return response()->json(['error' => 'Faltan parámetros'], 400); 
-        }
-
-        $validSeries = $this->comprobanteService->validateSeriesAjax($data);
-
-        if (count($validSeries) > 0) {
-            return response()->json(['valid' => true, 'series' => $validSeries]);
-        } else {
-            return response()->json(['valid' => false]);
-        }
+    if (empty($data)) {
+        return response()->json(['error' => 'Faltan parámetros'], 400); 
     }
+
+    $validSeries = $this->comprobanteService->validateSeriesAjax($data);
+
+    if (count($validSeries) > 0) {
+        return response()->json(['valid' => true, 'series' => $validSeries]);
+    } else {
+        return response()->json(['valid' => false]);
+    }
+
+}
 }

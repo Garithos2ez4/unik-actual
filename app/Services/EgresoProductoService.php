@@ -46,8 +46,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
     public function searchAjaxRegistro($serial)
     {
+        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
+
         $egresos = $this->registroRepository->searchByEgreso($serial, 5);
-        $result = $egresos->map(function ($details) {
+        $result = $egresos->map(function ($details) use ($tasaCambio) {
+            $precioDolar = $details->DetalleComprobante->Producto->precioDolar ?? 0;
             return [
                 'nombreProducto' => $details->DetalleComprobante->Producto->nombreProducto,
                 'codigoProducto' => $details->DetalleComprobante->Producto->codigoProducto,
@@ -56,7 +59,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'estado' => $details->estado,
                 'modelo' => $details->DetalleComprobante->Producto->modelo,
                 'image' => $details->DetalleComprobante->Producto->imagenProducto1,
-                'marca' => $details->DetalleComprobante->Producto->MarcaProducto->nombreMarca
+                'marca' => $details->DetalleComprobante->Producto->MarcaProducto->nombreMarca,
+                'precioSoles' => round($precioDolar * $tasaCambio, 2)
             ];
         });
         return $result;
@@ -64,10 +68,13 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
     public function getOneAjaxRegistro($serial)
     {
+        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
+
         $egreso = $this->registroRepository->getByEgreso($serial);
 
         if ($egreso) {
             $details = $egreso->DetalleComprobante->Producto;
+            $precioDolar = $details->precioDolar ?? 0;
 
             $result = [
                 'nombreProducto' => $details->nombreProducto,
@@ -77,7 +84,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'estado' => $egreso->estado,
                 'modelo' => $details->modelo,
                 'image' => $details->imagenProducto1,
-                'marca' => $details->MarcaProducto->nombreMarca
+                'marca' => $details->MarcaProducto->nombreMarca,
+                'precioSoles' => round($precioDolar * $tasaCambio, 2)
             ];
             return $result;
         }
