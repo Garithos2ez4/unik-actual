@@ -50,7 +50,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica', [HomeController::class, 'analytics'])->name('dashboard.analitica');
     Route::get('/home', fn() => redirect()->route('dashboard'))->name('home');
     Route::get('/dashboard/stockmin', [HomeController::class, 'stockMinDashboard'])->name('stockmindashboard');
-    Route::get('/dashboard/inventario/{estado}',[HomeController::class,'dashboardInventario'])->name('dashboardinventario');
+    Route::get('/dashboard/inventario/{estado}', [HomeController::class, 'dashboardInventario'])->name('dashboardinventario');
 
     Route::get('/calculadora', [CalculadoraController::class, 'index'])->name('calculadora');
     Route::get('/calculadora/calculate', [CalculadoraController::class, 'calculate'])->name('calculadora-calculate');
@@ -103,7 +103,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
- 
+
     // Rutas para Ventas
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('/', [VentaController::class, 'index'])->name('index');
@@ -111,11 +111,11 @@ Route::middleware(['validate.session'])->group(function () {
         Route::post('/store', [VentaController::class, 'store'])->name('store');
     });
 
-    Route::get('/garantia/creategarantia',[GarantiaController::class,'create'])->name('creategarantia');
-    Route::get('/garantias/{date}',[GarantiaController::class,'index'])->name('garantias');
-    Route::post('/garantia/insertgarantia',[GarantiaController::class,'insertGarantia'])->name('insertgarantia');
-    Route::get('/garantia/searchregistro',[GarantiaController::class,'searchRegistro'])->name('garantia.searchregistro');
-    Route::get('/garantia/getoneegreso',[GarantiaController::class,'getOneRegistro'])->name('garantia.getoneegreso');
+    Route::get('/garantia/creategarantia', [GarantiaController::class, 'create'])->name('creategarantia');
+    Route::get('/garantias/{date}', [GarantiaController::class, 'index'])->name('garantias');
+    Route::post('/garantia/insertgarantia', [GarantiaController::class, 'insertGarantia'])->name('insertgarantia');
+    Route::get('/garantia/searchregistro', [GarantiaController::class, 'searchRegistro'])->name('garantia.searchregistro');
+    Route::get('/garantia/getoneegreso', [GarantiaController::class, 'getOneRegistro'])->name('garantia.getoneegreso');
 
     Route::get('/plataformas', [PlataformaController::class, 'index'])->name('plataformas');
     Route::post('/plataforma/updatecuenta', [PlataformaController::class, 'updateCuentas'])->name('updatecuenta');
@@ -129,9 +129,10 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/edit/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'edit'])->name('edit');
         Route::put('/update/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'update'])->name('update');
         Route::get('/pdf', [\App\Http\Controllers\EnvioProvinciaController::class, 'pdf'])->name('pdf');
-        
+
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
+        Route::get('/ultimo-envio-cliente/{idCliente}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getUltimoEnvioCliente'])->name('ultimo-envio-cliente');
         Route::get('/provincias-por-departamento/{idDepartamento}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getProvinciasPorDepartamento'])->name('provincias-por-departamento');
         Route::get('/destinos-por-provincia/{idProvincia}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getDestinosPorProvincia'])->name('destinos-por-provincia');
         Route::get('/subagencias-por-agencia-y-destino/{idAgencia}/{idDestino}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getSubAgenciasPorAgenciaYDestino'])->name('subagencias-por-agencia-y-destino');
@@ -178,10 +179,11 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/insert-publicacion', [PublicacionController::class, 'insertPublicacion'])->name('insertpublicacion');
     Route::post('/update-estado-publicacion', [PublicacionController::class, 'updateEstado'])->name('update-estado-publicacion');
     Route::get('/searchpublicacion', [PublicacionController::class, 'searchPublicacion'])->name('searchpublicacion');
+    Route::get('/publicaciones/buscar', [PublicacionController::class, 'buscar'])->name('buscar-publicaciones');
 
-    Route::get('/clientes',[ClienteController::class,'index'])->name('clientes');
-    Route::get('/cliente/searchcliente',[ClienteController::class,'searchCliente'])->name('searchcliente');
-    Route::post('/cliente/create',[ClienteController::class,'createCliente'])->name('createcliente');
+    Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes');
+    Route::get('/cliente/searchcliente', [ClienteController::class, 'searchCliente'])->name('searchcliente');
+    Route::post('/cliente/create', [ClienteController::class, 'createCliente'])->name('createcliente');
 
     //Configuracion-WEB
     Route::get('/configuracion/web', [ConfiguracionController::class, 'web'])->name('configweb');
@@ -191,7 +193,7 @@ Route::middleware(['validate.session'])->group(function () {
     //Configuracion-CALCULOS
     Route::get('/configuracion/calculos', [ConfiguracionController::class, 'calculos'])->name('configcalculos');
     Route::post('/configuracion/updatecalculos', [ConfiguracionController::class, 'updateCalculos'])->name('updatecalculos');
-    Route::post('/configuracion/updateCalculosTasaFija',[ConfiguracionController::class, 'updateCalculosTasaFija'])->name('updateCalculosTasaFija');
+    Route::post('/configuracion/updateCalculosTasaFija', [ConfiguracionController::class, 'updateCalculosTasaFija'])->name('updateCalculosTasaFija');
     Route::post('/configuracion/updatecomision', [ConfiguracionController::class, 'updateComision'])->name('updatecomision');
     Route::post('/configuracion/createcomisionplataforma', [ConfiguracionController::class, 'createComisionPlataforma'])->name('createcomisionplataforma');
     Route::post('/configuracion/deletecomisionplataforma', [ConfiguracionController::class, 'deleteComisionPlataforma'])->name('deletecomisionplataforma');
@@ -220,12 +222,12 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/generateSerialPdf/{idDocumento}', [PdfController::class, 'generateSerialPdf'])->name('generarSeriesPdf');
     Route::get('/pdf/serialbyproduct/{idProducto}/{idAlmacen?}', [PdfController::class, 'seriesByProductPdf'])->name('seriesXProducto');
-    Route::get('/pdf/producto-series/{idProducto}/{idAlmacen}',[PdfController::class, 'productoSeriesPdf'])->name('pdf.producto.series');
+    Route::get('/pdf/producto-series/{idProducto}/{idAlmacen}', [PdfController::class, 'productoSeriesPdf'])->name('pdf.producto.series');
     Route::get('/reporte/stock/{idAlmacen}', [PdfController::class, 'reportStockPdf'])->name('reportealmacen');
     Route::get('/pdf/garantia/{idGarantia}', [PdfController::class, 'garantiaPdf'])->name('garantiaPdf');
     Route::post('/tipos-licencia', [LicenciaController::class, 'storeTipoLicencia'])->name('tiposLicencia.store');
     Route::post(
-    '/licencias/confirmar-importacion',
+        '/licencias/confirmar-importacion',
         [LicenciaController::class, 'confirmarImportacion']
     )->name('licencias.confirmar.importacion');
 
@@ -237,7 +239,6 @@ Route::middleware(['validate.session'])->group(function () {
         '/licencias/importar-excel',
         [LicenciaController::class, 'importarExcel']
     )->name('licencias.importar.excel');
-
 });
 // Ruta para verificar clave duplicada
 
@@ -246,8 +247,8 @@ Route::post('/verificar-serial-recuperada', function (Request $request) {
 
     // Buscar en la tabla correcta
     $existe = DB::table('licencias_recuperadas')
-                ->where('serial_recuperada', $serial)
-                ->exists();
+        ->where('serial_recuperada', $serial)
+        ->exists();
 
     return response()->json([
         'existe' => $existe
@@ -259,8 +260,8 @@ Route::post('/verificar-clave-duplicada', function (Request $request) {
 
     // Verificar si la clave ya existe en la tabla licencias_usadas
     $existe = DB::table('licencias_usadas')
-                ->where('clave_key', $claveKey)
-                ->exists();
+        ->where('clave_key', $claveKey)
+        ->exists();
 
     return response()->json([
         'existe' => $existe,
@@ -288,12 +289,12 @@ Route::prefix('licencias')->name('licencias.')->group(function () {
 
     //Plantilla en ecxel
     Route::get('/plantilla-excel', [LicenciaController::class, 'descargarPlantilla'])
-    ->name('plantilla_excel');
+        ->name('plantilla_excel');
 
     //Licencias Usadas
-     Route::get('/usadas', [LicenciaController::class, 'usadas'])->name('usadas');
-     //Licencias Usadas
-     Route::get('/defectuosas', [LicenciaController::class, 'defectuosas'])->name('defectuosas');
-     //Licencias Recuperadas
-     Route::get('/recuperadas', [LicenciaController::class, 'recuperadas'])->name('recuperadas');
+    Route::get('/usadas', [LicenciaController::class, 'usadas'])->name('usadas');
+    //Licencias Usadas
+    Route::get('/defectuosas', [LicenciaController::class, 'defectuosas'])->name('defectuosas');
+    //Licencias Recuperadas
+    Route::get('/recuperadas', [LicenciaController::class, 'recuperadas'])->name('recuperadas');
 });
