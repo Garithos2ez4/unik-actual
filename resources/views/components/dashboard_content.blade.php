@@ -33,11 +33,22 @@ $gradientString = implode(', ', $gradientParts);
                     <h4 class="fw-bold"><i class="bi bi-box-seam me-2"></i>Inventario</h4>
                     <small class="text-secondary">Seguimiento de Productos registrados y métricas clave.</small>
                 </div>
+                @php
+                    $tieneAccesoAnalitica = false;
+                    foreach ($user->Accesos as $acceso) {
+                        if ($acceso->idVista == 13) {
+                            $tieneAccesoAnalitica = true;
+                            break;
+                        }
+                    }
+                @endphp
+                @if($tieneAccesoAnalitica)
                 <div class="col-md-4 text-end">
                     <a href="{{ route('dashboard.analitica') }}" class="btn btn-primary rounded-pill shadow-sm px-4">
                         <i class="bi bi-bar-chart-line-fill me-1"></i> Ver Detalles Analíticos
                     </a>
                 </div>
+                @endif
 
                 <div class="col-12 mt-3">
                     <div class="row g-3">

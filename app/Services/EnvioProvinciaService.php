@@ -1,0 +1,147 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\EnvioProvincia;
+use App\Models\EnvioProvinciaDetalle;
+use App\Models\EnvioProvinciaProducto;
+use App\Models\Agencia;
+use App\Models\Provincia;
+use App\Models\Destino;
+use App\Models\SubAgencia;
+use Illuminate\Support\Facades\DB;
+use Throwable;
+
+class EnvioProvinciaService implements EnvioProvinciaServiceInterface
+{
+    public function createEnvio(array $data, array $productos)
+    {
+        DB::beginTransaction();
+        try {
+            $envio = EnvioProvincia::create($data);
+
+            if (!empty($data['dir']) || !empty($data['ref'])) {
+                EnvioProvinciaDetalle::create([
+                    'idEnvioProvincia' => $envio->idEnvioProvincia,
+                    'dir' => $data['dir'] ?? null,
+                    'ref' => $data['ref'] ?? null
+                ]);
+            }
+
+            foreach ($productos as $prodData) {
+                if (!empty($prodData['idProducto'])) {
+                    EnvioProvinciaProducto::create([
+                        'idEnvioProvincia' => $envio->idEnvioProvincia,
+                        'idProducto' => $prodData['idProducto'],
+                        'cantidad' => $prodData['cantidad'] ?? 1,
+                        'nota_producto' => $prodData['nota_producto'] ?? null
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return $envio;
+        } catch (Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function updateEnvio($idEnvioProvincia, array $data, array $productos)
+    {
+        DB::beginTransaction();
+        try {
+            $envio = EnvioProvincia::findOrFail($idEnvioProvincia);
+            $envio->update($data);
+
+            if (!empty($data['dir']) || !empty($data['ref'])) {
+                EnvioProvinciaDetalle::updateOrCreate(
+                    ['idEnvioProvincia' => $envio->idEnvioProvincia],
+                    [
+                        'dir' => $data['dir'] ?? null,
+                        'ref' => $data['ref'] ?? null
+                    ]
+                );
+            } else {
+                EnvioProvinciaDetalle::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
+            }
+
+            EnvioProvinciaProducto::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
+            
+            foreach ($productos as $prodData) {
+                if (!empty($prodData['idProducto'])) {
+                    EnvioProvinciaProducto::create([
+                        'idEnvioProvincia' => $envio->idEnvioProvincia,
+                        'idProducto' => $prodData['idProducto'],
+                        'cantidad' => $prodData['cantidad'] ?? 1,
+                        'nota_producto' => $prodData['nota_producto'] ?? null
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return $envio;
+        } catch (Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function getEnvioById($id)
+    {
+        return EnvioProvincia::with(['Detalle', 'Destino.Provincia.Departamento', 'Productos.Producto'])->findOrFail($id);
+    }
+
+    public function getUltimoEnvioCliente($idCliente)
+    {
+        return EnvioProvincia::with(['Detalle', 'Destino.Provincia.Departamento'])
+            ->where('idCliente', $idCliente)
+            ->orderBy('fecha_envio', 'desc')
+            ->orderBy('idEnvioProvincia', 'desc')
+            ->first();
+    }
+
+    public function createAgencia($nombre)
+    {
+        return Agencia::create([
+            'nombre' => $nombre,
+            'estado' => 1
+        ]);
+    }
+
+    public function createProvincia($nombre)
+    {
+        return Provincia::create([
+            'nombre' => $nombre
+        ]);
+    }
+
+    public function createDestino($idProvincia, $nombre)
+    {
+        return Destino::create([
+            'idProvincia' => $idProvincia,
+            'nombre' => $nombre
+        ]);
+    }
+
+    public function createSubAgencia($idAgencia, $idDestino, $nombre_oficina, $direccion, $telefono)
+    {
+        $existe = SubAgencia::where('idAgencia', $idAgencia)
+            ->where('idDestino', $idDestino)
+            ->where('nombre_oficina', $nombre_oficina)
+            ->first();
+
+        if ($existe) {
+            throw new \Exception('Ya existe una oficina con este nombre en el destino seleccionado.');
+        }
+
+        return SubAgencia::create([
+            'idAgencia' => $idAgencia,
+            'idDestino' => $idDestino,
+            'nombre_oficina' => $nombre_oficina,
+            'direccion' => $direccion,
+            'telefono' => $telefono,
+            'estado' => 1
+        ]);
+    }
+}

@@ -213,6 +213,19 @@ class HomeController extends Controller
     {
         $userModel = $this->headerService->getModelUser();
 
+        $tieneAcceso = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 13) {
+                $tieneAcceso = true;
+                break;
+            }
+        }
+
+        if (!$tieneAcceso) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
         $tc = $this->calculadoraService->getTasaCambio();
 
         // Ventas del mes actual con Monto (S/)
