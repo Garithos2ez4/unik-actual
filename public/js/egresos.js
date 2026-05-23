@@ -13,7 +13,18 @@ function validateEgreso() {
 
     return disabledInput;
 }
+function filtrarPorDia(fechaSeleccionada) {
+    // Obtenemos la URL actual limpia (sin los parámetros ?dia= anteriores)
+    let urlBase = window.location.href.split('?')[0];
 
+    if (fechaSeleccionada) {
+        // Redirigimos agregando el día a la URL
+        window.location.href = urlBase + '?dia=' + fechaSeleccionada;
+    } else {
+        // Si el usuario borra el día usando la "X" del input, recargamos el mes completo
+        window.location.href = urlBase;
+    }
+}
 function handleBtnRegistrar() {
     let btnRegEgreso = document.getElementById('btnRegistrarEgreso');
     if (btnRegEgreso) {

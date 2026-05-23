@@ -22,8 +22,14 @@
             </div>
             <div class="col-md-3 d-none d-lg-block"></div>
             <div class="col-3 col-md-5 col-lg-4 text-end">
+                <input type="date" class="form-control" id="filtro-dia" name="dia"
+                    value="{{ request('dia')}}"
+                    min="{{ $fecha->copy()->startOfMonth()->format('Y-m-d') }}"
+                    max="{{ $fecha->copy()->endOfMonth()->format('Y-m-d') }}"
+                    onchange="filtrarPorDia(this.value)">
                 <input type="month" class="form-control hidde-month" id="month" name="month"
-                    value="{{ $fecha->format('Y-m') }}">
+                    value="{{$fecha->format('Y-m')}}">
+
                 <button class="btn btn-light border d-md-none" onclick="hiddeInputDate('month')">
                     <i class="bi bi-calendar3"></i> <!-- Ícono de calendario -->
                 </button>

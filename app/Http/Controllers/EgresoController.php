@@ -29,7 +29,7 @@ class EgresoController extends Controller
         $this->ventaService = $ventaService;
     }
 
-    public function index($month)
+    public function index($month, Request $request)
     {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
@@ -39,14 +39,16 @@ class EgresoController extends Controller
             if ($acceso->idVista == 2) {
                 Carbon::setLocale('es');
                 $carbonMonth = Carbon::createFromFormat('Y-m', $month);
-                $egresos = $this->egresoService->getEgresosByMonth($month, 150);
+                $diaSeleccionado = $request->query('dia');
+                $egresos = $this->egresoService->getEgresosByMonth($month, 150, $diaSeleccionado);
                 $almacenes = $this->egresoService->getAllAlmacenes();
 
                 return view('egresos', [
                     'user' => $userModel,
                     'egresos' => $egresos,
                     'almacenes' => $almacenes,
-                    'fecha' => $carbonMonth
+                    'fecha' => $carbonMonth,
+                    'diaSeleccionado' => $diaSeleccionado
                 ]);
             }
         }
@@ -93,7 +95,7 @@ class EgresoController extends Controller
                         $createResult = $this->egresoService->createEgreso($arrayEgreso, $items);
                         $productos = $createResult['productos'];
                         $egresosGenerados = $createResult['egresos'];
-                        
+
                         // Determinar el canal dinámicamente basado en la primera publicación válida encontrada
                         $plataformaTienda = \App\Models\Plataforma::find(7);
                         $canal = $plataformaTienda ? strtoupper(substr($plataformaTienda->nombrePlataforma, 0, 20)) : 'TIENDA';
@@ -246,17 +248,17 @@ class EgresoController extends Controller
             {
                 return collect([
                     [
-                        '11/05/2026', 
-                        'Leonardo', 
-                        'DISCO SOLIDO OEM M2 256GB', 
-                        '1', 
-                        'Egreso', 
-                        'De Tienda', 
-                        'ML - Unik', 
-                        'UNK-SSDOEM256GB-100036', 
-                        '2000016365872746', 
-                        'SKU-EJEMPLO', 
-                        'FLEX', 
+                        '11/05/2026',
+                        'Leonardo',
+                        'DISCO SOLIDO OEM M2 256GB',
+                        '1',
+                        'Egreso',
+                        'De Tienda',
+                        'ML - Unik',
+                        'UNK-SSDOEM256GB-100036',
+                        '2000016365872746',
+                        'SKU-EJEMPLO',
+                        'FLEX',
                         ''
                     ]
                 ]);

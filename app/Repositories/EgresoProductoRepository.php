@@ -26,10 +26,17 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
         return EgresoProducto::query()->where($column,'=', $data, 'and')->get();
     }
     
-    public function getAllByMonth($year, $month, $cant){
-        return EgresoProducto::query()->whereYear('fechaDespacho', '=', $year, 'and')
-                                    ->whereMonth('fechaDespacho', '=', $month, 'and')
-                                    ->orderBy('fechaDespacho','desc')
+    public function getAllByMonth($year, $month, $cant, $diaSeleccionado = null){
+        $query = EgresoProducto::query();
+        
+        if ($diaSeleccionado) {
+            $query->whereDate('fechaDespacho', '=', $diaSeleccionado);
+        } else {
+            $query->whereYear('fechaDespacho', '=', $year, 'and')
+                  ->whereMonth('fechaDespacho', '=', $month, 'and');
+        }
+        
+        return $query->orderBy('fechaDespacho','desc')
                                     ->paginate($cant);
     }
 
