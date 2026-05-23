@@ -47,20 +47,36 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function searchAjaxRegistro($serial)
     {
         $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
+        $tasaFijaGlobal = \App\Models\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
+        $preciosService = new \App\Services\PreciosService();
 
         $egresos = $this->registroRepository->searchByEgreso($serial, 5);
-        $result = $egresos->map(function ($details) use ($tasaCambio) {
-            $precioDolar = $details->DetalleComprobante->Producto->precioDolar ?? 0;
+        $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
+            $producto = $details->DetalleComprobante->Producto;
+            $precioDolarBase = $producto->precioDolar ?? 0;
+            
+            $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
+            $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
+
+            $tc_a_usar = $tasaCambio;
+            if (isset($producto->usar_tc_fijo) && $producto->usar_tc_fijo) {
+                if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
+                    $tc_a_usar = $producto->tc_fijo;
+                } else {
+                    $tc_a_usar = $tasaFijaGlobal;
+                }
+            }
+
             return [
-                'nombreProducto' => $details->DetalleComprobante->Producto->nombreProducto,
-                'codigoProducto' => $details->DetalleComprobante->Producto->codigoProducto,
+                'nombreProducto' => $producto->nombreProducto,
+                'codigoProducto' => $producto->codigoProducto,
                 'idRegistroProducto' => $details->idRegistro,
                 'numeroSerie' => $details->numeroSerie,
                 'estado' => $details->estado,
-                'modelo' => $details->DetalleComprobante->Producto->modelo,
-                'image' => $details->DetalleComprobante->Producto->imagenProducto1,
-                'marca' => $details->DetalleComprobante->Producto->MarcaProducto->nombreMarca,
-                'precioSoles' => round($precioDolar * $tasaCambio, 2)
+                'modelo' => $producto->modelo,
+                'image' => $producto->imagenProducto1,
+                'marca' => $producto->MarcaProducto->nombreMarca,
+                'precioSoles' => round($precioDolarTotal * $tc_a_usar, 2)
             ];
         });
         return $result;
@@ -69,23 +85,37 @@ class EgresoProductoService implements EgresoProductoServiceInterface
     public function getOneAjaxRegistro($serial)
     {
         $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
+        $tasaFijaGlobal = \App\Models\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
+        $preciosService = new \App\Services\PreciosService();
 
         $egreso = $this->registroRepository->getByEgreso($serial);
 
         if ($egreso) {
-            $details = $egreso->DetalleComprobante->Producto;
-            $precioDolar = $details->precioDolar ?? 0;
+            $producto = $egreso->DetalleComprobante->Producto;
+            $precioDolarBase = $producto->precioDolar ?? 0;
+            
+            $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
+            $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
+
+            $tc_a_usar = $tasaCambio;
+            if (isset($producto->usar_tc_fijo) && $producto->usar_tc_fijo) {
+                if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
+                    $tc_a_usar = $producto->tc_fijo;
+                } else {
+                    $tc_a_usar = $tasaFijaGlobal;
+                }
+            }
 
             $result = [
-                'nombreProducto' => $details->nombreProducto,
-                'codigoProducto' => $details->codigoProducto,
+                'nombreProducto' => $producto->nombreProducto,
+                'codigoProducto' => $producto->codigoProducto,
                 'idRegistroProducto' => $egreso->idRegistro,
                 'numeroSerie' => $egreso->numeroSerie,
                 'estado' => $egreso->estado,
-                'modelo' => $details->modelo,
-                'image' => $details->imagenProducto1,
-                'marca' => $details->MarcaProducto->nombreMarca,
-                'precioSoles' => round($precioDolar * $tasaCambio, 2)
+                'modelo' => $producto->modelo,
+                'image' => $producto->imagenProducto1,
+                'marca' => $producto->MarcaProducto->nombreMarca,
+                'precioSoles' => round($precioDolarTotal * $tc_a_usar, 2)
             ];
             return $result;
         }
