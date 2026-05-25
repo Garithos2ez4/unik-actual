@@ -358,7 +358,7 @@ class ProductoController extends Controller
                                 $arrayProduct['estadoProductoWeb'] = $estado;
                                 $arrayProduct['stockMin'] = $stockminimo;
                                 //Usar tasa de cambio
-                                $arrayProduct['usar_tc_fijo'] = $request->has('usar_tc_fijo');
+                                $arrayProduct['usar_tc_fijo'] = $request->boolean('usar_tc_fijo');
                                 $arrayProduct['tc_fijo'] = $tc_fijo;
 
                                 //Videos

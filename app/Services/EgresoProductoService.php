@@ -58,8 +58,10 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
 
-            $tc_a_usar = $tasaCambio;
-            if (isset($producto->usar_tc_fijo) && $producto->usar_tc_fijo) {
+            $usar_tc_fijo = $producto->usar_tc_fijo ?? true;
+            $tc_a_usar = $tasaCambio; // SUNAT
+            
+            if (!$usar_tc_fijo) {
                 if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
                     $tc_a_usar = $producto->tc_fijo;
                 } else {
@@ -97,8 +99,10 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
 
-            $tc_a_usar = $tasaCambio;
-            if (isset($producto->usar_tc_fijo) && $producto->usar_tc_fijo) {
+            $usar_tc_fijo = $producto->usar_tc_fijo ?? true;
+            $tc_a_usar = $tasaCambio; // SUNAT
+            
+            if (!$usar_tc_fijo) {
                 if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
                     $tc_a_usar = $producto->tc_fijo;
                 } else {

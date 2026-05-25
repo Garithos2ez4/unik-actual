@@ -62,6 +62,7 @@ class PublicacionRepository implements PublicacionRepositoryInterface
                             ->orWhere('codigoProducto', 'LIKE', "%{$data}%");
                     });
             })
+            ->orderBy('precioPublicacion', 'desc')
             ->take($cant)->get();
     }
 

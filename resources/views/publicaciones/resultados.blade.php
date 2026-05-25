@@ -4,13 +4,24 @@
 
 @section('content')
 <div class="container">
+    <div class="bg-secondary" id="hidden-body" style="position:fixed;left:0;width:100vw;height:100vh;z-index:998;opacity:0.5;display:none">
+    </div>
     <br>
-    <div class="row mb-3">
-        <div class="col-8">
-            <h2><i class="bi bi-search"></i> Resultados para: "{{ $termino }}"</h2>
-            <h6 class="text-secondary">{{ count($publicaciones) }} coincidencias encontradas</h6>
+    <div class="row mb-3 align-items-center">
+        <div class="col-12 col-md-5 mb-3 mb-md-0">
+            <form action="{{ route('buscar-publicaciones') }}" method="GET" class="w-100">
+                <div class="input-group">
+                    <button type="submit" class="input-group-text btn btn-secondary" style="border-top-left-radius: 0.375rem; border-bottom-left-radius: 0.375rem;">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <input type="text" name="q" class="form-control" placeholder="SKU, Título o Producto..." value="{{ $termino }}" required>
+                </div>
+            </form>
         </div>
-        <div class="col-4 text-end">
+        <div class="col-12 col-md-4 mb-3 mb-md-0 text-md-center">
+            <h6 class="text-secondary mb-0"><strong>{{ count($publicaciones) }}</strong> coincidencias para "<strong>{{ $termino }}</strong>"</h6>
+        </div>
+        <div class="col-12 col-md-3 text-end">
             <a href="{{ route('publicaciones', [now()->format('Y-m')]) }}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Volver a Publicaciones
             </a>
@@ -62,9 +73,11 @@
                                 <small>{{$public->CuentasPlataforma->nombreCuenta}}</small>
                             </div>
                             <div class="col-5 col-md-2">
-                                <small data-bs-toggle="tooltip" data-bs-placement="top" title="{{$public->titulo}}">
-                                    <strong class="text-primary">{{$public->sku}}</strong>
-                                </small>
+                                <a href="javascript:void(0)" class="decoration-link" onclick="ShareId({{$public->idPublicacion}},'{{$public->titulo}}',{{$public->precioPublicacion}},{{$public->estado}})">
+                                    <small data-bs-toggle="tooltip" data-bs-placement="top" title="{{$public->titulo}}">
+                                        <strong class="text-primary">{{$public->sku}}</strong>
+                                    </small>
+                                </a>
                             </div>
                             <div class="col-4 col-md-2">
                                 <small data-bs-toggle="tooltip" data-bs-placement="top" title="{{$public->Producto->modelo}}">
@@ -104,5 +117,73 @@
             @endif
         </div>
     </div>
+    <!-- Modal -->
+    <form id="estadoForm" action="{{route('update-estado-publicacion')}}" method="POST">
+        @csrf
+        <div class="modal fade" id="estadoModal" tabindex="-1" aria-labelledby="estadoModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="estadoModalLabel">Publicaci&oacute;n <span id="titlepubli"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <input type="hidden" name="idpubli" value="" id="hidden-id">
+                            <div class="col-md-12">
+                                <label class="form-label">Titulo:</label>
+                                <input type="text" name="titulo" class="form-control" id="title-text" value="">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Precio:</label>
+                                <input type="number" step="0.01" name="precio" class="form-control" id="price-number" value="">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado:</label>
+                                <select name="estado" id="estado-select" class="form-select">
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                    <option value="-1">Borrado</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer ">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-floppy-fill"></i> Actualizar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div class="modal fade" id="detalleModal" tabindex="-1" aria-labelledby="detalleModalLabel" aria-hidden="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 id="titlepublicacion-modal-detail">[titulo de la publicacion]</h5>
+                        </div>
+                        <div class="col-6 text-secondary">
+                            <h6 id="sku-modal-detail">[numero de sku]</h6>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span id="user-modal-detail">[usuario]</span>
+                        </div>
+                        <div class="col-6">
+                            <span id="state-modal-detail">[Estado]</span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span id="date-modal-detail">[fechadepubli]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+<script src="{{asset('js/publish.js')}}"></script>
 @endsection

@@ -42,7 +42,7 @@
             <div id="contador-productos" class="font-weight-bold" style="font-size:18px; color: #007bff;">Productos Agregados: 0</div>
         </div>
     </div>
-    <form action="{{ route('insertegreso') }}" method="POST">
+    <form action="{{ route('insertegreso') }}" method="POST" id="form-egreso">
         @csrf
         <div class="row">
             <div class="col-3 mb-2">
@@ -107,6 +107,65 @@
                 <h4 class="text-success" style="display: none;" id="contenedor-total-venta">Total Venta: <span id="span-total-venta">0.00</span></h4>
             </div>
         </div>
+
+        <!-- SECCIÓN DE PAGOS (Oculta por defecto) -->
+        <div class="row mt-3" id="seccion-pagos" style="display: none;">
+            <div class="col-12">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white py-1">
+                        <h6 class="mb-0"><i class="bi bi-wallet2"></i> Registro de Pagos (Opcional)</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row align-items-end">
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label mb-0"><small>Método de Pago</small></label>
+                                <select class="form-select form-select-sm" id="pago-metodo">
+                                    <option value="">Seleccione...</option>
+                                    @foreach($metodosPago ?? [] as $metodo)
+                                        <option value="{{ $metodo->idMetodoPago }}">{{ $metodo->nombreMetodo }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label mb-0"><small>Monto</small></label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" id="pago-monto" placeholder="0.00">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label mb-0"><small>Nro. Operación / Ref.</small></label>
+                                <input type="text" class="form-control form-control-sm" id="pago-ref" placeholder="(Opcional)">
+                            </div>
+                            <div class="col-md-2 mb-2 text-end">
+                                <button type="button" class="btn btn-sm btn-primary w-100" id="btn-add-pago">Añadir</button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered mb-0 text-center" id="tabla-pagos" style="display:none;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Método</th>
+                                        <th>Ref.</th>
+                                        <th>Monto</th>
+                                        <th>Quitar</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <th colspan="2" class="text-end">Total Pagado:</th>
+                                        <th id="total-pagado-text" class="text-primary">0.00</th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        
+                        <!-- Contenedor para inyectar inputs hidden al hacer submit -->
+                        <div id="hidden-pagos-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <br>
         <div class="row">
             <div class="col-12 text-center">
@@ -132,6 +191,26 @@
             </form>
         </div>
     </div>
+
+    <!-- MODAL DE CONFIRMACIÓN DE PAGOS -->
+    <div class="modal fade" id="modalConfirmacionPago" tabindex="-1" aria-labelledby="modalConfirmacionPagoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-primary">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fs-6" id="modalConfirmacionPagoLabel"><i class="bi bi-info-circle"></i> Confirmar Guardado</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center" id="modal-body-confirmacion">
+                    <!-- Contenido dinámico desde JS -->
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="btn-confirmar-guardar">Confirmar y Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 <script>
     window.assetUrl = "{{ asset('storage/') }}";

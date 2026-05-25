@@ -26,7 +26,7 @@
                     value="{{ request('dia')}}"
                     min="{{ $fecha->copy()->startOfMonth()->format('Y-m-d') }}"
                     max="{{ $fecha->copy()->endOfMonth()->format('Y-m-d') }}"
-                    onchange="filtrarPorDia(this.value)">
+                    onblur="filtrarPorDia(this.value)">
                 <input type="month" class="form-control hidde-month" id="month" name="month"
                     value="{{$fecha->format('Y-m')}}">
 

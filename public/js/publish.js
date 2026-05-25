@@ -1,62 +1,65 @@
-document.getElementById('search').addEventListener('input', function () {
-    let query = this.value;
-    let hiddenBody = document.getElementById('hidden-body');
-    if (query.length > 2) { // Comenzar la b��squeda despu��s de 3 caracteres
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/searchpublicacion?query=${query}`, true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                let suggestions = document.getElementById('suggestions');
-                hiddenBody.style.display = 'block';
-                suggestions.innerHTML = '';
+let searchInput = document.getElementById('search');
+if (searchInput) {
+    searchInput.addEventListener('input', function () {
+        let query = this.value;
+        let hiddenBody = document.getElementById('hidden-body');
+        if (query.length > 2) { // Comenzar la bsqueda despus de 3 caracteres
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', `/searchpublicacion?query=${query}`, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    let data = JSON.parse(xhr.responseText);
+                    let suggestions = document.getElementById('suggestions');
+                    hiddenBody.style.display = 'block';
+                    suggestions.innerHTML = '';
 
-                data.forEach(item => {
-                    let li = document.createElement('li');
-                    li.classList.add('list-group-item', 'hover-sistema-uno');
-                    li.style.cursor = "pointer";
+                    data.forEach(item => {
+                        let li = document.createElement('li');
+                        li.classList.add('list-group-item', 'hover-sistema-uno');
+                        li.style.cursor = "pointer";
 
-                    let divRow = document.createElement('div');
-                    divRow.classList.add('row');
+                        let divRow = document.createElement('div');
+                        divRow.classList.add('row');
 
-                    let divColProduct = document.createElement('div');
-                    divColProduct.classList.add('col-12', 'col-md-12', 'text-start');
-                    let smallProduct = document.createElement('small');
-                    smallProduct.textContent = item.titulo;
-                    divColProduct.appendChild(smallProduct);
+                        let divColProduct = document.createElement('div');
+                        divColProduct.classList.add('col-12', 'col-md-12', 'text-start');
+                        let smallProduct = document.createElement('small');
+                        smallProduct.textContent = item.titulo;
+                        divColProduct.appendChild(smallProduct);
 
-                    let divColSerial = document.createElement('div');
-                    divColSerial.classList.add('col-6', 'col-md-6', 'text-secondary');
-                    let smallSerial = document.createElement('small');
-                    smallSerial.textContent = item.sku;
-                    divColSerial.appendChild(smallSerial);
+                        let divColSerial = document.createElement('div');
+                        divColSerial.classList.add('col-6', 'col-md-6', 'text-secondary');
+                        let smallSerial = document.createElement('small');
+                        smallSerial.textContent = item.sku;
+                        divColSerial.appendChild(smallSerial);
 
-                    let divColDate = document.createElement('div');
-                    divColDate.classList.add('col-6', 'col-md-6', 'text-secondary', 'text-end');
-                    let smallDate = document.createElement('small');
-                    smallDate.textContent = item.fechaPublicacion;
-                    divColDate.appendChild(smallDate);
+                        let divColDate = document.createElement('div');
+                        divColDate.classList.add('col-6', 'col-md-6', 'text-secondary', 'text-end');
+                        let smallDate = document.createElement('small');
+                        smallDate.textContent = item.fechaPublicacion;
+                        divColDate.appendChild(smallDate);
 
-                    li.addEventListener('click', function () {
-                        document.getElementById('search').value = item.sku;
-                        suggestions.innerHTML = '';
-                        ShareId(item.idPublicacion, item.titulo, item.precio, item.estado);
+                        li.addEventListener('click', function () {
+                            document.getElementById('search').value = item.sku;
+                            suggestions.innerHTML = '';
+                            ShareId(item.idPublicacion, item.titulo, item.precio, item.estado);
+                        });
+
+                        divRow.appendChild(divColProduct);
+                        divRow.appendChild(divColSerial);
+                        divRow.appendChild(divColDate);
+                        li.appendChild(divRow);
+                        suggestions.appendChild(li);
                     });
-
-                    divRow.appendChild(divColProduct);
-                    divRow.appendChild(divColSerial);
-                    divRow.appendChild(divColDate);
-                    li.appendChild(divRow);
-                    suggestions.appendChild(li);
-                });
-            }
-        };
-        xhr.send();
-    } else {
-        document.getElementById('suggestions').innerHTML = ''; // Limpiar si hay menos de 3 caracteres
-        hiddenBody.style.display = 'none';
-    }
-});
+                }
+            };
+            xhr.send();
+        } else {
+            document.getElementById('suggestions').innerHTML = ''; // Limpiar si hay menos de 3 caracteres
+            hiddenBody.style.display = 'none';
+        }
+    });
+}
 
 function hideSuggestions(event) {
     let suggestions = document.getElementById('suggestions');
