@@ -30,7 +30,7 @@ class VentaService implements VentaServiceInterface
         $this->calculadoraService = $calculadoraService;
     }
 
-    public function createVenta(array $ventaData, array $detallesData)
+    public function createVenta(array $ventaData, array $detallesData, array $pagos = [])
     {
         DB::beginTransaction();
         try {
@@ -89,6 +89,33 @@ class VentaService implements VentaServiceInterface
             // 4. Actualizar el Total de la Venta
             $venta->totalVenta = $totalVenta;
             $venta->save();
+
+            // 5. Registrar Pagos
+            if (!empty($pagos)) {
+                foreach ($pagos as $pago) {
+                    \App\Models\PagoVenta::create([
+                        'idVenta' => $venta->idVenta,
+                        'idMetodoPago' => $pago['idMetodo'],
+                        'monto' => $pago['monto'],
+                        'nroOperacion' => $pago['ref'] ?? null,
+                    ]);
+                }
+            } else {
+                // Si no enviaron pagos pero es de tienda y hay un total, asume Efectivo
+                if ($venta->canal === 'TIENDA' && $totalVenta > 0) {
+                    $metodoEfectivo = \App\Models\MetodoPago::where('nombreMetodo', 'LIKE', '%Efectivo%')
+                                                            ->orWhere('idMetodoPago', 1)
+                                                            ->first();
+                    if ($metodoEfectivo) {
+                        \App\Models\PagoVenta::create([
+                            'idVenta' => $venta->idVenta,
+                            'idMetodoPago' => $metodoEfectivo->idMetodoPago,
+                            'monto' => $totalVenta,
+                            'nroOperacion' => null,
+                        ]);
+                    }
+                }
+            }
 
             DB::commit();
 

@@ -61,7 +61,11 @@ class EgresoController extends Controller
         $userModel = $this->headerService->getModelUser();
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 9) {
-                return view('createegreso', ['user' => $userModel]);
+                $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
+                return view('createegreso', [
+                    'user' => $userModel,
+                    'metodosPago' => $metodosPago
+                ]);
             }
         }
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
@@ -132,8 +136,11 @@ class EgresoController extends Controller
                             ];
                         }
 
-                        // 3. Crear la Venta
-                        $this->ventaService->createVenta($ventaData, $detallesVenta);
+                        // 3. Obtener pagos (si existen)
+                        $pagos = $request->input('pagos', []);
+
+                        // 4. Crear la Venta
+                        $this->ventaService->createVenta($ventaData, $detallesVenta, $pagos);
 
                         $this->headerService->sendFlashAlerts('Egreso y Venta registrados', 'Operacion exitosa', 'success', 'btn-success');
                         return back();
