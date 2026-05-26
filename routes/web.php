@@ -22,6 +22,8 @@ use App\Http\Controllers\GarantiaController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\LicenciaController;
 use App\Http\Controllers\ReclamoPlataformaController;
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\GananciaController;
 
 //scripts
 use App\Http\Controllers\ScriptController;
@@ -41,13 +43,20 @@ Route::withoutMiddleware(['validate.session'])->group(function () {
     Route::get('/js/config-calculos.js', [ScriptController::class, 'configCalculosScript'])->name('js.config-calculos.js');
 });
 
+
+
 Route::middleware(['validate.session'])->group(function () {
 
     // Agrega esta línea con las demás rutas
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
     Route::get('/licencias', [LicenciaController::class, 'index'])->name('licencias.index');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/analitica', [HomeController::class, 'analytics'])->name('dashboard.analitica');
+    Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
+    
+    // Ganancias
+    Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
+    Route::get('/ganancias/venta/{idVenta}', [GananciaController::class, 'getGananciaPorVenta'])->name('ganancias.venta');
+
     Route::get('/home', fn() => redirect()->route('dashboard'))->name('home');
     Route::get('/dashboard/stockmin', [HomeController::class, 'stockMinDashboard'])->name('stockmindashboard');
     Route::get('/dashboard/inventario/{estado}', [HomeController::class, 'dashboardInventario'])->name('dashboardinventario');
@@ -174,12 +183,12 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/web/empresa/{idEmpresa}', [PublicidadController::class, 'empresa'])->name('empresa-publicidad');
     Route::post('/web/updatepublicacion', [PublicidadController::class, 'updatePublicaion'])->name('updatepublicacion');
 
+    Route::get('/registro-publicaciones/buscar', [PublicacionController::class, 'buscar'])->name('buscar-publicaciones');
     Route::get('/registro-publicaciones/{date}', [PublicacionController::class, 'index'])->name('publicaciones');
     Route::get('/crear-publicacion/{idPlataforma}', [PublicacionController::class, 'create'])->name('createpublicacion');
     Route::post('/insert-publicacion', [PublicacionController::class, 'insertPublicacion'])->name('insertpublicacion');
     Route::post('/update-estado-publicacion', [PublicacionController::class, 'updateEstado'])->name('update-estado-publicacion');
     Route::get('/searchpublicacion', [PublicacionController::class, 'searchPublicacion'])->name('searchpublicacion');
-    Route::get('/publicaciones/buscar', [PublicacionController::class, 'buscar'])->name('buscar-publicaciones');
 
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes');
     Route::get('/cliente/searchcliente', [ClienteController::class, 'searchCliente'])->name('searchcliente');

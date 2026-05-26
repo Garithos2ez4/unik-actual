@@ -60,6 +60,7 @@ class GananciaController extends Controller
                 DB::raw('SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos'),
                 DB::raw("SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos")
             )
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta')
             ->orderBy('Venta.fechaVenta', 'desc')
             ->get()
@@ -104,6 +105,7 @@ class GananciaController extends Controller
                 DB::raw("SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos")
             )
             ->where('Venta.idVenta', $idVenta)
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta')
             ->first();
 

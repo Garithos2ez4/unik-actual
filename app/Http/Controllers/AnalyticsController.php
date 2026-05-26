@@ -79,6 +79,7 @@ class AnalyticsController extends Controller
                 DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             )
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('Venta.fechaVenta', '>=', '2026-05-25');
 
         $qEgresos1 = DB::table('EgresoProducto')
@@ -122,6 +123,7 @@ class AnalyticsController extends Controller
             ->join('Publicacion', 'DetalleVenta.idPublicacion', '=', 'Publicacion.idPublicacion')
             ->select('Publicacion.sku', 'Publicacion.titulo', 'DetalleVenta.cantidad as cantidad')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('Venta.fechaVenta', '>=', '2026-05-25')
             ->whereNotNull('DetalleVenta.idPublicacion');
 
@@ -151,6 +153,7 @@ class AnalyticsController extends Controller
                 DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             )
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('Venta.fechaVenta', '>=', '2026-05-25');
 
         $qEgresos3 = DB::table('EgresoProducto')
@@ -187,6 +190,7 @@ class AnalyticsController extends Controller
                 DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             )
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('Venta.fechaVenta', '>=', '2026-05-25');
 
         $qEgresos4 = DB::table('EgresoProducto')
@@ -223,6 +227,7 @@ class AnalyticsController extends Controller
                 'DetalleVenta.cantidad as cantidad'
             )
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('Venta.fechaVenta', '>=', '2026-05-25');
 
         $qEgresos5 = DB::table('EgresoProducto')
@@ -346,6 +351,7 @@ class AnalyticsController extends Controller
                 DB::raw("((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) as costos")
             )
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('Venta.fechaVenta', '>=', '2026-05-25');
 
         // Costo para egresos históricos (< 2026-05-25):
