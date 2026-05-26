@@ -137,6 +137,7 @@ class EnvioProvinciaController extends Controller
         try {
             $data = $request->all();
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
+            unset($data['clave']);
             $productos = $request->input('productos', []);
 
             $this->envioService->updateEnvio($id, $data, $productos);

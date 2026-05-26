@@ -41,6 +41,7 @@
                             <th>Cliente</th>
                             <th>Plataforma/Cuenta</th>
                             <th>Producto/Cant</th>
+                            <th>Registrado Por</th>
                             <th>Fecha</th>
                             <th class="text-end pe-3">Acciones</th>
                         </tr>
@@ -90,6 +91,9 @@
                                         </div>
                                     @endforeach
                                 @endif
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border"><i class="bi bi-person-fill"></i> {{ $envio->Usuario->user ?? 'Sistema' }}</span>
                             </td>
                             <td>{{ $envio->fecha_envio->format('d-m-Y') }}</td>
                             <td class="text-end pe-3">

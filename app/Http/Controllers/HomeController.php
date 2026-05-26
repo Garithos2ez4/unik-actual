@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\CalculadoraServiceInterface;
 use App\Services\DashboardServiceInterface;
 use App\Services\HeaderServiceInterface;
 use Illuminate\Http\Request;
@@ -11,16 +10,13 @@ class HomeController extends Controller
 {
     protected $dashboardService;
     protected $headerService;
-    protected $calculadoraService;
 
     public function __construct(
         DashboardServiceInterface $dashboardService,
-        HeaderServiceInterface $headerService,
-        CalculadoraServiceInterface $calculadoraService
+        HeaderServiceInterface $headerService
     ) {
         $this->dashboardService = $dashboardService;
         $this->headerService = $headerService;
-        $this->calculadoraService = $calculadoraService;
     }
 
     public function index(Request $request)
@@ -206,178 +202,6 @@ class HomeController extends Controller
             'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
             'productosConFallas' => $productosConFallas,
             'ventas7Dias' => $ventas7Dias
-        ]);
-    }
-
-    public function analytics()
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        $tieneAcceso = false;
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 13) {
-                $tieneAcceso = true;
-                break;
-            }
-        }
-
-        if (!$tieneAcceso) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-            return redirect()->route('dashboard', ['user' => $userModel]);
-        }
-
-        $tc = $this->calculadoraService->getTasaCambio();
-
-        // Ventas del mes actual con Monto (S/)
-        $ventasMesRaw = \App\Models\EgresoProducto::query()
-            ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-            ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select(
-                \DB::raw('DATE(EgresoProducto.fechaCompra) as fecha'),
-                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades'),
-                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
-            )
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->groupBy(\DB::raw('DATE(EgresoProducto.fechaCompra)'))
-            ->orderBy('fecha', 'asc')
-            ->get();
-
-        $ventasMes = [];
-        $diasEnMes = now()->daysInMonth;
-        for ($i = 1; $i <= $diasEnMes; $i++) {
-            $date = now()->startOfMonth()->addDays($i - 1)->format('Y-m-d');
-            $found = $ventasMesRaw->firstWhere('fecha', $date);
-            $ventasMes[] = [
-                'fecha' => now()->startOfMonth()->addDays($i - 1)->format('d/m'),
-                'total' => $found ? $found->total_unidades : 0,
-                'monto' => $found ? $found->total_monto : 0
-            ];
-        }
-
-        // Top 5 productos con más fallas
-        $productosConFallas = \App\Models\Producto::query()
-            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
-            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
-            ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
-            ->select('Producto.nombreProducto', 'Producto.modelo', \DB::raw('COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas'))
-            ->where(function ($q) {
-                $q->where(function ($q2) {
-                    $q2->whereIn('RegistroProducto.estado', ['DEFECTUOSO', 'GARANTIA'])
-                        ->whereNotNull('RegistroProducto.observacion')
-                        ->where('RegistroProducto.observacion', '!=', '');
-                })
-                    ->orWhere(function ($q2) {
-                        $q2->whereNotNull('devoluciones.idDevolucion')
-                            ->whereNotNull('devoluciones.motivo')
-                            ->where('devoluciones.motivo', '!=', '');
-                    });
-            })
-            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
-            ->orderBy('total_fallas', 'desc')
-            ->take(10) // Traemos 10 para la página de analítica
-            ->get();
-
-        // Top 5 SKUs con más ventas (Mes)
-        $skusMostSoldMonth = \App\Models\Publicacion::query()
-            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select('Publicacion.sku', 'Publicacion.titulo', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->groupBy('Publicacion.sku', 'Publicacion.titulo')
-            ->orderBy('total_ventas', 'desc')
-            ->take(5)
-            ->get();
-        // Métricas por plataforma (Mes actual)
-        $metricasPlataformas = \App\Models\EgresoProducto::query()
-            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->leftJoin('CuentasPlataforma', 'Publicacion.idCuentaPlataforma', '=', 'CuentasPlataforma.idCuentaPlataforma')
-            ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
-            ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-            ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->select(
-                \DB::raw('COALESCE(Plataforma.nombrePlataforma, "VENTA DIRECTA") as plataforma'),
-                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_pedidos'),
-                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
-            )
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->groupBy('plataforma')
-            ->orderBy('total_monto', 'desc')
-            ->get();
-
-        // Top 5 Productos con más ingresos (Mes actual)
-        $productosMostRevenueMonth = \App\Models\Producto::query()
-            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
-            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
-            ->join('EgresoProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
-            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades'),
-                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_ingreso")
-            )
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
-            ->orderBy('total_ingreso', 'desc')
-            ->take(5)
-            ->get();
-
-        // Top 5 Productos más vendidos por cantidad (Mes actual)
-        $productosMostSoldMonth = \App\Models\Producto::query()
-            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
-            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
-            ->join('EgresoProducto', 'RegistroProducto.idRegistro', '=', 'EgresoProducto.idRegistro')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                \DB::raw('COUNT(EgresoProducto.idEgreso) as total_unidades')
-            )
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->whereNotExists(function ($query) {
-                $query->select(\DB::raw(1))
-                    ->from('devoluciones')
-                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
-            })
-            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
-            ->orderBy('total_unidades', 'desc')
-            ->take(5)
-            ->get();
-
-        // Top 3 mejores meses de venta (Histórico)
-        $topBestMonths = \App\Models\EgresoProducto::query()
-            ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-            ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select(
-                \DB::raw("DATE_FORMAT(EgresoProducto.fechaCompra, '%Y-%m') as mes_raw"),
-                \DB::raw("DATE_FORMAT(EgresoProducto.fechaCompra, '%M %Y') as mes_nombre"),
-                \DB::raw("SUM(COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)) as total_monto")
-            )
-            ->whereNotIn('EgresoProducto.numeroOrden', ['2026', '2026/SN'])
-            ->groupBy('mes_raw', 'mes_nombre')
-            ->orderBy('total_monto', 'desc')
-            ->take(3)
-            ->get();
-
-        return view('analytics.index', [
-            'user' => $userModel,
-            'ventasMes' => $ventasMes,
-            'productosConFallas' => $productosConFallas,
-            'skusMostSoldMonth' => $skusMostSoldMonth,
-            'metricasPlataformas' => $metricasPlataformas,
-            'productosMostRevenueMonth' => $productosMostRevenueMonth,
-            'productosMostSoldMonth' => $productosMostSoldMonth,
-            'topBestMonths' => $topBestMonths
         ]);
     }
 

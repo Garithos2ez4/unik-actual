@@ -160,7 +160,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Clave</label>
-                                <input type="text" name="clave" class="form-control" value="{{ $envio->clave }}" placeholder="Clave para recojo">
+                                <input type="text" name="clave" class="form-control" value="{{ $envio->clave }}" placeholder="Clave para recojo" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Dato Adicional</label>

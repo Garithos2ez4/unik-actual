@@ -12,7 +12,7 @@
                     <small>Sección: NUEVO DESPACHO</small>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('envios.store') }}" method="POST">
+                    <form id="form-create-envio" action="{{ route('envios.store') }}" method="POST">
                         @csrf
                         
                         <div class="row g-3">
@@ -140,7 +140,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Clave</label>
-                                <input type="text" name="clave" class="form-control" placeholder="Clave para recojo">
+                                <input type="text" id="input-clave" name="clave" class="form-control" placeholder="Clave para recojo">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Dato Adicional</label>
@@ -186,7 +186,7 @@
 
                             <div class="col-12 text-end mt-5">
                                 <a href="{{ route('envios.index') }}" class="btn btn-light border px-4 py-2 me-2">Cancelar</a>
-                                <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">
+                                <button type="button" class="btn btn-primary px-5 py-2 fw-bold shadow-sm" onclick="verificarClaveYGuardar()">
                                     <i class="bi bi-save"></i> Guardar Envío
                                 </button>
                             </div>
@@ -205,5 +205,42 @@
 @include('envios.components.modal_new_provincia')
 @include('envios.components.modal_new_sub_agencia')
 @include('envios.components.modal_new_cliente')
+
+<!-- Modal de Confirmación de Guardado -->
+<div class="modal fade" id="confirmSaveModal" tabindex="-1" aria-labelledby="confirmSaveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="confirmSaveModalLabel"><i class="bi bi-exclamation-triangle-fill"></i> ¡Advertencia!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-shield-lock text-warning" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">¿Estás seguro de guardar?</h5>
+                <p class="text-muted">Una vez guardado el envío, <strong>la Clave de recojo no podrá ser editada</strong> desde el sistema. Tendría que modificarse directamente en la base de datos.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Revisar de nuevo</button>
+                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="document.getElementById('form-create-envio').submit();">
+                    Sí, Guardar Envío
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function verificarClaveYGuardar() {
+        let clave = document.getElementById('input-clave').value.trim();
+        if (clave !== '') {
+            // Si hay clave, mostramos el modal de advertencia
+            var myModal = new bootstrap.Modal(document.getElementById('confirmSaveModal'));
+            myModal.show();
+        } else {
+            // Si no hay clave, guardamos directamente
+            document.getElementById('form-create-envio').submit();
+        }
+    }
+</script>
 
 @endsection

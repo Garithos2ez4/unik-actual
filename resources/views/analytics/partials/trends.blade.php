@@ -3,8 +3,8 @@
         <div class="col-lg-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h5 class="fw-bold mb-0">Tendencia de Ventas (Mes Actual)</h5>
-                    <small class="text-muted">Egresos diarios registrados en el mes de {{ now()->translatedFormat('F') }}.</small>
+                    <h5 class="fw-bold mb-0">Tendencia de Ventas</h5>
+                    <small class="text-muted">{{ $filtros['fecha_inicio']->translatedFormat('d M Y') }} — {{ $filtros['fecha_fin']->translatedFormat('d M Y') }}</small>
                 </div>
             </div>
             <div style="height: 380px; width: 100%; position: relative;">
@@ -13,7 +13,7 @@
         </div>
         <div class="col-lg-3 d-flex flex-column justify-content-center border-start ps-lg-4 mt-4 mt-lg-0">
             <div class="p-3 bg-light rounded-4 mb-3 border">
-                <h6 class="text-secondary small mb-1 uppercase fw-bold">Ingresos Mes</h6>
+                <h6 class="text-secondary small mb-1 uppercase fw-bold">Ingresos Periodo</h6>
                 <h5 class="fw-bold text-primary mb-0">S/ {{ number_format(collect($ventasMes)->sum('monto'), 2) }}</h5>
             </div>
             <div class="p-3 bg-light rounded-4 mb-3 border">
