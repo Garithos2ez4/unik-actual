@@ -91,6 +91,9 @@
         </div>
     </div>
 
+    <!-- Márgenes de Ganancia -->
+    @include('analytics.partials.margins')
+
     <div class="row mt-2">
         <!-- Rendimiento por Plataforma -->
         <div class="col-lg-6">
