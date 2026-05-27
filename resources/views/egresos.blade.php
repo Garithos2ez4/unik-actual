@@ -52,7 +52,7 @@
         </div>
         <br>
         <div id="container-lista-egresos">
-            <x-lista_egresos :egresos="$egresos" :container="'container-lista-egresos'" />
+            <x-lista_egresos :egresos="$egresos" :container="'container-lista-egresos'" :usuarios="$usuarios" />
         </div>
 
 

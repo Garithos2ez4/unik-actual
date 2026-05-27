@@ -42,13 +42,15 @@ class EgresoController extends Controller
                 $diaSeleccionado = $request->query('dia');
                 $egresos = $this->egresoService->getEgresosByMonth($month, 150, $diaSeleccionado);
                 $almacenes = $this->egresoService->getAllAlmacenes();
+                $usuarios = \App\Models\Usuario::all();
 
                 return view('egresos', [
                     'user' => $userModel,
                     'egresos' => $egresos,
                     'almacenes' => $almacenes,
                     'fecha' => $carbonMonth,
-                    'diaSeleccionado' => $diaSeleccionado
+                    'diaSeleccionado' => $diaSeleccionado,
+                    'usuarios' => $usuarios
                 ]);
             }
         }
@@ -295,6 +297,7 @@ class EgresoController extends Controller
             }
         };
 
+        $export = new \App\Exports\EgresosFormatoExport();
         return \Maatwebsite\Excel\Facades\Excel::download($export, 'formato_egresos.xlsx');
     }
 }

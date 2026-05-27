@@ -11,7 +11,10 @@
             <p class="text-secondary mb-0">Análisis detallado de ventas, tendencias y rendimiento operativo.</p>
         </div>
         <div class="col-md-6 text-md-end">
-            <a href="{{ route('dashboard.analitica.falabella') }}" class="btn btn-warning rounded-pill px-4 me-2">
+            <a href="{{ route('dashboard.analitica.tienda') }}" class="btn btn-primary rounded-pill px-4 me-2 shadow-sm">
+                <i class="bi bi-shop me-1"></i> Detalle Tienda
+            </a>
+            <a href="{{ route('dashboard.analitica.falabella') }}" class="btn btn-warning rounded-pill px-4 me-2 shadow-sm">
                 <i class="bi bi-shop me-1"></i> Detalle Falabella
             </a>
             <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">

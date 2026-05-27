@@ -408,4 +408,60 @@ class AnalyticsController extends Controller
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
+
+    public function tienda(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        $tc = $this->calculadoraService->getTasaCambio();
+        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
+
+        $costoVentaExpr = "COALESCE(
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+             FROM EgresoProducto ep_inner
+             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1 AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
+             LIMIT 1),
+            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+        )";
+
+        $comisionTiendaExpr = "0";
+
+        $ventasTienda = Venta::query()
+            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
+                         0 as comision_tienda")
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->map(function ($venta) {
+                $venta->ingresos = round($venta->ingresos, 2);
+                $venta->costos   = round($venta->costos, 2);
+                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+                $venta->comision_tienda = 0;
+                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                return $venta;
+            });
+
+        return view('analytics.components.tienda_venta', [
+            'user' => $userModel,
+            'ventasTienda' => $ventasTienda,
+            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
+        ]);
+    }
 }

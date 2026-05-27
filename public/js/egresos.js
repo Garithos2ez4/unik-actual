@@ -385,3 +385,13 @@ function searchPublicacion(inputElement) {
     }
 }
 
+function filterEgresosByUser(idUser) {
+    const rows = document.querySelectorAll('.row-egreso');
+    rows.forEach(row => {
+        if (idUser === 'all' || row.dataset.user === idUser) {
+            row.classList.remove('d-none');
+        } else {
+            row.classList.add('d-none');
+        }
+    });
+}

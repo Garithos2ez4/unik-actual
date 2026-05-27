@@ -10,8 +10,16 @@
                     <div class="col-md-1 d-none d-lg-block">
                         <small>Nro Orden</small>
                     </div>
-                    <div class="col-md-1 d-none d-lg-block">
-                        <small>Usuario</small>
+                    @php
+                        $usuariosConEgresos = $egresos->map(function($e) { return $e->Usuario; })->unique('idUser');
+                    @endphp
+                    <div class="col-md-1 d-none d-lg-block p-0">
+                        <select class="form-select form-select-sm border-0 bg-transparent text-light text-center" onchange="filterEgresosByUser(this.value)" style="box-shadow:none; cursor:pointer">
+                            <option value="all" class="text-dark">Usuario</option>
+                            @foreach($usuariosConEgresos as $u)
+                                <option value="{{ $u->idUser }}" class="text-dark">{{ $u->user }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-2 d-none d-md-block">
                         <small>SKU</small>
@@ -34,7 +42,7 @@
                 </div>
             </li>
             @foreach ($egresos as $egreso)
-            <li class="list-group-item">
+            <li class="list-group-item row-egreso" data-user="{{ $egreso->idUser }}">
                 <div class="row text-center">
                     <div class="col-2 col-md-2 text-start">
                         <small>
