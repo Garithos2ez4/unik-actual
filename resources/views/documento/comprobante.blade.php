@@ -84,18 +84,20 @@
                         </div>
                     @else
                         <div class="row">
-                            <div class="col-6 col-md-6 mb-4 ">
+                            <div class="col-6 col-md-4 mb-4 ">
                                 <button type="button" onclick="deleteForm({{ $documento->idComprobante }})"
                                     class="btn btn-danger {{ $documento->estado == 'INVALIDO' ? 'd-none' : '' }}">
                                     <i class="bi bi-trash3"></i> Eliminar {{ $documento->TipoComprobante->descripcion }}
                                 </button>
                             </div>
-                            @if (count($pdf) > 0)
-                                <div class="col-6 col-md-6 text-end mb-4">
-                                    <button type="button" class="btn btn-danger" onclick="openPdfInNewWindow()"><i
-                                            class="bi bi-file-earmark-pdf"></i> Series</button>
-                                </div>
-                            @endif
+                            <div class="col-6 col-md-8 text-end mb-4">
+                                <button type="button" class="btn btn-warning {{ $documento->estado == 'INVALIDO' ? 'd-none' : '' }}" data-bs-toggle="modal" data-bs-target="#editComprobanteModal">
+                                    <i class="bi bi-pencil-square"></i> Editar Comprobante
+                                </button>
+                                @if (count($pdf) > 0)
+                                    <button type="button" class="btn btn-danger ms-2" onclick="openPdfInNewWindow()"><i class="bi bi-file-earmark-pdf"></i> Series</button>
+                                @endif
+                            </div>
                         </div>
                     @endif
                     <ul class="list-group" id="ul-ingreso" style="max-height: 60vh;overflow-x: hidden; overflow-y: auto;">
@@ -348,6 +350,10 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Modal Editar Comprobante -->
+        @include('documento.edit_modal')
+        
         <br>
         <input type="file" onchange="readExcel(this)" id="excel-file" class="d-none" /> <!--Input reusable -->
         <form action="{{ route('deletecomprobante') }}" method="post" id="form-deletecomprobante">

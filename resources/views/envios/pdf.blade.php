@@ -156,12 +156,12 @@ return $iniciales . '.' . $ultima;
 
         .print-page.layout-4 {
             grid-template-columns: 1fr 1fr;
-            max-width: 28cm;
+            max-width: 100%;
             gap: 10px;
         }
 
         .print-page.layout-4 .rotulo {
-            zoom: 0.65;
+            zoom: 0.48;
             margin-bottom: 0;
             border-width: 4px;
         }

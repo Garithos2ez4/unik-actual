@@ -110,6 +110,58 @@ class ComprobanteService implements ComprobanteServiceInterface
             }
         }
     }
+    public function updateRegisteredComprobante($id, $moneda, array $detalles)
+    {
+        DB::beginTransaction();
+        try {
+            $comprobante = $this->comprobanteRepository->getOne('idComprobante', $id);
+            if (!$comprobante) {
+                throw new Exception("Comprobante no encontrado.");
+            }
+
+            $totalCompra = 0;
+
+            foreach ($comprobante->DetalleComprobante as $detalle) {
+                $newPrecioUnitario = null;
+                foreach ($detalles as $reqDetalle) {
+                    if ($reqDetalle['idDetalleComprobante'] == $detalle->idDetalleComprobante) {
+                        $newPrecioUnitario = $reqDetalle['precioUnitario'];
+                        break;
+                    }
+                }
+
+                if ($newPrecioUnitario !== null) {
+                    $validRegistros = 0;
+                    foreach ($detalle->RegistroProducto as $registro) {
+                        if ($registro->estado != 'INVALIDO') {
+                            $validRegistros++;
+                        }
+                    }
+                    
+                    $precioCompra = $newPrecioUnitario * $validRegistros;
+                    $totalCompra += $precioCompra;
+
+                    $this->detalleComprobanteRepository->update($detalle->idDetalleComprobante, [
+                        'precioUnitario' => $newPrecioUnitario,
+                        'precioCompra' => $precioCompra
+                    ]);
+                } else {
+                    $totalCompra += $detalle->precioCompra;
+                }
+            }
+
+            $this->comprobanteRepository->update($id, [
+                'moneda' => $moneda,
+                'totalCompra' => $totalCompra
+            ]);
+
+            DB::commit();
+            return true;
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
 
     public function deleteComprobante($idComprobante)
     {

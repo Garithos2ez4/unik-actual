@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
 use App\Models\Venta;
+use App\Models\DetalleVenta;
+use App\Models\EgresoProducto;
 use App\Models\Producto;
 
 class AnalyticsController extends Controller
@@ -21,239 +23,203 @@ class AnalyticsController extends Controller
         $this->calculadoraService = $calculadoraService;
     }
 
+    /**
+     * Valida si el usuario tiene acceso a la vista específica.
+     */
+    private function validateAccess($userModel, int $idVista)
+    {
+        return $userModel->Accesos->contains('idVista', $idVista);
+    }
+
+    /**
+     * Resuelve las fechas de inicio y fin desde el Request.
+     */
+    private function resolveDateRange(Request $request)
+    {
+        Carbon::setLocale('es');
+        $anio = (int) $request->query('anio', now()->year);
+        $mes  = (int) $request->query('mes', now()->month);
+
+        $fechaInicio = Carbon::create($anio, $mes, 1)->startOfMonth();
+        $fechaFin    = Carbon::create($anio, $mes, 1)->endOfMonth()->endOfDay();
+
+        if ($request->filled('dia_inicio')) {
+            $fechaInicio = Carbon::parse($request->query('dia_inicio'))->startOfDay();
+            $fechaFin = $request->filled('dia_fin')
+                ? Carbon::parse($request->query('dia_fin'))->endOfDay()
+                : $fechaInicio->copy()->endOfDay();
+        } elseif ($request->filled('dia_fin')) {
+            $fechaFin = Carbon::parse($request->query('dia_fin'))->endOfDay();
+        }
+
+        return [$fechaInicio, $fechaFin, $anio, $mes];
+    }
+
     public function index(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
-        // Validar acceso (idVista == 13 = Resumen Ejecutivo)
-        $tieneAcceso = false;
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 13) {
-                $tieneAcceso = true;
-                break;
-            }
-        }
-
-        if (!$tieneAcceso) {
+        if (!$this->validateAccess($userModel, 13)) {
             $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
             return redirect()->route('dashboard', ['user' => $userModel]);
         }
 
-        // Tasa de cambio para el histórico de Egresos
         $tc = $this->calculadoraService->getTasaCambio();
+        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
 
-        // ── Filtros de fecha ──────────────────────────────────
-        Carbon::setLocale('es');
-        $anio = (int) $request->query('anio', now()->year);
-        $mes  = (int) $request->query('mes', now()->month);
-        $diaInicio = $request->query('dia_inicio');
-        $diaFin    = $request->query('dia_fin');
-
-        // Por defecto, todo el mes seleccionado
-        $fechaInicio = Carbon::create($anio, $mes, 1)->startOfMonth();
-        $fechaFin    = Carbon::create($anio, $mes, 1)->endOfMonth()->endOfDay();
-
-        // Si envían un rango, aplicarlo (incluso si envían solo uno de los dos)
-        if ($diaInicio || $diaFin) {
-            if ($diaInicio) {
-                $fechaInicio = Carbon::parse($diaInicio)->startOfDay();
-            }
-            if ($diaFin) {
-                $fechaFin = Carbon::parse($diaFin)->endOfDay();
-            } else {
-                // Si envían dia_inicio pero no dia_fin, asumimos que quieren ver solo ese día específico
-                $fechaFin = Carbon::parse($diaInicio)->endOfDay();
-            }
-        }
-
-        // ── Helper para construir UNION ALL por métrica ────────
-        // Todas las métricas nuevas de Venta aplican >= 2026-05-25
-        // Todas las métricas antiguas de EgresoProducto aplican < 2026-05-25
+        // ── Helper Variables para la transición de sistema ────────
+        $fechaTransicion = '2026-05-25';
+        $ordenesIgnoradas = ['2026', '2026/SN', '2026-SN'];
+        $precioPubExpr = "COALESCE(Publicacion.precioPublicacion, COALESCE(Producto.precioDolar, 0) * $tc * 1.20)";
 
         // ── 1. Tendencia de ventas (diarias) ──────────────────
-        $qVentas1 = DB::table('DetalleVenta')
+        $qVentas1 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
-            ->select(
-                DB::raw('DATE(Venta.fechaVenta) as fecha'),
-                'DetalleVenta.cantidad as cantidad',
-                DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
-            )
+            ->selectRaw('DATE(Venta.fechaVenta) as fecha, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where('Venta.fechaVenta', '>=', '2026-05-25');
+            ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
-        $qEgresos1 = DB::table('EgresoProducto')
+        $qEgresos1 = EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select(
-                DB::raw('DATE(EgresoProducto.fechaCompra) as fecha'),
-                DB::raw('1 as cantidad'),
-                DB::raw("COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc) as monto")
-            )
+            ->selectRaw("DATE(EgresoProducto.fechaCompra) as fecha, 1 as cantidad, $precioPubExpr as monto")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $ventasMesRaw = DB::query()
             ->fromSub($qVentas1->unionAll($qEgresos1), 'unioned')
-            ->select('fecha', DB::raw('SUM(cantidad) as total_unidades'), DB::raw('SUM(monto) as total_monto'))
+            ->selectRaw('fecha, SUM(cantidad) as total_unidades, SUM(monto) as total_monto')
             ->groupBy('fecha')
             ->orderBy('fecha', 'asc')
             ->get();
 
-        // Rellenar días sin ventas con 0
+        // Rellenar días vacíos
         $ventasMes = [];
-        $current = $fechaInicio->copy()->startOfDay();
-        $end = $fechaFin->copy()->startOfDay();
-        while ($current->lte($end)) {
-            $dateStr = $current->format('Y-m-d');
+        for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
             $found = $ventasMesRaw->firstWhere('fecha', $dateStr);
             $ventasMes[] = [
-                'fecha' => $current->format('d/m'),
+                'fecha' => $date->format('d/m'),
                 'total' => $found ? $found->total_unidades : 0,
                 'monto' => $found ? round($found->total_monto, 2) : 0
             ];
-            $current->addDay();
         }
 
         // ── 2. Top SKUs más vendidos ──────────────────────────
-        $qVentas2 = DB::table('DetalleVenta')
+        $qVentas2 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Publicacion', 'DetalleVenta.idPublicacion', '=', 'Publicacion.idPublicacion')
             ->select('Publicacion.sku', 'Publicacion.titulo', 'DetalleVenta.cantidad as cantidad')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where('Venta.fechaVenta', '>=', '2026-05-25')
+            ->where('Venta.fechaVenta', '>=', $fechaTransicion)
             ->whereNotNull('DetalleVenta.idPublicacion');
 
-        $qEgresos2 = DB::table('EgresoProducto')
+        $qEgresos2 = EgresoProducto::query()
             ->join('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select('Publicacion.sku', 'Publicacion.titulo', DB::raw('1 as cantidad'))
+            ->selectRaw('Publicacion.sku, Publicacion.titulo, 1 as cantidad')
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $skusMostSoldMonth = DB::query()
             ->fromSub($qVentas2->unionAll($qEgresos2), 'unioned')
-            ->select('sku', 'titulo', DB::raw('SUM(cantidad) as total_ventas'))
+            ->selectRaw('sku, titulo, SUM(cantidad) as total_ventas')
             ->groupBy('sku', 'titulo')
-            ->orderBy('total_ventas', 'desc')
-            ->take(5)
+            ->orderByDesc('total_ventas')
+            ->limit(5)
             ->get();
 
         // ── 3. Métricas por plataforma ────────────────────────
-        $qVentas3 = DB::table('DetalleVenta')
+        $qVentas3 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->leftJoin('Publicacion', 'DetalleVenta.idPublicacion', '=', 'Publicacion.idPublicacion')
             ->leftJoin('CuentasPlataforma', 'Publicacion.idCuentaPlataforma', '=', 'CuentasPlataforma.idCuentaPlataforma')
             ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
-            ->select(
-                DB::raw('COALESCE(Plataforma.nombrePlataforma, "VENTA DIRECTA") as plataforma'),
-                'DetalleVenta.cantidad as cantidad',
-                DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
-            )
+            ->selectRaw('COALESCE(Plataforma.nombrePlataforma, "VENTA DIRECTA") as plataforma, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where('Venta.fechaVenta', '>=', '2026-05-25');
+            ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
-        $qEgresos3 = DB::table('EgresoProducto')
+        $qEgresos3 = EgresoProducto::query()
             ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
             ->leftJoin('CuentasPlataforma', 'Publicacion.idCuentaPlataforma', '=', 'CuentasPlataforma.idCuentaPlataforma')
             ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->select(
-                DB::raw('COALESCE(Plataforma.nombrePlataforma, "VENTA DIRECTA") as plataforma'),
-                DB::raw('1 as cantidad'),
-                DB::raw("COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc) as monto")
-            )
+            ->selectRaw("COALESCE(Plataforma.nombrePlataforma, 'VENTA DIRECTA') as plataforma, 1 as cantidad, $precioPubExpr as monto")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $metricasPlataformas = DB::query()
             ->fromSub($qVentas3->unionAll($qEgresos3), 'unioned')
-            ->select('plataforma', DB::raw('SUM(cantidad) as total_pedidos'), DB::raw('SUM(monto) as total_monto'))
+            ->selectRaw('plataforma, SUM(cantidad) as total_pedidos, SUM(monto) as total_monto')
             ->groupBy('plataforma')
-            ->orderBy('total_monto', 'desc')
+            ->orderByDesc('total_monto')
             ->get();
 
         // ── 4. Top productos por ingreso (monto S/) ──────────
-        $qVentas4 = DB::table('DetalleVenta')
+        $qVentas4 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                'DetalleVenta.cantidad as cantidad',
-                DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
-            )
+            ->selectRaw('Producto.idProducto, Producto.nombreProducto, Producto.modelo, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where('Venta.fechaVenta', '>=', '2026-05-25');
+            ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
-        $qEgresos4 = DB::table('EgresoProducto')
+        $qEgresos4 = EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                DB::raw('1 as cantidad'),
-                DB::raw("COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc) as monto")
-            )
+            ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, 1 as cantidad, $precioPubExpr as monto")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $productosMostRevenueMonth = DB::query()
             ->fromSub($qVentas4->unionAll($qEgresos4), 'unioned')
-            ->select('idProducto', 'nombreProducto', 'modelo', DB::raw('SUM(cantidad) as total_unidades'), DB::raw('SUM(monto) as total_ingreso'))
+            ->selectRaw('idProducto, nombreProducto, modelo, SUM(cantidad) as total_unidades, SUM(monto) as total_ingreso')
             ->groupBy('idProducto', 'nombreProducto', 'modelo')
-            ->orderBy('total_ingreso', 'desc')
-            ->take(5)
+            ->orderByDesc('total_ingreso')
+            ->limit(5)
             ->get();
 
         // ── 5. Top productos por cantidad vendida ─────────────
-        $qVentas5 = DB::table('DetalleVenta')
+        $qVentas5 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                'DetalleVenta.cantidad as cantidad'
-            )
+            ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'DetalleVenta.cantidad as cantidad')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where('Venta.fechaVenta', '>=', '2026-05-25');
+            ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
-        $qEgresos5 = DB::table('EgresoProducto')
+        $qEgresos5 = EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                DB::raw('1 as cantidad')
-            )
+            ->selectRaw('Producto.idProducto, Producto.nombreProducto, Producto.modelo, 1 as cantidad')
             ->whereNotExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('devoluciones')
-                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+                    ->whereColumn('devoluciones.idEgreso', 'EgresoProducto.idEgreso');
             })
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $productosMostSoldMonth = DB::query()
             ->fromSub($qVentas5->unionAll($qEgresos5), 'unioned')
-            ->select('idProducto', 'nombreProducto', 'modelo', DB::raw('SUM(cantidad) as total_unidades'))
+            ->selectRaw('idProducto, nombreProducto, modelo, SUM(cantidad) as total_unidades')
             ->groupBy('idProducto', 'nombreProducto', 'modelo')
-            ->orderBy('total_unidades', 'desc')
-            ->take(5)
+            ->orderByDesc('total_unidades')
+            ->limit(5)
             ->get();
 
         // ── 6. Top productos con fallas (solo RegistroProducto)
@@ -261,111 +227,79 @@ class AnalyticsController extends Controller
             ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
             ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
             ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
-            ->select(
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                DB::raw('COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas')
-            )
+            ->selectRaw('Producto.nombreProducto, Producto.modelo, COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas')
             ->where(function ($q) {
                 $q->where(function ($q2) {
                     $q2->whereIn('RegistroProducto.estado', ['DEFECTUOSO', 'GARANTIA'])
                         ->whereNotNull('RegistroProducto.observacion')
                         ->where('RegistroProducto.observacion', '!=', '');
-                })
-                    ->orWhere(function ($q2) {
-                        $q2->whereNotNull('devoluciones.idDevolucion')
-                            ->whereNotNull('devoluciones.motivo')
-                            ->where('devoluciones.motivo', '!=', '');
-                    });
+                })->orWhere(function ($q2) {
+                    $q2->whereNotNull('devoluciones.idDevolucion')
+                        ->whereNotNull('devoluciones.motivo')
+                        ->where('devoluciones.motivo', '!=', '');
+                });
             })
-            // Opcional: filtrar por fechas si se desea que las fallas sean relativas al rango
-            // pero el dashboard original no lo hacía. Lo dejamos como global.
             ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
-            ->orderBy('total_fallas', 'desc')
-            ->take(10)
+            ->orderByDesc('total_fallas')
+            ->limit(10)
             ->get();
 
         // ── 7. Top mejores meses históricos (Global) ──────────
-        // Para calcular el global mes a mes sin importar el filtro:
-        $qVentas7 = DB::table('Venta')
-            ->select(
-                DB::raw("DATE_FORMAT(fechaVenta, '%Y-%m') as mes_raw"),
-                DB::raw("DATE_FORMAT(fechaVenta, '%M %Y') as mes_nombre"),
-                'totalVenta as monto'
-            )
-            ->where('fechaVenta', '>=', '2026-05-25');
+        $qVentas7 = Venta::query()
+            ->selectRaw("DATE_FORMAT(fechaVenta, '%Y-%m') as mes_raw, DATE_FORMAT(fechaVenta, '%M %Y') as mes_nombre, totalVenta as monto")
+            ->where('fechaVenta', '>=', $fechaTransicion);
 
-        $qEgresos7 = DB::table('EgresoProducto')
+        $qEgresos7 = EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select(
-                DB::raw("DATE_FORMAT(EgresoProducto.fechaCompra, '%Y-%m') as mes_raw"),
-                DB::raw("DATE_FORMAT(EgresoProducto.fechaCompra, '%M %Y') as mes_nombre"),
-                DB::raw("COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc) as monto")
-            )
-            ->whereNotIn('EgresoProducto.numeroOrden', ['2026', '2026/SN'])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->selectRaw("DATE_FORMAT(EgresoProducto.fechaCompra, '%Y-%m') as mes_raw, DATE_FORMAT(EgresoProducto.fechaCompra, '%M %Y') as mes_nombre, $precioPubExpr as monto")
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas)
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion);
 
         $topBestMonths = DB::query()
             ->fromSub($qVentas7->unionAll($qEgresos7), 'unioned')
-            ->select('mes_raw', 'mes_nombre', DB::raw('SUM(monto) as total_monto'))
+            ->selectRaw('mes_raw, mes_nombre, SUM(monto) as total_monto')
             ->groupBy('mes_raw', 'mes_nombre')
-            ->orderBy('total_monto', 'desc')
-            ->take(3)
+            ->orderByDesc('total_monto')
+            ->limit(3)
             ->get();
 
-
+        // ── 8. Cálculos de Costos y Márgenes ──────────────────
         $costoVentaExpr = "COALESCE(
-            (
-                SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
-                FROM EgresoProducto ep_inner
-                INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
-                INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
-                INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                WHERE ep_inner.idEgreso = DetalleVenta.idEgreso
-                  AND dc_inner.precioUnitario > 1
-                  AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
-                LIMIT 1
-            ),
-            COALESCE(Producto.precioDolar, 0) * $tc
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+             FROM EgresoProducto ep_inner
+             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1 AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
+             LIMIT 1),
+            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
 
-        $comisionFalabellaVenta = "CASE 
-            WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
+        $comisionFalabellaVenta = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 
-        END";
+            ELSE 0 END";
 
-        $qVentas8 = DB::table('DetalleVenta')
+        $qVentas8 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                DB::raw('(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos'),
-                DB::raw("((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) as costos")
-            )
+            ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, 
+                         (DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos, 
+                         ((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) as costos")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where('Venta.fechaVenta', '>=', '2026-05-25');
+            ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
-        // Costo para egresos históricos (< 2026-05-25):
-        // Sigue la cadena: EgresoProducto.idRegistro → RegistroProducto → DetalleComprobante.precioCompra
-        // Fallback: Producto.precioDolar * TC
-        $precioPubExpr = "COALESCE(Publicacion.precioPublicacion, Producto.precioDolar * $tc)";
-        $comisionFalabellaEgreso = "CASE 
-            WHEN UPPER(Plataforma.nombrePlataforma) LIKE '%FALABELLA%' THEN 
+        $comisionFalabellaEgreso = "CASE WHEN UPPER(Plataforma.nombrePlataforma) LIKE '%FALABELLA%' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
                 + ($precioPubExpr * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 
-        END";
+            ELSE 0 END";
 
-        $qEgresos8 = DB::table('EgresoProducto')
+        $qEgresos8 = EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Comprobante', 'Comprobante.idComprobante', '=', 'DetalleComprobante.idComprobante')
@@ -374,53 +308,30 @@ class AnalyticsController extends Controller
             ->leftJoin('Publicacion', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
             ->leftJoin('CuentasPlataforma', 'Publicacion.idCuentaPlataforma', '=', 'CuentasPlataforma.idCuentaPlataforma')
             ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
-            ->select(
-                'Producto.idProducto',
-                'Producto.nombreProducto',
-                'Producto.modelo',
-                DB::raw("$precioPubExpr as ingresos"),
-                DB::raw("(COALESCE(
-                    NULLIF(CASE WHEN DetalleComprobante.precioUnitario > 1 AND Comprobante.numeroComprobante NOT LIKE 'INVENTARIO%' THEN (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $tc ELSE DetalleComprobante.precioUnitario END) ELSE NULL END, NULL),
-                    COALESCE(Producto.precioDolar, 0) * $tc
-                ) + ($comisionFalabellaEgreso)) as costos")
-            )
+            ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, $precioPubExpr as ingresos,
+                         (COALESCE(
+                            NULLIF(CASE WHEN DetalleComprobante.precioUnitario > 1 AND Comprobante.numeroComprobante NOT LIKE 'INVENTARIO%' THEN 
+                                (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $tc ELSE DetalleComprobante.precioUnitario END) 
+                            ELSE NULL END, NULL),
+                            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+                         ) + ($comisionFalabellaEgreso)) as costos")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
-            ->where('EgresoProducto.fechaCompra', '<', '2026-05-25');
+            ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
+            ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $margenesProductos = DB::query()
             ->fromSub($qVentas8->unionAll($qEgresos8), 'unioned')
-            ->select(
-                'idProducto',
-                'nombreProducto',
-                'modelo',
-                DB::raw('SUM(ingresos) as total_ingresos'),
-                DB::raw('SUM(costos) as total_costos'),
-                DB::raw('(SUM(ingresos) - SUM(costos)) as ganancia_neta')
-            )
+            ->selectRaw('idProducto, nombreProducto, modelo, SUM(ingresos) as total_ingresos, SUM(costos) as total_costos, (SUM(ingresos) - SUM(costos)) as ganancia_neta')
             ->groupBy('idProducto', 'nombreProducto', 'modelo')
             ->having('total_ingresos', '>', 0)
-            ->get();
-
-        // Calculamos margen porcentual y ordenamos
-        $margenesProductos = $margenesProductos->map(function ($item) {
-            $item->margen_porcentaje = $item->total_ingresos > 0
-                ? ($item->ganancia_neta / $item->total_ingresos) * 100
-                : 0;
-            return $item;
-        });
+            ->get()
+            ->map(function ($item) {
+                $item->margen_porcentaje = $item->total_ingresos > 0 ? ($item->ganancia_neta / $item->total_ingresos) * 100 : 0;
+                return $item;
+            });
 
         $productosMasGanancia = $margenesProductos->sortByDesc('ganancia_neta')->take(5)->values();
         $productosMenosGanancia = $margenesProductos->sortBy('ganancia_neta')->take(5)->values();
-
-        // ── Datos para los filtros de la vista ────────────────
-        $filtros = [
-            'anio' => $anio,
-            'mes' => $mes,
-            'dia_inicio' => $diaInicio,
-            'dia_fin' => $diaFin,
-            'fecha_inicio' => $fechaInicio,
-            'fecha_fin' => $fechaFin,
-        ];
 
         return view('analytics.index', [
             'user' => $userModel,
@@ -433,7 +344,68 @@ class AnalyticsController extends Controller
             'productosMasGanancia' => $productosMasGanancia,
             'productosMenosGanancia' => $productosMenosGanancia,
             'topBestMonths' => $topBestMonths,
-            'filtros' => $filtros,
+            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
+        ]);
+    }
+
+    public function falabella(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        $tc = $this->calculadoraService->getTasaCambio();
+        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
+
+        $costoVentaExpr = "COALESCE(
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+             FROM EgresoProducto ep_inner
+             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1 AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
+             LIMIT 1),
+            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+        )";
+
+        $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
+                (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
+                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
+            ELSE 0 END";
+
+        // Usamos el Modelo Venta para iniciar la consulta
+        $ventasFalabella = Venta::query()
+            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->map(function ($venta) {
+                $venta->ingresos = round($venta->ingresos, 2);
+                $venta->costos   = round($venta->costos, 2);
+                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+                $venta->comision_falabella = round($venta->comision_falabella, 2);
+                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                return $venta;
+            });
+
+        return view('analytics.components.falabella', [
+            'user' => $userModel,
+            'ventasFalabella' => $ventasFalabella,
+            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
 }

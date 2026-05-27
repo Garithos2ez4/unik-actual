@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\CalculadoraServiceInterface;
+use App\Models\Venta;
 
 class GananciaController extends Controller
 {
@@ -30,7 +31,7 @@ class GananciaController extends Controller
                   AND c.numeroComprobante NOT LIKE 'INVENTARIO%'
                 LIMIT 1
             ),
-            COALESCE(Producto.precioDolar, 0) * $tc
+            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
     }
 
@@ -42,32 +43,30 @@ class GananciaController extends Controller
         $tc = $this->calculadoraService->getTasaCambio();
         $costoExpr = $this->costoUnitarioExpr($tc);
 
-        $comisionFalabellaExpr = "CASE 
-            WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
+        $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 
-        END";
+            ELSE 0 END";
 
-        $ganancias = DB::table('Venta')
+        $ganancias = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->select(
-                'Venta.idVenta',
-                'Venta.fechaVenta',
-                DB::raw("GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo"),
-                DB::raw('SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos'),
-                DB::raw("SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos")
-            )
+            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->groupBy('Venta.idVenta', 'Venta.fechaVenta')
-            ->orderBy('Venta.fechaVenta', 'desc')
+            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+            ->orderByDesc('Venta.fechaVenta')
             ->get()
             ->map(function ($venta) {
                 $venta->ingresos = round($venta->ingresos, 2);
                 $venta->costos   = round($venta->costos, 2);
                 $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+                $venta->comision_falabella = round($venta->comision_falabella, 2);
                 return $venta;
             });
 
@@ -86,24 +85,20 @@ class GananciaController extends Controller
         $tc = $this->calculadoraService->getTasaCambio();
         $costoExpr = $this->costoUnitarioExpr($tc);
 
-        $comisionFalabellaExpr = "CASE 
-            WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
+        $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 
-        END";
+            ELSE 0 END";
 
-        $venta = DB::table('Venta')
+        $venta = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->select(
-                'Venta.idVenta',
-                'Venta.fechaVenta',
-                DB::raw("GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo"),
-                DB::raw('SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos'),
-                DB::raw("SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos")
-            )
+            ->selectRaw("Venta.idVenta, Venta.fechaVenta,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
             ->where('Venta.idVenta', $idVenta)
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta')
@@ -119,6 +114,7 @@ class GananciaController extends Controller
         $venta->ingresos = round($venta->ingresos, 2);
         $venta->costos   = round($venta->costos, 2);
         $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+        $venta->comision_falabella = round($venta->comision_falabella, 2);
 
         return response()->json([
             'success'  => true,

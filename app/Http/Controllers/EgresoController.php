@@ -239,6 +239,9 @@ class EgresoController extends Controller
         ]);
 
         try {
+            set_time_limit(0); // Permitir tiempo ilimitado para archivos masivos
+            ini_set('memory_limit', '-1'); // Aumentar límite de memoria para archivos grandes
+
             \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\EgresosImport($this->egresoService, $this->ventaService), $request->file('archivo_excel'));
             $this->headerService->sendFlashAlerts('Egresos masivos registrados', 'El archivo Excel se ha procesado exitosamente.', 'success', 'btn-success');
         } catch (\Exception $e) {

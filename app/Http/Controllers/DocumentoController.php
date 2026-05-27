@@ -47,7 +47,7 @@ class DocumentoController extends Controller
 
         foreach($userModel->Accesos as $acceso){
             if($acceso->idVista == 8 && $bool){
-                return view('documento',['user' => $userModel,
+                return view('documento.comprobante',['user' => $userModel,
                 'documento' => $documento,
                 'ubicaciones' => $ubicaciones,
                 'estados' => $estados,
@@ -58,7 +58,7 @@ class DocumentoController extends Controller
             }
 
             if($acceso->idVista == 2 && !$bool){
-                return view('documento',['user' => $userModel,
+                return view('documento.comprobante',['user' => $userModel,
                 'documento' => $documento,
                 'ubicaciones' => $ubicaciones,
                 'estados' => $estados,
@@ -117,6 +117,29 @@ class DocumentoController extends Controller
         $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
         return redirect()->route('dashboard',['user' => $userModel]);
     }
+    
+    public function editComprobante(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $idComprobante = $request->input('idComprobante');
+        $moneda = $request->input('moneda');
+        $detalles = $request->input('detalles', []);
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
+                try {
+                    $this->comprobanteService->updateRegisteredComprobante($idComprobante, $moneda, $detalles);
+                    $this->headerService->sendFlashAlerts('Comprobante Actualizado', 'Se editaron los precios y/o moneda correctamente', 'success', 'btn-success');
+                } catch (\Exception $e) {
+                    $this->headerService->sendFlashAlerts('Error', 'No se pudo editar el comprobante: ' . $e->getMessage(), 'error', 'btn-danger');
+                }
+                return redirect()->route('documento', ['id' => encrypt($idComprobante), 'bool' => 0]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para editar', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
     
     public function searchDocument(Request $request){
         $query = $request->input('query');
