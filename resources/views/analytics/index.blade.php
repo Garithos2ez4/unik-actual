@@ -11,67 +11,16 @@
             <p class="text-secondary mb-0">Análisis detallado de ventas, tendencias y rendimiento operativo.</p>
         </div>
         <div class="col-md-6 text-md-end">
+            <a href="{{ route('dashboard.analitica.falabella') }}" class="btn btn-warning rounded-pill px-4 me-2">
+                <i class="bi bi-shop me-1"></i> Detalle Falabella
+            </a>
             <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
                 <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
             </a>
         </div>
     </div>
 
-    <!-- Barra de Filtros -->
-    <div class="card border-0 shadow-sm rounded-4 mt-3 mb-4">
-        <div class="card-body py-3 px-4">
-            <form method="GET" action="{{ route('dashboard.analitica') }}" id="form-filtros-analytics">
-                <div class="row align-items-end g-2">
-                    <div class="col-6 col-md-2">
-                        <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-event me-1"></i>Año</label>
-                        <select name="anio" class="form-select form-select-sm" id="filtro-anio" onchange="actualizarLimitesDia()">
-                            @for($y = now()->year; $y >= 2026; $y--)
-                            <option value="{{ $y }}" {{ $filtros['anio'] == $y ? 'selected' : '' }}>{{ $y }}</option>
-                            @endfor
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-month me-1"></i>Mes</label>
-                        <select name="mes" class="form-select form-select-sm" id="filtro-mes" onchange="actualizarLimitesDia()">
-                            @php
-                            $meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-                            @endphp
-                            @for($m = 1; $m <= 12; $m++)
-                                <option value="{{ $m }}" {{ $filtros['mes'] == $m ? 'selected' : '' }}>{{ $meses[$m-1] }}</option>
-                                @endfor
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-plus me-1"></i>Día Inicio</label>
-                        <input type="date" name="dia_inicio" class="form-control form-control-sm" id="filtro-dia-inicio"
-                            value="{{ $filtros['dia_inicio'] ?? now()->format('Y-m-d') }}">
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-check me-1"></i>Día Corte</label>
-                        <input type="date" name="dia_fin" class="form-control form-control-sm" id="filtro-dia-fin"
-                            value="{{ $filtros['dia_fin'] ?? now()->format('Y-m-d') }}">
-                    </div>
-                    <div class="col-12 col-md-2 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                            <i class="bi bi-funnel-fill me-1"></i>Filtrar
-                        </button>
-                        <a href="{{ route('dashboard.analitica') }}" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
-                            <i class="bi bi-x-lg"></i>
-                        </a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Indicador de rango activo -->
-    <div class="mb-3">
-        <span class="badge bg-primary bg-opacity-10 text-succes
-         border border-primary px-3 py-2 rounded-pill">
-            <i class="bi bi-calendar-range me-1"></i>
-            {{ $filtros['fecha_inicio']->translatedFormat('d M Y') }} — {{ $filtros['fecha_fin']->translatedFormat('d M Y') }}
-        </span>
-    </div>
+    @include('analytics.partials.topcontrols')
 
     <div class="row mt-2">
         <!-- Gráfico de Tendencia -->

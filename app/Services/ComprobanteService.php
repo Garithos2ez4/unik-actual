@@ -210,10 +210,16 @@ class ComprobanteService implements ComprobanteServiceInterface
         }
     }
     public function searchAjaxComprobante($column,$data){
-        $comprobantes = $this->comprobanteRepository->searchTakeList($column,$data,5)
-                        ->map(function($comprobante) {
-                            $comprobante->fechaPersonalizada = Carbon::parse($comprobante->fechaRegistro)->format('d-m-Y');
-                            $comprobante->encryptId = encrypt($comprobante->idComprobante );
+        // Usamos el nuevo método si están buscando por comprobante, para que también busque por número de serie
+        if ($column === 'numeroComprobante') {
+            $comprobantes = $this->comprobanteRepository->searchByInvoiceOrSerial($data, 5);
+        } else {
+            $comprobantes = $this->comprobanteRepository->searchTakeList($column, $data, 5);
+        }
+
+        $comprobantes = $comprobantes->map(function($comprobante) {
+            $comprobante->fechaPersonalizada = \Carbon\Carbon::parse($comprobante->fechaRegistro)->format('d-m-Y');
+            $comprobante->encryptId = encrypt($comprobante->idComprobante );
                             $comprobante->Preveedor = $comprobante->Preveedor;
                             return $comprobante;
                         });

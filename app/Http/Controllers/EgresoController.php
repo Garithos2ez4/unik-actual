@@ -119,7 +119,7 @@ class EgresoController extends Controller
                         $ventaData = [
                             'idCliente' => $request->input('idCliente'), // puede ser null
                             'numeroOrden' => $numeroorden == 'No aplica' ? null : $numeroorden,
-                            'fechaVenta' => $fechapedido,
+                            'fechaVenta' => $fechadespacho,
                             'canal' => $canal
                         ];
 
@@ -171,13 +171,15 @@ class EgresoController extends Controller
                 $nro_orden = $request->input('nro_orden');
                 $fecha_compra = $request->input('fecha_compra');
                 $fecha_despacho = $request->input('fecha_despacho');
+                $precio_venta = $request->input('precio_venta');
 
                 if (isset($transaccion) && isset($idegreso)) {
                     $dataEgreso = [
                         'sku' => $sku,
                         'numeroOrden' => $nro_orden,
                         'fechaCompra' => $fecha_compra,
-                        'fechaDespacho' => $fecha_despacho
+                        'fechaDespacho' => $fecha_despacho,
+                        'precioVenta' => $precio_venta
                     ];
                     $this->egresoService->updateEgreso($transaccion, $idegreso, $observacion, null, $fechaDevolucion, $dataEgreso);
 

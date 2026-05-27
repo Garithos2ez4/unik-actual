@@ -12,7 +12,7 @@
         <div class="col-9 col-md-7 col-lg-5 text-end" style="position:relative;z-index:999">
             <div class="input-group mb-3">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" placeholder="Nro documento" id="search">
+                <input type="text" class="form-control" placeholder="Nro documento o Serie..." id="search">
                 <ul class="list-group w-100" style="position:absolute;top:100%;z-index:1000" id="suggestions">
                 </ul>
             </div>

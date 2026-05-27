@@ -67,6 +67,17 @@ class ComprobanteRepository implements ComprobanteRepositoryInterface
         return Comprobante::query()->where($column, 'LIKE', '%' . $data . '%', 'and')->take($cant)->get();
     }
 
+    public function searchByInvoiceOrSerial($data, $cant)
+    {
+        return Comprobante::query()
+            ->where('numeroComprobante', 'LIKE', '%' . $data . '%')
+            ->orWhereHas('DetalleComprobante.RegistroProducto', function ($q) use ($data) {
+                $q->where('numeroSerie', 'LIKE', '%' . $data . '%');
+            })
+            ->take($cant)
+            ->get();
+    }
+
     public function getUsuariosByMonth(\Carbon\Carbon $month){
         return Comprobante::select('idUser')->distinct()
                             ->whereMonth('fechaRegistro', '=', $month->month, 'and')

@@ -188,7 +188,9 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'idCuentaPlataforma' => $idCuentaPlataforma,
                 'nombrePlataforma' => $nombrePlataforma,
                 'cuenta' => $nombreCuenta,
-                'imagenPublicacion' => $details->Publicacion ? asset('storage/' . $details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null
+                'numeroOrden' => $details->numeroOrden,
+                'imagenPublicacion' => $details->Publicacion ? asset('storage/' . $details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null,
+                'precioVenta' => $details->DetalleVenta ? ($details->DetalleVenta->precioVenta > 0 ? $details->DetalleVenta->precioVenta : ($details->DetalleVenta->Venta ? $details->DetalleVenta->Venta->totalVenta : 0)) : 0
             ];
         });
         return $result;
@@ -282,7 +284,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $registro = $modelEgreso->RegistroProducto;
         $tipoTransaccion = strtoupper($transaction); // 'DEVOLUCION', 'GARANTIA' o 'UPDATE'
 
-        // Si hay datos para actualizar en el egreso (fecha, sku, nro_orden)
+        // Si hay datos para actualizar en el egreso (fecha, sku, nro_orden, precioVenta)
         if (!empty($dataEgreso)) {
             $updateData = [];
             if (isset($dataEgreso['sku'])) {
@@ -295,6 +297,27 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
             if (!empty($updateData)) {
                 $this->egresoRepository->update($idEgreso, $updateData);
+            }
+
+            // Actualizar precio de venta en DetalleVenta y totalVenta en Venta
+            if (isset($dataEgreso['precioVenta']) && $dataEgreso['precioVenta'] !== '') {
+                $nuevoPrecio = floatval($dataEgreso['precioVenta']);
+                $detalleVenta = \App\Models\DetalleVenta::where('idEgreso', $idEgreso)->first();
+                if ($detalleVenta) {
+                    $detalleVenta->precioVenta = $nuevoPrecio;
+                    $detalleVenta->save();
+
+                    $venta = $detalleVenta->Venta;
+                    if ($venta) {
+                        $nuevoTotal = \App\Models\DetalleVenta::where('idVenta', $venta->idVenta)
+                            ->selectRaw('SUM(precioVenta * cantidad) as total')
+                            ->first()
+                            ->total ?? 0;
+
+                        $venta->totalVenta = floatval($nuevoTotal);
+                        $venta->save();
+                    }
+                }
             }
         }
 

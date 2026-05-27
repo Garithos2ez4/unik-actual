@@ -9,6 +9,7 @@ interface ComprobanteRepositoryInterface
     public function searchOne($column,$data);
     public function searchList($column,$data);
     public function searchTakeList($column, $data,$cant);
+    public function searchByInvoiceOrSerial($data, $cant);
     public function create(array $data);
     public function update($id, array $data);
     public function remove($id);

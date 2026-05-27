@@ -100,7 +100,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6 text-end">
-                                    <small><strong></strong></small>
+                                    <p class="mb-0" id="modal-egreso-precio-display"><small><strong>Precio Venta:</strong> S/ <span id="modal-egreso-precio-text">0.00</span></small></p>
                                     <p class="mb-0"><small id="modal-egreso-usuario"></small></p>
                                 </div>
                                 <div class="col-md-12 mt-1" id="modal-egreso-publicidad">
@@ -118,6 +118,14 @@
                                         <div class="col-6">
                                             <label class="form-label fw-bold mb-0"><small>Nro de Orden:</small></label>
                                             <input type="text" name="nro_orden" id="modal-egreso-edit-nro-orden" class="form-control form-control-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mt-2 d-none" id="container-edit-precio">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold mb-0"><small>Precio Venta:</small></label>
+                                            <input type="number" step="0.01" min="0" name="precio_venta" id="modal-egreso-edit-precio" class="form-control form-control-sm">
                                         </div>
                                     </div>
                                 </div>

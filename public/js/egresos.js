@@ -213,7 +213,14 @@ function viewModalEgreso(json) {
         divFecha.innerHTML = '<p class="mb-0"><small><strong>Fecha Devolución:</strong> ' + stringDate(json.fechaMovimiento) + '</small></p>';
     }
 
-    // Poblar campos de edición
+    // Poblar campos de edición y precio
+    document.getElementById('modal-egreso-precio-text').textContent = json.precioVenta !== undefined ? parseFloat(json.precioVenta).toFixed(2) : '0.00';
+    
+    let editPrecioInput = document.getElementById('modal-egreso-edit-precio');
+    if (editPrecioInput) {
+        editPrecioInput.value = json.precioVenta !== undefined ? json.precioVenta : '';
+    }
+
     document.getElementById('modal-egreso-edit-fecha-compra').value = json.fechaCompra ? json.fechaCompra.split('T')[0] : '';
     document.getElementById('modal-egreso-edit-fecha-despacho').value = json.fechaDespacho ? json.fechaDespacho.split('T')[0] : '';
     document.getElementById('modal-egreso-edit-sku').value = json.sku || '';
@@ -222,12 +229,16 @@ function viewModalEgreso(json) {
     // Resetear modo edición
     const containerFechas = document.getElementById('container-edit-fechas');
     const containerPublicacion = document.getElementById('container-edit-publicacion');
+    const containerPrecio = document.getElementById('container-edit-precio');
+    const divPrecioDisplay = document.getElementById('modal-egreso-precio-display');
     const btnEdit = document.getElementById('btn-edit-egreso');
 
     containerFechas.classList.add('d-none');
     containerPublicacion.classList.add('d-none');
+    if (containerPrecio) containerPrecio.classList.add('d-none');
     divFecha.classList.remove('d-none');
     divPublicacion.classList.remove('d-none');
+    if (divPrecioDisplay) divPrecioDisplay.classList.remove('d-none');
     if (btnEdit) {
         btnEdit.innerHTML = '<i class="bi bi-pencil-fill"></i>';
     }
@@ -291,21 +302,27 @@ function stringDate(date) {
 function toggleEditEgreso() {
     const containerFechas = document.getElementById('container-edit-fechas');
     const containerPublicacion = document.getElementById('container-edit-publicacion');
+    const containerPrecio = document.getElementById('container-edit-precio');
     const divFecha = document.getElementById('modal-egreso-fecha');
     const divPublicacion = document.getElementById('modal-egreso-publicidad');
+    const divPrecioDisplay = document.getElementById('modal-egreso-precio-display');
     const btnEdit = document.getElementById('btn-edit-egreso');
 
     if (containerFechas.classList.contains('d-none')) {
         containerFechas.classList.remove('d-none');
         containerPublicacion.classList.remove('d-none');
+        if (containerPrecio) containerPrecio.classList.remove('d-none');
         divFecha.classList.add('d-none');
         divPublicacion.classList.add('d-none');
+        if (divPrecioDisplay) divPrecioDisplay.classList.add('d-none');
         if (btnEdit) btnEdit.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
     } else {
         containerFechas.classList.add('d-none');
         containerPublicacion.classList.add('d-none');
+        if (containerPrecio) containerPrecio.classList.add('d-none');
         divFecha.classList.remove('d-none');
         divPublicacion.classList.remove('d-none');
+        if (divPrecioDisplay) divPrecioDisplay.classList.remove('d-none');
         if (btnEdit) btnEdit.innerHTML = '<i class="bi bi-pencil-fill"></i>';
     }
 }
