@@ -96,6 +96,7 @@ class VentaService implements VentaServiceInterface
                     \App\Models\PagoVenta::create([
                         'idVenta' => $venta->idVenta,
                         'idMetodoPago' => $pago['idMetodo'],
+                        'idCuentaBancaria' => $pago['idCuentaBancaria'] ?? null,
                         'monto' => $pago['monto'],
                         'nroOperacion' => $pago['ref'] ?? null,
                     ]);

@@ -148,6 +148,23 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         }
     }
 
+    public function createCuentaBancaria($data){
+        $data['idCuentaBancaria'] = $this->getNewIdCuentaBancaria();
+        $this->cuentasTransferenciaRepository->create($data);
+    }
+
+    public function createMetodoPago($data){
+        $ultimo = \App\Models\MetodoPago::orderBy('idMetodoPago', 'desc')->first();
+        $data['idMetodoPago'] = $ultimo ? $ultimo->idMetodoPago + 1 : 1;
+        \App\Models\MetodoPago::create($data);
+    }
+
+    public function createTipoMetodoPago($data){
+        $ultimo = \App\Models\TipoMetodoPago::orderBy('idTipoMetodo', 'desc')->first();
+        $data['idTipoMetodo'] = $ultimo ? $ultimo->idTipoMetodo + 1 : 1;
+        \App\Models\TipoMetodoPago::create($data);
+    }
+
     public function updateComisionEmpresa($id,$comision){
         if($id && !is_null($comision)){
             $data = ['comision' => $comision];
@@ -395,6 +412,12 @@ class ConfiguracionService implements ConfiguracionServiceInterface
     private function getNewIdSugerencia(){
         $sugerencia = $this->sugerenciaRepository->getLast();
         $id = $sugerencia ? $sugerencia->idSugerencia : 0;
+        return $id + 1;
+    }
+
+    private function getNewIdCuentaBancaria(){
+        $cuenta = $this->cuentasTransferenciaRepository->getLast();
+        $id = $cuenta ? $cuenta->idCuentaBancaria : 0;
         return $id + 1;
     }
 }

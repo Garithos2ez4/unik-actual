@@ -144,7 +144,7 @@ class EgresosImport implements ToCollection, WithHeadingRow
                             'idRegistro' => $registro->idRegistro,
                             'idPublicacion' => $idPublicacion,
                             'idProducto' => $registro->DetalleComprobante->idProducto ?? null,
-                            'precioVenta' => 0, // 0 hace que herede auto en el service de venta
+                            'precioVenta' => '', // '' hace que herede auto en el service de venta
                             'cantidad' => 1
                         ];
                     }
@@ -174,7 +174,7 @@ class EgresosImport implements ToCollection, WithHeadingRow
                                 'idRegistro' => $registro->idRegistro,
                                 'idPublicacion' => $idPublicacion,
                                 'idProducto' => $registro->DetalleComprobante->idProducto ?? null,
-                                'precioVenta' => 0, // Se hereda automáticamente
+                                'precioVenta' => '', // Se hereda automáticamente
                                 'cantidad' => 1
                             ];
                         } else {

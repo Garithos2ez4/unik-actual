@@ -17,6 +17,7 @@ class PagoVenta extends Model
     protected $fillable = [
         'idVenta',
         'idMetodoPago',
+        'idCuentaBancaria',
         'monto',
         'nroOperacion',
         'fechaPago'
@@ -38,5 +39,10 @@ class PagoVenta extends Model
     public function MetodoPago()
     {
         return $this->belongsTo(MetodoPago::class, 'idMetodoPago', 'idMetodoPago');
+    }
+
+    public function CuentaBancaria()
+    {
+        return $this->belongsTo(CuentasTransferencia::class, 'idCuentaBancaria', 'idCuentaBancaria');
     }
 }

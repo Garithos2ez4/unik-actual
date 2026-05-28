@@ -117,7 +117,7 @@
                     </div>
                     <div class="card-body py-2">
                         <div class="row align-items-end">
-                            <div class="col-md-4 mb-2">
+                            <div class="col-md-3 mb-2">
                                 <label class="form-label mb-0"><small>Método de Pago</small></label>
                                 <select class="form-select form-select-sm" id="pago-metodo">
                                     <option value="">Seleccione...</option>
@@ -126,12 +126,30 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-2">
+                            <div class="col-md-2 mb-2" id="div-pago-empresa" style="display: none;">
+                                <label class="form-label mb-0"><small>Empresa</small></label>
+                                <select class="form-select form-select-sm" id="pago-empresa">
+                                    <option value="">Seleccione...</option>
+                                    @foreach($empresas ?? [] as $empresa)
+                                        <option value="{{ $empresa->idEmpresa }}">{{ $empresa->nombreComercial ?? $empresa->razonSocial }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2" id="div-pago-cuenta" style="display: none;">
+                                <label class="form-label mb-0"><small>Cuenta Destino</small></label>
+                                <select class="form-select form-select-sm" id="pago-cuenta">
+                                    <option value="">Seleccione...</option>
+                                    @foreach($cuentasBancarias ?? [] as $cuenta)
+                                        <option value="{{ $cuenta->idCuentaBancaria }}" data-idempresa="{{ $cuenta->idEmpresa }}" data-banco="{{ strtoupper($cuenta->Banco->nombreBanco ?? '') }}">{{ $cuenta->Banco->nombreBanco ?? 'Banco' }} - Nro: {{ $cuenta->numeroCuenta }} ({{ $cuenta->tipoCuenta }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-2">
                                 <label class="form-label mb-0"><small>Monto</small></label>
                                 <input type="number" step="0.01" class="form-control form-control-sm" id="pago-monto" placeholder="0.00">
                             </div>
-                            <div class="col-md-3 mb-2">
-                                <label class="form-label mb-0"><small>Nro. Operación / Ref.</small></label>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label mb-0"><small>Ref.</small></label>
                                 <input type="text" class="form-control form-control-sm" id="pago-ref" placeholder="(Opcional)">
                             </div>
                             <div class="col-md-2 mb-2 text-end">

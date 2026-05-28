@@ -27,10 +27,16 @@ class ConfiguracionController extends Controller
         foreach($userModel->Accesos as $acceso){
             if($acceso->idVista == 7){
                 $empresas = $this->configuracionService->getAllEmpresas();
+                $bancos = \App\Models\Banco::all();
+                $metodosPago = \App\Models\MetodoPago::with('TipoMetodoPago', 'Banco')->get();
+                $tiposMetodoPago = \App\Models\TipoMetodoPago::all();
 
                     return view('configweb',['user' => $userModel,
                                             'pagina' => 'web',
-                                            'empresas' => $empresas
+                                            'empresas' => $empresas,
+                                            'bancos' => $bancos,
+                                            'metodosPago' => $metodosPago,
+                                            'tiposMetodoPago' => $tiposMetodoPago
                     ]);
             }
         }
@@ -401,7 +407,79 @@ class ConfiguracionController extends Controller
                     $this->headerService->sendFlashAlerts('Faltan Datos','Faltan datos para completar las transaccion','warning','btn-warning');
                     return back();
                 }
-                dd($request);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta operacion','warning','btn-danger');
+        return redirect()->route('dashboard',['user' => $userModel]);
+    }
+
+    public function insertCuentasBancarias(Request $request){
+        $userModel = $this->headerService->getModelUser();
+        $data = [
+            'idEmpresa' => $request->input('idEmpresa'),
+            'idBanco' => $request->input('idBanco'),
+            'tipoCuenta' => $request->input('tipoCuenta'),
+            'tipoMoneda' => $request->input('tipoMoneda'),
+            'titular' => $request->input('titular'),
+            'numeroCuenta' => $request->input('cuenta')
+        ];
+        
+        foreach($userModel->Accesos as $acceso){
+            if($acceso->idVista == 7){
+                if($data['idEmpresa'] && $data['idBanco'] && $data['tipoCuenta'] && $data['tipoMoneda'] && $data['titular'] && $data['numeroCuenta']){
+                    $this->configuracionService->createCuentaBancaria($data);
+                    return back();
+                }else{
+                    $this->headerService->sendFlashAlerts('Faltan Datos','Faltan datos para completar las transaccion','warning','btn-warning');
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta operacion','warning','btn-danger');
+        return redirect()->route('dashboard',['user' => $userModel]);
+    }
+
+    public function insertMetodoPago(Request $request){
+        $userModel = $this->headerService->getModelUser();
+        $data = [
+            'idTipoMetodo' => $request->input('idTipoMetodo'),
+            'idBanco' => $request->input('idBanco') ?: null,
+            'nombreMetodo' => $request->input('nombreMetodo'),
+            'estado' => 1
+        ];
+        
+        foreach($userModel->Accesos as $acceso){
+            if($acceso->idVista == 7){
+                if($data['nombreMetodo'] && $data['idTipoMetodo']){
+                    $this->configuracionService->createMetodoPago($data);
+                    $this->headerService->sendFlashAlerts('Éxito','Método de pago agregado correctamente','success','btn-success');
+                    return back();
+                }else{
+                    $this->headerService->sendFlashAlerts('Faltan Datos','El nombre y tipo de método son obligatorios','warning','btn-warning');
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta operacion','warning','btn-danger');
+        return redirect()->route('dashboard',['user' => $userModel]);
+    }
+
+    public function insertTipoMetodoPago(Request $request){
+        $userModel = $this->headerService->getModelUser();
+        $data = [
+            'nombreTipo' => $request->input('nombreTipo')
+        ];
+        
+        foreach($userModel->Accesos as $acceso){
+            if($acceso->idVista == 7){
+                if($data['nombreTipo']){
+                    $this->configuracionService->createTipoMetodoPago($data);
+                    $this->headerService->sendFlashAlerts('Éxito','Tipo de método agregado correctamente','success','btn-success');
+                    return back();
+                }else{
+                    $this->headerService->sendFlashAlerts('Faltan Datos','El nombre del tipo es obligatorio','warning','btn-warning');
+                    return back();
+                }
             }
         }
         $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta operacion','warning','btn-danger');

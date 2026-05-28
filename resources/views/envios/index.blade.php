@@ -58,13 +58,13 @@
                             <td>
                                 {{ $envio->Destino->nombre ?? 'N/A' }}
                                 @if($envio->Detalle)
-                                    <br>
-                                    <small class="text-muted d-block text-truncate" style="max-width: 180px;" title="Dir: {{ $envio->Detalle->dir }} {{ $envio->Detalle->ref ? '| Ref: '.$envio->Detalle->ref : '' }}">
-                                        <i class="bi bi-geo-alt text-primary"></i> {{ $envio->Detalle->dir }}
-                                        @if($envio->Detalle->ref)
-                                            <span class="text-secondary">({{ $envio->Detalle->ref }})</span>
-                                        @endif
-                                    </small>
+                                <br>
+                                <small class="text-muted d-block text-truncate" style="max-width: 180px;" title="Dir: {{ $envio->Detalle->dir }} {{ $envio->Detalle->ref ? '| Ref: '.$envio->Detalle->ref : '' }}">
+                                    <i class="bi bi-geo-alt text-primary"></i> {{ $envio->Detalle->dir }}
+                                    @if($envio->Detalle->ref)
+                                    <span class="text-secondary">({{ $envio->Detalle->ref }})</span>
+                                    @endif
+                                </small>
                                 @endif
                             </td>
                             <td>
@@ -79,17 +79,21 @@
                             </td>
                             <td>
                                 @if($envio->Productos->isEmpty())
-                                    <span class="text-muted">Sin productos</span>
+                                <span class="text-muted">Sin productos</span>
                                 @else
+                                <div class="pe-2" style="max-height: 120px; overflow-y: auto; scrollbar-width: thin;">
                                     @foreach($envio->Productos as $envioProd)
-                                        <div class="mb-1 text-truncate" style="max-width: 200px;" title="{{ $envioProd->Producto->nombreProducto ?? 'N/A' }}">
-                                            • {{ $envioProd->Producto->nombreProducto ?? 'N/A' }}
-                                            <span class="badge bg-secondary">x{{ $envioProd->cantidad }}</span>
-                                            @if($envioProd->nota_producto)
-                                                <small class="d-block text-muted ps-2" style="font-size: 0.75rem;">Nota: {{ $envioProd->nota_producto }}</small>
-                                            @endif
-                                        </div>
+                                    <div class="mb-1 text-truncate" style="max-width: 220px;" title="{{ $envioProd->Producto->nombreProducto ?? 'N/A' }}">
+                                        • {{ $envioProd->Producto->nombreProducto ?? 'N/A' }}
+                                        <span class="badge bg-secondary">x{{ $envioProd->cantidad }}</span>
+                                        @if($envioProd->nota_producto)
+                                        <small class="d-block text-muted ps-2 text-truncate" style="font-size: 0.75rem;" title="{{ $envioProd->nota_producto }}">
+                                            Nota: {{ $envioProd->nota_producto }}
+                                        </small>
+                                        @endif
+                                    </div>
                                     @endforeach
+                                </div>
                                 @endif
                             </td>
                             <td>
@@ -118,19 +122,19 @@
 </div>
 
 <script>
-function imprimirSeleccionados() {
-    // Collect all checked checkboxes
-    let checkboxes = document.querySelectorAll('.envio-checkbox:checked');
-    let seleccionados = Array.from(checkboxes).map(cb => cb.value);
-    
-    if (seleccionados.length > 0) {
-        // Print only selected
-        window.open('{{ route("envios.pdf") }}?ids=' + seleccionados.join(','), '_blank');
-    } else {
-        // Fallback to print the whole day
-        let fecha = document.getElementById('input_fecha').value;
-        window.open('{{ route("envios.pdf") }}?fecha=' + fecha, '_blank');
+    function imprimirSeleccionados() {
+        // Collect all checked checkboxes
+        let checkboxes = document.querySelectorAll('.envio-checkbox:checked');
+        let seleccionados = Array.from(checkboxes).map(cb => cb.value);
+
+        if (seleccionados.length > 0) {
+            // Print only selected
+            window.open('{{ route("envios.pdf") }}?ids=' + seleccionados.join(','), '_blank');
+        } else {
+            // Fallback to print the whole day
+            let fecha = document.getElementById('input_fecha').value;
+            window.open('{{ route("envios.pdf") }}?fecha=' + fecha, '_blank');
+        }
     }
-}
 </script>
 @endsection

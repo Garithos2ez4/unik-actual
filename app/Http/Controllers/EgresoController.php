@@ -64,9 +64,13 @@ class EgresoController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 9) {
                 $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
+                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
+                $empresas = \App\Models\Empresa::all();
                 return view('createegreso', [
                     'user' => $userModel,
-                    'metodosPago' => $metodosPago
+                    'metodosPago' => $metodosPago,
+                    'cuentasBancarias' => $cuentasBancarias,
+                    'empresas' => $empresas
                 ]);
             }
         }

@@ -266,7 +266,7 @@ function searchClienteAjax(inputElement) {
     if (query.length > 2) {
         document.getElementById('hidden-id-cliente').value = "";
         document.getElementById('btn-clear-cliente').style.display = 'none';
-        
+
         let xhr = new XMLHttpRequest();
         xhr.open('GET', `/cliente/searchcliente?query=${query}`, true);
         xhr.onreadystatechange = function () {
@@ -289,7 +289,7 @@ function searchClienteAjax(inputElement) {
                         inputElement.value = nombreCompleto;
                         document.getElementById('hidden-id-cliente').value = item.idCliente;
                         document.getElementById('btn-clear-cliente').style.display = 'block';
-                        
+
                         suggestions.innerHTML = '';
                         hiddenBody.style.display = 'none';
                         inputElement.style.zIndex = '1';
@@ -393,17 +393,17 @@ function createItem(object, query) {
     inputPrecio.className = 'form-control form-control-sm border-success text-end input-precio-item';
     inputPrecio.placeholder = 'Precio Venta';
     inputPrecio.title = 'Precio Venta';
-    
+
     let selectedSkuPrecio = document.getElementById('hidden-publicacion-precio').value;
     let fallbackPrecio = object.precioSoles || '';
     inputPrecio.dataset.precioSoles = fallbackPrecio;
-    
-    if(selectedSkuPrecio && selectedSkuPrecio !== 'null' && selectedSkuPrecio !== 'undefined' && selectedSkuPrecio !== 'NULO' && !isNaN(parseFloat(selectedSkuPrecio))) {
+
+    if (selectedSkuPrecio && selectedSkuPrecio !== 'null' && selectedSkuPrecio !== 'undefined' && selectedSkuPrecio !== 'NULO' && !isNaN(parseFloat(selectedSkuPrecio))) {
         inputPrecio.value = selectedSkuPrecio;
     } else {
         inputPrecio.value = fallbackPrecio;
     }
-    
+
     inputPrecio.addEventListener('input', calculateTotalVenta);
 
     divColPrecio.appendChild(inputPrecio);
@@ -440,7 +440,7 @@ function applySkuToUnassignedItems(skuId, skuText, skuPrecio, forceAll = false) 
     hiddenSkus.forEach((hiddenInput, index) => {
         // Solo aplicar si se fuerza, o si el item no tiene un SKU asignado previamente
         let isUnassigned = !hiddenInput.value || hiddenInput.value === 'NULO' || hiddenInput.value === '';
-        
+
         if (forceAll || isUnassigned) {
             hiddenInput.value = skuId;
             textDisplays[index].innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + skuText + '</strong></small>';
@@ -460,17 +460,17 @@ function applySkuToUnassignedItems(skuId, skuText, skuPrecio, forceAll = false) 
 function calculateTotalVenta() {
     let inputs = document.querySelectorAll('.input-precio-item');
     let total = 0;
-    
+
     inputs.forEach(input => {
         let val = parseFloat(input.value);
-        if(!isNaN(val)) {
+        if (!isNaN(val)) {
             total += val;
         }
     });
 
     let contenedor = document.getElementById('contenedor-total-venta');
     let spanTotal = document.getElementById('span-total-venta');
-    
+
     if (inputs.length > 0) {
         contenedor.style.display = 'block';
         spanTotal.textContent = total.toFixed(2);
@@ -559,7 +559,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const inputFechaDespacho = document.getElementById('fechadespacho');
 
     if (inputFechaPedido && inputFechaDespacho) {
-        inputFechaPedido.addEventListener('blur', function() {
+        inputFechaPedido.addEventListener('blur', function () {
             // No permitir fechas anteriores a 2024
             if (this.value && this.value < '2024-01-01') {
                 alertBootstrap('La fecha de pedido no puede ser anterior al año 2024', 'warning');
@@ -573,7 +573,7 @@ document.addEventListener('DOMContentLoaded', function () {
             validateSubmit();
         });
 
-        inputFechaDespacho.addEventListener('blur', function() {
+        inputFechaDespacho.addEventListener('blur', function () {
             if (inputFechaPedido.value && this.value < inputFechaPedido.value) {
                 alertBootstrap('La fecha de despacho no puede ser anterior a la fecha de pedido', 'warning');
                 this.value = inputFechaPedido.value;
@@ -585,19 +585,100 @@ document.addEventListener('DOMContentLoaded', function () {
     validateSubmit();
 });
 
-// ==========================================
-// LÓGICA DE PAGOS DIVIDIDOS (Ventas Tienda)
-// ==========================================
 let pagosAgregados = [];
 let pagoIndex = 0;
 
-document.getElementById('btn-add-pago')?.addEventListener('click', function() {
+function filterCuentasDestino() {
     let selectMetodo = document.getElementById('pago-metodo');
+    let selectEmpresa = document.getElementById('pago-empresa');
+    let selectCuenta = document.getElementById('pago-cuenta');
+    let divCuenta = document.getElementById('div-pago-cuenta');
+    let divEmpresa = document.getElementById('div-pago-empresa');
+
+    if (!selectMetodo) return;
+
+    let textMetodo = selectMetodo.options[selectMetodo.selectedIndex]?.text.toUpperCase() || '';
+    let idEmpresa = selectEmpresa.value;
+
+    if (textMetodo.includes('TRANSFERENCIA') || textMetodo.includes('YAPE') || textMetodo.includes('PLIN')) {
+        divEmpresa.style.display = 'block';
+        divCuenta.style.display = 'block';
+
+        let options = selectCuenta.querySelectorAll('option');
+        options.forEach(opt => {
+            if (opt.value === '') {
+                opt.style.display = 'block';
+                return;
+            }
+
+            let banco = opt.getAttribute('data-banco');
+            let optIdEmpresa = opt.getAttribute('data-idempresa');
+
+            let show = true;
+
+            if (idEmpresa !== '' && optIdEmpresa !== idEmpresa) {
+                show = false;
+            }
+
+            if (show) {
+                if (textMetodo.includes('YAPE')) {
+                    show = (banco && banco.includes('BCP')) ? true : false;
+                } else if (textMetodo.includes('PLIN')) {
+                    show = (banco && (banco.includes('BBVA') || banco.includes('INTERBANK') || banco.includes('SCOTIABANK'))) ? true : false;
+                }
+            }
+
+            opt.style.display = show ? 'block' : 'none';
+        });
+
+        if (selectCuenta.selectedIndex > 0) {
+            let selectedOpt = selectCuenta.options[selectCuenta.selectedIndex];
+            if (selectedOpt.style.display === 'none') {
+                selectCuenta.value = '';
+            }
+        }
+    } else {
+        divEmpresa.style.display = 'none';
+        divCuenta.style.display = 'none';
+        selectEmpresa.value = '';
+        selectCuenta.value = '';
+    }
+}
+
+document.getElementById('pago-metodo')?.addEventListener('change', function () {
+    document.getElementById('pago-empresa').value = '';
+    document.getElementById('pago-cuenta').value = '';
+    filterCuentasDestino();
+});
+
+document.getElementById('pago-empresa')?.addEventListener('change', function () {
+    document.getElementById('pago-cuenta').value = '';
+    filterCuentasDestino();
+});
+
+document.getElementById('btn-add-pago')?.addEventListener('click', function () {
+    let selectMetodo = document.getElementById('pago-metodo');
+    let selectCuenta = document.getElementById('pago-cuenta');
     let inputMonto = document.getElementById('pago-monto');
     let inputRef = document.getElementById('pago-ref');
 
     let idMetodo = selectMetodo.value;
     let nombreMetodo = selectMetodo.options[selectMetodo.selectedIndex].text;
+    let textMetodo = nombreMetodo.toUpperCase();
+
+    let idCuenta = null;
+    let nombreCuenta = '';
+
+    if (textMetodo.includes('TRANSFERENCIA') || textMetodo.includes('YAPE') || textMetodo.includes('PLIN')) {
+        idCuenta = selectCuenta.value;
+        if (!idCuenta) {
+            alertBootstrap('Debe seleccionar una Cuenta Destino para este método', 'warning');
+            return;
+        }
+        nombreCuenta = selectCuenta.options[selectCuenta.selectedIndex].text;
+        nombreMetodo += ' (' + nombreCuenta + ')';
+    }
+
     let monto = parseFloat(inputMonto.value);
     let ref = inputRef.value.trim();
 
@@ -614,6 +695,7 @@ document.getElementById('btn-add-pago')?.addEventListener('click', function() {
     let pago = {
         id: pagoIndex++,
         idMetodo: idMetodo,
+        idCuentaBancaria: idCuenta,
         nombreMetodo: nombreMetodo,
         monto: monto,
         ref: ref
@@ -624,6 +706,8 @@ document.getElementById('btn-add-pago')?.addEventListener('click', function() {
 
     // Limpiar inputs
     selectMetodo.value = '';
+    selectCuenta.value = '';
+    document.getElementById('div-pago-cuenta').style.display = 'none';
     inputMonto.value = '';
     inputRef.value = '';
 });
@@ -632,7 +716,7 @@ function renderPagos() {
     let tbody = document.querySelector('#tabla-pagos tbody');
     let tabla = document.getElementById('tabla-pagos');
     let contenedorHidden = document.getElementById('hidden-pagos-container');
-    
+
     tbody.innerHTML = '';
     contenedorHidden.innerHTML = '';
 
@@ -666,28 +750,29 @@ function renderPagos() {
             <input type="hidden" name="pagos[${index}][idMetodo]" value="${pago.idMetodo}">
             <input type="hidden" name="pagos[${index}][monto]" value="${pago.monto}">
             <input type="hidden" name="pagos[${index}][ref]" value="${pago.ref}">
+            ${pago.idCuentaBancaria ? `<input type="hidden" name="pagos[${index}][idCuentaBancaria]" value="${pago.idCuentaBancaria}">` : ''}
         `;
     });
 
     document.getElementById('total-pagado-text').innerText = totalPagado.toFixed(2);
-    
+
     // Llamar a la validación para habilitar/deshabilitar el botón de submit
     validateSubmit();
 }
 
 // Debe ser global para que el onclick del HTML lo encuentre
-window.removePago = function(id) {
+window.removePago = function (id) {
     pagosAgregados = pagosAgregados.filter(p => p.id !== id);
     renderPagos();
 };
 
 // Interceptar envío del formulario para mostrar modal
-document.getElementById('form-egreso')?.addEventListener('submit', function(e) {
+document.getElementById('form-egreso')?.addEventListener('submit', function (e) {
     e.preventDefault();
-    
+
     let checkSku = document.getElementById('check-sku-egreso');
     let modalBody = document.getElementById('modal-body-confirmacion');
-    
+
     let totalVenta = 0;
     document.querySelectorAll('.input-precio-item').forEach(input => {
         let val = parseFloat(input.value);
@@ -708,12 +793,12 @@ document.getElementById('form-egreso')?.addEventListener('submit', function(e) {
             let listHtml = '<ul class="list-group list-group-flush text-start border">';
             pagosAgregados.forEach(p => {
                 listHtml += `<li class="list-group-item py-1 px-2 d-flex justify-content-between align-items-center">
-                    <span><small>${p.nombreMetodo} ${p.ref ? '('+p.ref+')' : ''}</small></span>
+                    <span><small>${p.nombreMetodo} ${p.ref ? '(' + p.ref + ')' : ''}</small></span>
                     <span class="badge bg-success rounded-pill">S/ ${p.monto.toFixed(2)}</span>
                 </li>`;
             });
             listHtml += '</ul>';
-            
+
             modalBody.innerHTML = `
                 <p class="mb-2 text-muted"><small>Se registrarán los siguientes pagos para cubrir el total de <b>S/ ${totalVenta.toFixed(2)}</b>:</small></p>
                 ${listHtml}
@@ -733,7 +818,7 @@ document.getElementById('form-egreso')?.addEventListener('submit', function(e) {
     modal.show();
 });
 
-document.getElementById('btn-confirmar-guardar')?.addEventListener('click', function() {
+document.getElementById('btn-confirmar-guardar')?.addEventListener('click', function () {
     this.disabled = true;
     this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
     document.getElementById('form-egreso').submit();

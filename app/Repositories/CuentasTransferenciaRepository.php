@@ -57,6 +57,11 @@ class CuentasTransferenciaRepository implements CuentasTransferenciaRepositoryIn
         return $cuenta;
     }
     
+    public function getLast()
+    {
+        return CuentasTransferencia::orderBy('idCuentaBancaria', 'desc')->first();
+    }
+    
     private function validateColumns($column){
         if (!in_array($column, $this->modelColumns)) {
             throw new \InvalidArgumentException("La columna '$column' no es válida.");

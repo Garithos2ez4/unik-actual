@@ -15,6 +15,9 @@ interface ConfiguracionServiceInterface
     public function getOneCategoria($idCategoria);
     public function updateCorreoEmpresa($id,$correo);
     public function updateCuentaBancaria($id,$titular,$cuenta);
+    public function createCuentaBancaria($data);
+    public function createMetodoPago($data);
+    public function createTipoMetodoPago($data);
     public function updateComisionEmpresa($id,$comision);
     public function updateCalculadora($igv,$fact);
     public function updateCalculadoraTasaFija($igv,$fact,$tc);
