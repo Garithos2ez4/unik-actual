@@ -145,15 +145,23 @@
             <ul class="list-group">
                 <li class="list-group-item bg-sistema-uno text-light">
                     <div class="row text-center">
-                        <div class="col-12">
+                        <div class="col-10">
                             <h6>Tipo de M&eacute;todo</h6>
+                        </div>
+                        <div class="col-2">
+                            <h6>Editar</h6>
                         </div>
                     </div>
                 </li>
                 @foreach($tiposMetodoPago as $tipo)
                 <li class="list-group-item">
                     <div class="row text-center align-items-center">
-                        <div class="col-12 fw-bold">{{ $tipo->nombreTipo }}</div>
+                        <div class="col-10 fw-bold">{{ $tipo->nombreTipo }}</div>
+                        <div class="col-2">
+                            <button class="btn" onclick="openEditTipoMetodoPagoModal({{$tipo->idTipoMetodo}}, '{{$tipo->nombreTipo}}')" data-bs-toggle="modal" data-bs-target="#editTipoMetodoPagoModal">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
                     </div>
                 </li>
                 @endforeach
@@ -177,23 +185,31 @@
             <ul class="list-group">
                 <li class="list-group-item bg-sistema-uno text-light">
                     <div class="row text-center">
-                        <div class="col-4">
+                        <div class="col-3">
                             <h6>M&eacute;todo</h6>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <h6>Tipo</h6>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <h6>Banco</h6>
+                        </div>
+                        <div class="col-3">
+                            <h6>Editar</h6>
                         </div>
                     </div>
                 </li>
                 @foreach($metodosPago as $metodo)
-                <li class="list-group-item">
+                <li class="list-group-item {{$metodo->estado == 0 ? 'bg-list text-muted' : ''}}">
                     <div class="row text-center align-items-center">
-                        <div class="col-4 fw-bold">{{ $metodo->nombreMetodo }}</div>
-                        <div class="col-4"><small>{{ $metodo->TipoMetodoPago->nombreTipo ?? 'N/A' }}</small></div>
-                        <div class="col-4"><small>{{ $metodo->Banco->nombreBanco ?? '-' }}</small></div>
+                        <div class="col-3 fw-bold">{{ $metodo->nombreMetodo }} {!! $metodo->estado == 0 ? '<small>(Inactivo)</small>' : '' !!}</div>
+                        <div class="col-3"><small>{{ $metodo->TipoMetodoPago->nombreTipo ?? 'N/A' }}</small></div>
+                        <div class="col-3"><small>{{ $metodo->Banco->nombreBanco ?? '-' }}</small></div>
+                        <div class="col-3">
+                            <button class="btn" onclick="openEditMetodoPagoModal({{$metodo->idMetodoPago}}, '{{$metodo->nombreMetodo}}', '{{$metodo->idTipoMetodo}}', '{{$metodo->idBanco}}', {{$metodo->estado}})" data-bs-toggle="modal" data-bs-target="#editMetodoPagoModal">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
                     </div>
                 </li>
                 @endforeach
@@ -371,6 +387,89 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-success">Guardar <i class="bi bi-floppy"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Modal Editar Método de Pago -->
+    <form action="{{route('updatemetodopago')}}" method="POST">
+        @csrf
+        <div class="modal fade" id="editMetodoPagoModal" tabindex="-1" aria-labelledby="editMetodoPagoModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editMetodoPagoModalLabel">Editar M&eacute;todo de Pago</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <input type="hidden" name="idMetodoPago" id="hidden-edit-metodo-id">
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">Nombre del M&eacute;todo:</label>
+                                <input type="text" class="form-control" maxlength="50" name="nombreMetodo" id="input-edit-metodo-nombre" required>
+                            </div>
+
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">Tipo de M&eacute;todo:</label>
+                                <select class="form-select" name="idTipoMetodo" id="select-edit-metodo-tipo" required>
+                                    <option value="">Seleccione Tipo...</option>
+                                    @foreach($tiposMetodoPago as $tipo)
+                                    <option value="{{$tipo->idTipoMetodo}}">{{$tipo->nombreTipo}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">Banco Asociado (Opcional):</label>
+                                <select class="form-select" name="idBanco" id="select-edit-metodo-banco">
+                                    <option value="">Ninguno</option>
+                                    @foreach($bancos as $banco)
+                                    <option value="{{$banco->idBanco}}">{{$banco->nombreBanco}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-12 mb-2 mt-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="estado" id="switch-edit-metodo-estado" value="1">
+                                    <label class="form-check-label" for="switch-edit-metodo-estado">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Actualizar <i class="bi bi-floppy"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Modal Editar Tipo de Método de Pago -->
+    <form action="{{route('updatetipometodopago')}}" method="POST">
+        @csrf
+        <div class="modal fade" id="editTipoMetodoPagoModal" tabindex="-1" aria-labelledby="editTipoMetodoPagoModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editTipoMetodoPagoModalLabel">Editar Tipo de M&eacute;todo de Pago</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <input type="hidden" name="idTipoMetodo" id="hidden-edit-tipo-metodo-id">
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">Nombre del Tipo:</label>
+                                <input type="text" class="form-control" maxlength="50" name="nombreTipo" id="input-edit-tipo-metodo-nombre" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Actualizar <i class="bi bi-floppy"></i></button>
                     </div>
                 </div>
             </div>

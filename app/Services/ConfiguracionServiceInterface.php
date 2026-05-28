@@ -18,6 +18,8 @@ interface ConfiguracionServiceInterface
     public function createCuentaBancaria($data);
     public function createMetodoPago($data);
     public function createTipoMetodoPago($data);
+    public function updateMetodoPago($id, $data);
+    public function updateTipoMetodoPago($id, $data);
     public function updateComisionEmpresa($id,$comision);
     public function updateCalculadora($igv,$fact);
     public function updateCalculadoraTasaFija($igv,$fact,$tc);

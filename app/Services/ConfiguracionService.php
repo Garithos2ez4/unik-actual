@@ -165,6 +165,14 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         \App\Models\TipoMetodoPago::create($data);
     }
 
+    public function updateMetodoPago($id, $data){
+        \App\Models\MetodoPago::where('idMetodoPago', $id)->update($data);
+    }
+
+    public function updateTipoMetodoPago($id, $data){
+        \App\Models\TipoMetodoPago::where('idTipoMetodo', $id)->update($data);
+    }
+
     public function updateComisionEmpresa($id,$comision){
         if($id && !is_null($comision)){
             $data = ['comision' => $comision];
