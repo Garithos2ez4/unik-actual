@@ -200,7 +200,9 @@ class EgresoController extends Controller
     public function searchRegistro(Request $request)
     {
         $query = $request->input('query');
-        $results = $this->egresoService->searchAjaxRegistro($query);
+        $exclude = $request->input('exclude', '');
+        $excludeArray = array_filter(explode(',', $exclude));
+        $results = $this->egresoService->searchAjaxRegistro($query, $excludeArray);
 
         return response()->json($results);
     }

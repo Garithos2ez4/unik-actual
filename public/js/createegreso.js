@@ -179,7 +179,8 @@ function searchRegistro(inputElement) {
     if (query.length > 2) { // Comenzar la búsqueda después de 3 caracteres
         document.getElementById('hidden-product-serial-number').value = "";
         let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/egresos/searchregistro?query=${query}`, true);
+        let excluded = productosAgregados.join(',');
+        xhr.open('GET', `/egresos/searchregistro?query=${query}&exclude=${excluded}`, true);
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 let data = JSON.parse(xhr.responseText);

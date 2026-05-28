@@ -4,7 +4,7 @@ namespace App\Services;
 interface EgresoProductoServiceInterface
 {
     public function getEgresosByMonth($date, $cant, $diaSeleccionado = null);
-    public function searchAjaxRegistro($serial);
+    public function searchAjaxRegistro($serial, $excludeArray = []);
     public function getOneAjaxRegistro($serial);
     public function searchAjaxEgreso($serie,$cant);
     public function getRegistro($serial);

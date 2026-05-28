@@ -77,6 +77,22 @@
                         $state = $devolucion ? $devolucion->tipo : ($esDevueltoLegado ? 'DEVOLUCION' : $egreso->RegistroProducto->estado);
                         $observacionFinal = $devolucion ? $devolucion->motivo : $egreso->RegistroProducto->observacion;
 
+                        $detalleVenta = $egreso->DetalleVenta;
+                        $fallbackPrecio = 0;
+                        if ($detalleVenta && $detalleVenta->precioVenta > 0) {
+                            $fallbackPrecio = $detalleVenta->precioVenta;
+                        } elseif ($detalleVenta && $detalleVenta->Venta && $detalleVenta->Venta->totalVenta > 0) {
+                            $fallbackPrecio = $detalleVenta->Venta->totalVenta;
+                        } elseif ($egreso->Publicacion && $egreso->Publicacion->precioPublicacion > 0) {
+                            $fallbackPrecio = $egreso->Publicacion->precioPublicacion;
+                        } else {
+                            $producto = $egreso->RegistroProducto->DetalleComprobante->Producto ?? null;
+                            if ($producto && isset($producto->precioDolar) && $producto->precioDolar > 0) {
+                                $tasaCambio = \App\Models\Calculadora::first()?->tasaCambio ?? 1;
+                                $fallbackPrecio = $producto->precioDolar * $tasaCambio;
+                            }
+                        }
+
                         $egresoJson = [
                         'idEgreso' => $egreso->idEgreso,
                         'nombreProducto' => $egreso->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
@@ -91,7 +107,8 @@
                         'sku' => $egreso->Publicacion ? $egreso->Publicacion->sku : null,
                         'numeroOrden' => $egreso->numeroOrden,
                         'imagenPublicacion' => $egreso->Publicacion ? asset('storage/'.$egreso->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null,
-                        'precioVenta' => $egreso->DetalleVenta ? ($egreso->DetalleVenta->precioVenta > 0 ? $egreso->DetalleVenta->precioVenta : ($egreso->DetalleVenta->Venta ? $egreso->DetalleVenta->Venta->totalVenta : 0)) : 0
+                        'precioVenta' => $fallbackPrecio,
+                        'hasDetalleVenta' => $detalleVenta !== null
                         ];
                         @endphp
                         <a href="javascript:void(0)"
@@ -101,7 +118,7 @@
                         </a>
                     </div>
                     <div class="col-2 col-md-1">
-                        <small>S/ {{ number_format($egreso->DetalleVenta ? $egreso->DetalleVenta->precioVenta : 0, 2) }}</small>
+                        <small>S/ {{ number_format($fallbackPrecio, 2) }}</small>
                     </div>
                     <div class="col-md-1 d-none d-lg-block {{$state == 'NUEVO' ? 'text-sistema-uno' : (
                                                                     $state == 'ENTREGADO' ? 'text-green' : (

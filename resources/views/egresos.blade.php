@@ -68,6 +68,7 @@
                                 <div class="col-md-12 d-flex justify-content-between align-items-center">
                                     <input type="hidden" id="modal-egreso-transaccion" name="transaccion">
                                     <input type="hidden" id="modal-egreso-id" name="idegreso">
+                                    <input type="hidden" id="modal-egreso-has-detalle-venta" value="false">
                                     <h5 id="modal-egreso-titulo" class="mb-0"></h5>
                                     @foreach ($user->Accesos as $vista)
                                     @if($vista->idVista == 9)
@@ -162,8 +163,37 @@
                         </div>
                     </div>
                 </div>
-            </div>
         </form>
+        
+        <!-- Modal de Confirmación de Migración -->
+        <div class="modal fade" id="confirmMigrationModal" tabindex="-1" aria-labelledby="confirmMigrationModalLabel" aria-hidden="true" style="z-index: 1070; backdrop-filter: blur(4px);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-warning shadow-lg">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title fw-bold text-uppercase mb-0" id="confirmMigrationModalLabel">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirmar Migración
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-start">
+                        <p class="mb-2">Este egreso corresponde a un registro histórico (anterior al sistema de ventas).</p>
+                        <p class="mb-3 text-secondary">
+                            <i class="bi bi-info-circle me-1 text-primary"></i> Al guardar esta modificación, el sistema creará automáticamente un registro de <strong>Venta</strong> y <strong>DetalleVenta</strong> para migrar este registro de forma permanente.
+                        </p>
+                        <p class="mb-0 fw-bold text-center">¿Está seguro de que desea continuar?</p>
+                    </div>
+                    <div class="modal-footer justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </button>
+                        <button type="button" id="btn-confirm-migration-submit" class="btn btn-warning fw-bold text-dark px-4 shadow-sm">
+                            <i class="bi bi-check-lg"></i> Sí, continuar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script src="{{asset('js/egresos.js')}}"></script>
     @endsection

@@ -13,7 +13,7 @@ interface RegistroProductoRepositoryInterface
     public function create(array $data);
     public function update($id, array $data);
     public function getLast();
-    public function searchByEgreso($serial,$cant);
+    public function searchByEgreso($serial,$cant,$excludeArray = []);
     public function getByEgreso($serial);
     public function searchByGarantia($serial,$cant);
     public function getByGarantia($serial);

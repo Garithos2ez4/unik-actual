@@ -65,13 +65,55 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
             ->get();
     }
 
-    public function searchByEgreso($serial, $cant)
+    public function searchByEgreso($serial, $cant, $excludeArray = [])
     {
-        return RegistroProducto::where('estado', '!=', 'ENTREGADO', 'and')
-            ->where('estado', '!=', 'INVALIDO', 'and')
-            ->where('numeroSerie', 'LIKE', "%{$serial}%")
+        // 1. Obtener 1 registro por cada producto distinto (Diversidad)
+        $query1 = RegistroProducto::selectRaw('MIN(RegistroProducto.idRegistro) as idRegistro')
+            ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->where('RegistroProducto.estado', '!=', 'ENTREGADO')
+            ->where('RegistroProducto.estado', '!=', 'INVALIDO')
+            ->where('RegistroProducto.numeroSerie', 'LIKE', "%{$serial}%");
+
+        if (!empty($excludeArray)) {
+            $query1->whereNotIn('RegistroProducto.idRegistro', $excludeArray);
+        }
+
+        $diverseIds = $query1->groupBy('DetalleComprobante.idProducto')
             ->take($cant)
-            ->get();
+            ->pluck('idRegistro')
+            ->toArray();
+
+        $finalResults = collect();
+
+        if (!empty($diverseIds)) {
+            $diverseRecords = RegistroProducto::whereIn('idRegistro', $diverseIds)->get();
+            foreach ($diverseRecords as $rec) {
+                $finalResults->push($rec);
+            }
+        }
+
+        // 2. Rellenar los cupos faltantes SOLO si la búsqueda fue muy específica (coincidió con 1 solo producto)
+        if (count($diverseIds) === 1) {
+            $faltan = $cant - count($diverseIds);
+            
+            if ($faltan > 0) {
+                $allExcluded = array_merge($excludeArray, $diverseIds);
+                
+                $query2 = RegistroProducto::where('estado', '!=', 'ENTREGADO')
+                    ->where('estado', '!=', 'INVALIDO')
+                    ->where('numeroSerie', 'LIKE', "%{$serial}%")
+                    ->whereNotIn('idRegistro', $allExcluded)
+                    ->take($faltan);
+                    
+                $fillRecords = $query2->get();
+                foreach ($fillRecords as $rec) {
+                    $finalResults->push($rec);
+                }
+            }
+        }
+
+        // Ordenar alfabéticamente por numeroSerie para agrupar visualmente los productos
+        return $finalResults->sortBy('numeroSerie')->values();
     }
 
     public function getByEgreso($serial)

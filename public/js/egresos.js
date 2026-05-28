@@ -184,6 +184,11 @@ function viewModalEgreso(json) {
     labelUsuario.textContent = json.usuario;
     hiddenIdEgreso.value = json.idEgreso;
 
+    let hiddenHasDetalle = document.getElementById('modal-egreso-has-detalle-venta');
+    if (hiddenHasDetalle) {
+        hiddenHasDetalle.value = json.hasDetalleVenta ? 'true' : 'false';
+    }
+
     let containerDevolucion = document.getElementById('container-campos-devolucion');
     let inputFechaDevolucion = document.getElementById('modal-egreso-fecha-devolucion');
 
@@ -275,6 +280,20 @@ function formDetailEgreso(transaction) {
     if (transaction === 'devolucion' && !formEgreso.checkValidity()) {
         formEgreso.reportValidity();
         return;
+    }
+
+    if (transaction === 'update') {
+        let hasDetalleVentaInput = document.getElementById('modal-egreso-has-detalle-venta');
+        if (hasDetalleVentaInput && hasDetalleVentaInput.value === 'false') {
+            let confirmModal = new bootstrap.Modal(document.getElementById('confirmMigrationModal'));
+            confirmModal.show();
+
+            document.getElementById('btn-confirm-migration-submit').onclick = function () {
+                hiddenTransaction.value = transaction;
+                formEgreso.submit();
+            };
+            return;
+        }
     }
 
     hiddenTransaction.value = transaction;

@@ -44,13 +44,13 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         return $this->egresoRepository->getAllByMonth($carbonMonth->year, $carbonMonth->month, $cant, $diaSeleccionado);
     }
 
-    public function searchAjaxRegistro($serial)
+    public function searchAjaxRegistro($serial, $excludeArray = [])
     {
         $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
         $tasaFijaGlobal = \App\Models\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
         $preciosService = new \App\Services\PreciosService();
 
-        $egresos = $this->registroRepository->searchByEgreso($serial, 5);
+        $egresos = $this->registroRepository->searchByEgreso($serial, 7, $excludeArray);
         $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
             $producto = $details->DetalleComprobante->Producto;
             $precioDolarBase = $producto->precioDolar ?? 0;
@@ -170,6 +170,22 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
             }
 
+            $detalleVenta = $details->DetalleVenta;
+            $fallbackPrecio = 0;
+            if ($detalleVenta && $detalleVenta->precioVenta > 0) {
+                $fallbackPrecio = $detalleVenta->precioVenta;
+            } elseif ($detalleVenta && $detalleVenta->Venta && $detalleVenta->Venta->totalVenta > 0) {
+                $fallbackPrecio = $detalleVenta->Venta->totalVenta;
+            } elseif ($details->Publicacion && $details->Publicacion->precioPublicacion > 0) {
+                $fallbackPrecio = $details->Publicacion->precioPublicacion;
+            } else {
+                $producto = $details->RegistroProducto->DetalleComprobante->Producto ?? null;
+                if ($producto && isset($producto->precioDolar) && $producto->precioDolar > 0) {
+                    $tasaCambio = \App\Models\Calculadora::first()?->tasaCambio ?? 1;
+                    $fallbackPrecio = $producto->precioDolar * $tasaCambio;
+                }
+            }
+
             return [
                 'idEgreso' => $details->idEgreso,
                 'idRegistro' => $details->idRegistro,
@@ -190,7 +206,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'cuenta' => $nombreCuenta,
                 'numeroOrden' => $details->numeroOrden,
                 'imagenPublicacion' => $details->Publicacion ? asset('storage/' . $details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null,
-                'precioVenta' => $details->DetalleVenta ? ($details->DetalleVenta->precioVenta > 0 ? $details->DetalleVenta->precioVenta : ($details->DetalleVenta->Venta ? $details->DetalleVenta->Venta->totalVenta : 0)) : 0
+                'precioVenta' => $fallbackPrecio,
+                'hasDetalleVenta' => $detalleVenta !== null
             ];
         });
         return $result;
@@ -317,6 +334,34 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         $venta->totalVenta = floatval($nuevoTotal);
                         $venta->save();
                     }
+                } else {
+                    // MIGRACIÓN AUTOMÁTICA DE EGRESO ANTIGUO
+                    // 1. Obtener usuario (el del egreso actual o el logueado)
+                    $idUser = $this->headerService->getModelUser()->idUser ?? $modelEgreso->idUser;
+                    
+                    // 2. Determinar canal
+                    $canal = $modelEgreso->idPublicacion ? 'PLATAFORMA' : 'TIENDA';
+                    
+                    // 3. Crear cabecera Venta
+                    $venta = \App\Models\Venta::create([
+                        'idUser'      => $idUser,
+                        'canal'       => $canal,
+                        'numeroOrden' => $modelEgreso->numeroOrden,
+                        'fechaVenta'  => $modelEgreso->fechaCompra ? $modelEgreso->fechaCompra->toDateString() : now()->toDateString(),
+                        'totalVenta'  => $nuevoPrecio,
+                        'observacion' => 'Migración automática de egreso histórico',
+                    ]);
+                    
+                    // 4. Crear DetalleVenta
+                    \App\Models\DetalleVenta::create([
+                        'idVenta'       => $venta->idVenta,
+                        'idEgreso'      => $idEgreso,
+                        'idProducto'    => $registro->DetalleComprobante->idProducto,
+                        'idPublicacion' => $modelEgreso->idPublicacion,
+                        'precioVenta'   => $nuevoPrecio,
+                        'cantidad'      => 1,
+                        'origenPrecio'  => $modelEgreso->idPublicacion ? 'PUBLICACION' : 'TIENDA',
+                    ]);
                 }
             }
         }
