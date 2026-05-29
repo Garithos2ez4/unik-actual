@@ -229,14 +229,25 @@
             const files = dt.files;
         
             if (files.length) {
-                input.files = files; // Asignar los archivos al input
-                changeImage({ target: { files } }, input, img);
+                const newDt = new DataTransfer();
+                newDt.items.add(files[0]);
+                input.files = newDt.files; // Asignar los archivos al input usando un DataTransfer persistente
+                changeImage({ target: { files: newDt.files } }, input, img);
             }
         }
         
         function changeImage(event, input, img) {
             const file = event.target.files ? event.target.files[0] : null;
         
+            let imgElement = img;
+            if (typeof img === 'string') {
+                let triggerId = arguments[3]; 
+                if (triggerId) {
+                    imgElement = document.getElementById(triggerId);
+                } else {
+                    imgElement = document.getElementById(img);
+                }
+            }
         
             if (file) {
         
@@ -253,18 +264,26 @@
                         if (image.width !== maxWidth || image.height !== maxHeight) {
                             alert('La imagen no coincide con las dimensiones permitidas ' + maxWidth + ' x ' + maxHeight + ' píxeles.');
                             input.value = ''; // Limpiar el input si no coincide
+                            if (typeof disableSave === 'function') disableSave();
                             return;
                         }
         
                         // Si la imagen cumple con las dimensiones, actualiza la vista previa
-                        img.src = e.target.result;
+                        if (imgElement) imgElement.src = e.target.result;
+                        if (typeof disableSave === 'function') disableSave();
+                    }
+                    
+                    image.onerror = function() {
+                        alert('El archivo seleccionado no es una imagen válida.');
+                        input.value = '';
+                        if (typeof disableSave === 'function') disableSave();
                     }
                 };
         
                 reader.readAsDataURL(file);
+            } else {
+                if (typeof disableSave === 'function') disableSave();
             }
-            
-            disableSave();
         }
         
         function validateForm() {

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Calculadora;
@@ -7,6 +8,7 @@ use App\Repositories\PlataformaRepositoryInterface;
 use App\Repositories\CategoriaProductoRepositoryInterface;
 use App\Repositories\ComisionRepositoryInterface;
 use App\Repositories\RegistroUpdateRepositoryInterface;
+use App\Repositories\HistorialTipoCambioRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -17,55 +19,67 @@ class CalculadoraService implements CalculadoraServiceInterface
     protected $categoriaRepository;
     protected $comisionRepository;
     protected $registroRepository;
+    protected $historialRepository;
 
-    public function __construct(CalculadoraRepositoryInterface $calcRepository,
-                                PlataformaRepositoryInterface $plataformaRepository,
-                                CategoriaProductoRepositoryInterface $categoriaRepository,
-                                ComisionRepositoryInterface $comisionRepository,
-                                RegistroUpdateRepositoryInterface $registroRepository)
-    {
+    public function __construct(
+        CalculadoraRepositoryInterface $calcRepository,
+        PlataformaRepositoryInterface $plataformaRepository,
+        CategoriaProductoRepositoryInterface $categoriaRepository,
+        ComisionRepositoryInterface $comisionRepository,
+        RegistroUpdateRepositoryInterface $registroRepository,
+        HistorialTipoCambioRepositoryInterface $historialRepository
+    ) {
         $this->calcRepository = $calcRepository;
         $this->plataformaRepository = $plataformaRepository;
         $this->categoriaRepository = $categoriaRepository;
         $this->comisionRepository = $comisionRepository;
         $this->registroRepository = $registroRepository;
+        $this->historialRepository = $historialRepository;
     }
     //Get al primer registro con el api de la sunat para el cambio del dolar
-    public function get(){
+    public function get()
+    {
         return $this->calcRepository->get();
     }
     //Get al registro con el id(2) con una tasa de cambio fija(editable) 
-    public function getTasaFija(){
+    public function getTasaFija()
+    {
         return $this->calcRepository->findById();
     }
-    public function allComision(){
-        return $this ->comisionRepository->all();
+    public function allComision()
+    {
+        return $this->comisionRepository->all();
     }
-    public function getTasaCambio(){
+    public function getTasaCambio()
+    {
         $tc = $this->calcRepository->get()->tasaCambio;
         $this->updateTipoCambio($tc);
         return $this->calcRepository->get()->tasaCambio;
     }
-    public function getIgv(){
+    public function getIgv()
+    {
         $igv = $this->calcRepository->get()->value('igv');
-        return ($igv / 100) +1;
+        return ($igv / 100) + 1;
     }
-    public function getComisionByRelation($table){
+    public function getComisionByRelation($table)
+    {
         return $this->plataformaRepository->getByRelation($table);
     }
-    public function getAllLabelCategory(){
+    public function getAllLabelCategory()
+    {
         $categoriaModel = $this->categoriaRepository->all();
         $categoria = $categoriaModel->map(function ($cat) {
-        return [
-                    'idCategoria' => $cat->idCategoria,
-                    'nombreCategoria' => $cat->nombreCategoria,
-                    'GrupoProducto' => $cat->GrupoProducto
-                ];
-            });
+            return [
+                'idCategoria' => $cat->idCategoria,
+                'nombreCategoria' => $cat->nombreCategoria,
+                'GrupoProducto' => $cat->GrupoProducto
+            ];
+        });
         return $categoria;
     }
 
-    public function updateTipoCambio($backup){
+    public function updateTipoCambio($backup)
+    {
         $switch = false;
         $horaActual = date("H:i:s");
         $fechaActual = now()->format('Y-m-d');
@@ -80,19 +94,25 @@ class CalculadoraService implements CalculadoraServiceInterface
             $switch = true;
         }
 
-        if($switch){
+        if ($switch) {
             $tc = $this->getApiDolar();
-            if($tc != null){
+            if ($tc != null) {
                 $this->calcRepository->updateTC($tc);
                 $this->registroRepository->update();
-            }else{
+                $this->historialRepository->updateOrCreateByDate($fechaActual, $tc);
+            } else {
                 $this->calcRepository->updateTC($backup);
                 $this->registroRepository->update();
+                $this->historialRepository->updateOrCreateByDate($fechaActual, $backup);
             }
+        } else {
+            // Asegurarnos de que el historial del día exista, por si el switch fue false
+            $this->historialRepository->updateOrCreateByDate($fechaActual, $backup);
         }
     }
 
-    public function getApiDolar(){
+    public function getApiDolar()
+    {
         try {
             $fecha = now()->format('Y-m-d');
             $response = Http::withOptions([
@@ -111,13 +131,15 @@ class CalculadoraService implements CalculadoraServiceInterface
         return null;
     }
 
-    public function obtenerCambioDolar(){
+    public function obtenerCambioDolar()
+    {
         $calculadora = $this->calcRepository->get();
         $this->updateTipoCambio($calculadora->tasaCambio);
         return $calculadora->tasaCambio;
     }
 
-    public function obtenerCambioDolarFijo(){
+    public function obtenerCambioDolarFijo()
+    {
         $calculadora = $this->calcRepository->findById();
         return $calculadora ? $calculadora->tasaCambio : null;
     }

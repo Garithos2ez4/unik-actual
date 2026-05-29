@@ -51,11 +51,17 @@ class VentaService implements VentaServiceInterface
             // 3. Crear los Detalles y sumar el total
             foreach ($detallesData as $detalle) {
                 // Validación para asegurar que hay un precio
-                $precio = (isset($detalle['precioVenta']) && $detalle['precioVenta'] !== '') ? floatval($detalle['precioVenta']) : 0;
+                $precioProvisto = isset($detalle['precioVenta']) && $detalle['precioVenta'] !== '';
+                $precio = $precioProvisto ? floatval($detalle['precioVenta']) : null;
+                
+                // Si el usuario digitó exactamente 0, guardarlo como 0.1 para evitar que herede el precio total
+                if ($precioProvisto && $precio == 0) {
+                    $precio = 0.1;
+                }
+
                 $cantidad = isset($detalle['cantidad']) ? intval($detalle['cantidad']) : 1;
                 
                 $detalle['idVenta'] = $venta->idVenta;
-                $detalle['precioVenta'] = $precio;
                 $detalle['cantidad'] = $cantidad;
                 
                 // Si viene de una publicación, el origen es PUBLICACION, si no TIENDA
@@ -64,7 +70,8 @@ class VentaService implements VentaServiceInterface
                 }
 
                 // Lógica automática: heredar precio si no se proporcionó (es nulo o string vacío)
-                if (!isset($detalle['precioVenta']) || $detalle['precioVenta'] === '') {
+                if (!$precioProvisto) {
+                    $precio = 0; // Default en caso falle
                     if ($detalle['origenPrecio'] === 'PUBLICACION' && !empty($detalle['idPublicacion'])) {
                         $publicacion = \App\Models\Publicacion::find($detalle['idPublicacion']);
                         if ($publicacion) {

@@ -125,6 +125,8 @@ use App\Repositories\LicenciaRepository;
 use App\Repositories\LicenciaRepositoryInterface;
 use App\Repositories\RegistroUpdateRepository;
 use App\Repositories\RegistroUpdateRepositoryInterface;
+use App\Repositories\HistorialTipoCambioRepository;
+use App\Repositories\HistorialTipoCambioRepositoryInterface;
 use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
@@ -195,6 +197,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RegistroUpdateRepositoryInterface::class,RegistroUpdateRepository::class);
         $this->app->bind(VentaRepositoryInterface::class,VentaRepository::class);
         $this->app->bind(DetalleVentaRepositoryInterface::class,DetalleVentaRepository::class);
+        $this->app->bind(HistorialTipoCambioRepositoryInterface::class,HistorialTipoCambioRepository::class);
 
     }
 

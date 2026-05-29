@@ -303,7 +303,6 @@ class EgresoController extends Controller
             }
         };
 
-        $export = new \App\Exports\EgresosFormatoExport();
         return \Maatwebsite\Excel\Facades\Excel::download($export, 'formato_egresos.xlsx');
     }
 }

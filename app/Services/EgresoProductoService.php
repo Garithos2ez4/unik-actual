@@ -319,6 +319,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             // Actualizar precio de venta en DetalleVenta y totalVenta en Venta
             if (isset($dataEgreso['precioVenta']) && $dataEgreso['precioVenta'] !== '') {
                 $nuevoPrecio = floatval($dataEgreso['precioVenta']);
+                
+                if ($nuevoPrecio == 0) {
+                    $nuevoPrecio = 0.1;
+                }
+
                 $detalleVenta = \App\Models\DetalleVenta::where('idEgreso', $idEgreso)->first();
                 if ($detalleVenta) {
                     $detalleVenta->precioVenta = $nuevoPrecio;

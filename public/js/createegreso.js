@@ -736,7 +736,12 @@ function renderPagos() {
         tr.innerHTML = `
             <td>${pago.nombreMetodo}</td>
             <td>${pago.ref || '-'}</td>
-            <td>S/ ${pago.monto.toFixed(2)}</td>
+            <td>
+                <div class="input-group input-group-sm mb-0 mx-auto" style="max-width: 120px;">
+                    <span class="input-group-text">S/</span>
+                    <input type="number" class="form-control text-end" step="0.01" value="${pago.monto.toFixed(2)}" onchange="updatePagoMonto(${pago.id}, this.value)">
+                </div>
+            </td>
             <td>
                 <button type="button" class="btn btn-sm btn-danger py-0 px-2" onclick="removePago(${pago.id})">
                     <i class="bi bi-x"></i>
@@ -760,9 +765,20 @@ function renderPagos() {
     validateSubmit();
 }
 
-// Debe ser global para que el onclick del HTML lo encuentre
+// Funciones globales para que el onclick/onchange del HTML las encuentre
 window.removePago = function (id) {
     pagosAgregados = pagosAgregados.filter(p => p.id !== id);
+    renderPagos();
+};
+
+window.updatePagoMonto = function (id, nuevoMonto) {
+    let monto = parseFloat(nuevoMonto);
+    if (!isNaN(monto) && monto >= 0) {
+        let pago = pagosAgregados.find(p => p.id === id);
+        if (pago) {
+            pago.monto = monto;
+        }
+    }
     renderPagos();
 };
 
@@ -781,6 +797,17 @@ document.getElementById('form-egreso')?.addEventListener('submit', function (e) 
 
     if (checkSku && checkSku.checked) {
         // Venta de tienda
+        
+        let selectMetodo = document.getElementById('pago-metodo');
+        if (selectMetodo && selectMetodo.value !== "" && pagosAgregados.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No has añadido el pago',
+                text: 'Seleccionaste un método de pago pero olvidaste presionar el botón "Añadir". Por favor, añádelo antes de registrar la venta.'
+            });
+            return; // Detener ejecución
+        }
+
         if (pagosAgregados.length === 0) {
             modalBody.innerHTML = `
                 <div class="alert alert-warning py-2 mb-0">
@@ -790,6 +817,16 @@ document.getElementById('form-egreso')?.addEventListener('submit', function (e) 
                 </div>
             `;
         } else {
+            let sumaPagos = pagosAgregados.reduce((sum, p) => sum + p.monto, 0);
+            if (Math.abs(sumaPagos - totalVenta) > 0.01) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Montos no coinciden',
+                    text: `El total de la venta es S/ ${totalVenta.toFixed(2)}, pero los pagos añadidos suman S/ ${sumaPagos.toFixed(2)}. Por favor ajusta los pagos para que coincidan.`
+                });
+                return;
+            }
+
             let listHtml = '<ul class="list-group list-group-flush text-start border">';
             pagosAgregados.forEach(p => {
                 listHtml += `<li class="list-group-item py-1 px-2 d-flex justify-content-between align-items-center">

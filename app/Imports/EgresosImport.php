@@ -5,13 +5,14 @@ namespace App\Imports;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use App\Models\RegistroProducto;
 use App\Models\Publicacion;
 use App\Services\EgresoProductoServiceInterface;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
-class EgresosImport implements ToCollection, WithHeadingRow
+class EgresosImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
 {
     protected $egresoService;
     protected $ventaService;
@@ -86,6 +87,13 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 'canal' => $canal
             ];
 
+            // Mapeo manual de la columna Plataforma del Excel a idCuentaPlataforma
+            $idCuentaPlataformaExcel = null;
+            if ($plataformaStr === 'ML LIZ') $idCuentaPlataformaExcel = 4;
+            elseif ($plataformaStr === 'FB UNIK') $idCuentaPlataformaExcel = 2;
+            elseif ($plataformaStr === 'AGORA') $idCuentaPlataformaExcel = 11;
+            elseif ($plataformaStr === 'FB GAMING') $idCuentaPlataformaExcel = 1;
+
             foreach ($filasOrden as $filaInfo) {
                 $rowArray = $filaInfo['row'];
                 $index = $filaInfo['index'];
@@ -93,6 +101,10 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 $numeroSerie = $this->getVal($rowArray, 'series', 7);
                 $sku         = $this->getVal($rowArray, 'sku', 9);
                 $numeroSerie = $numeroSerie ? trim((string)$numeroSerie) : null;
+                // Remover emojis de la serie para evitar error de collation
+                if ($numeroSerie) {
+                    $numeroSerie = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $numeroSerie);
+                }
                 $sku         = $sku ? trim((string)$sku) : null;
                 $cantidad    = $this->getVal($rowArray, 'un', 3) ?? 1;
                 $nombreProducto = $this->getVal($rowArray, 'producto', 2);
@@ -100,54 +112,8 @@ class EgresosImport implements ToCollection, WithHeadingRow
                 $fechaDespacho  = $this->transformDate($this->getVal($rowArray, 'fecha', 0));
 
                 if (empty($numeroSerie)) {
-                    if (empty($nombreProducto)) {
-                        Log::warning("Fila $index saltada: No tiene Serie ni Nombre de Producto.");
-                        continue;
-                    }
-
-                    $almacenBusqueda = str_replace(['De ', 'de '], '', $almacenNombre);
-                    $almacen = \App\Models\Almacen::where('descripcion', 'LIKE', "%$almacenBusqueda%")->first();
-                    $idAlmacen = $almacen ? $almacen->idAlmacen : null;
-
-                    $query = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-                        ->join('Producto', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-                        ->where(function ($q) use ($nombreProducto) {
-                            $q->where('Producto.nombreProducto', $nombreProducto)
-                                ->orWhere('Producto.modelo', $nombreProducto);
-                        })
-                        ->where('RegistroProducto.estado', 'NUEVO');
-
-                    if ($idAlmacen) {
-                        $query->where('RegistroProducto.idAlmacen', $idAlmacen);
-                    }
-
-                    $registrosDisponibles = $query->select('RegistroProducto.*')->take($cantidad)->get();
-
-                    if ($registrosDisponibles->isEmpty()) {
-                        Log::warning("Fila $index: No se encontró stock para '$nombreProducto' en almacén '$almacenNombre'");
-                        continue;
-                    }
-
-                    foreach ($registrosDisponibles as $registro) {
-                        $idPublicacion = null;
-                        if (!empty($sku) && strtolower($sku) !== 'no aplica') {
-                            $publicacion = Publicacion::where('sku', $sku)->first();
-                            if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
-                        }
-
-                        $itemsParaEgreso[] = [
-                            'idregistro' => $registro->idRegistro,
-                            'idpublicacion' => $idPublicacion
-                        ];
-
-                        $detallesVentaData[] = [
-                            'idRegistro' => $registro->idRegistro,
-                            'idPublicacion' => $idPublicacion,
-                            'idProducto' => $registro->DetalleComprobante->idProducto ?? null,
-                            'precioVenta' => '', // '' hace que herede auto en el service de venta
-                            'cantidad' => 1
-                        ];
-                    }
+                    Log::warning("Fila $index saltada: No tiene Serie.");
+                    continue;
                 } else {
                     $seriesArray = explode(',', $numeroSerie);
                     foreach ($seriesArray as $serieIndividual) {
@@ -161,7 +127,11 @@ class EgresosImport implements ToCollection, WithHeadingRow
                         if ($registro) {
                             $idPublicacion = null;
                             if (!empty($sku) && strtolower($sku) !== 'no aplica') {
-                                $publicacion = Publicacion::where('sku', $sku)->first();
+                                $queryPub = Publicacion::where('sku', $sku);
+                                if ($idCuentaPlataformaExcel) {
+                                    $queryPub->where('idCuentaPlataforma', $idCuentaPlataformaExcel);
+                                }
+                                $publicacion = $queryPub->first();
                                 if ($publicacion) $idPublicacion = $publicacion->idPublicacion;
                             }
 

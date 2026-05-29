@@ -343,47 +343,66 @@
      }
 
      function handleDrop(event, input, img) {
-     const dt = event.dataTransfer;
-     const files = dt.files;
+        const dt = event.dataTransfer;
+        const files = dt.files;
+    
+        if (files.length) {
+            const newDt = new DataTransfer();
+            newDt.items.add(files[0]);
+            input.files = newDt.files; // Asignar los archivos al input usando un DataTransfer persistente
+            changeImage({ target: { files: newDt.files } }, input, img);
+        }
+    }
 
-     if (files.length) {
-     input.files = files; // Asignar los archivos al input
-     changeImage({ target: { files } }, input, img);
-     }
-     }
+    function changeImage(event, input, img) {
+        const file = event.target.files ? event.target.files[0] : null;
 
-     function changeImage(event, input, img) {
-     const file = event.target.files ? event.target.files[0] : null;
+        let imgElement = img;
+        if (typeof img === 'string') {
+            let triggerId = arguments[3]; 
+            if (triggerId) {
+                imgElement = document.getElementById(triggerId);
+            } else {
+                imgElement = document.getElementById(img);
+            }
+        }
 
+        if (file) {
 
-     if (file) {
+            const reader = new FileReader();
 
-     const reader = new FileReader();
+            reader.onload = function(e) {
+                const image = new Image();
+                image.src = e.target.result;
 
-     reader.onload = function(e) {
-     const image = new Image();
-     image.src = e.target.result;
+                image.onload = function() {
+                    const maxWidth = 1000; // Ancho máximo permitido
+                    const maxHeight = 1000; // Alto máximo permitido
 
-     image.onload = function() {
-     const maxWidth = 1000; // Ancho máximo permitido
-     const maxHeight = 1000; // Alto máximo permitido
+                    if (image.width !== maxWidth || image.height !== maxHeight) {
+                        alert('La imagen no coincide con las dimensiones permitidas ' + maxWidth + ' x ' + maxHeight + ' píxeles.');
+                        input.value = ''; // Limpiar el input si no coincide
+                        if (typeof disableButton === 'function') disableButton();
+                        return;
+                    }
 
-     if (image.width !== maxWidth || image.height !== maxHeight) {
-     alert('La imagen no coincide con las dimensiones permitidas ' + maxWidth + ' x ' + maxHeight + ' píxeles.');
-     input.value = ''; // Limpiar el input si no coincide
-     return;
-     }
+                    // Si la imagen cumple con las dimensiones, actualiza la vista previa
+                    if (imgElement) imgElement.src = e.target.result;
+                    if (typeof disableButton === 'function') disableButton();
+                }
+                
+                image.onerror = function() {
+                    alert('El archivo seleccionado no es una imagen válida.');
+                    input.value = '';
+                    if (typeof disableButton === 'function') disableButton();
+                }
+            };
 
-     // Si la imagen cumple con las dimensiones, actualiza la vista previa
-     img.src = e.target.result;
-     }
-     };
-
-     reader.readAsDataURL(file);
-     }
-
-     disableButton();
-     }
+            reader.readAsDataURL(file);
+        } else {
+            if (typeof disableButton === 'function') disableButton();
+        }
+    }
 
      function validateForm() {
      let isValid = true;

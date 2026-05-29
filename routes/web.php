@@ -52,6 +52,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/licencias', [LicenciaController::class, 'index'])->name('licencias.index');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
+    Route::get('/dashboard/analitica/falabella', [AnalyticsController::class, 'falabella'])->name('dashboard.analitica.falabella');
+    Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
     
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
@@ -100,6 +102,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/documento/{id}/{bool}', [DocumentoController::class, 'index'])->name('documento');
     Route::get('/documentos/{date}', [DocumentoController::class, 'list'])->name('documentos');
     Route::post('/documento/deletecomprobante', [DocumentoController::class, 'deleteComprobante'])->name('deletecomprobante');
+    Route::post('/documento/editcomprobante', [DocumentoController::class, 'editComprobante'])->name('editcomprobante');
     Route::post('/documento/validateseries', [DocumentoController::class, 'validateSeries'])->name('validate.series');
 
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
@@ -198,6 +201,11 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/configuracion/web', [ConfiguracionController::class, 'web'])->name('configweb');
     Route::post('/configuracion/updatecorreos', [ConfiguracionController::class, 'updateCorreos'])->name('updatecorreos');
     Route::post('/configuracion/updatecuentasbancarias', [ConfiguracionController::class, 'updateCuentasBancarias'])->name('updatecuentasbancarias');
+    Route::post('/configuracion/insertcuentasbancarias', [ConfiguracionController::class, 'insertCuentasBancarias'])->name('insertcuentasbancarias');
+    Route::post('/configuracion/insertmetodopago', [ConfiguracionController::class, 'insertMetodoPago'])->name('insertmetodopago');
+    Route::post('/configuracion/inserttipometodopago', [ConfiguracionController::class, 'insertTipoMetodoPago'])->name('inserttipometodopago');
+    Route::post('/configuracion/updatemetodopago', [ConfiguracionController::class, 'updateMetodoPago'])->name('updatemetodopago');
+    Route::post('/configuracion/updatetipometodopago', [ConfiguracionController::class, 'updateTipoMetodoPago'])->name('updatetipometodopago');
 
     //Configuracion-CALCULOS
     Route::get('/configuracion/calculos', [ConfiguracionController::class, 'calculos'])->name('configcalculos');
