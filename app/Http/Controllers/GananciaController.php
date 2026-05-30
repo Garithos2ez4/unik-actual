@@ -53,11 +53,14 @@ class GananciaController extends Controller
             ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+            ->leftJoin('EgresoProducto', 'DetalleVenta.idEgreso', '=', 'EgresoProducto.idEgreso')
+            ->leftJoin('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
-                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo_raw,
+                         GROUP_CONCAT(RegistroProducto.numeroSerie SEPARATOR ', ') as series,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
-                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
+                         SUM(({$costoExpr} + ({$comisionFalabellaExpr})) * DetalleVenta.cantidad) as costos,
+                         SUM(({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
             ->orderByDesc('Venta.fechaVenta')
@@ -67,6 +70,21 @@ class GananciaController extends Controller
                 $venta->costos   = round($venta->costos, 2);
                 $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
                 $venta->comision_falabella = round($venta->comision_falabella, 2);
+
+                // Deduplicar modelos: "A, A, A, B" => "A (x3), B"
+                if ($venta->modelo_raw) {
+                    $modelos = array_map('trim', explode(',', $venta->modelo_raw));
+                    $counts = array_count_values($modelos);
+                    $parts = [];
+                    foreach ($counts as $modelo => $count) {
+                        $parts[] = $count >= 2 ? "{$modelo} (x{$count})" : $modelo;
+                    }
+                    $venta->modelo = implode(', ', $parts);
+                } else {
+                    $venta->modelo = null;
+                }
+                unset($venta->modelo_raw);
+
                 return $venta;
             });
 

@@ -797,7 +797,7 @@ document.getElementById('form-egreso')?.addEventListener('submit', function (e) 
 
     if (checkSku && checkSku.checked) {
         // Venta de tienda
-        
+
         let selectMetodo = document.getElementById('pago-metodo');
         if (selectMetodo && selectMetodo.value !== "" && pagosAgregados.length === 0) {
             Swal.fire({

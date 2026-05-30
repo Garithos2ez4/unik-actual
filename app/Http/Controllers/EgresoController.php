@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\ProductoServiceInterface;
 use App\Services\VentaServiceInterface;
+use App\Models\RegistroProducto;
 use Exception;
 
 class EgresoController extends Controller
@@ -44,7 +45,7 @@ class EgresoController extends Controller
                 $almacenes = $this->egresoService->getAllAlmacenes();
                 $usuarios = \App\Models\Usuario::all();
 
-                return view('egresos', [
+                return view('egresos.egresos', [
                     'user' => $userModel,
                     'egresos' => $egresos,
                     'almacenes' => $almacenes,
@@ -259,6 +260,75 @@ class EgresoController extends Controller
         }
 
         return back();
+    }
+
+    public function egresosMasivos()
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 9) {
+                $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
+                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
+                $empresas = \App\Models\Empresa::all();
+                $tasaCambio = app(\App\Services\CalculadoraServiceInterface::class)->obtenerCambioDolar() ?? 3.42;
+                return view('egresos.egresos_masivos', [
+                    'user' => $userModel,
+                    'metodosPago' => $metodosPago,
+                    'cuentasBancarias' => $cuentasBancarias,
+                    'empresas' => $empresas,
+                    'tasaCambio' => $tasaCambio
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function searchProductoAjax(Request $request)
+    {
+        $query = $request->input('query');
+        if (empty($query) || strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $words = array_filter(explode(' ', trim($query)));
+
+        $productos = \App\Models\Producto::query()
+            ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
+            ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1', 'MarcaProducto.nombreMarca', 'Producto.precioDolar')
+            ->where(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->where(function ($sq) use ($word) {
+                        $sq->where('Producto.nombreProducto', 'LIKE', '%' . $word . '%')
+                            ->orWhere('Producto.modelo', 'LIKE', '%' . $word . '%')
+                            ->orWhere('Producto.codigoProducto', 'LIKE', '%' . $word . '%')
+                            ->orWhere('Producto.partNumber', 'LIKE', '%' . $word . '%')
+                            ->orWhere('MarcaProducto.nombreMarca', 'LIKE', '%' . $word . '%');
+                    });
+                }
+            })
+            ->take(10)
+            ->get();
+
+        return response()->json($productos);
+    }
+
+    public function getSeriesDisponibles(Request $request)
+    {
+        $idProducto = $request->input('idProducto');
+        if (empty($idProducto)) {
+            return response()->json([]);
+        }
+
+        $series = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->join('Almacen', 'RegistroProducto.idAlmacen', '=', 'Almacen.idAlmacen')
+            ->where('DetalleComprobante.idProducto', $idProducto)
+            ->where('RegistroProducto.estado', 'NUEVO')
+            ->select('RegistroProducto.idRegistro', 'RegistroProducto.numeroSerie', 'Almacen.descripcion as almacen')
+            ->orderBy('RegistroProducto.idRegistro', 'desc')
+            ->get();
+
+        return response()->json($series);
     }
 
     public function descargarFormato()
