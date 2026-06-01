@@ -20,9 +20,10 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
         try {
             $envio = EnvioProvincia::create($data);
 
-            if (!empty($data['dir']) || !empty($data['ref'])) {
+            if (isset($data['entrega_domicilio']) || !empty($data['dir']) || !empty($data['ref'])) {
                 EnvioProvinciaDetalle::create([
                     'idEnvioProvincia' => $envio->idEnvioProvincia,
+                    'entrega_domicilio' => $data['entrega_domicilio'] ?? 0,
                     'dir' => $data['dir'] ?? null,
                     'ref' => $data['ref'] ?? null
                 ]);
@@ -54,10 +55,11 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
             $envio = EnvioProvincia::findOrFail($idEnvioProvincia);
             $envio->update($data);
 
-            if (!empty($data['dir']) || !empty($data['ref'])) {
+            if (isset($data['entrega_domicilio']) || !empty($data['dir']) || !empty($data['ref'])) {
                 EnvioProvinciaDetalle::updateOrCreate(
                     ['idEnvioProvincia' => $envio->idEnvioProvincia],
                     [
+                        'entrega_domicilio' => $data['entrega_domicilio'] ?? 0,
                         'dir' => $data['dir'] ?? null,
                         'ref' => $data['ref'] ?? null
                     ]

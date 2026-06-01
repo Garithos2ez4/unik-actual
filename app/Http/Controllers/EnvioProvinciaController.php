@@ -489,7 +489,8 @@ class EnvioProvinciaController extends Controller
                 'token_expires_at' => now()->addMinutes(20),
             ]);
 
-            $link = url("/formulario-envio/{$token}");
+            $baseUrl = rtrim(config('app.public_envio_url', url('/')), '/');
+            $link = "{$baseUrl}/formulario-envio/{$token}";
 
             return response()->json([
                 'success' => true,
@@ -540,7 +541,8 @@ class EnvioProvinciaController extends Controller
                 'token_expires_at' => now()->addMinutes(20),
             ]);
 
-            $link = url("/formulario-envio/{$token}");
+            $baseUrl = rtrim(config('app.public_envio_url', url('/')), '/');
+            $link = "{$baseUrl}/formulario-envio/{$token}";
 
             return response()->json([
                 'success' => true,

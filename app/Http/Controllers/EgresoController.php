@@ -67,11 +67,13 @@ class EgresoController extends Controller
                 $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
                 $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
                 $empresas = \App\Models\Empresa::all();
+                $tipoDocumentos = \App\Models\TipoDocumento::all();
                 return view('createegreso', [
                     'user' => $userModel,
                     'metodosPago' => $metodosPago,
                     'cuentasBancarias' => $cuentasBancarias,
-                    'empresas' => $empresas
+                    'empresas' => $empresas,
+                    'tipoDocumentos' => $tipoDocumentos
                 ]);
             }
         }
@@ -95,6 +97,10 @@ class EgresoController extends Controller
                 }
 
                 if (!is_null($fechapedido) && !is_null($fechadespacho)) {
+                    if ($fechapedido > $fechadespacho) {
+                        $this->headerService->sendFlashAlerts('Error de validación', 'La fecha de pedido no puede ser posterior a la fecha de despacho', 'error', 'btn-danger');
+                        return back();
+                    }
                     $arrayEgreso = [
                         'numeroOrden' => $numeroorden == 'No aplica' ? null : $numeroorden,
                         'fechaCompra' => $fechapedido,
@@ -184,6 +190,10 @@ class EgresoController extends Controller
                 $precio_venta = $request->input('precio_venta');
 
                 if (isset($transaccion) && isset($idegreso)) {
+                    if ($transaccion === 'update' && !empty($fecha_compra) && !empty($fecha_despacho) && $fecha_compra > $fecha_despacho) {
+                        $this->headerService->sendFlashAlerts('Error de validación', 'La fecha de compra no puede ser posterior a la fecha de despacho', 'error', 'btn-danger');
+                        return back();
+                    }
                     $dataEgreso = [
                         'sku' => $sku,
                         'numeroOrden' => $nro_orden,
@@ -273,13 +283,15 @@ class EgresoController extends Controller
                 $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
                 $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
                 $empresas = \App\Models\Empresa::all();
+                $tipoDocumentos = \App\Models\TipoDocumento::all();
                 $tasaCambio = app(\App\Services\CalculadoraServiceInterface::class)->obtenerCambioDolar() ?? 3.42;
                 return view('egresos.egresos_masivos', [
                     'user' => $userModel,
                     'metodosPago' => $metodosPago,
                     'cuentasBancarias' => $cuentasBancarias,
                     'empresas' => $empresas,
-                    'tasaCambio' => $tasaCambio
+                    'tasaCambio' => $tasaCambio,
+                    'tipoDocumentos' => $tipoDocumentos
                 ]);
             }
         }

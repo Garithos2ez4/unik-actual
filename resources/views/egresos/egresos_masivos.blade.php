@@ -7,7 +7,7 @@
     <br>
     <div class="row">
         <div class="col-12 col-md-6">
-            <h2><a href="javascript:void(0)" onclick="window.history.back()" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> <i class="bi bi-lightning-charge-fill text-primary"></i> Egreso Masivo</h2>
+            <h2><a href="javascript:void(0)" onclick="window.history.back()" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> <i class="bi bi-lightning-charge-fill text-primary"></i> Egreso Masivo <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" class="btn btn-sm btn-outline-primary ms-2" title="Añadir Cliente"><i class="bi bi-person-fill-add"></i></a></h2>
             <p class="text-muted mb-1">Busca productos, selecciona sus series, asígnales un SKU y agrégalos a la lista para procesarlos juntos.</p>
         </div>
     </div>
@@ -288,4 +288,5 @@
     };
 </script>
 <script src="{{asset('js/egresos_masivos.js')}}?v=1.0"></script>
+@include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

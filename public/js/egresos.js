@@ -34,6 +34,29 @@ function handleBtnRegistrar() {
 
 document.addEventListener('DOMContentLoaded', function () {
     handleBtnRegistrar();
+
+    const inputFechaCompra = document.getElementById('modal-egreso-edit-fecha-compra');
+    const inputFechaDespacho = document.getElementById('modal-egreso-edit-fecha-despacho');
+
+    if (inputFechaCompra && inputFechaDespacho) {
+        inputFechaCompra.addEventListener('change', function () {
+            if (this.value && this.value < '2024-01-01') {
+                alert('La fecha de compra no puede ser anterior al año 2024');
+                this.value = '2024-01-01';
+            }
+            inputFechaDespacho.min = this.value;
+            if (inputFechaDespacho.value && inputFechaDespacho.value < this.value) {
+                inputFechaDespacho.value = this.value;
+            }
+        });
+
+        inputFechaDespacho.addEventListener('change', function () {
+            if (inputFechaCompra.value && this.value < inputFechaCompra.value) {
+                alert('La fecha de despacho no puede ser anterior a la fecha de compra');
+                this.value = inputFechaCompra.value;
+            }
+        });
+    }
 });
 
 
@@ -283,6 +306,14 @@ function formDetailEgreso(transaction) {
     }
 
     if (transaction === 'update') {
+        let fechaCompra = document.getElementById('modal-egreso-edit-fecha-compra').value;
+        let fechaDespacho = document.getElementById('modal-egreso-edit-fecha-despacho').value;
+
+        if (fechaCompra && fechaDespacho && fechaCompra > fechaDespacho) {
+            alert('La fecha de compra no puede ser posterior a la fecha de despacho.');
+            return;
+        }
+
         let hasDetalleVentaInput = document.getElementById('modal-egreso-has-detalle-venta');
         if (hasDetalleVentaInput && hasDetalleVentaInput.value === 'false') {
             let confirmModal = new bootstrap.Modal(document.getElementById('confirmMigrationModal'));

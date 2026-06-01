@@ -76,6 +76,9 @@
                     <div class="input-group-text" id="btn-clear-cliente" style="cursor:pointer; display:none;" onclick="clearCliente()">
                         <i class="bi bi-x"></i>
                     </div>
+                    <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" class="input-group-text bg-primary text-white" title="Añadir Cliente" style="text-decoration: none;">
+                        <i class="bi bi-person-fill-add"></i>
+                    </a>
                     <input type="hidden" name="idCliente" id="hidden-id-cliente" value="">
                     <ul class="list-group" id="suggestions-cliente"
                         style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
@@ -234,4 +237,5 @@
     window.assetUrl = "{{ asset('storage/') }}";
 </script>
 <script src="{{asset('js/createegreso.js')}}?v=1.15"></script>
+@include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

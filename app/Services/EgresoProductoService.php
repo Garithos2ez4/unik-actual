@@ -54,9 +54,6 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
             $producto = $details->DetalleComprobante->Producto;
             $precioInventario = $details->DetalleComprobante->precioUnitario ?? 0;
-            if ($precioInventario <= 1) {
-                $precioInventario = $details->DetalleComprobante->precioCompra ?? 0;
-            }
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
@@ -99,9 +96,6 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         if ($egreso) {
             $producto = $egreso->DetalleComprobante->Producto;
             $precioInventario = $egreso->DetalleComprobante->precioUnitario ?? 0;
-            if ($precioInventario <= 1) {
-                $precioInventario = $egreso->DetalleComprobante->precioCompra ?? 0;
-            }
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
@@ -316,7 +310,12 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 $publicacion = $this->getPublicacion($dataEgreso['sku']);
                 $updateData['idPublicacion'] = $publicacion ? $publicacion->idPublicacion : null;
             }
-            if (isset($dataEgreso['fechaCompra'])) $updateData['fechaCompra'] = $dataEgreso['fechaCompra'];
+            if (isset($dataEgreso['fechaCompra'])) {
+                $updateData['fechaCompra'] = $dataEgreso['fechaCompra'];
+                if ($registro->estado === 'ENTREGADO') {
+                    $this->registroRepository->update($registro->idRegistro, ['fechaMovimiento' => $dataEgreso['fechaCompra']]);
+                }
+            }
             if (isset($dataEgreso['fechaDespacho'])) $updateData['fechaDespacho'] = $dataEgreso['fechaDespacho'];
             if (isset($dataEgreso['numeroOrden'])) $updateData['numeroOrden'] = $dataEgreso['numeroOrden'];
 
