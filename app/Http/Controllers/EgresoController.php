@@ -101,6 +101,7 @@ class EgresoController extends Controller
                         'fechaDespacho' => $fechadespacho
                     ];
 
+                    \Illuminate\Support\Facades\DB::beginTransaction();
                     try {
                         // 1. Crear el egreso (stock)
                         $createResult = $this->egresoService->createEgreso($arrayEgreso, $items);
@@ -149,9 +150,11 @@ class EgresoController extends Controller
                         // 4. Crear la Venta
                         $this->ventaService->createVenta($ventaData, $detallesVenta, $pagos);
 
+                        \Illuminate\Support\Facades\DB::commit();
                         $this->headerService->sendFlashAlerts('Egreso y Venta registrados', 'Operacion exitosa', 'success', 'btn-success');
                         return back();
                     } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\DB::rollBack();
                         $this->headerService->sendFlashAlerts('Error al registrar egreso/venta', $e->getMessage(), 'error', 'btn-danger');
                         return back();
                     }

@@ -20,6 +20,32 @@
     <!-- Controles de Filtros -->
     @include('analytics.partials.topcontrols')
 
+    <!-- Resumen por Métodos de Pago -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-wallet2 me-2 text-primary"></i>Ingresos por Método de Pago</h5>
+            <div class="row g-3">
+                @forelse($pagosTienda as $pago)
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left: 4px solid var(--unik-primary) !important;">
+                            <div class="card-body p-3">
+                                <div class="text-uppercase small fw-bold text-secondary mb-1">{{ $pago->metodo_pago }}</div>
+                                <h4 class="fw-bold text-dark mb-0">S/ {{ number_format($pago->total_monto, 2) }}</h4>
+                                <div class="small text-muted mt-2"><i class="bi bi-receipt me-1"></i>{{ $pago->cantidad_transacciones }} transacciones</div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="alert alert-light border text-muted">
+                            <i class="bi bi-info-circle me-2"></i>No hay pagos registrados en este período.
+                        </div>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
     <!-- Tabla de Ventas -->
     <div class="card border-0 shadow-sm rounded-4 mt-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">

@@ -53,7 +53,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $egresos = $this->registroRepository->searchByEgreso($serial, 7, $excludeArray);
         $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
             $producto = $details->DetalleComprobante->Producto;
-            $precioDolarBase = $producto->precioDolar ?? 0;
+            $precioInventario = $details->DetalleComprobante->precioUnitario ?? 0;
+            if ($precioInventario <= 1) {
+                $precioInventario = $details->DetalleComprobante->precioCompra ?? 0;
+            }
+            $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
@@ -94,7 +98,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
         if ($egreso) {
             $producto = $egreso->DetalleComprobante->Producto;
-            $precioDolarBase = $producto->precioDolar ?? 0;
+            $precioInventario = $egreso->DetalleComprobante->precioUnitario ?? 0;
+            if ($precioInventario <= 1) {
+                $precioInventario = $egreso->DetalleComprobante->precioCompra ?? 0;
+            }
+            $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);

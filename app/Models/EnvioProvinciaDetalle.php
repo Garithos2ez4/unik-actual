@@ -11,6 +11,7 @@ class EnvioProvinciaDetalle extends Model
 
     protected $fillable = [
         'idEnvioProvincia',
+        'entrega_domicilio',
         'dir',
         'ref'
     ];

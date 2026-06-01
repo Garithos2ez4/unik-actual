@@ -121,8 +121,15 @@
                             </div>
 
                             <!-- Dirección y Referencia -->
+                            <div class="col-md-12 d-flex align-items-center mb-2">
+                                <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #f8f9fa;">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1">
+                                    <label class="form-check-label fw-bold text-primary" for="entrega_domicilio">¿Entrega a Domicilio?</label>
+                                </div>
+                            </div>
+
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Dirección (Dir) <span class="text-muted">(Opcional)</span></label>
+                                <label class="form-label fw-bold" id="label-dir">Dirección (Dir) <span class="text-muted">(Opcional)</span></label>
                                 <input type="text" name="dir" class="form-control" maxlength="100" placeholder="Dirección de envío">
                             </div>
                             <div class="col-md-6">
@@ -241,6 +248,15 @@
             document.getElementById('form-create-envio').submit();
         }
     }
+
+    document.getElementById('entrega_domicilio').addEventListener('change', function() {
+        const labelDir = document.getElementById('label-dir');
+        if (this.checked) {
+            labelDir.innerHTML = 'Dirección Exacta (Dir) <span class="text-muted">(Opcional)</span>';
+        } else {
+            labelDir.innerHTML = 'Dirección (Dir) <span class="text-muted">(Opcional)</span>';
+        }
+    });
 </script>
 
 @endsection

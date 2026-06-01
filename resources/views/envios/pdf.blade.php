@@ -535,7 +535,7 @@ return $iniciales . '.' . $ultima;
                         <div class="dest-title">Destinatario:</div>
 
                         <div class="d-line-group">
-                            <div class="d-value" style="font-size: 22px;">{{ $envio->Cliente->nombre }} {{ $envio->Cliente->apellidoPaterno }} {{ $envio->Cliente->apellidoMaterno ?? '' }}</div>
+                            <div class="d-value" style="font-size: 22px;">{{ $envio->Cliente->nombre ?? '' }} {{ $envio->Cliente->apellidoPaterno ?? '' }} {{ $envio->Cliente->apellidoMaterno ?? '' }}</div>
                         </div>
 
                         <div class="d-line-group">

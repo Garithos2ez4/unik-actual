@@ -28,7 +28,6 @@ class GananciaController extends Controller
                 INNER JOIN Comprobante c ON c.idComprobante = dc.idComprobante
                 WHERE ep.idEgreso = DetalleVenta.idEgreso
                   AND dc.precioUnitario > 1
-                  AND c.numeroComprobante NOT LIKE 'INVENTARIO%'
                 LIMIT 1
             ),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
@@ -86,6 +85,66 @@ class GananciaController extends Controller
                 unset($venta->modelo_raw);
 
                 return $venta;
+            });
+
+        return response()->json([
+            'success'  => true,
+            'tc_usado' => $tc,
+            'data'     => $ganancias
+        ]);
+    }
+
+    /**
+     * Devuelve las ganancias detalladas por cada producto (DetalleVenta) de todas las ventas.
+     */
+    public function getAllGananciasPorDetalle()
+    {
+        $tc = $this->calculadoraService->getTasaCambio();
+        $costoExpr = $this->costoUnitarioExpr($tc);
+
+        $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
+                (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
+                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
+            ELSE 0 END";
+
+        $ganancias = \App\Models\DetalleVenta::query()
+            ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+            ->leftJoin('EgresoProducto', 'DetalleVenta.idEgreso', '=', 'EgresoProducto.idEgreso')
+            ->leftJoin('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+            ->selectRaw("DetalleVenta.idDetalleVenta, Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                         Producto.nombreProducto,
+                         Producto.modelo,
+                         DetalleVenta.cantidad,
+                         GROUP_CONCAT(RegistroProducto.numeroSerie SEPARATOR ', ') as series,
+                         (DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         (({$costoExpr} + ({$comisionFalabellaExpr})) * DetalleVenta.cantidad) as costos,
+                         (({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella")
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->groupBy(
+                'DetalleVenta.idDetalleVenta',
+                'Venta.idVenta',
+                'Venta.fechaVenta',
+                'Venta.idUser',
+                'Usuario.user',
+                'Producto.nombreProducto',
+                'Producto.modelo',
+                'DetalleVenta.cantidad',
+                'DetalleVenta.precioVenta',
+                'GrupoProducto.idCategoria',
+                'GrupoProducto.idGrupoProducto',
+                'Venta.canal'
+            )
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->map(function ($detalle) {
+                $detalle->ingresos = round($detalle->ingresos, 2);
+                $detalle->costos   = round($detalle->costos, 2);
+                $detalle->ganancia = round($detalle->ingresos - $detalle->costos, 2);
+                $detalle->comision_falabella = round($detalle->comision_falabella, 2);
+                return $detalle;
             });
 
         return response()->json([

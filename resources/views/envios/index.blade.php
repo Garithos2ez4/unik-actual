@@ -14,14 +14,27 @@
             <form action="{{ route('envios.index') }}" method="GET" class="d-inline-block me-2">
                 <div class="input-group">
                     <input type="date" name="fecha" id="input_fecha" class="form-control" value="{{ request('fecha', date('Y-m-d')) }}" onchange="this.form.submit()" required>
-                    <button type="button" onclick="imprimirSeleccionados()" class="btn btn-danger shadow-sm" title="Imprime los seleccionados, o todo el día si no hay ninguno seleccionado">
-                        <i class="bi bi-file-earmark-pdf-fill"></i> Imprimir Selección / Día
-                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-danger dropdown-toggle shadow-sm" type="button" id="dropdownImprimir" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-printer-fill"></i> Imprimir / Exportar
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownImprimir">
+                            <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('pdf')"><i class="bi bi-file-earmark-pdf text-danger"></i> Lista PDF</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('etiquetas')"><i class="bi bi-tags text-primary"></i> Etiquetas</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('excel')"><i class="bi bi-file-earmark-excel text-success"></i> Exportar Excel</a></li>
+                        </ul>
+                    </div>
                 </div>
             </form>
             <a href="{{ route('envios.create') }}" class="btn btn-primary shadow-sm">
                 <i class="bi bi-plus-circle-fill"></i> Nuevo Envío
             </a>
+            @if($user->Accesos->contains('idVista', 14))
+            <button type="button" class="btn btn-success shadow-sm" onclick="generarLinkCliente()">
+                <i class="bi bi-link-45deg"></i> Generar Link Cliente
+            </button>
+            @endif
         </div>
     </div>
 
@@ -122,19 +135,96 @@
 </div>
 
 <script>
-    function imprimirSeleccionados() {
-        // Collect all checked checkboxes
+    function accionSeleccionados(tipo) {
         let checkboxes = document.querySelectorAll('.envio-checkbox:checked');
         let seleccionados = Array.from(checkboxes).map(cb => cb.value);
+        let baseUrl = '';
+
+        if (tipo === 'pdf') baseUrl = '{{ route("envios.pdf") }}';
+        if (tipo === 'etiquetas') baseUrl = '{{ route("envios.etiquetas") }}';
+        if (tipo === 'excel') baseUrl = '{{ route("envios.excel") }}';
 
         if (seleccionados.length > 0) {
-            // Print only selected
-            window.open('{{ route("envios.pdf") }}?ids=' + seleccionados.join(','), '_blank');
+            window.open(baseUrl + '?ids=' + seleccionados.join(','), tipo === 'excel' ? '_self' : '_blank');
         } else {
-            // Fallback to print the whole day
             let fecha = document.getElementById('input_fecha').value;
-            window.open('{{ route("envios.pdf") }}?fecha=' + fecha, '_blank');
+            window.open(baseUrl + '?fecha=' + fecha, tipo === 'excel' ? '_self' : '_blank');
         }
+    }
+
+    function generarLinkCliente() {
+        Swal.fire({
+            title: 'Generar Link para Cliente',
+            text: 'Se creará un formulario público que el cliente podrá llenar. El link expira en 20 minutos.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Generar Link',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#00b1b9'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('{{ route("envios.generar-link") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        navigator.clipboard.writeText(data.link).then(() => {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Link copiado!',
+                                html: `<p>El link fue copiado al portapapeles.</p>
+                                       <div class="input-group mt-3">
+                                           <input type="text" class="form-control form-control-sm" value="${data.link}" readonly id="link-generado">
+                                           <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('link-generado').value)">
+                                               <i class="bi bi-clipboard"></i>
+                                           </button>
+                                       </div>
+                                       <small class="text-muted d-block mt-2">Expira en ${data.expira_en}</small>`,
+                                confirmButtonColor: '#00b1b9'
+                            }).then(() => location.reload());
+                        });
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function regenerarLink(idEnvio) {
+        fetch(`/envios-provincias/regenerar-link/${idEnvio}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                navigator.clipboard.writeText(data.link).then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Nuevo link copiado!',
+                        html: `<div class="input-group mt-2">
+                                   <input type="text" class="form-control form-control-sm" value="${data.link}" readonly id="link-regen">
+                                   <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('link-regen').value)">
+                                       <i class="bi bi-clipboard"></i>
+                                   </button>
+                               </div>
+                               <small class="text-muted d-block mt-2">Nuevo timer: ${data.expira_en}</small>`,
+                        confirmButtonColor: '#00b1b9'
+                    });
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        });
     }
 </script>
 @endsection

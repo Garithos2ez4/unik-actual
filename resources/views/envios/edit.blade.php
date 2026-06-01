@@ -23,7 +23,7 @@
                             <div class="col-md-12">
                                 <label class="form-label fw-bold">Buscar Cliente <span class="text-danger">*</span></label>
                                 <div class="input-group" id="div-input-group-cliente" style="position: relative">
-                                    <input type="text" class="form-control" value="{{ $envio->Cliente->numeroDocumento ?? $envio->Cliente->nombre }}" placeholder="Buscar por Nro Documento o Nombre..." id="input-search-cliente" autocomplete="off">
+                                    <input type="text" class="form-control" value="{{ optional($envio->Cliente)->numeroDocumento ?? optional($envio->Cliente)->nombre }}" placeholder="Buscar por Nro Documento o Nombre..." id="input-search-cliente" autocomplete="off">
                                     <button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" title="Nuevo Cliente">
                                         <i class="bi bi-person-plus-fill"></i>
                                     </button>
@@ -34,11 +34,11 @@
 
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Nombres del Cliente</label>
-                                <input type="text" id="input-cliente-nombre" class="form-control bg-light" value="{{ $envio->Cliente->nombre }} {{ $envio->Cliente->apellidoPaterno ?? '' }} {{ $envio->Cliente->apellidoMaterno ?? '' }}" placeholder="Se completará automáticamente" readonly>
+                                <input type="text" id="input-cliente-nombre" class="form-control bg-light" value="{{ optional($envio->Cliente)->nombre }} {{ optional($envio->Cliente)->apellidoPaterno }} {{ optional($envio->Cliente)->apellidoMaterno }}" placeholder="Se completará automáticamente" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Celular / Contacto</label>
-                                <input type="text" id="input-cliente-telefono" class="form-control bg-light" value="{{ $envio->Cliente->telefono ?? '' }}" placeholder="Número de contacto" readonly>
+                                <input type="text" id="input-cliente-telefono" class="form-control bg-light" value="{{ optional($envio->Cliente)->telefono }}" placeholder="Número de contacto" readonly>
                             </div>
 
                             <!-- Plataforma / Cuenta -->
@@ -141,8 +141,17 @@
                             </div>
 
                             <!-- Dirección y Referencia -->
+                            <div class="col-md-12 d-flex align-items-center mb-2">
+                                <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #f8f9fa;">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1" {{ optional($envio->Detalle)->entrega_domicilio ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-bold text-primary" for="entrega_domicilio">¿Entrega a Domicilio?</label>
+                                </div>
+                            </div>
+
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Dirección (Dir) <span class="text-muted">(Opcional)</span></label>
+                                <label class="form-label fw-bold" id="label-dir">
+                                    {{ optional($envio->Detalle)->entrega_domicilio ? 'Dirección Exacta (Dir)' : 'Dirección (Dir)' }} <span class="text-muted">(Opcional)</span>
+                                </label>
                                 <input type="text" name="dir" class="form-control" maxlength="100" value="{{ $envio->Detalle->dir ?? '' }}" placeholder="Dirección de envío">
                             </div>
                             <div class="col-md-6">
@@ -160,7 +169,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Clave</label>
-                                <input type="text" name="clave" class="form-control" value="{{ $envio->clave }}" placeholder="Clave para recojo" readonly>
+                                <input type="text" name="clave" class="form-control" value="{{ $envio->clave }}" placeholder="Clave para recojo">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Dato Adicional</label>
@@ -225,5 +234,16 @@
 @include('envios.components.modal_new_provincia')
 @include('envios.components.modal_new_sub_agencia')
 @include('envios.components.modal_new_cliente')
+
+<script>
+    document.getElementById('entrega_domicilio').addEventListener('change', function() {
+        const labelDir = document.getElementById('label-dir');
+        if (this.checked) {
+            labelDir.innerHTML = 'Dirección Exacta (Dir) <span class="text-muted">(Opcional)</span>';
+        } else {
+            labelDir.innerHTML = 'Dirección (Dir) <span class="text-muted">(Opcional)</span>';
+        }
+    });
+</script>
 
 @endsection

@@ -273,7 +273,7 @@ class AnalyticsController extends Controller
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1 AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
              LIMIT 1),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
@@ -310,7 +310,7 @@ class AnalyticsController extends Controller
             ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, $precioPubExpr as ingresos,
                          (COALESCE(
-                            NULLIF(CASE WHEN DetalleComprobante.precioUnitario > 1 AND Comprobante.numeroComprobante NOT LIKE 'INVENTARIO%' THEN 
+                            NULLIF(CASE WHEN DetalleComprobante.precioUnitario > 1 THEN 
                                 (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $tc ELSE DetalleComprobante.precioUnitario END) 
                             ELSE NULL END, NULL),
                             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
@@ -366,7 +366,7 @@ class AnalyticsController extends Controller
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1 AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
              LIMIT 1),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
@@ -427,7 +427,7 @@ class AnalyticsController extends Controller
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1 AND c_inner.numeroComprobante NOT LIKE 'INVENTARIO%'
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
              LIMIT 1),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
@@ -458,9 +458,20 @@ class AnalyticsController extends Controller
                 return $venta;
             });
 
+        $pagosTienda = \App\Models\PagoVenta::query()
+            ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
+            ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
+            ->selectRaw("MetodoPago.nombreMetodo as metodo_pago, SUM(PagoVenta.monto) as total_monto, COUNT(PagoVenta.idPagoVenta) as cantidad_transacciones")
+            ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('MetodoPago.nombreMetodo')
+            ->orderByDesc('total_monto')
+            ->get();
+
         return view('analytics.components.tienda_venta', [
             'user' => $userModel,
             'ventasTienda' => $ventasTienda,
+            'pagosTienda' => $pagosTienda,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }

@@ -13,6 +13,8 @@ class Cliente extends Model
     
     protected $primaryKey = 'idCliente';
     
+    public $incrementing = false;
+    
     protected $fillable = ['idCliente',
                             'nombre',
                             'apellidoPaterno',

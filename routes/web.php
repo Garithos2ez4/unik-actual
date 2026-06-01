@@ -28,6 +28,7 @@ use App\Http\Controllers\GananciaController;
 //scripts
 use App\Http\Controllers\ScriptController;
 use App\Http\Controllers\TrasladoController;
+use App\Http\Controllers\FormularioPublicoController;
 
 Route::withoutMiddleware(['validate.session'])->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('login');
@@ -41,6 +42,16 @@ Route::withoutMiddleware(['validate.session'])->group(function () {
     Route::get('/js/product-update-scripts.js/{tc}', [ScriptController::class, 'updateProductScript'])->name('js.update-product-scripts');
     Route::get('/js/product-list-scripts.js/{tc}', [ScriptController::class, 'listProductScript'])->name('js.list-product-scripts');
     Route::get('/js/config-calculos.js', [ScriptController::class, 'configCalculosScript'])->name('js.config-calculos.js');
+
+    // Formulario público para clientes (sin sesión)
+    Route::prefix('formulario-envio')->group(function () {
+        Route::get('/api/provincias/{idDepartamento}', [FormularioPublicoController::class, 'provincias']);
+        Route::get('/api/destinos/{idProvincia}', [FormularioPublicoController::class, 'destinos']);
+        Route::get('/api/subagencias/{idAgencia}/{idDestino}', [FormularioPublicoController::class, 'subagencias']);
+        Route::get('/api/buscar-cliente/{documento}', [FormularioPublicoController::class, 'buscarCliente']);
+        Route::get('/{token}', [FormularioPublicoController::class, 'show'])->name('formulario.publico.show');
+        Route::post('/{token}', [FormularioPublicoController::class, 'store'])->name('formulario.publico.store');
+    });
 });
 
 
@@ -57,6 +68,7 @@ Route::middleware(['validate.session'])->group(function () {
     
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
+    Route::get('/ganancias/detalles', [GananciaController::class, 'getAllGananciasPorDetalle'])->name('ganancias.detalles');
     Route::get('/ganancias/venta/{idVenta}', [GananciaController::class, 'getGananciaPorVenta'])->name('ganancias.venta');
 
     Route::get('/home', fn() => redirect()->route('dashboard'))->name('home');
@@ -112,6 +124,9 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/total', [EgresoController::class, 'getTotalEgresos'])->name('egresos.total');
     Route::post('/egresos/importar', [EgresoController::class, 'importarExcel'])->name('egresos.importar');
     Route::get('/egresos/descargar-formato', [EgresoController::class, 'descargarFormato'])->name('egresos.formato');
+    Route::get('/egresos/masivos', [EgresoController::class, 'egresosMasivos'])->name('egresos.masivos');
+    Route::get('/egresos/search-producto-ajax', [EgresoController::class, 'searchProductoAjax'])->name('egresos.searchproducto');
+    Route::get('/egresos/series-disponibles', [EgresoController::class, 'getSeriesDisponibles'])->name('egresos.seriesdisponibles');
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
@@ -141,6 +156,9 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/edit/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'edit'])->name('edit');
         Route::put('/update/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'update'])->name('update');
         Route::get('/pdf', [\App\Http\Controllers\EnvioProvinciaController::class, 'pdf'])->name('pdf');
+        Route::get('/excel', [\App\Http\Controllers\EnvioProvinciaController::class, 'excel'])->name('excel');
+        Route::get('/etiquetas', [\App\Http\Controllers\EnvioProvinciaController::class, 'etiquetas'])->name('etiquetas');
+        Route::get('/solicitudes', [\App\Http\Controllers\EnvioProvinciaController::class, 'obtenerSolicitudes'])->name('solicitudes');
 
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
@@ -152,6 +170,8 @@ Route::middleware(['validate.session'])->group(function () {
         Route::post('/sub-agencia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeSubAgencia'])->name('subagencia.store');
         Route::post('/provincia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeProvincia'])->name('provincia.store');
         Route::post('/destino', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeDestino'])->name('destino.store');
+        Route::post('/generar-link', [\App\Http\Controllers\EnvioProvinciaController::class, 'generarLinkPublico'])->name('generar-link');
+        Route::post('/regenerar-link/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'regenerarLink'])->name('regenerar-link');
     });
     // FALABELLA
     Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {

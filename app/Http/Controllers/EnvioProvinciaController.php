@@ -31,10 +31,18 @@ class EnvioProvinciaController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 12) {
                 $fecha = $request->query('fecha', date('Y-m-d'));
-                $envios = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'CuentaPlataforma', 'Agencia', 'Destino', 'Productos.Producto', 'Detalle'
+                $envios = EnvioProvincia::with([
+                    'Usuario',
+                    'Cliente',
+                    'Plataforma',
+                    'CuentaPlataforma',
+                    'Agencia',
+                    'Destino',
+                    'Productos.Producto',
+                    'Detalle'
                 ])->whereDate('fecha_envio', $fecha)
-                ->orderBy('fecha_envio', 'desc')
-                ->get();
+                    ->orderBy('fecha_envio', 'desc')
+                    ->get();
 
                 return view('envios.index', [
                     'user' => $userModel,
@@ -104,10 +112,10 @@ class EnvioProvinciaController extends Controller
                 $plataformas = Plataforma::with('CuentasPlataforma')->get();
                 $agencias = Agencia::where('estado', 1)->orderBy('nombre', 'asc')->get();
                 $departamentos = Departamento::orderBy('nombre', 'asc')->get();
-                
+
                 $selectedDeptoId = optional(optional(optional($envio->Destino)->Provincia)->Departamento)->idDepartamento;
                 $provincias = $selectedDeptoId ? Provincia::where('idDepartamento', $selectedDeptoId)->orderBy('nombre', 'asc')->get() : collect();
-                
+
                 $selectedProvId = optional(optional($envio->Destino)->Provincia)->idProvincia;
                 $destinos = $selectedProvId ? Destino::where('idProvincia', $selectedProvId)->orderBy('nombre', 'asc')->get() : collect();
 
@@ -137,7 +145,6 @@ class EnvioProvinciaController extends Controller
         try {
             $data = $request->all();
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
-            unset($data['clave']);
             $productos = $request->input('productos', []);
 
             $this->envioService->updateEnvio($id, $data, $productos);
@@ -149,7 +156,7 @@ class EnvioProvinciaController extends Controller
             return redirect()->back()->withInput();
         }
     }
-    
+
     public function pdf(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
@@ -157,7 +164,7 @@ class EnvioProvinciaController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 12) {
                 $ids = $request->query('ids');
-                
+
                 $query = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'CuentaPlataforma', 'Agencia', 'Destino.Provincia', 'Productos.Producto.GrupoProducto', 'Productos.Producto.MarcaProducto', 'Detalle']);
 
                 if (!empty($ids)) {
@@ -178,6 +185,119 @@ class EnvioProvinciaController extends Controller
 
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ver esta sección', 'warning', 'btn-danger');
         return redirect()->route('dashboard');
+    }
+
+    public function excel(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 12) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        if (!$hasAccess) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ver esta sección', 'warning', 'btn-danger');
+            return redirect()->route('dashboard');
+        }
+
+        $ids = $request->query('ids');
+        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'Productos.Producto']);
+
+        if (!empty($ids)) {
+            $idArray = explode(',', $ids);
+            $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
+        } else {
+            $fecha = $request->query('fecha', date('Y-m-d'));
+            $envios = $query->whereDate('fecha_envio', $fecha)->get();
+        }
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="envios_' . date('Y-m-d') . '.csv"',
+        ];
+
+        $callback = function () use ($envios) {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF"); // BOM para Excel
+            fputcsv($file, [
+                'DESTINATARIO (DOC)',
+                'TELF. DESTINATARIO',
+                'CONTACTO (DOC)',
+                'TELF. CONTACTO',
+                'NRO GRR',
+                'ORIGEN',
+                'DESTINO',
+                'MERCADERIA',
+                'ALTO',
+                'ANCHO',
+                'LARGO',
+                'PESO',
+                'CANTIDAD'
+            ], ';');
+
+            foreach ($envios as $envio) {
+                $mercaderia = $envio->Productos->map(function ($p) {
+                    return $p->Producto->nombreProducto ?? 'Producto';
+                })->implode(' / ');
+
+                if (empty($mercaderia)) {
+                    $mercaderia = 'PAQUETE L';
+                }
+
+                $cantidad = $envio->Productos->sum('cantidad');
+                if ($cantidad == 0) $cantidad = 1; // Para evitar cantidad 0
+
+                fputcsv($file, [
+                    optional($envio->Cliente)->numeroDocumento ?? '',
+                    optional($envio->Cliente)->telefono ?? '',
+                    '', // CONTACTO (DOC)
+                    '', // TELF. CONTACTO
+                    $envio->numero_guia ?? '',
+                    'AV. GRAU', // ORIGEN
+                    optional($envio->Destino)->nombre ?? '',
+                    $mercaderia,
+                    '0.1', // ALTO
+                    '0.1', // ANCHO
+                    '0.1', // LARGO
+                    '7',   // PESO
+                    $cantidad
+                ], ';');
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function etiquetas(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 12) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        if (!$hasAccess) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ver esta sección', 'warning', 'btn-danger');
+            return redirect()->route('dashboard');
+        }
+
+        $ids = $request->query('ids');
+        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino.Provincia.Departamento', 'SubAgencia', 'Productos.Producto', 'Detalle']);
+
+        if (!empty($ids)) {
+            $idArray = explode(',', $ids);
+            $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
+        } else {
+            $fecha = $request->query('fecha', date('Y-m-d'));
+            $envios = $query->whereDate('fecha_envio', $fecha)->get();
+        }
+
+        return view('envios.etiquetas2', compact('envios', 'fecha'));
     }
 
     public function storeAgencia(Request $request)
@@ -238,15 +358,15 @@ class EnvioProvinciaController extends Controller
         $registros = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
             ->where('estado', '!=', 'ENTREGADO')
             ->where('estado', '!=', 'INVALIDO')
-            ->where(function($queryGroup) use ($terminos, $query) {
+            ->where(function ($queryGroup) use ($terminos, $query) {
                 $queryGroup->where('numeroSerie', 'LIKE', '%' . $query . '%')
                     ->orWhereHas('DetalleComprobante.Producto', function ($q) use ($terminos) {
                         $q->where(function ($subQ) use ($terminos) {
                             foreach ($terminos as $termino) {
-                                $subQ->where(function($wQ) use ($termino) {
+                                $subQ->where(function ($wQ) use ($termino) {
                                     $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
-                                       ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
-                                       ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
+                                        ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
+                                        ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
                                 });
                             }
                         });
@@ -256,30 +376,30 @@ class EnvioProvinciaController extends Controller
             ->get();
 
         // Recopilar idProducto de registros para evitar duplicados
-        $idsFromRegistros = $registros->map(function($r) {
+        $idsFromRegistros = $registros->map(function ($r) {
             return $r->DetalleComprobante?->Producto?->idProducto;
         })->filter()->unique()->toArray();
 
         // 2. Buscar directamente en tabla Producto (para productos sin serialización)
         $productosFormateados = collect();
 
-        $productos = \App\Models\Producto::where(function($q) use ($terminos) {
-                $q->where(function ($subQ) use ($terminos) {
-                    foreach ($terminos as $termino) {
-                        $subQ->where(function($wQ) use ($termino) {
-                            $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
-                               ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
-                               ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
-                        });
-                    }
-                });
-            })
+        $productos = \App\Models\Producto::where(function ($q) use ($terminos) {
+            $q->where(function ($subQ) use ($terminos) {
+                foreach ($terminos as $termino) {
+                    $subQ->where(function ($wQ) use ($termino) {
+                        $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
+                            ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
+                            ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
+                    });
+                }
+            });
+        })
             ->whereNotIn('idProducto', $idsFromRegistros)
             ->take(50)
             ->get();
 
         // Formatear para mantener la misma estructura que el frontend espera
-        $productosFormateados = $productos->map(function($prod) {
+        $productosFormateados = $productos->map(function ($prod) {
             return [
                 'numeroSerie' => null,
                 'detalle_comprobante' => [
@@ -301,29 +421,29 @@ class EnvioProvinciaController extends Controller
     public function getDestinosPorProvincia($idProvincia)
     {
         $destinos = Destino::where('idProvincia', $idProvincia)
-                        ->orderBy('nombre', 'asc')
-                        ->get(['idDestino', 'nombre']);
-        
+            ->orderBy('nombre', 'asc')
+            ->get(['idDestino', 'nombre']);
+
         return response()->json($destinos);
     }
 
     public function getProvinciasPorDepartamento($idDepartamento)
     {
         $provincias = Provincia::where('idDepartamento', $idDepartamento)
-                        ->orderBy('nombre', 'asc')
-                        ->get(['idProvincia', 'nombre']);
-        
+            ->orderBy('nombre', 'asc')
+            ->get(['idProvincia', 'nombre']);
+
         return response()->json($provincias);
     }
 
     public function getSubAgenciasPorAgenciaYDestino($idAgencia, $idDestino)
     {
         $subagencias = SubAgencia::where('idAgencia', $idAgencia)
-                        ->where('idDestino', $idDestino)
-                        ->where('estado', 1)
-                        ->orderBy('nombre_oficina', 'asc')
-                        ->get(['idSubAgencia', 'nombre_oficina', 'direccion', 'telefono']);
-        
+            ->where('idDestino', $idDestino)
+            ->where('estado', 1)
+            ->orderBy('nombre_oficina', 'asc')
+            ->get(['idSubAgencia', 'nombre_oficina', 'direccion', 'telefono']);
+
         return response()->json($subagencias);
     }
 
@@ -338,6 +458,95 @@ class EnvioProvinciaController extends Controller
                 $request->telefono
             );
             return response()->json(['success' => true, 'subagencia' => $subagencia]);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => $th->getMessage()]);
+        }
+    }
+
+
+    public function generarLinkPublico(Request $request)
+    {
+        try {
+            $userModel = $this->headerService->getModelUser();
+
+            $hasAccess = false;
+            foreach ($userModel->Accesos as $acceso) {
+                if ($acceso->idVista == 14) {
+                    $hasAccess = true;
+                    break;
+                }
+            }
+            if (!$hasAccess) {
+                return response()->json(['success' => false, 'message' => 'No tienes permiso para generar enlaces.']);
+            }
+
+            $token = \Illuminate\Support\Str::random(32);
+
+            $solicitud = \App\Models\SolicitudEnvio::create([
+                'idUser' => $userModel->idUser,
+                'token' => $token,
+                'estado' => 'PENDIENTE',
+                'token_expires_at' => now()->addMinutes(20),
+            ]);
+
+            $link = url("/formulario-envio/{$token}");
+
+            return response()->json([
+                'success' => true,
+                'link' => $link,
+                'idSolicitud' => $solicitud->idSolicitud,
+                'expira_en' => '20 minutos'
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => $th->getMessage()]);
+        }
+    }
+
+
+    public function obtenerSolicitudes(Request $request)
+    {
+        try {
+            // Solo traemos idUser y user para no cargar la bandeja (que es muy pesada)
+            $query = \App\Models\SolicitudEnvio::with(['Usuario:idUser,user']);
+
+            // Si pasan parametro ?estado=PROCESADO
+            if ($request->has('estado')) {
+                $query->where('estado', $request->estado);
+            }
+
+            $solicitudes = $query->orderBy('created_at', 'desc')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $solicitudes
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => $th->getMessage()]);
+        }
+    }
+
+    /**
+     * Regenera un nuevo token para una solicitud existente (extiende la expiración).
+     */
+    public function regenerarLink($id)
+    {
+        try {
+            $solicitud = \App\Models\SolicitudEnvio::findOrFail($id);
+            $token = \Illuminate\Support\Str::random(32);
+
+            $solicitud->update([
+                'token' => $token,
+                'estado' => 'PENDIENTE',
+                'token_expires_at' => now()->addMinutes(20),
+            ]);
+
+            $link = url("/formulario-envio/{$token}");
+
+            return response()->json([
+                'success' => true,
+                'link' => $link,
+                'expira_en' => '20 minutos'
+            ]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
         }
