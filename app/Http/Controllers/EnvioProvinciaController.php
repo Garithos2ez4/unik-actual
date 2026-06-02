@@ -507,10 +507,16 @@ class EnvioProvinciaController extends Controller
     public function obtenerSolicitudes(Request $request)
     {
         try {
+            // Actualizar a EXPIRADO las solicitudes que ya pasaron su tiempo límite
+            \App\Models\SolicitudEnvio::where('estado', 'PENDIENTE')
+                ->whereNotNull('token_expires_at')
+                ->where('token_expires_at', '<', now())
+                ->update(['estado' => 'EXPIRADO']);
+
             // Solo traemos idUser y user para no cargar la bandeja (que es muy pesada)
             $query = \App\Models\SolicitudEnvio::with(['Usuario:idUser,user']);
 
-            // Si pasan parametro ?estado=PROCESADO
+            // Si pasan parametro ?estado=PROCESADO (u otro)
             if ($request->has('estado')) {
                 $query->where('estado', $request->estado);
             }

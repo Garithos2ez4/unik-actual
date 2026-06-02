@@ -10,16 +10,24 @@
             <h2 class="fw-bold"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Resumen Ejecutivo</h2>
             <p class="text-secondary mb-0">Análisis detallado de ventas, tendencias y rendimiento operativo.</p>
         </div>
-        <div class="col-md-6 text-md-end">
-            <a href="{{ route('dashboard.analitica.tienda') }}" class="btn btn-primary rounded-pill px-4 me-2 shadow-sm">
-                <i class="bi bi-shop me-1"></i> Detalle Tienda
-            </a>
-            <a href="{{ route('dashboard.analitica.falabella') }}" class="btn btn-warning rounded-pill px-4 me-2 shadow-sm">
-                <i class="bi bi-shop me-1"></i> Detalle Falabella
-            </a>
-            <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
-            </a>
+        <div class="col-md-7">
+            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                <a href="{{ route('dashboard.analitica.tienda') }}" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                    <i class="bi bi-shop me-1"></i> Detalle Tienda
+                </a>
+                <a href="{{ route('dashboard.analitica.falabella') }}" class="btn btn-warning rounded-pill px-4 shadow-sm">
+                    <i class="bi bi-shop me-1"></i> Detalle Falabella
+                </a>
+                <a href="{{ route('dashboard.analitica.mercadolibre') }}" class="btn btn-info text-white rounded-pill px-4 shadow-sm">
+                    <i class="bi bi-shop me-1"></i> Detalle Mercado Libre
+                </a>
+                <a href="{{ route('dashboard.analitica.ripley') }}" class="btn rounded-pill px-4 shadow-sm" style="background-color: #6a1b9a; color: white;">
+                    <i class="bi bi-shop me-1"></i> Detalle Ripley
+                </a>
+                <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+                </a>
+            </div>
         </div>
     </div>
 

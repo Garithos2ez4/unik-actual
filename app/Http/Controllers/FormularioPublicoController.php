@@ -183,6 +183,24 @@ class FormularioPublicoController extends Controller
     {
         $cliente = \App\Models\Cliente::where('numeroDocumento', $documento)->first();
         if ($cliente) {
+            $ultimoEnvio = \App\Models\EnvioProvincia::with(['Detalle', 'Destino.Provincia'])
+                ->where('idCliente', $cliente->idCliente)
+                ->orderBy('idEnvioProvincia', 'desc')
+                ->first();
+
+            $envioData = null;
+            if ($ultimoEnvio) {
+                $envioData = [
+                    'idDepartamento' => $ultimoEnvio->Destino->Provincia->idDepartamento ?? null,
+                    'idProvincia' => $ultimoEnvio->Destino->idProvincia ?? null,
+                    'idDestino' => $ultimoEnvio->idDestino,
+                    'idAgencia' => $ultimoEnvio->idAgencia,
+                    'entrega_domicilio' => $ultimoEnvio->Detalle->entrega_domicilio ?? 0,
+                    'dir' => $ultimoEnvio->Detalle->dir ?? '',
+                    'ref' => $ultimoEnvio->Detalle->ref ?? '',
+                ];
+            }
+
             return response()->json([
                 'success' => true,
                 'cliente' => [
@@ -192,7 +210,8 @@ class FormularioPublicoController extends Controller
                     'telefono' => $cliente->telefono,
                     'correo' => $cliente->correo,
                     'idTipoDocumento' => $cliente->idTipoDocumento,
-                ]
+                ],
+                'ultimo_envio' => $envioData
             ]);
         }
         return response()->json(['success' => false]);

@@ -68,7 +68,7 @@ class EgresoController extends Controller
                 $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
                 $empresas = \App\Models\Empresa::all();
                 $tipoDocumentos = \App\Models\TipoDocumento::all();
-                return view('createegreso', [
+                return view('egresos.createegreso', [
                     'user' => $userModel,
                     'metodosPago' => $metodosPago,
                     'cuentasBancarias' => $cuentasBancarias,

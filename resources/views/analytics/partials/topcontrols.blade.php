@@ -24,7 +24,7 @@
                 <div class="col-6 col-md-3">
                     <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-plus me-1"></i>Día Inicio</label>
                     <input type="date" name="dia_inicio" class="form-control form-control-sm" id="filtro-dia-inicio"
-                        value="{{ $filtros['dia_inicio'] ?? now()->format('Y-m-d') }}">
+                        value="{{ $filtros['dia_inicio'] ?? \Carbon\Carbon::create($filtros['anio'] ?? now()->year, $filtros['mes'] ?? now()->month, 1)->format('Y-m-d') }}">
                 </div>
                 <div class="col-6 col-md-3">
                     <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-check me-1"></i>Día Corte</label>

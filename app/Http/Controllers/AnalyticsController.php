@@ -409,6 +409,123 @@ class AnalyticsController extends Controller
         ]);
     }
 
+    public function mercadolibre(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        $tc = $this->calculadoraService->getTasaCambio();
+        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
+
+        $costoVentaExpr = "COALESCE(
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+             FROM EgresoProducto ep_inner
+             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+             LIMIT 1),
+            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+        )";
+
+        $comisionMercadoLibreExpr = "0";
+
+        // Usamos el Modelo Venta para iniciar la consulta
+        $ventasMercadoLibre = Venta::query()
+            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre")
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->map(function ($venta) {
+                $venta->ingresos = round($venta->ingresos, 2);
+                $venta->costos   = round($venta->costos, 2);
+                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+                $venta->comision_mercadolibre = round($venta->comision_mercadolibre, 2);
+                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                return $venta;
+            });
+
+        return view('analytics.components.mercadolibre', [
+            'user' => $userModel,
+            'ventasMercadoLibre' => $ventasMercadoLibre,
+            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
+        ]);
+    }
+
+    public function ripley(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        $tc = $this->calculadoraService->getTasaCambio();
+        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
+
+        $costoVentaExpr = "COALESCE(
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+             FROM EgresoProducto ep_inner
+             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+             LIMIT 1),
+            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+        )";
+
+        $comisionRipleyExpr = "0";
+
+        // Usamos el Modelo Venta para iniciar la consulta
+        $ventasRipley = Venta::query()
+            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley")
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->map(function ($venta) {
+                $venta->ingresos = round($venta->ingresos, 2);
+                $venta->costos   = round($venta->costos, 2);
+                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+                $venta->comision_ripley = round($venta->comision_ripley, 2);
+                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                return $venta;
+            });
+
+        return view('analytics.components.ripley', [
+            'user' => $userModel,
+            'ventasRipley' => $ventasRipley,
+            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
+        ]);
+    }
+
+
     public function tienda(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
@@ -440,6 +557,7 @@ class AnalyticsController extends Controller
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                         (SELECT GROUP_CONCAT(DISTINCT MetodoPago.nombreMetodo SEPARATOR ', ') FROM PagoVenta JOIN MetodoPago ON PagoVenta.idMetodoPago = MetodoPago.idMetodoPago WHERE PagoVenta.idVenta = Venta.idVenta) as metodos_pago,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
                          0 as comision_tienda")
@@ -468,10 +586,25 @@ class AnalyticsController extends Controller
             ->orderByDesc('total_monto')
             ->get();
 
+        $detallePagosTienda = \App\Models\PagoVenta::query()
+            ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
+            ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
+            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+            ->leftJoin('CuentasTransferencia', 'PagoVenta.idCuentaBancaria', '=', 'CuentasTransferencia.idCuentaBancaria')
+            ->leftJoin('Banco', 'CuentasTransferencia.idBanco', '=', 'Banco.idBanco')
+            ->selectRaw("COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) as metodo_banco, PagoVenta.idVenta, Venta.fechaVenta, PagoVenta.monto, PagoVenta.nroOperacion, Usuario.user as vendedor")
+            ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->orderByRaw('COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo)')
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->groupBy('metodo_banco');
+
         return view('analytics.components.tienda_venta', [
             'user' => $userModel,
             'ventasTienda' => $ventasTienda,
             'pagosTienda' => $pagosTienda,
+            'detallePagosTienda' => $detallePagosTienda,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
