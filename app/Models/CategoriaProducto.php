@@ -8,10 +8,13 @@ class CategoriaProducto extends Model
  
     protected $table = 'CategoriaProducto';
 
+    public $timestamps = false;
+
     protected $guarded = ['idCategoria'];
     
     protected $fillable = ['idCategoria',
                             'nombreCategoria',
+                            'iconCategoria',
                             'slugCategoria'
                             ];
 
@@ -33,7 +36,7 @@ class CategoriaProducto extends Model
             $categoria->slugCategoria = Str::slug($categoria->nombreCategoria);
         });
 
-        static::updating(function ($producto) {
+        static::updating(function ($categoria) {
             $categoria->slugCategoria = Str::slug($categoria->nombreCategoria);
         });
     }

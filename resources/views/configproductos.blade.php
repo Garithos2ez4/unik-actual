@@ -17,11 +17,14 @@
     <br>
     
     <div class="row border shadow rounded-3 pt-2 mb-4">
-        <div class="col-md-12 border-bottom border-secondary pb-2">
+        <div class="col-md-8 border-bottom border-secondary pb-2">
             <h3>Grupos</h3>
             <label class="text-secondary">Conjunto donde se agrupan los productos.</label>
         </div>
-        <div class="accordion accordion-flush" id="accordionGrupos">
+        <div class="col-md-4 border-bottom border-secondary pb-2 text-end align-self-center">
+            <button class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#categoriaModal"><i class="bi bi-plus-lg"></i></button>
+        </div>
+        <div class="accordion accordion-flush mt-2" id="accordionGrupos">
             @php
                 $count = 0;
             @endphp
@@ -159,6 +162,35 @@
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
               <button type="button" onclick="validateForm('form-insert-marca')" class="btn btn-primary" id="btn-modal-marca"><i class="bi bi-floppy-fill"></i> Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+    <form action="{{route('insertcategoria')}}" method="post" id="form-insert-categoria">
+        @csrf
+        <div class="modal fade" id="categoriaModal" tabindex="-1" aria-labelledby="categoriaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="categoriaModalLabel">Nueva Categor&iacute;a</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="body-modal-categoria">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Nombre de la Categor&iacute;a:</label>
+                        <input type="text" maxlength="50" class="form-control" name="nombreCategoria" required>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Icono de la Categor&iacute;a (Clase bi):</label>
+                        <input type="text" maxlength="50" class="form-control" name="iconCategoria" placeholder="ej. bi bi-laptop">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="button" onclick="validateForm('form-insert-categoria')" class="btn btn-primary" id="btn-modal-categoria"><i class="bi bi-floppy-fill"></i> Guardar</button>
             </div>
           </div>
         </div>

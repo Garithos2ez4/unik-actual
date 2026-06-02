@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupDropArea('drop-area-grupo', 'file-modal-grupo', 'img-modal-grupo', 300, 300);
     validateButton('btn-modal-marca','body-modal-marcas');
     validateButton('btn-modal-grupo','body-modal-grupo');
+    validateButton('btn-modal-categoria','body-modal-categoria');
 });
 
 function validateForm(id){

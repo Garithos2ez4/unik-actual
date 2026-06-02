@@ -373,19 +373,19 @@ function createItem(object, query) {
     );
     divColBtnDelete.appendChild(btnDeleteItem);
 
-    let divColModelo = createDiv(['col-12', 'col-md-3'], null);
-    divColModelo.innerHTML = 'Modelo: ' + object.modelo;
+    let divColModelo = createDiv(['col-12', 'col-md-3', 'mb-2'], null);
+    divColModelo.innerHTML = '<strong>Modelo:</strong><br>' + object.modelo;
 
-    let divColCodigo = createDiv(['col-12', 'col-md-2'], null);
-    divColCodigo.innerHTML = 'Codigo: ' + object.codigoProducto;
+    let divColCodigo = createDiv(['col-12', 'col-md-2', 'mb-2'], null);
+    divColCodigo.innerHTML = '<strong>Codigo:</strong><br>' + object.codigoProducto;
 
-    let divColSerial = createDiv(['col-12', 'col-md-3'], null);
-    divColSerial.innerHTML = 'SN: ' + object.numeroSerie;
+    let divColSerial = createDiv(['col-12', 'col-md-3', 'mb-2'], null);
+    divColSerial.innerHTML = '<strong>SN:</strong><br>' + object.numeroSerie;
 
-    let divColEstado = createDiv(['col-6', 'col-md-2', 'text-md-center'], null);
-    divColEstado.innerHTML = object.estado;
+    let divColEstado = createDiv(['col-6', 'col-md-2', 'text-md-center', 'mb-2'], null);
+    divColEstado.innerHTML = '<strong>Estado:</strong><br>' + object.estado;
 
-    let divColPrecio = createDiv(['col-6', 'col-md-2', 'text-end'], null);
+    let divColPrecio = createDiv(['col-6', 'col-md-2', 'text-end', 'mb-2'], null);
     let inputPrecio = document.createElement('input');
     inputPrecio.type = 'number';
     inputPrecio.step = '0.01';

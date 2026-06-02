@@ -125,7 +125,7 @@
                                 <select class="form-select form-select-sm" id="pago-metodo">
                                     <option value="">Seleccione...</option>
                                     @foreach($metodosPago ?? [] as $metodo)
-                                        <option value="{{ $metodo->idMetodoPago }}">{{ $metodo->nombreMetodo }}</option>
+                                    <option value="{{ $metodo->idMetodoPago }}">{{ $metodo->nombreMetodo }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -134,7 +134,7 @@
                                 <select class="form-select form-select-sm" id="pago-empresa">
                                     <option value="">Seleccione...</option>
                                     @foreach($empresas ?? [] as $empresa)
-                                        <option value="{{ $empresa->idEmpresa }}">{{ $empresa->nombreComercial ?? $empresa->razonSocial }}</option>
+                                    <option value="{{ $empresa->idEmpresa }}">{{ $empresa->nombreComercial ?? $empresa->razonSocial }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -143,7 +143,7 @@
                                 <select class="form-select form-select-sm" id="pago-cuenta">
                                     <option value="">Seleccione...</option>
                                     @foreach($cuentasBancarias ?? [] as $cuenta)
-                                        <option value="{{ $cuenta->idCuentaBancaria }}" data-idempresa="{{ $cuenta->idEmpresa }}" data-banco="{{ strtoupper($cuenta->Banco->nombreBanco ?? '') }}">{{ $cuenta->Banco->nombreBanco ?? 'Banco' }} - Nro: {{ $cuenta->numeroCuenta }} ({{ $cuenta->tipoCuenta }})</option>
+                                    <option value="{{ $cuenta->idCuentaBancaria }}" data-idempresa="{{ $cuenta->idEmpresa }}" data-banco="{{ strtoupper($cuenta->Banco->nombreBanco ?? '') }}">{{ $cuenta->Banco->nombreBanco ?? 'Banco' }} - Nro: {{ $cuenta->numeroCuenta }} ({{ $cuenta->tipoCuenta }})</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -159,7 +159,7 @@
                                 <button type="button" class="btn btn-sm btn-primary w-100" id="btn-add-pago">Añadir</button>
                             </div>
                         </div>
-                        
+
                         <div class="table-responsive mt-2">
                             <table class="table table-sm table-bordered mb-0 text-center" id="tabla-pagos" style="display:none;">
                                 <thead class="table-light">
@@ -180,7 +180,7 @@
                                 </tfoot>
                             </table>
                         </div>
-                        
+
                         <!-- Contenedor para inyectar inputs hidden al hacer submit -->
                         <div id="hidden-pagos-container"></div>
                     </div>

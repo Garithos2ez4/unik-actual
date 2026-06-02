@@ -36,6 +36,19 @@ document.getElementById('form-update-bandeja').addEventListener('submit', functi
         .then(response => response.json())
         .then(data => {
             loader.style.display = 'none';
+            let modalEl = document.getElementById('modalBandeja');
+            let modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modalInstance.hide();
+
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: 'Bandeja actualizada correctamente',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }, 400);
         })
         .catch(error => {
             loader.style.display = 'none';

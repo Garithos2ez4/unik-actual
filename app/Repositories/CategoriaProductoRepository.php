@@ -60,4 +60,9 @@ class CategoriaProductoRepository implements CategoriaProductoRepositoryInterfac
             throw new \InvalidArgumentException("La columna '$column' no es válida.");
         }
     }
+
+    public function getLast()
+    {
+        return CategoriaProducto::orderBy('idCategoria', 'desc')->first();
+    }
 }

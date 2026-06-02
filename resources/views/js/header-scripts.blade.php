@@ -30,6 +30,54 @@ function getIdPass(id,input){
     inputHidden.value = id;
 }
 
+function markPendientesAsRead() {
+    let navIcon = document.getElementById('nav-alert-icon');
+    let menuIcon = document.getElementById('menu-alert-icon');
+    let linkEl = document.getElementById('nav-pendientes-link');
+    
+    if (navIcon) navIcon.style.display = 'none';
+    if (menuIcon) menuIcon.style.display = 'none';
+    if (linkEl) {
+        linkEl.classList.remove('text-danger', 'fw-bold');
+        linkEl.classList.add('text-secondary');
+    }
+}
+
+function openMyPendientes(idUser, url) {
+    markPendientesAsRead();
+    
+    let loader = document.getElementById('modalBandeja-total-body');
+    let titleEl = document.getElementById('bandejaModalLabel');
+    
+    document.getElementById('id-modal-bandeja').value = idUser;
+    if (titleEl) {
+        titleEl.innerHTML = 'Mis Pendientes';
+    }
+    
+    if (loader) loader.style.display = 'flex';
+    
+    fetch(url + "?id=" + idUser, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (loader) loader.style.display = 'none';
+        if (typeof quill !== 'undefined' && quill) {
+            quill.root.innerHTML = data.bandeja || '';
+        } else {
+            let tb = document.getElementById('text-bandeja');
+            if (tb) tb.innerHTML = data.bandeja || '';
+        }
+    })
+    .catch(error => {
+        if (loader) loader.style.display = 'none';
+        console.log('Error:', error);
+    });
+}
+
 function cancelarModal(){
     let pass = document.getElementById('pass-modal-password');
     let validatepass = document.getElementById('confirmpass-modal-password');

@@ -382,6 +382,7 @@ $gradientString = implode(', ', $gradientParts);
                             </ul>
                         </div>
                     </div>
+                </div>
                 <div class="col-md-12 mt-3">
                     <div class="row border shadow rounded-3 pt-2 pb-2">
                         <div class="col-md-12">

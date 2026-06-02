@@ -661,4 +661,21 @@ class ConfiguracionController extends Controller
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
+
+    public function createCategoriaProducto(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $nombre = $request->input('nombreCategoria');
+        $icon = $request->input('iconCategoria');
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                if (isset($nombre)) {
+                    $this->configuracionService->createCategoriaProducto($nombre, $icon);
+                }
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
 }

@@ -106,6 +106,34 @@ class UsuarioController extends Controller
         }
         return  response()->json(['message' => 'Datos enviados correctamente.']);
     }
+
+    public function colaboradoresIndex(){
+        $userModel = $this->headerService->getModelUser();
+        
+        foreach($userModel->Accesos as $acceso){
+            if($acceso->idVista == 15){ // 15: Asignar Pendientes
+                $usuarios = $this->usuarioService->allUsers()->where('estadoUsuario', 1);
+                return view('colaboradores.index',[
+                    'user' => $userModel,
+                    'usuarios' => $usuarios
+                ]);
+            }
+        }
+
+        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
+        return redirect()->route('dashboard',['user' => $userModel]);
+    }
+
+    public function getBandejaColaborador(Request $request){
+        $id = $request->input('id');
+        if(isset($id)){
+            $usuario = $this->usuarioService->getUserId($id);
+            if($usuario){
+                return response()->json(['bandeja' => $usuario->bandeja]);
+            }
+        }
+        return response()->json(['bandeja' => '']);
+    }
     
     public function updateUser(Request $request){
         //variables de la cabecera

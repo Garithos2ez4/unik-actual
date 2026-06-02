@@ -18,7 +18,7 @@
     <script src="{{ asset('js/sheetjs/xlsx.full.min.js') }}"></script>
     <script src="{{ asset('js/quill.js') }}"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="{{ route('js.header-scripts') }}"></script>
+    <script src="{{ route('js.header-scripts') }}?v=1.01"></script>
 
 </head>
 
@@ -57,18 +57,30 @@
                     <div class="col-6 col-lg-2" style="position:relative;z-index:9000">
                         <div class="row h-100 d-flex align-items-center text-end pt-2" id="header-user-nav"
                             style="cursor:pointer">
-                            <h5 class="w-100"><i class="bi bi-person-circle"></i> {{ $user->user }}</h5>
+                            @php
+                                $hasPendientes = !empty(trim(strip_tags(str_replace('&nbsp;', '', $user->bandeja))));
+                            @endphp
+                            <h5 class="w-100"><i class="bi bi-person-circle"></i> {{ $user->user }}
+                                @if($hasPendientes)
+                                    <span class="badge bg-danger rounded-circle p-1 ms-1" style="font-size: 0.5rem;" title="Tienes pendientes asignados" id="nav-alert-icon">
+                                        <i class="bi bi-exclamation-circle-fill"></i>
+                                    </span>
+                                @endif
+                            </h5>
                         </div>
                         <div class="border shadow pt-2 pb-3 rounded-3 bg-light"
                             style="position:absolute;width:100%;left:-10%;z-index:9000;display:none" id="options-user">
                             <div class="row text-dark text-center">
                                 <div class="col-md-12 mt-1">
                                     <small>
-                                        <a href="#"
-                                            onclick="getIdPass('{{ $user->idUser }}','id-modal-bandeja'); return false;"
-                                            class=" text-decoration-none text-secondary link-hover"
+                                        <a href="#" id="nav-pendientes-link"
+                                            onclick="openMyPendientes('{{ $user->idUser }}', '{{ route('getbandeja') }}'); return false;"
+                                            class=" text-decoration-none {{ $hasPendientes ? 'text-danger fw-bold' : 'text-secondary' }} link-hover"
                                             data-bs-toggle="modal" data-bs-target="#modalBandeja">
                                             <i class="bi bi-journal-bookmark-fill"></i> Pendientes
+                                            @if(!empty($hasPendientes))
+                                                <i class="bi bi-exclamation-circle-fill ms-1" id="menu-alert-icon"></i>
+                                            @endif
                                         </a>
                                     </small>
                                 </div>
@@ -118,7 +130,7 @@
                     <li class="list-group-item bg-sistema-uno menu-border"><a href="{{ route('calculadora') }}"
                             class="btn text-light">Calculadora <i class="bi bi-calculator"></i></a></li>
                     @php
-                    $order = [2, 1, 4, 11, 12, 5, 3, 6, 7]; // Orden personalizado, 11 es Reclamos, 12 es Envios
+                    $order = [2, 1, 4, 11, 12, 5, 3, 6, 7, 15]; // Orden personalizado, 11 es Reclamos, 12 es Envios
                     @endphp
 
                     @foreach ($order as $idVista)
@@ -161,6 +173,11 @@
                                     <li>
                                         <a href="{{ route('plataformas.falabella.productos') }}" class="btn btn-sm text-info py-0">
                                             <i class="bi bi-chevron-right"></i> Catálogo
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.falabella.publicaciones') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Publicaciones
                                         </a>
                                     </li>
                                     <li>
@@ -218,6 +235,11 @@
                     @case(12)
                     <li class="list-group-item bg-sistema-uno menu-border">
                         <a href="{{ route('envios.index') }}" class="btn text-light w-100 text-start">Envíos <i class="bi bi-truck "></i></a>
+                    </li>
+                    @break
+                    @case(15)
+                    <li class="list-group-item bg-sistema-uno menu-border">
+                        <a href="{{ route('colaboradores') }}" class="btn text-light">Colaboradores <i class="bi bi-people-fill"></i></a>
                     </li>
                     @break
 
@@ -314,7 +336,7 @@
     <footer>
     </footer>
     @stack('scripts')
-    <script src="{{ asset('js/app.js') }}"></script>
+    <script src="{{ asset('js/app.js') }}?v=1.03"></script>
 </body>
 
 </html>

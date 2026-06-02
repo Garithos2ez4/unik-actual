@@ -64,6 +64,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsController::class, 'falabella'])->name('dashboard.analitica.falabella');
+    Route::get('/dashboard/analitica/mercadolibre', [AnalyticsController::class, 'mercadolibre'])->name('dashboard.analitica.mercadolibre');
+    Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
     
     // Ganancias
@@ -92,6 +94,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/usuario/updatepass', [UsuarioController::class, 'updatePass'])->name('updatepass');
     Route::post('/usuario/updatebandeja', [UsuarioController::class, 'updateBandeja'])->name('updatebandeja');
     Route::post('/usuario/updateuser', [UsuarioController::class, 'updateUser'])->name('updateuser');
+    Route::get('/colaboradores', [UsuarioController::class, 'colaboradoresIndex'])->name('colaboradores');
+    Route::get('/usuario/getbandeja', [UsuarioController::class, 'getBandejaColaborador'])->name('getbandeja');
 
     Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
     Route::get('/productos/searchmodelproduct', [ProductoController::class, 'searchModelProduct'])->name('searchmodelproduct');
@@ -158,6 +162,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/pdf', [\App\Http\Controllers\EnvioProvinciaController::class, 'pdf'])->name('pdf');
         Route::get('/excel', [\App\Http\Controllers\EnvioProvinciaController::class, 'excel'])->name('excel');
         Route::get('/etiquetas', [\App\Http\Controllers\EnvioProvinciaController::class, 'etiquetas'])->name('etiquetas');
+        Route::get('/lista-productos', [\App\Http\Controllers\EnvioProvinciaController::class, 'listaProductos'])->name('listaProductos');
         Route::get('/solicitudes', [\App\Http\Controllers\EnvioProvinciaController::class, 'obtenerSolicitudes'])->name('solicitudes');
 
         // AJAX Endpoints
@@ -241,6 +246,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/configuracion/productos', [ConfiguracionController::class, 'productos'])->name('configproductos');
     Route::post('/configuracion/insertmarca', [ConfiguracionController::class, 'createMarcaProducto'])->name('insertmarca');
     Route::post('/configuracion/insertgrupo', [ConfiguracionController::class, 'createGrupoProducto'])->name('insertgrupo');
+    Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
 
     //Configuracion-ESPECIFICACIONES
     Route::get('/configuracion/especificacionesxgeneral', [ConfiguracionController::class, 'especificacionesGeneral'])->name('configespecificacionesgeneral');
