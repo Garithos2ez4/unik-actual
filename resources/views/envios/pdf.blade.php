@@ -138,7 +138,7 @@ return $iniciales . '.' . $ultima;
             max-width: 20cm;
         }
 
-        .print-page.layout-1 .rotulo {
+        .print-page.layout-1 .rotulo, .print-page.layout-1 .items-picking-section {
             max-width: 20cm;
         }
 
@@ -148,7 +148,7 @@ return $iniciales . '.' . $ultima;
             gap: 10px;
         }
 
-        .print-page.layout-2 .rotulo {
+        .print-page.layout-2 .rotulo, .print-page.layout-2 .items-picking-section {
             zoom: 0.75;
             max-width: 20cm;
             margin-bottom: 0;
@@ -160,7 +160,7 @@ return $iniciales . '.' . $ultima;
             gap: 10px;
         }
 
-        .print-page.layout-4 .rotulo {
+        .print-page.layout-4 .rotulo, .print-page.layout-4 .items-picking-section {
             zoom: 0.48;
             margin-bottom: 0;
             border-width: 4px;
@@ -172,7 +172,7 @@ return $iniciales . '.' . $ultima;
             gap: 5px;
         }
 
-        .print-page.layout-6 .rotulo {
+        .print-page.layout-6 .rotulo, .print-page.layout-6 .items-picking-section {
             zoom: 0.50;
             margin-bottom: 0;
             border-width: 3px;
@@ -423,7 +423,7 @@ return $iniciales . '.' . $ultima;
             white-space: nowrap;
         }
 
-        .d-value {
+            .d-value {
             flex-grow: 1;
             border-bottom: 2px solid #000;
             padding-bottom: 2px;
@@ -431,6 +431,72 @@ return $iniciales . '.' . $ultima;
             text-transform: uppercase;
             line-height: 1.2;
             min-height: 22px;
+        }
+
+        /* ── SECCIÓN ITEMS (TIPO FALABELLA) ── */
+        .items-picking-section {
+            max-width: 20cm;
+            margin: 0 auto;
+            margin-top: 5px;
+        }
+
+        .cut-line-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .cut-line {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .cut-line::before, .cut-line::after {
+            content: "";
+            flex-grow: 1;
+            border-bottom: 1.5px dashed #666;
+        }
+
+        .cut-line::before { margin-right: 15px; }
+        .cut-line::after { margin-left: 15px; }
+
+        .cut-line-text {
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .items-box {
+            border: 1.5px solid #000;
+            border-radius: 8px;
+            padding: 0;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .items-title {
+            font-size: 22px;
+            font-weight: 900;
+            padding: 8px 15px;
+            border-bottom: 1.5px solid #000;
+            text-transform: uppercase;
+        }
+
+        .items-list {
+            padding: 10px 15px;
+            font-size: 13px;
+            color: #000;
+            font-family: Arial, sans-serif;
+        }
+
+        .item-line {
+            margin-bottom: 6px;
         }
     </style>
 </head>
@@ -573,6 +639,47 @@ return $iniciales . '.' . $ultima;
 
                 </div>{{-- end bottom-section --}}
             </div>{{-- end rotulo --}}
+
+            {{-- ── SECCIÓN DE ITEMS TIPO FALABELLA ── --}}
+            <div class="items-picking-section">
+                <div class="cut-line-container">
+                    <div class="cut-line">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 10px; transform: rotate(-90deg);">
+                            <path d="M3.5 3.5c-.614-.884-.074-1.962.858-2.5L8 7.226 11.642 1c.932.538 1.472 1.616.858 2.5L8.81 8.61l1.556 2.661a2.5 2.5 0 1 1-.794.637L8 9.73l-1.572 2.177a2.5 2.5 0 1 1-.794-.637L7.19 8.61 3.5 3.5zm2.5 0c-.614-.884-.074-1.962.858-2.5L8 7.226 11.642 1c.932.538 1.472 1.616.858 2.5L8.81 8.61l1.556 2.661a2.5 2.5 0 1 1-.794.637L8 9.73l-1.572 2.177a2.5 2.5 0 1 1-.794-.637L7.19 8.61 6 3.5z"/>
+                        </svg>
+                        <div class="cut-line-text">
+                            <div>Etiqueta para pegar en el paquete</div>
+                            <div>Información para el armado del paquete</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="items-box">
+                    <div class="items-title">ÍTEMS</div>
+                    <div class="items-list">
+                        @php
+                            $agrupadosPdf = [];
+                            foreach($envio->Productos as $item) {
+                                $idProd = $item->idProducto;
+                                if (!isset($agrupadosPdf[$idProd])) {
+                                    $agrupadosPdf[$idProd] = [
+                                        'producto' => $item->Producto,
+                                        'cantidad' => 0
+                                    ];
+                                }
+                                $agrupadosPdf[$idProd]['cantidad'] += $item->cantidad;
+                            }
+                        @endphp
+                        @forelse($agrupadosPdf as $data)
+                            <div class="item-line">
+                                {{ $data['producto']->nombreProducto ?? 'Producto Desconocido' }} SKU: <strong>{{ $data['producto']->modelo ?? 'N/A' }}</strong> / Cant: <strong>{{ $data['cantidad'] }}</strong>
+                            </div>
+                        @empty
+                            <div class="item-line text-muted">No hay productos registrados en este envío.</div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
         </div>{{-- end rotulo-wrapper --}}
         @endforeach
     </div>{{-- end rotulos-container --}}

@@ -8,11 +8,11 @@
         style="position:fixed;left:0;width:100vw;height:100vh;z-index:998;opacity:0.5;display:none">
     </div>
     <br>
-    <div class="row">
-        <div class="col-5 col-md-7">
-            <h2>Nuevo egreso</h2>
+    <div class="row align-items-center">
+        <div class="col-12 col-md-7 mb-2 mb-md-0">
+            <h2 class="mb-0">Nuevo egreso</h2>
         </div>
-        <div class="col-7 col-md-5 mb-2" style="position:relative">
+        <div class="col-12 col-md-5 mb-2" style="position:relative">
             <div class="row">
                 <div class="col-12">
                     <div class="input-group mt-1">
@@ -45,7 +45,7 @@
     <form action="{{ route('insertegreso') }}" method="POST" id="form-egreso">
         @csrf
         <div class="row">
-            <div class="col-3 mb-2">
+            <div class="col-12 col-md-3 mb-2">
                 <div class="row">
                     <div class="col-6">
                         <label>SKU</label> <i id="sku-modal-egreso-validate" class="bi bi-exclamation-circle text-danger"></i>
@@ -69,7 +69,7 @@
                         style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
                 </div>
             </div>
-            <div class="col-3 mb-2" id="div-cliente-egreso" style="display:none;">
+            <div class="col-12 col-md-3 mb-2" id="div-cliente-egreso" style="display:none;">
                 <label>Cliente (Opcional)</label>
                 <div class="input-group" style="position:relative">
                     <input type="text" oninput="searchClienteAjax(this)" id="input-cliente-egreso" class="form-control input-egreso" placeholder="Nombre o Documento">
@@ -84,17 +84,17 @@
                         style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
                 </div>
             </div>
-            <div class="col-2 mb-2">
+            <div class="col-12 col-md-2 mb-2">
                 <label>Numero de Orden</label>
                 <input type="text" placeholder="Nro de Orden" id="input-numero-orden"
                     name="numeroorden" class="form-control input-egreso cab-form" required>
             </div>
-            <div class="col-2 mb-2">
+            <div class="col-6 col-md-2 mb-2">
                 <label>Fecha de pedido</label>
                 <input type="date" name="fechapedido" id="fechapedido" class="form-control input-egreso cab-form"
                     min="2024-01-01" max="{{ date('Y-m-d') }}" required>
             </div>
-            <div class="col-2 mb-2">
+            <div class="col-6 col-md-2 mb-2">
                 <label>Fecha de despacho</label>
                 <input type="date" name="fechadespacho" id="fechadespacho" class="form-control input-egreso cab-form" required>
             </div>
@@ -120,7 +120,7 @@
                     </div>
                     <div class="card-body py-2">
                         <div class="row align-items-end">
-                            <div class="col-md-3 mb-2">
+                            <div class="col-12 col-md-3 mb-2">
                                 <label class="form-label mb-0"><small>Método de Pago</small></label>
                                 <select class="form-select form-select-sm" id="pago-metodo">
                                     <option value="">Seleccione...</option>
@@ -129,7 +129,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-2 mb-2" id="div-pago-empresa" style="display: none;">
+                            <div class="col-12 col-md-2 mb-2" id="div-pago-empresa" style="display: none;">
                                 <label class="form-label mb-0"><small>Empresa</small></label>
                                 <select class="form-select form-select-sm" id="pago-empresa">
                                     <option value="">Seleccione...</option>
@@ -138,7 +138,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-2" id="div-pago-cuenta" style="display: none;">
+                            <div class="col-12 col-md-3 mb-2" id="div-pago-cuenta" style="display: none;">
                                 <label class="form-label mb-0"><small>Cuenta Destino</small></label>
                                 <select class="form-select form-select-sm" id="pago-cuenta">
                                     <option value="">Seleccione...</option>
@@ -147,15 +147,15 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-2 mb-2">
+                            <div class="col-6 col-md-2 mb-2">
                                 <label class="form-label mb-0"><small>Monto</small></label>
                                 <input type="number" step="0.01" class="form-control form-control-sm" id="pago-monto" placeholder="0.00">
                             </div>
-                            <div class="col-md-2 mb-2">
+                            <div class="col-6 col-md-2 mb-2">
                                 <label class="form-label mb-0"><small>Ref.</small></label>
                                 <input type="text" class="form-control form-control-sm" id="pago-ref" placeholder="(Opcional)">
                             </div>
-                            <div class="col-md-2 mb-2 text-end">
+                            <div class="col-12 col-md-2 mb-2 text-end">
                                 <button type="button" class="btn btn-sm btn-primary w-100" id="btn-add-pago">Añadir</button>
                             </div>
                         </div>

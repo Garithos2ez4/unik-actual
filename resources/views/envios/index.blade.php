@@ -20,6 +20,7 @@
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="dropdownImprimir">
                             <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('pdf')"><i class="bi bi-file-earmark-pdf text-danger"></i> Lista PDF</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('lista-productos')"><i class="bi bi-card-image text-info"></i> Lista Productos (Imágenes)</a></li>
                             <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('etiquetas')"><i class="bi bi-tags text-primary"></i> Etiquetas</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" onclick="accionSeleccionados('excel')"><i class="bi bi-file-earmark-excel text-success"></i> Exportar Excel</a></li>
@@ -141,6 +142,7 @@
         let baseUrl = '';
 
         if (tipo === 'pdf') baseUrl = '{{ route("envios.pdf") }}';
+        if (tipo === 'lista-productos') baseUrl = '{{ route("envios.listaProductos") }}';
         if (tipo === 'etiquetas') baseUrl = '{{ route("envios.etiquetas") }}';
         if (tipo === 'excel') baseUrl = '{{ route("envios.excel") }}';
 

@@ -187,6 +187,36 @@ class EnvioProvinciaController extends Controller
         return redirect()->route('dashboard');
     }
 
+    public function listaProductos(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 12) {
+                $ids = $request->query('ids');
+
+                $query = EnvioProvincia::with(['Usuario', 'Cliente', 'Plataforma', 'Agencia', 'Productos.Producto']);
+
+                if (!empty($ids)) {
+                    $idArray = explode(',', $ids);
+                    $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
+                    $fecha = null;
+                } else {
+                    $fecha = $request->query('fecha', date('Y-m-d'));
+                    $envios = $query->whereDate('fecha_envio', $fecha)->get();
+                }
+
+                return view('envios.lista_productos', [
+                    'envios' => $envios,
+                    'fecha' => $fecha
+                ]);
+            }
+        }
+
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ver esta sección', 'warning', 'btn-danger');
+        return redirect()->route('dashboard');
+    }
+
     public function excel(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
