@@ -36,6 +36,8 @@ interface ConfiguracionServiceInterface
     public function deleteComisionPlataforma($idComisionPlataforma);
     public function createMarcaProducto($nombre,$img);
     public function createGrupoProducto($categoria,$grupo,$tipo,$img);
+    public function updateGrupoProducto($id,$nombre,$tipo,$img);
     public function createCategoriaProducto($nombre,$icon);
+    public function updateCategoriaProducto($id,$nombre,$icon);
     public function removeSugerencia($idSugerencia,$tipo);
 }

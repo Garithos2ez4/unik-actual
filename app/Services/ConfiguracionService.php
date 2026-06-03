@@ -431,6 +431,29 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         }
     }
 
+    public function updateGrupoProducto($id, $nombre, $tipo, $img)
+    {
+        $data = [
+            'nombreGrupo' => $nombre,
+            'idTipoProducto' => $tipo
+        ];
+        
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            if ($img) {
+                $imgService = new ImageService();
+                $grupo = $this->grupoRepository->getOne('idGrupoProducto', $id);
+                $data['imagenGrupo'] = 'grupos/IMGPRO' . $grupo->slugGrupo . '.webp';
+                $imgService->createImage($img, $grupo->slugGrupo, $this->pathGrupo);
+            }
+            $this->grupoRepository->update($id, $data);
+            \Illuminate\Support\Facades\DB::commit();
+        } catch (Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            throw new \InvalidArgumentException("Error al actualizar Grupo: " . $e->getMessage());
+        }
+    }
+
     public function createCategoriaProducto($nombre, $icon)
     {
         $data = [
@@ -439,6 +462,15 @@ class ConfiguracionService implements ConfiguracionServiceInterface
             'iconCategoria' => $icon ?? 'bi bi-tag'
         ];
         $this->categoriaRepository->create($data);
+    }
+
+    public function updateCategoriaProducto($id, $nombre, $icon)
+    {
+        $data = [
+            'nombreCategoria' => $nombre,
+            'iconCategoria' => $icon ?? 'bi bi-tag'
+        ];
+        $this->categoriaRepository->update($id, $data);
     }
 
     public function removeSugerencia($idSugerencia, $tipo)

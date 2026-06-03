@@ -18,7 +18,7 @@
     <script src="{{ asset('js/sheetjs/xlsx.full.min.js') }}"></script>
     <script src="{{ asset('js/quill.js') }}"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="{{ route('js.header-scripts') }}?v=1.01"></script>
+    <script src="{{ route('js.header-scripts') }}?v=1.02"></script>
 
 </head>
 
@@ -58,7 +58,11 @@
                         <div class="row h-100 d-flex align-items-center text-end pt-2" id="header-user-nav"
                             style="cursor:pointer">
                             @php
-                                $hasPendientes = !empty(trim(strip_tags(str_replace('&nbsp;', '', $user->bandeja))));
+                                $bandejaText = trim(strip_tags(str_replace('&nbsp;', '', $user->bandeja)));
+                                $bandejaHash = md5($bandejaText);
+                                $cookieName = 'bandeja_read_' . $user->idUser;
+                                $cookieValue = $_COOKIE[$cookieName] ?? null;
+                                $hasPendientes = !empty($bandejaText) && $cookieValue !== $bandejaHash;
                             @endphp
                             <h5 class="w-100"><i class="bi bi-person-circle"></i> {{ $user->user }}
                                 @if($hasPendientes)
@@ -74,7 +78,7 @@
                                 <div class="col-md-12 mt-1">
                                     <small>
                                         <a href="#" id="nav-pendientes-link"
-                                            onclick="openMyPendientes('{{ $user->idUser }}', '{{ route('getbandeja') }}'); return false;"
+                                            onclick="openMyPendientes('{{ $user->idUser }}', '{{ route('getbandeja') }}', '{{ $bandejaHash }}'); return false;"
                                             class=" text-decoration-none {{ $hasPendientes ? 'text-danger fw-bold' : 'text-secondary' }} link-hover"
                                             data-bs-toggle="modal" data-bs-target="#modalBandeja">
                                             <i class="bi bi-journal-bookmark-fill"></i> Pendientes

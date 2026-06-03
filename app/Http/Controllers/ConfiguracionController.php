@@ -662,6 +662,25 @@ class ConfiguracionController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
+    public function updateGrupoProducto(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $id = $request->input('idGrupo');
+        $nombre = $request->input('grupo');
+        $tipo = $request->input('tipo');
+        $img = $request->file('img');
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                if (isset($id) && isset($nombre) && isset($tipo)) {
+                    $this->configuracionService->updateGrupoProducto($id, $nombre, $tipo, $img);
+                }
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
     public function createCategoriaProducto(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
@@ -671,6 +690,24 @@ class ConfiguracionController extends Controller
             if ($acceso->idVista == 7) {
                 if (isset($nombre)) {
                     $this->configuracionService->createCategoriaProducto($nombre, $icon);
+                }
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function updateCategoriaProducto(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $id = $request->input('idCategoria');
+        $nombre = $request->input('nombreCategoria');
+        $icon = $request->input('iconCategoria');
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                if (isset($id) && isset($nombre)) {
+                    $this->configuracionService->updateCategoriaProducto($id, $nombre, $icon);
                 }
                 return back();
             }

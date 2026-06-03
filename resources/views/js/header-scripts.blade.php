@@ -30,7 +30,7 @@ function getIdPass(id,input){
     inputHidden.value = id;
 }
 
-function markPendientesAsRead() {
+function markPendientesAsRead(idUser, bandejaHash) {
     let navIcon = document.getElementById('nav-alert-icon');
     let menuIcon = document.getElementById('menu-alert-icon');
     let linkEl = document.getElementById('nav-pendientes-link');
@@ -41,10 +41,14 @@ function markPendientesAsRead() {
         linkEl.classList.remove('text-danger', 'fw-bold');
         linkEl.classList.add('text-secondary');
     }
+
+    if (idUser && bandejaHash) {
+        document.cookie = "bandeja_read_" + idUser + "=" + bandejaHash + "; path=/; max-age=" + (60*60*24*365);
+    }
 }
 
-function openMyPendientes(idUser, url) {
-    markPendientesAsRead();
+function openMyPendientes(idUser, url, bandejaHash) {
+    markPendientesAsRead(idUser, bandejaHash);
     
     let loader = document.getElementById('modalBandeja-total-body');
     let titleEl = document.getElementById('bandejaModalLabel');

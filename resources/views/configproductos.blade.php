@@ -30,9 +30,12 @@
             @endphp
             @foreach ($categorias as $categoria)
             <div class="accordion-item">
-              <h2 class="accordion-header" id="flush-headingOne-{{$count}}">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne-{{$count}}" aria-expanded="false" aria-controls="flush-collapseOne">
-                    <i class="{{$categoria->iconCategoria}}"></i> {{$categoria->nombreCategoria}}  
+              <h2 class="accordion-header d-flex align-items-center" id="flush-headingOne-{{$count}}">
+                <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne-{{$count}}" aria-expanded="false" aria-controls="flush-collapseOne">
+                    <i class="{{$categoria->iconCategoria}} me-2"></i> {{$categoria->nombreCategoria}}  
+                </button>
+                <button class="btn btn-warning me-3" style="z-index: 10;" data-bs-toggle="modal" data-bs-target="#editCategoriaModal" onclick="populateEditCategoria({{$categoria->idCategoria}}, '{{$categoria->nombreCategoria}}', '{{$categoria->iconCategoria}}')">
+                    <i class="bi bi-pencil-square"></i>
                 </button>
               </h2>
               <div id="flush-collapseOne-{{$count}}" class="accordion-collapse collapse" aria-labelledby="flush-headingOne-{{$count}}" data-bs-parent="#accordionGrupos">
@@ -40,11 +43,14 @@
                     <div class="row">
                         @foreach ($categoria->GrupoProducto as $grupo)
                         <div class="col-md-3 pb-2">
-                            <div class="row bg-light text-center border rounded-3 ms-2 me-2">
+                            <div class="row bg-light text-center border rounded-3 ms-2 me-2 position-relative">
+                                <button class="btn btn-warning btn-sm position-absolute top-0 end-0" style="width: auto;" data-bs-toggle="modal" data-bs-target="#editGrupoModal" onclick="populateEditGrupo({{$grupo->idGrupoProducto}}, '{{$grupo->nombreGrupo}}', '{{$grupo->idTipoProducto}}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
                                 <div class="col-md-8 d-flex align-items-center">
                                     <h6>{{$grupo->nombreGrupo}}</h6>
                                 </div>
-                                <div class="col-md-4 pt-0 pe-0">
+                                <div class="col-md-4 pt-0 pe-0 mt-3">
                                     <img src="{{asset('storage/'. $grupo->imagenGrupo)}}" alt="" class="border ps-0 pe-0 w-100">
                                 </div>
                             </div>
@@ -195,6 +201,85 @@
           </div>
         </div>
       </div>
+    </form>
+    
+    <form action="{{route('updatecategoria')}}" method="post" id="form-update-categoria">
+        @csrf
+        <div class="modal fade" id="editCategoriaModal" tabindex="-1" aria-labelledby="editCategoriaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="editCategoriaModalLabel">Editar Categor&iacute;a</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="body-modal-edit-categoria">
+                <div class="row">
+                    <input type="hidden" name="idCategoria" id="edit-id-categoria">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Nombre de la Categor&iacute;a:</label>
+                        <input type="text" maxlength="50" class="form-control" name="nombreCategoria" id="edit-nombre-categoria" required>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Icono de la Categor&iacute;a (Clase bi):</label>
+                        <input type="text" maxlength="50" class="form-control" name="iconCategoria" id="edit-icon-categoria" placeholder="ej. bi bi-laptop">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="button" onclick="validateForm('form-update-categoria')" class="btn btn-primary" id="btn-modal-edit-categoria"><i class="bi bi-floppy-fill"></i> Guardar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <form action="{{route('updategrupo')}}" method="post" enctype="multipart/form-data" id="form-update-grupo">
+        @csrf
+        <div class="modal fade" id="editGrupoModal" tabindex="-1" aria-labelledby="editGrupoModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="row">
+                            <h1 class="modal-title fs-5" id="editGrupoModalLabel">Editar Grupo</h1>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="body-modal-edit-grupo">
+                        <div class="row">
+                            <input type="hidden" name="idGrupo" value="" id="edit-id-grupo">
+                            <div class="col-md-4" id="drop-area-edit-grupo" class="drop-area">
+                                <input class="d-none" id="file-modal-edit-grupo" name="img" type="file" accept="image/*">
+                                <img src="https://placehold.co/300x300?text=Cambiar+Imagen"  alt="Click to upload" id="img-modal-edit-grupo" class="w-100 border border-secondary rounded-3" style="cursor: pointer; object-fit: cover;">
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <label class="form-label">Nombre del Grupo:</label>
+                                        <input type="text" maxlength="50" class="form-control" name="grupo" id="edit-nombre-grupo">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Tipo de producto</label>
+                                        <select name="tipo" id="edit-tipo-grupo" class="form-select">
+                                            <option value="">-Elige-</option>
+                                            @foreach ($tipos as $tipo)
+                                            <option value="{{$tipo->idTipoProducto}}">{{$tipo->tipoProducto}}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" onclick="validateForm('form-update-grupo')" class="btn btn-primary" id="btn-modal-edit-grupo"><i class="bi bi-floppy-fill"></i> Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
 </div>
 <script src="{{asset('js/configproductos.js')}}"></script>

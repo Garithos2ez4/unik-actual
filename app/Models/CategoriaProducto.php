@@ -8,6 +8,8 @@ class CategoriaProducto extends Model
  
     protected $table = 'CategoriaProducto';
 
+    protected $primaryKey = 'idCategoria';
+
     public $timestamps = false;
 
     protected $guarded = ['idCategoria'];

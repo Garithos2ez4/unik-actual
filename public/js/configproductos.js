@@ -1,10 +1,46 @@
 document.addEventListener('DOMContentLoaded', function() {
     setupDropArea('drop-area-marca', 'file-modal-marca', 'img-modal-marca', 1000, 400);
     setupDropArea('drop-area-grupo', 'file-modal-grupo', 'img-modal-grupo', 300, 300);
+    setupDropArea('drop-area-edit-grupo', 'file-modal-edit-grupo', 'img-modal-edit-grupo', 300, 300);
     validateButton('btn-modal-marca','body-modal-marcas');
     validateButton('btn-modal-grupo','body-modal-grupo');
     validateButton('btn-modal-categoria','body-modal-categoria');
+    validateButtonEdit('btn-modal-edit-categoria','body-modal-edit-categoria');
+    validateButtonEdit('btn-modal-edit-grupo','body-modal-edit-grupo');
 });
+
+function populateEditCategoria(id, nombre, icon) {
+    document.getElementById('edit-id-categoria').value = id;
+    document.getElementById('edit-nombre-categoria').value = nombre;
+    document.getElementById('edit-icon-categoria').value = icon;
+    document.getElementById('btn-modal-edit-categoria').disabled = false;
+}
+
+function populateEditGrupo(id, nombre, tipo) {
+    document.getElementById('edit-id-grupo').value = id;
+    document.getElementById('edit-nombre-grupo').value = nombre;
+    document.getElementById('edit-tipo-grupo').value = tipo;
+    document.getElementById('btn-modal-edit-grupo').disabled = false;
+}
+
+function validateButtonEdit(button, modal) {
+    const btnModal = document.getElementById(button);
+    const modalBody = document.getElementById(modal);
+    const inputsModal = modalBody.querySelectorAll('input:not([type="hidden"]):not([type="file"])');
+    const selectModal = modalBody.querySelector('select');
+    
+    function validate() {
+        let disableBtn = false;
+        inputsModal.forEach(function(x) {
+            if (x.value === '') disableBtn = true;
+        });
+        if(selectModal != null && selectModal.value == '') disableBtn = true;
+        btnModal.disabled = disableBtn;
+    }
+
+    inputsModal.forEach(function(x) { x.addEventListener('input', validate); });
+    if(selectModal != null) selectModal.addEventListener('change', validate);
+}
 
 function validateForm(id){
     let formPost = document.getElementById(id);

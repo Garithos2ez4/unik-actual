@@ -24,9 +24,11 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-lg-end">
                         @foreach ($categorias as $cat)
-                            <li><a class="dropdown-item text-dark" type="button"
-                                    href="{{ route('productos', [encrypt($cat['idCategoria']), encrypt($cat['GrupoProducto'][0]->idGrupoProducto)]) }}">{{ $cat['nombreCategoria'] }}</a>
-                            </li>
+                            @if (count($cat['GrupoProducto']) > 0)
+                                <li><a class="dropdown-item text-dark" type="button"
+                                        href="{{ route('productos', [encrypt($cat['idCategoria']), encrypt($cat['GrupoProducto'][0]->idGrupoProducto)]) }}">{{ $cat['nombreCategoria'] }}</a>
+                                </li>
+                            @endif
                         @endforeach
                     </ul>
                 </div>
