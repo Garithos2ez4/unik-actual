@@ -333,6 +333,17 @@ class AnalyticsController extends Controller
         $productosMasGanancia = $margenesProductos->sortByDesc('ganancia_neta')->take(5)->values();
         $productosMenosGanancia = $margenesProductos->sortBy('ganancia_neta')->take(5)->values();
 
+        // ── 9. Top 5 Productos Más Enviados ───────────────────
+        $topEnviados = \App\Models\EnvioProvinciaProducto::query()
+            ->join('envio_provincias', 'envio_provincia_productos.idEnvioProvincia', '=', 'envio_provincias.idEnvioProvincia')
+            ->join('Producto', 'envio_provincia_productos.idProducto', '=', 'Producto.idProducto')
+            ->selectRaw('Producto.nombreProducto, Producto.modelo, SUM(envio_provincia_productos.cantidad) as total_enviado')
+            ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
+            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
+            ->orderByDesc('total_enviado')
+            ->limit(5)
+            ->get();
+
         return view('analytics.index', [
             'user' => $userModel,
             'ventasMes' => $ventasMes,
@@ -344,6 +355,7 @@ class AnalyticsController extends Controller
             'productosMasGanancia' => $productosMasGanancia,
             'productosMenosGanancia' => $productosMenosGanancia,
             'topBestMonths' => $topBestMonths,
+            'topEnviados' => $topEnviados,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }

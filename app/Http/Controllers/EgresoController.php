@@ -215,6 +215,198 @@ class EgresoController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
+    public function appendEgreso(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 9) {
+                $idegreso = $request->input('idegreso');
+                $idRegistro = $request->input('append_idregistro');
+                $sku = $request->input('append_sku');
+                $precio = $request->input('append_precio');
+
+                if (empty($idegreso) || empty($idRegistro)) {
+                    $this->headerService->sendFlashAlerts('Datos incompletos', 'Verifica que hayas seleccionado una serie válida.', 'info', 'btn-warning');
+                    return back();
+                }
+
+                \Illuminate\Support\Facades\DB::beginTransaction();
+                try {
+                    // Obtener Egreso Original
+                    $egresoOriginal = \App\Models\EgresoProducto::findOrFail($idegreso);
+
+                    // Buscar Publicación
+                    $idPublicacion = 'NULO';
+                    if (!empty($sku)) {
+                        $publicacion = \App\Models\Publicacion::where('sku', $sku)->first();
+                        if ($publicacion) {
+                            $idPublicacion = $publicacion->idPublicacion;
+                        }
+                    }
+
+                    // Armar array para createEgreso
+                    $arrayEgreso = [
+                        'numeroOrden' => $egresoOriginal->numeroOrden,
+                        'fechaCompra' => $egresoOriginal->fechaCompra,
+                        'fechaDespacho' => $egresoOriginal->fechaDespacho
+                    ];
+                    
+                    $items = [
+                        [
+                            'idregistro' => $idRegistro,
+                            'idpublicacion' => $idPublicacion,
+                            'precioVenta' => $precio
+                        ]
+                    ];
+
+                    $createResult = $this->egresoService->createEgreso($arrayEgreso, $items);
+                    $egresosGenerados = $createResult['egresos'];
+                    $nuevoIdEgreso = $egresosGenerados[$idRegistro];
+
+                    // Verificar si el original tiene una Venta asignada
+                    $detalleOriginal = \App\Models\DetalleVenta::where('idEgreso', $idegreso)->first();
+                    if ($detalleOriginal && $detalleOriginal->idVenta) {
+                        $venta = \App\Models\Venta::find($detalleOriginal->idVenta);
+                        if ($venta) {
+                            // Validar precio
+                            $precioFinal = ($precio !== null && $precio !== '') ? floatval($precio) : 0;
+                            if ($precioFinal == 0 && isset($precio) && $precio !== '') $precioFinal = 0.1;
+
+                            // Heredar lógica de precio si no hay
+                            if ($precioFinal == 0) {
+                                if ($idPublicacion !== 'NULO' && isset($publicacion)) {
+                                    $precioFinal = $publicacion->precioPublicacion;
+                                } else {
+                                    $producto = \App\Models\RegistroProducto::find($idRegistro)->DetalleComprobante->Producto;
+                                    if ($producto) {
+                                        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
+                                        $precioFinal = $producto->precioDolar * $tasaCambio;
+                                    }
+                                }
+                            }
+
+                            \App\Models\DetalleVenta::create([
+                                'idVenta' => $venta->idVenta,
+                                'idEgreso' => $nuevoIdEgreso,
+                                'idProducto' => \App\Models\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
+                                'idPublicacion' => $idPublicacion !== 'NULO' ? $idPublicacion : null,
+                                'precioVenta' => $precioFinal,
+                                'cantidad' => 1,
+                                'origenPrecio' => $idPublicacion !== 'NULO' ? 'PUBLICACION' : 'TIENDA'
+                            ]);
+
+                            // Recalcular el total de la venta
+                            $nuevoTotal = \App\Models\DetalleVenta::where('idVenta', $venta->idVenta)
+                                ->selectRaw('SUM(precioVenta * cantidad) as total')
+                                ->first()->total ?? 0;
+                            
+                            $venta->totalVenta = floatval($nuevoTotal);
+                            $venta->save();
+                        }
+                    } else {
+                        // Si no hay venta (egreso histórico sin migrar), creamos una venta nueva
+                        $idUser = $this->headerService->getModelUser()->idUser;
+                        $ventaData = [
+                            'idCliente' => null,
+                            'numeroOrden' => $egresoOriginal->numeroOrden,
+                            'fechaVenta' => $egresoOriginal->fechaDespacho,
+                            'canal' => $idPublicacion !== 'NULO' ? 'PLATAFORMA' : 'TIENDA'
+                        ];
+                        
+                        $detallesVenta = [[
+                            'idRegistro' => $idRegistro,
+                            'idEgreso' => $nuevoIdEgreso,
+                            'idPublicacion' => $idPublicacion !== 'NULO' ? $idPublicacion : null,
+                            'idProducto' => \App\Models\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
+                            'precioVenta' => $precio,
+                            'cantidad' => 1
+                        ]];
+
+                        $this->ventaService->createVenta($ventaData, $detallesVenta, []);
+                    }
+
+                    \Illuminate\Support\Facades\DB::commit();
+                    $this->headerService->sendFlashAlerts('Producto añadido', 'El producto se sumó a la orden correctamente.', 'success', 'btn-success');
+                    return back();
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\DB::rollBack();
+                    $this->headerService->sendFlashAlerts('Error al añadir producto', $e->getMessage(), 'error', 'btn-danger');
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function pendientesEnvios(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 9) {
+                $fechaDia = $request->input('dia');
+                $fechaMes = $request->input('month');
+                $fechaCarbon = null;
+
+                $query = \App\Models\EnvioProvinciaProducto::with(['EnvioProvincia.Cliente', 'EnvioProvincia.Destino'])
+                    ->whereNotNull('nota_producto')
+                    ->where('nota_producto', 'LIKE', '%S/N:%');
+
+                if ($fechaDia) {
+                    $fechaCarbon = \Carbon\Carbon::parse($fechaDia);
+                    $query->whereHas('EnvioProvincia', function ($q) use ($fechaDia) {
+                        $q->whereDate('fecha_envio', $fechaDia);
+                    });
+                } elseif ($fechaMes) {
+                    $fechaCarbon = \Carbon\Carbon::parse($fechaMes . '-01');
+                    $query->whereHas('EnvioProvincia', function ($q) use ($fechaMes) {
+                        $q->whereMonth('fecha_envio', date('m', strtotime($fechaMes)))
+                          ->whereYear('fecha_envio', date('Y', strtotime($fechaMes)));
+                    });
+                } else {
+                    $fechaCarbon = \Carbon\Carbon::now();
+                    $query->whereHas('EnvioProvincia', function ($q) {
+                        $q->whereMonth('fecha_envio', date('m'))
+                          ->whereYear('fecha_envio', date('Y'));
+                    });
+                }
+
+                $pes = $query->orderBy('idEnvioProvinciaProducto', 'desc')->get();
+
+                $series = [];
+                foreach ($pes as $pe) {
+                    preg_match_all('/S\/N:\s*([^\s,]+)/', $pe->nota_producto, $matches);
+                    if (!empty($matches[1])) {
+                        foreach ($matches[1] as $serial) {
+                            $serialClasificado = trim($serial);
+                            $registro = \App\Models\RegistroProducto::with('DetalleComprobante.Producto')
+                                ->where('numeroSerie', $serialClasificado)
+                                ->where('estado', '!=', 'ENTREGADO')
+                                ->first();
+
+                            if ($registro) {
+                                $series[] = [
+                                    'serial' => $serialClasificado,
+                                    'producto' => $registro->DetalleComprobante->Producto->nombreProducto ?? 'Producto desconocido',
+                                    'envio' => $pe->EnvioProvincia->toArray(),
+                                    'cantidad' => $pe->cantidad
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                return view('egresos.pendientes_envios', [
+                    'user' => $userModel,
+                    'series' => $series,
+                    'fecha' => $fechaCarbon
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
     public function searchRegistro(Request $request)
     {
         $query = $request->input('query');

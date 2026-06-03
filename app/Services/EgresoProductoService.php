@@ -345,6 +345,24 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
                         $venta->totalVenta = floatval($nuevoTotal);
                         $venta->save();
+
+                        // Actualizar PagoVenta para reflejar el nuevo precio
+                        // Si solo hay un pago, le asignamos todo el total. Si hay varios, se ajusta el primero proporcionalmente o se deja una alerta,
+                        // pero la regla general es tener un solo pago para el total.
+                        $pagos = \App\Models\PagoVenta::where('idVenta', $venta->idVenta)->get();
+                        if ($pagos->count() === 1) {
+                            $pagoUnico = $pagos->first();
+                            $pagoUnico->monto = floatval($nuevoTotal);
+                            $pagoUnico->save();
+                        } elseif ($pagos->count() > 1) {
+                            // Si hay múltiples pagos, calculamos la diferencia y se la restamos/sumamos al último pago
+                            // para que la suma cuadre.
+                            $diferencia = floatval($nuevoTotal) - $pagos->sum('monto');
+                            $ultimoPago = $pagos->last();
+                            $ultimoPago->monto += $diferencia;
+                            if ($ultimoPago->monto < 0) $ultimoPago->monto = 0; // Prevenir montos negativos
+                            $ultimoPago->save();
+                        }
                     }
                 } else {
                     // MIGRACIÓN AUTOMÁTICA DE EGRESO ANTIGUO

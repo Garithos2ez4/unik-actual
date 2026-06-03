@@ -45,8 +45,9 @@
             <div class="col-2 col-md-4 text-end">
                 @foreach ($user->Accesos as $vista)
                 @if($vista->idVista == 9)
-                <a class="btn btn-primary me-1" href="{{route('egresos.masivos')}}" target="_blank"><i class="bi bi-lightning-charge-fill"></i><span class="d-none d-md-inline"> Egreso Masivo</span></a>
-                <a class="btn btn-success" href="{{route('createegreso')}}" target="_blank"><i class="bi bi-plus-lg"></i><span class="d-none d-md-inline"> Nuevo Egreso</span> </a>
+                <a class="btn btn-warning me-1 mb-1 mb-md-0" href="{{route('egresos.pendientes_envios')}}" target="_blank"><i class="bi bi-clock-history"></i><span class="d-none d-md-inline"> Pendiente de Egresar</span></a>
+                <a class="btn btn-primary me-1 mb-1 mb-md-0" href="{{route('egresos.masivos')}}" target="_blank"><i class="bi bi-lightning-charge-fill"></i><span class="d-none d-md-inline"> Egreso Masivo</span></a>
+                <a class="btn btn-success mb-1 mb-md-0" href="{{route('createegreso')}}" target="_blank"><i class="bi bi-plus-lg"></i><span class="d-none d-md-inline"> Nuevo Egreso</span> </a>
                 @endif
                 @endforeach
             </div>
@@ -128,6 +129,28 @@
                                         <div class="col-6">
                                             <label class="form-label fw-bold mb-0"><small>Precio Venta:</small></label>
                                             <input type="number" step="0.01" min="0" name="precio_venta" id="modal-egreso-edit-precio" class="form-control form-control-sm">
+                                        </div>
+                                    </div>
+                                    <hr class="mt-3 mb-2">
+                                    <div class="row align-items-end">
+                                        <div class="col-12 mb-2">
+                                            <label class="form-label text-success fw-bold mb-0"><small><i class="bi bi-plus-circle"></i> Añadir producto a esta misma Orden</small></label>
+                                        </div>
+                                        <div class="col-12 mb-2" style="position:relative">
+                                            <input type="text" id="append_serialnumber" name="append_serialnumber" class="form-control form-control-sm" placeholder="Escanear Serial Number" oninput="searchRegistroAppend(this)" autocomplete="off">
+                                            <input type="hidden" id="hidden_append_idregistro" name="append_idregistro" value="">
+                                            <ul class="list-group w-100" style="position:absolute;top:100%;z-index:1100" id="suggestions-append-serial"></ul>
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="form-label fw-bold mb-0"><small>SKU:</small></label>
+                                            <input type="text" id="append_sku" name="append_sku" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-4">
+                                            <label class="form-label fw-bold mb-0"><small>Precio:</small></label>
+                                            <input type="number" step="0.01" min="0" id="append_precio" name="append_precio" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <button type="button" class="btn btn-sm btn-success w-100" onclick="formDetailEgreso('append')">Añadir</button>
                                         </div>
                                     </div>
                                 </div>

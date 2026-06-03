@@ -122,6 +122,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/documento/validateseries', [DocumentoController::class, 'validateSeries'])->name('validate.series');
 
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
+    Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');
@@ -246,6 +247,9 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/configuracion/productos', [ConfiguracionController::class, 'productos'])->name('configproductos');
     Route::post('/configuracion/insertmarca', [ConfiguracionController::class, 'createMarcaProducto'])->name('insertmarca');
     Route::post('/configuracion/insertgrupo', [ConfiguracionController::class, 'createGrupoProducto'])->name('insertgrupo');
+    Route::post('/configuracion/updategrupo', [ConfiguracionController::class, 'updateGrupoProducto'])->name('updategrupo');
+    Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
+    Route::post('/configuracion/updatecategoria', [ConfiguracionController::class, 'updateCategoriaProducto'])->name('updatecategoria');
     Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
 
     //Configuracion-ESPECIFICACIONES

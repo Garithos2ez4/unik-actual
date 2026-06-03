@@ -4,7 +4,6 @@
 
 @section('content')
 <div class="container pb-5">
-    <!-- Encabezado -->
     <div class="row mt-4 align-items-center">
         <div class="col-md-6">
             <h2 class="fw-bold"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Resumen Ejecutivo</h2>
@@ -34,50 +33,41 @@
     @include('analytics.partials.topcontrols')
 
     <div class="row mt-2">
-        <!-- Gráfico de Tendencia -->
         <div class="col-lg-12">
             @include('analytics.partials.trends')
         </div>
     </div>
 
     <div class="row mt-2">
-        <!-- Productos con Mayor Ingreso (Monto S/) -->
         <div class="col-lg-6">
             @include('analytics.partials.top_products_revenue')
         </div>
-        <!-- Productos Más Vendidos (Cantidad Unidades) -->
         <div class="col-lg-6">
             @include('analytics.partials.top_products_qty')
         </div>
     </div>
 
-    <!-- Márgenes de Ganancia -->
     @include('analytics.partials.margins')
 
     <div class="row mt-2">
-        <!-- Rendimiento por Plataforma -->
         <div class="col-lg-6">
             @include('analytics.partials.platforms')
         </div>
-        <!-- Top SKUs Mes -->
         <div class="col-lg-6">
             @include('analytics.partials.top_skus')
         </div>
     </div>
 
     <div class="row mt-2">
-        <!-- Top Fallas Detallado -->
         <div class="col-lg-6">
-            @include('analytics.partials.failures')
+            @include('analytics.partials.top_enviados')
         </div>
-        <!-- Hall of Fame: Mejores Meses Históricos -->
         <div class="col-lg-6">
             @include('analytics.partials.best_months')
         </div>
     </div>
 </div>
 
-<!-- Scripts y Estilos -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 @include('analytics.partials.scripts')
 
