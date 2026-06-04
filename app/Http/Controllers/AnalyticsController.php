@@ -394,7 +394,7 @@ class AnalyticsController extends Controller
             ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+            ->selectRaw("Venta.idVenta, Venta.numeroOrden, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
@@ -402,7 +402,7 @@ class AnalyticsController extends Controller
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+            ->groupBy('Venta.idVenta', 'Venta.numeroOrden', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
             ->orderByDesc('Venta.fechaVenta')
             ->get()
             ->map(function ($venta) {
@@ -414,9 +414,63 @@ class AnalyticsController extends Controller
                 return $venta;
             });
 
-        return view('analytics.components.falabella', [
+        // ── Consulta para agrupar por SKU (Modelo) ───────────────────
+        $skusFalabella = \App\Models\DetalleVenta::query()
+            ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
+            ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+            ->selectRaw("Producto.modelo as sku,
+                         SUM(DetalleVenta.cantidad) as total_unidades,
+                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                         SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('Producto.modelo')
+            ->orderByDesc('ingresos')
+            ->get()
+            ->map(function ($sku) {
+                $sku->ingresos = round($sku->ingresos, 2);
+                $sku->costos = round($sku->costos, 2);
+                $sku->ganancia = round($sku->ingresos - $sku->costos, 2);
+                $sku->comision_falabella = round($sku->comision_falabella, 2);
+                $sku->margen = $sku->ingresos > 0 ? round(($sku->ganancia / $sku->ingresos) * 100, 2) : 0;
+                return $sku;
+            });
+
+        $skusMayorRotacion = $skusFalabella->sortByDesc('total_unidades')->take(5)->values();
+        $skusMayorRentabilidad = $skusFalabella->sortByDesc('ganancia')->take(5)->values();
+
+        // ── Consulta para tendencia de ventas por mes (Gráfico) ────────
+        $ventasMesRaw = Venta::query()
+            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
+            ->where('DetalleVenta.precioVenta', '>', 0)
+            ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
+            ->orderBy('fecha', 'asc')
+            ->get();
+
+        $ventasMes = [];
+        for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
+            $found = $ventasMesRaw->firstWhere('fecha', $dateStr);
+            $ventasMes[] = [
+                'fecha' => $date->format('d/m'),
+                'total' => $found ? $found->total_unidades : 0,
+                'monto' => $found ? round($found->total_monto, 2) : 0
+            ];
+        }
+
+        return view('analytics.components.falabella.index', [
             'user' => $userModel,
             'ventasFalabella' => $ventasFalabella,
+            'skusFalabella' => $skusFalabella,
+            'skusMayorRotacion' => $skusMayorRotacion,
+            'skusMayorRentabilidad' => $skusMayorRentabilidad,
+            'ventasMes' => $ventasMes,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
