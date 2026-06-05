@@ -112,76 +112,96 @@
         </div>
 
         <!-- SECCIÓN DE PAGOS (Oculta por defecto) -->
-        <div class="row mt-3" id="seccion-pagos" style="display: none;">
+        <div class="row mt-4" id="seccion-pagos" style="display: none;">
             <div class="col-12">
-                <div class="card border-primary">
-                    <div class="card-header bg-primary text-white py-1">
-                        <h6 class="mb-0"><i class="bi bi-wallet2"></i> Registro de Pagos (Opcional)</h6>
-                    </div>
-                    <div class="card-body py-2">
-                        <div class="row align-items-end">
-                            <div class="col-12 col-md-3 mb-2">
-                                <label class="form-label mb-0"><small>Método de Pago</small></label>
-                                <select class="form-select form-select-sm" id="pago-metodo">
-                                    <option value="">Seleccione...</option>
-                                    @foreach($metodosPago ?? [] as $metodo)
-                                    <option value="{{ $metodo->idMetodoPago }}">{{ $metodo->nombreMetodo }}</option>
-                                    @endforeach
-                                </select>
+                <div class="card border-0 shadow-sm rounded-4 bg-light">
+                    <div class="card-body p-4">
+
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="p-2 rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background-color: #e6f0ff;"> <i class="bi bi-wallet2 text-primary fs-4"></i>
                             </div>
-                            <div class="col-12 col-md-2 mb-2" id="div-pago-empresa" style="display: none;">
-                                <label class="form-label mb-0"><small>Empresa</small></label>
-                                <select class="form-select form-select-sm" id="pago-empresa">
-                                    <option value="">Seleccione...</option>
-                                    @foreach($empresas ?? [] as $empresa)
-                                    <option value="{{ $empresa->idEmpresa }}">{{ $empresa->nombreComercial ?? $empresa->razonSocial }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-3 mb-2" id="div-pago-cuenta" style="display: none;">
-                                <label class="form-label mb-0"><small>Cuenta Destino</small></label>
-                                <select class="form-select form-select-sm" id="pago-cuenta">
-                                    <option value="">Seleccione...</option>
-                                    @foreach($cuentasBancarias ?? [] as $cuenta)
-                                    <option value="{{ $cuenta->idCuentaBancaria }}" data-idempresa="{{ $cuenta->idEmpresa }}" data-banco="{{ strtoupper($cuenta->Banco->nombreBanco ?? '') }}">{{ $cuenta->Banco->nombreBanco ?? 'Banco' }} - Nro: {{ $cuenta->numeroCuenta }} ({{ $cuenta->tipoCuenta }})</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-6 col-md-2 mb-2">
-                                <label class="form-label mb-0"><small>Monto</small></label>
-                                <input type="number" step="0.01" class="form-control form-control-sm" id="pago-monto" placeholder="0.00">
-                            </div>
-                            <div class="col-6 col-md-2 mb-2">
-                                <label class="form-label mb-0"><small>Ref.</small></label>
-                                <input type="text" class="form-control form-control-sm" id="pago-ref" placeholder="(Opcional)">
-                            </div>
-                            <div class="col-12 col-md-2 mb-2 text-end">
-                                <button type="button" class="btn btn-sm btn-primary w-100" id="btn-add-pago">Añadir</button>
+                            <div>
+                                <h5 class="fw-bold text-dark mb-0">Registro de Pagos</h5>
+                                <span class="text-muted small">Añade los adelantos o pagos parciales de este egreso <span class="badge bg-secondary-subtle text-secondary ms-1">Opcional</span></span>
                             </div>
                         </div>
 
-                        <div class="table-responsive mt-2">
-                            <table class="table table-sm table-bordered mb-0 text-center" id="tabla-pagos" style="display:none;">
-                                <thead class="table-light">
+                        <div class="bg-white p-3 rounded-3 shadow-sm border mb-4">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Método de Pago</label>
+                                    <select class="form-select" id="pago-metodo">
+                                        <option value="">Seleccione...</option>
+                                        @foreach($metodosPago ?? [] as $metodo)
+                                        <option value="{{ $metodo->idMetodoPago }}">{{ $metodo->nombreMetodo }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-3" id="div-pago-empresa" style="display: none;">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Empresa</label>
+                                    <select class="form-select" id="pago-empresa">
+                                        <option value="">Seleccione...</option>
+                                        @foreach($empresas ?? [] as $empresa)
+                                        <option value="{{ $empresa->idEmpresa }}">{{ $empresa->nombreComercial ?? $empresa->razonSocial }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-12 col-md-4" id="div-pago-cuenta" style="display: none;">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Cuenta Destino</label>
+                                    <select class="form-select" id="pago-cuenta">
+                                        <option value="">Seleccione...</option>
+                                        @foreach($cuentasBancarias ?? [] as $cuenta)
+                                        <option value="{{ $cuenta->idCuentaBancaria }}" data-idempresa="{{ $cuenta->idEmpresa }}" data-banco="{{ strtoupper($cuenta->Banco->nombreBanco ?? '') }}">
+                                            {{ $cuenta->Banco->nombreBanco ?? 'Banco' }} - Nro: {{ $cuenta->numeroCuenta }} ({{ $cuenta->tipoCuenta }})
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Monto (S/)</label>
+                                    <input type="number" step="0.01" class="form-control fw-bold text-primary" id="pago-monto" placeholder="0.00">
+                                </div>
+
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Referencia</label>
+                                    <input type="text" class="form-control" id="pago-ref" placeholder="Ej. OP-1234">
+                                </div>
+
+                                <div class="col-12 col-md-2">
+                                    <button type="button" class="btn btn-primary w-100 fw-bold shadow-sm" id="btn-add-pago">
+                                        <i class="bi bi-plus-lg me-1"></i> Añadir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover table-borderless align-middle mb-0" id="tabla-pagos" style="display:none;">
+                                <thead class="table-light border-bottom">
                                     <tr>
-                                        <th>Método</th>
-                                        <th>Ref.</th>
-                                        <th>Monto</th>
-                                        <th>Quitar</th>
+                                        <th class="text-uppercase small fw-bold text-secondary ps-3">Método / Cuenta</th>
+                                        <th class="text-uppercase small fw-bold text-secondary">Referencia</th>
+                                        <th class="text-uppercase small fw-bold text-secondary text-end">Monto</th>
+                                        <th class="text-uppercase small fw-bold text-secondary text-center pe-3">Acción</th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
-                                <tfoot>
+                                <tbody>
+                                </tbody>
+                                <tfoot class="border-top" style="border-top-width: 2px !important;">
                                     <tr>
-                                        <th colspan="2" class="text-end">Total Pagado:</th>
-                                        <th id="total-pagado-text" class="text-primary">0.00</th>
+                                        <th colspan="2" class="text-end text-uppercase text-secondary fw-bold pt-3">Total Pagado:</th>
+                                        <th class="text-end pt-3">
+                                            <span class="fs-5 fw-bold text-success">S/ <span id="total-pagado-text">0.00</span></span>
+                                        </th>
                                         <th></th>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
 
-                        <!-- Contenedor para inyectar inputs hidden al hacer submit -->
                         <div id="hidden-pagos-container"></div>
                     </div>
                 </div>

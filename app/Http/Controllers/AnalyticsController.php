@@ -604,73 +604,86 @@ class AnalyticsController extends Controller
         $tc = $this->calculadoraService->getTasaCambio();
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
 
-        $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
-             FROM EgresoProducto ep_inner
-             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
-             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
-             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
-             LIMIT 1),
-            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
-        )";
-
-        $comisionTiendaExpr = "0";
-
-        $ventasTienda = Venta::query()
-            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
-            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
-            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
-                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
-                         (SELECT GROUP_CONCAT(DISTINCT MetodoPago.nombreMetodo SEPARATOR ', ') FROM PagoVenta JOIN MetodoPago ON PagoVenta.idMetodoPago = MetodoPago.idMetodoPago WHERE PagoVenta.idVenta = Venta.idVenta) as metodos_pago,
-                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
-                         0 as comision_tienda")
-            ->where('DetalleVenta.precioVenta', '>', 0)
-            ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
-            ->orderByDesc('Venta.fechaVenta')
-            ->get()
-            ->map(function ($venta) {
-                $venta->ingresos = round($venta->ingresos, 2);
-                $venta->costos   = round($venta->costos, 2);
-                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
-                $venta->comision_tienda = 0;
-                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
-                return $venta;
-            });
-
-        $pagosTienda = \App\Models\PagoVenta::query()
-            ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
-            ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
-            ->selectRaw("MetodoPago.nombreMetodo as metodo_pago, SUM(PagoVenta.monto) as total_monto, COUNT(PagoVenta.idPagoVenta) as cantidad_transacciones")
-            ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy('MetodoPago.nombreMetodo')
-            ->orderByDesc('total_monto')
-            ->get();
-
-        $detallePagosTienda = \App\Models\PagoVenta::query()
-            ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
-            ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
-            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
-            ->leftJoin('CuentasTransferencia', 'PagoVenta.idCuentaBancaria', '=', 'CuentasTransferencia.idCuentaBancaria')
-            ->leftJoin('Banco', 'CuentasTransferencia.idBanco', '=', 'Banco.idBanco')
-            ->selectRaw("COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) as metodo_banco, PagoVenta.idVenta, Venta.fechaVenta, PagoVenta.monto, PagoVenta.nroOperacion, Usuario.user as vendedor")
-            ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->orderByRaw('COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo)')
-            ->orderByDesc('Venta.fechaVenta')
-            ->get()
-            ->groupBy('metodo_banco');
-
         return view('analytics.components.tienda_venta', [
             'user' => $userModel,
-            'ventasTienda' => $ventasTienda,
-            'pagosTienda' => $pagosTienda,
-            'detallePagosTienda' => $detallePagosTienda,
+            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
+        ]);
+    }
+
+    public function tiendaData(Request $request)
+    {
+        $tc = $this->calculadoraService->getTasaCambio();
+        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
+        
+        $cacheKey = "tienda_data_{$fechaInicio}_{$fechaFin}";
+
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () use ($fechaInicio, $fechaFin, $tc) {
+            $costoVentaExpr = "COALESCE(
+                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+                 FROM EgresoProducto ep_inner
+                 INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+                 INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+                 INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+                 WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+                 LIMIT 1),
+                COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+            )";
+
+            $comisionTiendaExpr = "0";
+
+            $ventasTienda = Venta::query()
+                ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+                ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+                ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+                ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+                             GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
+                             (SELECT GROUP_CONCAT(DISTINCT MetodoPago.nombreMetodo SEPARATOR ', ') FROM PagoVenta JOIN MetodoPago ON PagoVenta.idMetodoPago = MetodoPago.idMetodoPago WHERE PagoVenta.idVenta = Venta.idVenta) as metodos_pago,
+                             SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
+                             0 as comision_tienda")
+                ->where('DetalleVenta.precioVenta', '>', 0)
+                ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+                ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
+                ->orderByDesc('Venta.fechaVenta')
+                ->get()
+                ->map(function ($venta) {
+                    $venta->ingresos = round($venta->ingresos, 2);
+                    $venta->costos   = round($venta->costos, 2);
+                    $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
+                    $venta->comision_tienda = 0;
+                    $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                    return $venta;
+                });
+
+            $pagosTienda = \App\Models\PagoVenta::query()
+                ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
+                ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
+                ->selectRaw("MetodoPago.nombreMetodo as metodo_pago, SUM(PagoVenta.monto) as total_monto, COUNT(PagoVenta.idPagoVenta) as cantidad_transacciones")
+                ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+                ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->groupBy('MetodoPago.nombreMetodo')
+                ->orderByDesc('total_monto')
+                ->get();
+
+            $detallePagosTienda = \App\Models\PagoVenta::query()
+                ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
+                ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
+                ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
+                ->leftJoin('CuentasTransferencia', 'PagoVenta.idCuentaBancaria', '=', 'CuentasTransferencia.idCuentaBancaria')
+                ->leftJoin('Banco', 'CuentasTransferencia.idBanco', '=', 'Banco.idBanco')
+                ->selectRaw("COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) as metodo_banco, PagoVenta.idVenta, Venta.fechaVenta, PagoVenta.monto, PagoVenta.nroOperacion, Usuario.user as vendedor")
+                ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+                ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->orderByRaw('COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo)')
+                ->orderByDesc('Venta.fechaVenta')
+                ->get()
+                ->groupBy('metodo_banco');
+
+            return compact('ventasTienda', 'pagosTienda', 'detallePagosTienda');
+        });
+
+        return view('analytics.components.tienda_venta_data', $data + [
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }

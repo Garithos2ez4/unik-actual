@@ -4,24 +4,27 @@
 
 @section('content')
 <div class="container pb-5">
-    <div class="row mt-4 align-items-center">
-        <div class="col-md-6">
+    <div class="row mt-4 mb-5 align-items-center">
+        <div class="col-md-5">
             <h2 class="fw-bold"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Resumen Ejecutivo</h2>
             <p class="text-secondary mb-0">Análisis detallado de ventas, tendencias y rendimiento operativo.</p>
         </div>
         <div class="col-md-7">
             <div class="d-flex flex-wrap gap-2 justify-content-md-end">
                 <a href="{{ route('dashboard.analitica.tienda') }}" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                    <i class="bi bi-shop me-1"></i> Detalle Tienda
+                    <i class="bi bi-shop me-1"></i> Tienda
                 </a>
                 <a href="{{ route('dashboard.analitica.falabella') }}" class="btn btn-warning rounded-pill px-4 shadow-sm">
-                    <i class="bi bi-shop me-1"></i> Detalle Falabella
+                    <i class="bi bi-shop me-1"></i> Falabella
                 </a>
                 <a href="{{ route('dashboard.analitica.mercadolibre') }}" class="btn btn-info text-white rounded-pill px-4 shadow-sm">
-                    <i class="bi bi-shop me-1"></i> Detalle Mercado Libre
+                    <i class="bi bi-shop me-1"></i> Mercado Libre
                 </a>
                 <a href="{{ route('dashboard.analitica.ripley') }}" class="btn rounded-pill px-4 shadow-sm" style="background-color: #6a1b9a; color: white;">
-                    <i class="bi bi-shop me-1"></i> Detalle Ripley
+                    <i class="bi bi-shop me-1"></i> Ripley
+                </a>
+                <a href="{{ route('dashboard.analitica.envios') }}" class="btn btn-secondary rounded-pill px-4 shadow-sm text-white">
+                    <i class="bi bi-truck me-1"></i> Envíos
                 </a>
                 <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
                     <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard

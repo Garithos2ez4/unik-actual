@@ -65,7 +65,7 @@ class EgresoController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 9) {
                 $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
-                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
+                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
                 $empresas = \App\Models\Empresa::all();
                 $tipoDocumentos = \App\Models\TipoDocumento::all();
                 return view('egresos.createegreso', [
@@ -473,7 +473,7 @@ class EgresoController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 9) {
                 $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
-                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->get();
+                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
                 $empresas = \App\Models\Empresa::all();
                 $tipoDocumentos = \App\Models\TipoDocumento::all();
                 $tasaCambio = app(\App\Services\CalculadoraServiceInterface::class)->obtenerCambioDolar() ?? 3.42;
