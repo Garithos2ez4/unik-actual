@@ -77,6 +77,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'numeroSerie' => $details->numeroSerie,
                 'estado' => $details->estado,
                 'modelo' => $producto->modelo,
+                'idGrupo' => $producto->idGrupo,
                 'image' => $producto->imagenProducto1,
                 'marca' => $producto->MarcaProducto->nombreMarca,
                 'precioSoles' => round($precioDolarTotal * $tc_a_usar, 2)
@@ -241,6 +242,47 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 $idRegistro = $item['idregistro'];
                 $idPublicacion = isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '' ? $item['idpublicacion'] : null;
                 $registro = $this->registroRepository->getOne('idRegistro', $idRegistro);
+
+                // Si se especifica un costo personalizado (por ejemplo, para componentes), actualizar el DetalleComprobante
+                if (isset($item['costo']) && $item['costo'] !== '') {
+                    $customCostoSoles = floatval($item['costo']);
+                    $dc = \App\Models\DetalleComprobante::with('Comprobante')->find($registro->idDetalleComprobante);
+                    if ($dc && $dc->Comprobante) {
+                        $moneda = $dc->Comprobante->moneda ?? 'SOLES';
+                        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+                        
+                        if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
+                            $newPrecioUnitario = $tasaCambio > 0 ? $customCostoSoles / $tasaCambio : $customCostoSoles;
+                        } else {
+                            $newPrecioUnitario = $customCostoSoles;
+                        }
+                        
+                        $newPrecioUnitario = round($newPrecioUnitario, 4);
+                        $sharedCount = \App\Models\RegistroProducto::where('idDetalleComprobante', $registro->idDetalleComprobante)->count();
+                        
+                        if ($sharedCount > 1) {
+                            $newDc = $dc->replicate();
+                            $lastDc = \App\Models\DetalleComprobante::orderBy('idDetalleComprobante', 'desc')->first();
+                            $nextId = $lastDc ? $lastDc->idDetalleComprobante + 1 : 1;
+                            
+                            $newDc->idDetalleComprobante = $nextId;
+                            $newDc->precioUnitario = $newPrecioUnitario;
+                            $newDc->precioCompra = $newPrecioUnitario;
+                            $newDc->save();
+                            
+                            $registro->idDetalleComprobante = $nextId;
+                            $registro->save();
+                            
+                            $newQty = $sharedCount - 1;
+                            $dc->precioCompra = round($dc->precioUnitario * $newQty, 2);
+                            $dc->save();
+                        } else {
+                            $dc->precioUnitario = $newPrecioUnitario;
+                            $dc->precioCompra = $newPrecioUnitario;
+                            $dc->save();
+                        }
+                    }
+                }
 
                 // Validamos que el producto est en un estado vendible (NUEVO)
                 if ($registro->estado !== 'NUEVO') {

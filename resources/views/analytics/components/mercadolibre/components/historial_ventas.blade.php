@@ -1,25 +1,3 @@
-@extends('layouts.app')
-
-@section('title', 'Detalle Mercado Libre')
-
-@section('content')
-<div class="container pb-5">
-    <!-- Encabezado -->
-    <div class="row mt-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="fw-bold"><i class="bi bi-shop text-warning me-2"></i>Detalle de Ventas - Mercado Libre</h2>
-            <p class="text-secondary mb-0">Análisis específico de ventas, comisiones y márgenes en la plataforma Mercado Libre.</p>
-        </div>
-        <div class="col-md-6 text-md-end">
-            <a href="{{ route('dashboard.analitica') }}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="bi bi-arrow-left me-1"></i> Volver a Analítica
-            </a>
-        </div>
-    </div>
-
-    <!-- Controles de Filtros -->
-    @include('analytics.partials.topcontrols')
-
     <!-- Tabla de Ventas -->
     <div class="card border-0 shadow-sm rounded-4 mt-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
@@ -102,4 +80,3 @@
         </div>
     </div>
 </div>
-@endsection

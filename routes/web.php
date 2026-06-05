@@ -64,9 +64,16 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsController::class, 'falabella'])->name('dashboard.analitica.falabella');
-    Route::get('/dashboard/analitica/mercadolibre', [AnalyticsController::class, 'mercadolibre'])->name('dashboard.analitica.mercadolibre');
+    Route::get('/dashboard/analitica/mercadolibre', [\App\Http\Controllers\AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
     Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
+    Route::get('/dashboard/analitica/tienda/data', [AnalyticsController::class, 'tiendaData'])->name('dashboard.analitica.tienda.data');
+    
+    // Rutas de Analítica de Envíos
+    Route::get('/dashboard/analitica/envios', [\App\Http\Controllers\AnalyticsEnviosController::class, 'index'])->name('dashboard.analitica.envios');
+    Route::get('/dashboard/analitica/envios/top-provincias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopProvincias'])->name('dashboard.analitica.envios.provincias');
+    Route::get('/dashboard/analitica/envios/top-clientes', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopClientes'])->name('dashboard.analitica.envios.clientes');
+    Route::get('/dashboard/analitica/envios/top-agencias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopAgencias'])->name('dashboard.analitica.envios.agencias');
     
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
@@ -123,6 +130,7 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
+    Route::get('/egresos/pendientes-envios', [EgresoController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');
@@ -132,6 +140,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/masivos', [EgresoController::class, 'egresosMasivos'])->name('egresos.masivos');
     Route::get('/egresos/search-producto-ajax', [EgresoController::class, 'searchProductoAjax'])->name('egresos.searchproducto');
     Route::get('/egresos/series-disponibles', [EgresoController::class, 'getSeriesDisponibles'])->name('egresos.seriesdisponibles');
+    Route::get('/egresos/costo-registro', [EgresoController::class, 'getCostoRegistro'])->name('egresos.costoregistro');
+    Route::post('/egresos/calcular-costo-ensamble', [EgresoController::class, 'calcularCostoEnsamble'])->name('egresos.calcularcostoensamble');
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
@@ -139,6 +149,7 @@ Route::middleware(['validate.session'])->group(function () {
     // Rutas para Ventas
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('/', [VentaController::class, 'index'])->name('index');
+        Route::get('/laptops-aio', [VentaController::class, 'getVentasLaptopsAio'])->name('laptops_aio');
         Route::get('/{id}', [VentaController::class, 'show'])->name('show');
         Route::post('/store', [VentaController::class, 'store'])->name('store');
     });

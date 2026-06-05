@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 class DetalleComprobante extends Model
 {
     public $timestamps = false;
+    public $incrementing = false;
  
     protected $table = 'DetalleComprobante';
     

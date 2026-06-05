@@ -499,11 +499,17 @@ class EgresoController extends Controller
         }
 
         $words = array_filter(explode(' ', trim($query)));
+        $tipo = $request->input('tipo');
 
-        $productos = \App\Models\Producto::query()
+        $queryBuilder = \App\Models\Producto::query()
             ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
-            ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1', 'MarcaProducto.nombreMarca', 'Producto.precioDolar')
-            ->where(function ($q) use ($words) {
+            ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1', 'MarcaProducto.nombreMarca', 'Producto.precioDolar');
+
+        if ($tipo === 'componente') {
+            $queryBuilder->whereIn('Producto.idGrupo', [51, 52, 94]);
+        }
+
+        $productos = $queryBuilder->where(function ($q) use ($words) {
                 foreach ($words as $word) {
                     $q->where(function ($sq) use ($word) {
                         $sq->where('Producto.nombreProducto', 'LIKE', '%' . $word . '%')
@@ -536,6 +542,90 @@ class EgresoController extends Controller
             ->get();
 
         return response()->json($series);
+    }
+
+    public function getCostoRegistro(Request $request)
+    {
+        $idRegistro = $request->input('idRegistro');
+        if (empty($idRegistro)) {
+            return response()->json(['costo' => 0]);
+        }
+
+        $registro = RegistroProducto::with('DetalleComprobante.Comprobante')->find($idRegistro);
+        if (!$registro || !$registro->DetalleComprobante) {
+            return response()->json(['costo' => 0]);
+        }
+
+        $precioUnitario = $registro->DetalleComprobante->precioUnitario ?? 0;
+        $moneda = $registro->DetalleComprobante->Comprobante->moneda ?? 'SOLES';
+
+        if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
+            $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+            $precioUnitario = $precioUnitario * $tasaCambio;
+        }
+
+        return response()->json(['costo' => round($precioUnitario, 2)]);
+    }
+
+    public function calcularCostoEnsamble(Request $request)
+    {
+        $idRegistroPrincipal = $request->input('idRegistroPrincipal');
+        $componentes = $request->input('componentes', []);
+
+        $costoBase = 0;
+        $modeloPrincipal = '';
+
+        if (!empty($idRegistroPrincipal)) {
+            $registro = RegistroProducto::with(['DetalleComprobante.Comprobante', 'DetalleComprobante.Producto'])->find($idRegistroPrincipal);
+            if ($registro && $registro->DetalleComprobante) {
+                $precioUnitario = $registro->DetalleComprobante->precioUnitario ?? 0;
+                $moneda = $registro->DetalleComprobante->Comprobante->moneda ?? 'SOLES';
+                $modeloPrincipal = $registro->DetalleComprobante->Producto->modelo ?? '';
+
+                if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
+                    $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+                    $precioUnitario = $precioUnitario * $tasaCambio;
+                }
+                $costoBase = round($precioUnitario, 2);
+            }
+        }
+
+        $costoComponentesTotal = 0;
+        $detallesComponentes = [];
+
+        if (is_array($componentes)) {
+            foreach ($componentes as $comp) {
+                if (is_array($comp) && isset($comp['idRegistro'])) {
+                    $regComp = RegistroProducto::with('DetalleComprobante.Producto')->find($comp['idRegistro']);
+                    $modComp = '';
+                    if ($regComp && $regComp->DetalleComprobante && $regComp->DetalleComprobante->Producto) {
+                        $modComp = $regComp->DetalleComprobante->Producto->modelo ?? '';
+                    }
+                    $c = floatval($comp['costo'] ?? 0);
+                    $costoComponentesTotal += $c;
+
+                    $detallesComponentes[] = [
+                        'idRegistro' => $comp['idRegistro'],
+                        'modelo' => $modComp,
+                        'costo' => $c
+                    ];
+                } else {
+                    $costoComponentesTotal += floatval($comp);
+                }
+            }
+        } elseif (is_numeric($componentes)) {
+            $costoComponentesTotal = floatval($componentes);
+        }
+
+        $costoTotal = $costoBase + $costoComponentesTotal;
+
+        return response()->json([
+            'modelo_principal' => $modeloPrincipal,
+            'costo_base' => $costoBase,
+            'componentes' => $detallesComponentes,
+            'costo_componentes' => $costoComponentesTotal,
+            'costo_total' => $costoTotal
+        ]);
     }
 
     public function descargarFormato()

@@ -33,6 +33,7 @@ class PublicacionService implements PublicacionServiceInterface
                                                 'idPublicacion' => $details->idPublicacion,
                                                 'precio' => $details->precioPublicacion,
                                                 'titulo' => $details->titulo,
+                                                'modelo' => $details->Producto->modelo ?? '',
                                                 'user' => $details->Usuario->user,
                                                 'estado' => $details->estado
                                             ];

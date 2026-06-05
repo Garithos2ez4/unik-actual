@@ -111,6 +111,78 @@
             </div>
         </div>
 
+        <!-- SECCIÓN DE COMPONENTES / UPGRADES -->
+        <div class="row mt-3" id="seccion-componentes" style="display: none;">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 bg-light">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="p-2 rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; background-color: #e6ffe6;">
+                                <i class="bi bi-cpu text-success fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold text-dark mb-0">Componentes / Upgrades</h5>
+                                <span class="text-muted small">Añade RAM, SSD u otros componentes instalados en este producto
+                                    <span class="badge bg-secondary-subtle text-secondary ms-1">Opcional</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-3 shadow-sm border mb-3">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-12 col-md-5" style="position: relative;">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Buscar Componente (RAM / SSD)</label>
+                                    <input type="text" class="form-control" id="input-buscar-componente" placeholder="Ej: RAM DDR4 16GB" autocomplete="off">
+                                    <ul class="list-group" id="suggestions-componente" style="position:absolute;z-index:1000;top:100%;left:0;width:100%"></ul>
+                                </div>
+                                <div class="col-6 col-md-3" style="position: relative;">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Serie del Componente</label>
+                                    <select class="form-select" id="select-serie-componente" disabled>
+                                        <option value="">Primero selecciona un componente</option>
+                                    </select>
+                                    <input type="hidden" id="hidden-componente-idProducto" value="">
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label text-secondary fw-semibold small mb-1">Costo (S/)</label>
+                                    <input type="number" step="0.01" class="form-control fw-bold text-danger" id="input-costo-componente" placeholder="0.00">
+                                </div>
+                                <div class="col-12 col-md-2">
+                                    <button type="button" class="btn btn-success w-100 fw-bold shadow-sm" id="btn-add-componente">
+                                        <i class="bi bi-plus-lg me-1"></i> Añadir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover table-borderless align-middle mb-0" id="tabla-componentes" style="display:none;">
+                                <thead class="table-light border-bottom">
+                                    <tr>
+                                        <th class="text-uppercase small fw-bold text-secondary ps-3">Componente</th>
+                                        <th class="text-uppercase small fw-bold text-secondary">Serie</th>
+                                        <th class="text-uppercase small fw-bold text-secondary text-end">Costo</th>
+                                        <th class="text-uppercase small fw-bold text-secondary text-center pe-3">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-componentes"></tbody>
+                                <tfoot class="border-top" style="border-top-width: 2px !important;">
+                                    <tr>
+                                        <th colspan="2" class="text-end text-uppercase text-secondary fw-bold pt-3">Total Componentes:</th>
+                                        <th class="text-end pt-3">
+                                            <span class="fs-5 fw-bold text-danger">S/ <span id="total-componentes-text">0.00</span></span>
+                                        </th>
+                                        <th></th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div id="hidden-componentes-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- SECCIÓN DE PAGOS (Oculta por defecto) -->
         <div class="row mt-4" id="seccion-pagos" style="display: none;">
             <div class="col-12">
@@ -256,6 +328,8 @@
 <script>
     window.assetUrl = "{{ asset('storage/') }}";
 </script>
-<script src="{{asset('js/createegreso.js')}}?v=1.15"></script>
+<script src="{{asset('js/createegreso.js')}}?v=1.16"></script>
+<script src="{{asset('js/createegreso_sku.js')}}?v=1.00"></script>
+<script src="{{asset('js/createegreso_pagos.js')}}?v=1.00"></script>
 @include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

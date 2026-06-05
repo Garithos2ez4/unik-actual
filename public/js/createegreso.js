@@ -22,143 +22,6 @@ const cartManager = {
 // Asegúrate de usar el objeto cartManager globalmente
 window.cartManager = cartManager;
 
-function searchPublicacion(inputElement) {
-    let query = inputElement.value;
-
-    function handleClickOutside(event) {
-        let suggestions = document.getElementById('suggestions-sku');
-        if (!suggestions.contains(event.target) && event.target !== inputElement) {
-            suggestions.innerHTML = ''; // Limpiar sugerencias si se hace clic fuera del input
-            hiddenBody.style.display = 'none';
-        }
-    }
-
-    // Agregar el manejador de clics al documento
-    document.removeEventListener('click', handleClickOutside);
-    document.addEventListener('click', handleClickOutside);
-
-    if (query.length > 2) { // Comenzar la búsqueda después de 3 caracteres
-        document.getElementById('hidden-publicacion-sku').value = "";
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/searchpublicacion?query=${query}`, true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                let suggestions = document.getElementById('suggestions-sku');
-                hiddenBody.style.display = 'block';
-                inputElement.style.zIndex = '1000';
-                suggestions.innerHTML = '';
-
-                // AUTO-SELECT si hay una coincidencia exacta (ideal para escáneres)
-                let exactMatch = data.find(item => item.sku.toUpperCase() === query.toUpperCase());
-                if (exactMatch) {
-                    document.getElementById('hidden-publicacion-sku').value = exactMatch.idPublicacion;
-                    document.getElementById('hidden-publicacion-precio').value = exactMatch.precio;
-                    validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
-                    validateIconSku.classList.add('bi-check-circle', 'text-success');
-                    applySkuToUnassignedItems(exactMatch.idPublicacion, exactMatch.sku, exactMatch.precio);
-                    validateSubmit();
-                } else {
-                    document.getElementById('hidden-publicacion-sku').value = "";
-                    validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
-                    validateIconSku.classList.remove('bi-check-circle', 'text-success');
-                }
-
-                data.forEach(item => {
-                    let li = document.createElement('li');
-                    li.classList.add('list-group-item', 'pe-0');
-                    li.classList.add('hover-sistema-uno', 'text-truncate');
-                    li.style.cursor = "pointer";
-
-                    let divRow = document.createElement('div');
-                    divRow.classList.add('row', 'w-100');
-
-                    let colSerie = document.createElement('div');
-                    colSerie.classList.add('col-md-8');
-                    colSerie.textContent = item.sku;
-
-                    let colAlmacen = document.createElement('div');
-                    colAlmacen.classList.add('col-md-4', 'text-end');
-                    colAlmacen.textContent = item.fechaPublicacion;
-
-                    let colProducto = document.createElement('div');
-                    colProducto.classList.add('col-md-12');
-                    let smallProducto = document.createElement('em');
-                    smallProducto.textContent = item.titulo;
-                    smallProducto.style.fontSize = '12px';
-                    colProducto.appendChild(smallProducto);
-
-                    divRow.appendChild(colSerie);
-                    divRow.appendChild(colAlmacen);
-                    divRow.appendChild(colProducto);
-                    li.appendChild(divRow);
-
-                    li.addEventListener('click', function () {
-                        inputElement.value = item.sku;
-                        document.getElementById('hidden-publicacion-sku').value = item
-                            .idPublicacion;
-                        hiddenBody.style.display = 'none';
-                        inputElement.style.zIndex = '1';
-                        suggestions.innerHTML = ''; // Limpiar sugerencias después de seleccionar una
-                        validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
-                        validateIconSku.classList.add('bi-check-circle', 'text-success');
-                        document.getElementById('hidden-publicacion-precio').value = item.precio;
-                        applySkuToUnassignedItems(item.idPublicacion, item.sku, item.precio);
-                        validateSubmit();
-                    });
-
-                    suggestions.appendChild(li);
-                });
-            }
-        };
-        xhr.send();
-    } else {
-        document.getElementById('suggestions-sku').innerHTML = ''; // Limpiar si hay menos de 3 caracteres
-        document.getElementById('hidden-publicacion-sku').value = "";
-        document.getElementById('hidden-publicacion-precio').value = "";
-        validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
-        validateIconSku.classList.remove('bi-check-circle', 'text-success');
-        hiddenBody.style.display = 'none';
-        inputElement.style.zIndex = '1';
-    }
-}
-
-function checkSku() {
-    let checkSku = document.getElementById('check-sku-egreso');
-    let inputEgreso = document.getElementById('input-sku-egreso');
-    let hiddenEgreso = document.getElementById('hidden-publicacion-sku');
-    let hiddenPrecio = document.getElementById('hidden-publicacion-precio');
-    let inputNumberOrder = document.getElementById('input-numero-orden');
-    let divCliente = document.getElementById('div-cliente-egreso');
-    let seccionPagos = document.getElementById('seccion-pagos');
-
-    if (checkSku.checked) {
-        inputEgreso.disabled = true;
-        inputEgreso.value = checkSku.value;
-        inputNumberOrder.disabled = true;
-        inputNumberOrder.value = checkSku.value;
-        hiddenEgreso.value = 'NULO';
-        hiddenPrecio.value = '';
-        validateIconSku.classList.remove('bi-exclamation-circle', 'text-danger');
-        validateIconSku.classList.add('bi-check-circle', 'text-success');
-        applySkuToUnassignedItems('NULO', 'No aplica', '', true);
-        if (divCliente) divCliente.style.display = 'block';
-        if (seccionPagos) seccionPagos.style.display = 'flex';
-    } else {
-        inputEgreso.disabled = false;
-        inputEgreso.value = '';
-        inputNumberOrder.disabled = false;
-        inputNumberOrder.value = '';
-        hiddenEgreso.value = '';
-        hiddenPrecio.value = '';
-        validateIconSku.classList.add('bi-exclamation-circle', 'text-danger');
-        validateIconSku.classList.remove('bi-check-circle', 'text-success');
-        if (divCliente) divCliente.style.display = 'none';
-        if (seccionPagos) seccionPagos.style.display = 'none';
-        clearCliente(); // Limpiar el cliente si se oculta
-    }
-}
-
 let productosAgregados = [];
 let itemIndex = 0;
 
@@ -248,76 +111,6 @@ function searchRegistro(inputElement) {
     }
 }
 
-// Búsqueda de Cliente
-function searchClienteAjax(inputElement) {
-    let query = inputElement.value;
-
-    function handleClickOutside(event) {
-        let suggestions = document.getElementById('suggestions-cliente');
-        if (!suggestions.contains(event.target) && event.target !== inputElement) {
-            suggestions.innerHTML = '';
-            hiddenBody.style.display = 'none';
-        }
-    }
-
-    document.removeEventListener('click', handleClickOutside);
-    document.addEventListener('click', handleClickOutside);
-
-    if (query.length > 2) {
-        document.getElementById('hidden-id-cliente').value = "";
-        document.getElementById('btn-clear-cliente').style.display = 'none';
-
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/cliente/searchcliente?query=${query}`, true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                let data = JSON.parse(xhr.responseText);
-                let suggestions = document.getElementById('suggestions-cliente');
-                hiddenBody.style.display = 'block';
-                inputElement.style.zIndex = '1000';
-                suggestions.innerHTML = '';
-
-                data.forEach(item => {
-                    let li = document.createElement('li');
-                    li.classList.add('list-group-item', 'pe-0', 'hover-sistema-uno', 'text-truncate');
-                    li.style.cursor = "pointer";
-
-                    let nombreCompleto = item.nombre + (item.apePaterno ? ' ' + item.apePaterno : '');
-                    li.innerHTML = `<strong>${item.numeroDocumento}</strong> - ${nombreCompleto}`;
-
-                    li.addEventListener('click', function () {
-                        inputElement.value = nombreCompleto;
-                        document.getElementById('hidden-id-cliente').value = item.idCliente;
-                        document.getElementById('btn-clear-cliente').style.display = 'block';
-
-                        suggestions.innerHTML = '';
-                        hiddenBody.style.display = 'none';
-                        inputElement.style.zIndex = '1';
-                        inputElement.readOnly = true;
-                    });
-
-                    suggestions.appendChild(li);
-                });
-            }
-        };
-        xhr.send();
-    } else {
-        document.getElementById('suggestions-cliente').innerHTML = '';
-        document.getElementById('hidden-id-cliente').value = "";
-        document.getElementById('btn-clear-cliente').style.display = 'none';
-        hiddenBody.style.display = 'none';
-        inputElement.style.zIndex = '1';
-    }
-}
-
-function clearCliente() {
-    let inputElement = document.getElementById('input-cliente-egreso');
-    inputElement.value = '';
-    inputElement.readOnly = false;
-    document.getElementById('hidden-id-cliente').value = '';
-    document.getElementById('btn-clear-cliente').style.display = 'none';
-    document.getElementById('suggestions-cliente').innerHTML = '';
-}
 
 function createItem(object, query) {
     if (object == null || Object.keys(object).length == 0) {
@@ -338,6 +131,7 @@ function createItem(object, query) {
 
     let divRowItem = createDiv(['row', 'pt-2', 'pb-2', 'border'], null);
     let inputHiddenRegistro = createInput(['body-form', 'hidden-form'], null, 'hidden', object.idRegistroProducto, `items[${currentIndex}][idregistro]`);
+    inputHiddenRegistro.dataset.idgrupo = object.idGrupo || 0; // Store idGrupo
     let inputHiddenSku = createInput(['hidden-sku-item'], null, 'hidden', selectedSkuId, `items[${currentIndex}][idpublicacion]`);
 
     let divColImg = createDiv(['col-3', 'col-md-1'], null);
@@ -432,30 +226,6 @@ function createItem(object, query) {
     calculateTotalVenta();
 }
 
-function applySkuToUnassignedItems(skuId, skuText, skuPrecio, forceAll = false) {
-    let hiddenSkus = document.querySelectorAll('.hidden-sku-item');
-    let textDisplays = document.querySelectorAll('.sku-text-display');
-    let precioInputs = document.querySelectorAll('.input-precio-item');
-
-    hiddenSkus.forEach((hiddenInput, index) => {
-        // Solo aplicar si se fuerza, o si el item no tiene un SKU asignado previamente
-        let isUnassigned = !hiddenInput.value || hiddenInput.value === 'NULO' || hiddenInput.value === '';
-
-        if (forceAll || isUnassigned) {
-            hiddenInput.value = skuId;
-            textDisplays[index].innerHTML = '<small><i class="bi bi-tag-fill"></i> SKU Vinculado: <strong>' + skuText + '</strong></small>';
-            textDisplays[index].classList.remove('text-danger');
-            textDisplays[index].classList.add('text-success');
-
-            if (skuPrecio !== undefined && skuPrecio !== null && skuPrecio !== '' && skuPrecio !== 'null' && !isNaN(parseFloat(skuPrecio))) {
-                precioInputs[index].value = skuPrecio;
-            } else {
-                precioInputs[index].value = precioInputs[index].dataset.precioSoles || '';
-            }
-        }
-    });
-    calculateTotalVenta();
-}
 
 function calculateTotalVenta() {
     let inputs = document.querySelectorAll('.input-precio-item');
@@ -546,8 +316,7 @@ function searchCodeToController(query) {
 }
 
 
-document.getElementById('check-sku-egreso').addEventListener('change', checkSku);
-document.getElementById('check-sku-egreso').addEventListener('change', validateSubmit);
+
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input').forEach(function (x) {
@@ -585,275 +354,6 @@ document.addEventListener('DOMContentLoaded', function () {
     validateSubmit();
 });
 
-let pagosAgregados = [];
-let pagoIndex = 0;
-
-function filterCuentasDestino() {
-    let selectMetodo = document.getElementById('pago-metodo');
-    let selectEmpresa = document.getElementById('pago-empresa');
-    let selectCuenta = document.getElementById('pago-cuenta');
-    let divCuenta = document.getElementById('div-pago-cuenta');
-    let divEmpresa = document.getElementById('div-pago-empresa');
-
-    if (!selectMetodo) return;
-
-    let textMetodo = selectMetodo.options[selectMetodo.selectedIndex]?.text.toUpperCase() || '';
-    let idEmpresa = selectEmpresa.value;
-
-    if (textMetodo.includes('TRANSFERENCIA') || textMetodo.includes('YAPE') || textMetodo.includes('PLIN')) {
-        divEmpresa.style.display = 'block';
-        divCuenta.style.display = 'block';
-
-        let options = selectCuenta.querySelectorAll('option');
-        options.forEach(opt => {
-            if (opt.value === '') {
-                opt.style.display = 'block';
-                return;
-            }
-
-            let banco = opt.getAttribute('data-banco');
-            let optIdEmpresa = opt.getAttribute('data-idempresa');
-
-            let show = true;
-
-            if (idEmpresa !== '' && optIdEmpresa !== idEmpresa) {
-                show = false;
-            }
-
-            if (show) {
-                if (textMetodo.includes('YAPE')) {
-                    show = (banco && banco.includes('BCP')) ? true : false;
-                } else if (textMetodo.includes('PLIN')) {
-                    show = (banco && (banco.includes('BBVA') || banco.includes('INTERBANK') || banco.includes('SCOTIABANK'))) ? true : false;
-                }
-            }
-
-            opt.style.display = show ? 'block' : 'none';
-        });
-
-        if (selectCuenta.selectedIndex > 0) {
-            let selectedOpt = selectCuenta.options[selectCuenta.selectedIndex];
-            if (selectedOpt.style.display === 'none') {
-                selectCuenta.value = '';
-            }
-        }
-    } else {
-        divEmpresa.style.display = 'none';
-        divCuenta.style.display = 'none';
-        selectEmpresa.value = '';
-        selectCuenta.value = '';
-    }
-}
-
-document.getElementById('pago-metodo')?.addEventListener('change', function () {
-    document.getElementById('pago-empresa').value = '';
-    document.getElementById('pago-cuenta').value = '';
-    filterCuentasDestino();
-});
-
-document.getElementById('pago-empresa')?.addEventListener('change', function () {
-    document.getElementById('pago-cuenta').value = '';
-    filterCuentasDestino();
-});
-
-document.getElementById('btn-add-pago')?.addEventListener('click', function () {
-    let selectMetodo = document.getElementById('pago-metodo');
-    let selectCuenta = document.getElementById('pago-cuenta');
-    let inputMonto = document.getElementById('pago-monto');
-    let inputRef = document.getElementById('pago-ref');
-
-    let idMetodo = selectMetodo.value;
-    let nombreMetodo = selectMetodo.options[selectMetodo.selectedIndex].text;
-    let textMetodo = nombreMetodo.toUpperCase();
-
-    let idCuenta = null;
-    let nombreCuenta = '';
-
-    if (textMetodo.includes('TRANSFERENCIA') || textMetodo.includes('YAPE') || textMetodo.includes('PLIN')) {
-        idCuenta = selectCuenta.value;
-        if (!idCuenta) {
-            alertBootstrap('Debe seleccionar una Cuenta Destino para este método', 'warning');
-            return;
-        }
-        nombreCuenta = selectCuenta.options[selectCuenta.selectedIndex].text;
-        nombreMetodo += ' (' + nombreCuenta + ')';
-    }
-
-    let monto = parseFloat(inputMonto.value);
-    let ref = inputRef.value.trim();
-
-    if (!idMetodo) {
-        alertBootstrap('Debe seleccionar un Método de Pago', 'warning');
-        return;
-    }
-
-    if (isNaN(monto) || monto <= 0) {
-        alertBootstrap('El monto debe ser mayor a 0', 'warning');
-        return;
-    }
-
-    let pago = {
-        id: pagoIndex++,
-        idMetodo: idMetodo,
-        idCuentaBancaria: idCuenta,
-        nombreMetodo: nombreMetodo,
-        monto: monto,
-        ref: ref
-    };
-
-    pagosAgregados.push(pago);
-    renderPagos();
-
-    // Limpiar inputs
-    selectMetodo.value = '';
-    selectCuenta.value = '';
-    document.getElementById('div-pago-cuenta').style.display = 'none';
-    inputMonto.value = '';
-    inputRef.value = '';
-});
-
-function renderPagos() {
-    let tbody = document.querySelector('#tabla-pagos tbody');
-    let tabla = document.getElementById('tabla-pagos');
-    let contenedorHidden = document.getElementById('hidden-pagos-container');
-
-    tbody.innerHTML = '';
-    contenedorHidden.innerHTML = '';
-
-    let totalPagado = 0;
-
-    if (pagosAgregados.length > 0) {
-        tabla.style.display = 'table';
-    } else {
-        tabla.style.display = 'none';
-    }
-
-    pagosAgregados.forEach((pago, index) => {
-        totalPagado += pago.monto;
-
-        // Fila visual
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${pago.nombreMetodo}</td>
-            <td>${pago.ref || '-'}</td>
-            <td>
-                <div class="input-group input-group-sm mb-0 mx-auto" style="max-width: 120px;">
-                    <span class="input-group-text">S/</span>
-                    <input type="number" class="form-control text-end" step="0.01" value="${pago.monto.toFixed(2)}" onchange="updatePagoMonto(${pago.id}, this.value)">
-                </div>
-            </td>
-            <td>
-                <button type="button" class="btn btn-sm btn-danger py-0 px-2" onclick="removePago(${pago.id})">
-                    <i class="bi bi-x"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-
-        // Inputs ocultos para enviar al backend
-        contenedorHidden.innerHTML += `
-            <input type="hidden" name="pagos[${index}][idMetodo]" value="${pago.idMetodo}">
-            <input type="hidden" name="pagos[${index}][monto]" value="${pago.monto}">
-            <input type="hidden" name="pagos[${index}][ref]" value="${pago.ref}">
-            ${pago.idCuentaBancaria ? `<input type="hidden" name="pagos[${index}][idCuentaBancaria]" value="${pago.idCuentaBancaria}">` : ''}
-        `;
-    });
-
-    document.getElementById('total-pagado-text').innerText = totalPagado.toFixed(2);
-
-    // Llamar a la validación para habilitar/deshabilitar el botón de submit
-    validateSubmit();
-}
-
-// Funciones globales para que el onclick/onchange del HTML las encuentre
-window.removePago = function (id) {
-    pagosAgregados = pagosAgregados.filter(p => p.id !== id);
-    renderPagos();
-};
-
-window.updatePagoMonto = function (id, nuevoMonto) {
-    let monto = parseFloat(nuevoMonto);
-    if (!isNaN(monto) && monto >= 0) {
-        let pago = pagosAgregados.find(p => p.id === id);
-        if (pago) {
-            pago.monto = monto;
-        }
-    }
-    renderPagos();
-};
-
-// Interceptar envío del formulario para mostrar modal
-document.getElementById('form-egreso')?.addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    let checkSku = document.getElementById('check-sku-egreso');
-    let modalBody = document.getElementById('modal-body-confirmacion');
-
-    let totalVenta = 0;
-    document.querySelectorAll('.input-precio-item').forEach(input => {
-        let val = parseFloat(input.value);
-        if (!isNaN(val)) totalVenta += val;
-    });
-
-    if (checkSku && checkSku.checked) {
-        // Venta de tienda
-
-        let selectMetodo = document.getElementById('pago-metodo');
-        if (selectMetodo && selectMetodo.value !== "" && pagosAgregados.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'No has añadido el pago',
-                text: 'Seleccionaste un método de pago pero olvidaste presionar el botón "Añadir". Por favor, añádelo antes de registrar la venta.'
-            });
-            return; // Detener ejecución
-        }
-
-        if (pagosAgregados.length === 0) {
-            modalBody.innerHTML = `
-                <div class="alert alert-warning py-2 mb-0">
-                    <i class="bi bi-cash-coin fs-4 d-block mb-1"></i>
-                    <strong>No seleccionaste métodos de pago.</strong><br>
-                    Esta venta se guardará automáticamente como <b>EFECTIVO</b> por <b>S/ ${totalVenta.toFixed(2)}</b>.
-                </div>
-            `;
-        } else {
-            let sumaPagos = pagosAgregados.reduce((sum, p) => sum + p.monto, 0);
-            if (Math.abs(sumaPagos - totalVenta) > 0.01) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Montos no coinciden',
-                    text: `El total de la venta es S/ ${totalVenta.toFixed(2)}, pero los pagos añadidos suman S/ ${sumaPagos.toFixed(2)}. Por favor ajusta los pagos para que coincidan.`
-                });
-                return;
-            }
-
-            let listHtml = '<ul class="list-group list-group-flush text-start border">';
-            pagosAgregados.forEach(p => {
-                listHtml += `<li class="list-group-item py-1 px-2 d-flex justify-content-between align-items-center">
-                    <span><small>${p.nombreMetodo} ${p.ref ? '(' + p.ref + ')' : ''}</small></span>
-                    <span class="badge bg-success rounded-pill">S/ ${p.monto.toFixed(2)}</span>
-                </li>`;
-            });
-            listHtml += '</ul>';
-
-            modalBody.innerHTML = `
-                <p class="mb-2 text-muted"><small>Se registrarán los siguientes pagos para cubrir el total de <b>S/ ${totalVenta.toFixed(2)}</b>:</small></p>
-                ${listHtml}
-            `;
-        }
-    } else {
-        // Venta plataforma
-        modalBody.innerHTML = `
-            <div class="alert alert-info py-2 mb-0">
-                <i class="bi bi-box-seam fs-4 d-block mb-1"></i>
-                Venta de Plataforma (SKU vinculado).<br>No se registrarán métodos de pago en esta tabla.
-            </div>
-        `;
-    }
-
-    let modal = new bootstrap.Modal(document.getElementById('modalConfirmacionPago'));
-    modal.show();
-});
 
 document.getElementById('btn-confirmar-guardar')?.addEventListener('click', function () {
     this.disabled = true;
@@ -861,4 +361,241 @@ document.getElementById('btn-confirmar-guardar')?.addEventListener('click', func
     document.getElementById('form-egreso').submit();
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// COMPONENTES / UPGRADES (RAM, SSD, etc.)
+// ═══════════════════════════════════════════════════════════════════
 
+let componentesAgregados = [];
+let componenteIndex = 0;
+
+// Mostrar sección de componentes cuando se agrega al menos 1 producto (Laptops / AIO)
+const observerComponentes = new MutationObserver(function () {
+    let seccion = document.getElementById('seccion-componentes');
+    let items = document.querySelectorAll('.body-form');
+    let showComponents = false;
+    
+    items.forEach(function(item) {
+        let idGrupo = parseInt(item.dataset.idgrupo || 0);
+        // Grupos Laptops = 1, 2, 3. Grupo AIO = 10
+        if ([1, 2, 3, 10].includes(idGrupo)) {
+            showComponents = true;
+        }
+    });
+
+    if (seccion) {
+        seccion.style.display = showComponents ? 'flex' : 'none';
+    }
+});
+observerComponentes.observe(document.getElementById('div-items-create-egreso'), { childList: true });
+
+// Búsqueda de componentes
+document.getElementById('input-buscar-componente')?.addEventListener('input', function () {
+    let query = this.value;
+    let suggestions = document.getElementById('suggestions-componente');
+
+    if (query.length < 2) {
+        suggestions.innerHTML = '';
+        return;
+    }
+
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', `/egresos/search-producto-ajax?query=${encodeURIComponent(query)}&tipo=componente`, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            let data = JSON.parse(xhr.responseText);
+            suggestions.innerHTML = '';
+
+            data.forEach(item => {
+                let li = document.createElement('li');
+                li.classList.add('list-group-item', 'hover-sistema-uno', 'text-truncate');
+                li.style.cursor = 'pointer';
+                li.innerHTML = `<strong>${item.nombreProducto}</strong> <small class="text-muted">${item.modelo || ''}</small>`;
+
+                li.addEventListener('click', function () {
+                    document.getElementById('input-buscar-componente').value = item.nombreProducto;
+                    let hiddenIdProducto = document.getElementById('hidden-componente-idProducto');
+                    hiddenIdProducto.value = item.idProducto;
+                    hiddenIdProducto.dataset.modelo = item.modelo || '';
+                    suggestions.innerHTML = '';
+
+                    // Cargar series disponibles
+                    cargarSeriesComponente(item.idProducto);
+                });
+
+                suggestions.appendChild(li);
+            });
+        }
+    };
+    xhr.send();
+});
+
+// Click fuera cierra las sugerencias de componentes
+document.addEventListener('click', function (e) {
+    let input = document.getElementById('input-buscar-componente');
+    let suggestions = document.getElementById('suggestions-componente');
+    if (input && suggestions && !input.contains(e.target) && !suggestions.contains(e.target)) {
+        suggestions.innerHTML = '';
+    }
+});
+
+function cargarSeriesComponente(idProducto) {
+    let selectSerie = document.getElementById('select-serie-componente');
+    let inputCosto = document.getElementById('input-costo-componente');
+    selectSerie.innerHTML = '<option value="">Cargando...</option>';
+    selectSerie.disabled = true;
+    inputCosto.value = '';
+
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', `/egresos/series-disponibles?idProducto=${idProducto}`, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            let data = JSON.parse(xhr.responseText);
+            selectSerie.innerHTML = '<option value="">Selecciona una serie</option>';
+
+            if (data.length === 0) {
+                selectSerie.innerHTML = '<option value="">Sin stock disponible</option>';
+                return;
+            }
+
+            data.forEach(serie => {
+                // No mostrar las que ya fueron agregadas como componente
+                if (componentesAgregados.some(c => c.idRegistro == serie.idRegistro)) return;
+
+                let opt = document.createElement('option');
+                opt.value = serie.idRegistro;
+                opt.textContent = `${serie.numeroSerie} (${serie.almacen})`;
+                opt.dataset.serie = serie.numeroSerie;
+                selectSerie.appendChild(opt);
+            });
+
+            selectSerie.disabled = false;
+        }
+    };
+    xhr.send();
+}
+
+// Al seleccionar una serie, cargar su costo
+document.getElementById('select-serie-componente')?.addEventListener('change', function () {
+    let idRegistro = this.value;
+    let inputCosto = document.getElementById('input-costo-componente');
+
+    if (!idRegistro) {
+        inputCosto.value = '';
+        return;
+    }
+
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', `/egresos/costo-registro?idRegistro=${idRegistro}`, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            let data = JSON.parse(xhr.responseText);
+            inputCosto.value = data.costo ? parseFloat(data.costo).toFixed(2) : '0.00';
+        }
+    };
+    xhr.send();
+});
+
+// Añadir componente
+document.getElementById('btn-add-componente')?.addEventListener('click', function () {
+    let selectSerie = document.getElementById('select-serie-componente');
+    let inputCosto = document.getElementById('input-costo-componente');
+    let inputBuscar = document.getElementById('input-buscar-componente');
+    let hiddenIdProducto = document.getElementById('hidden-componente-idProducto');
+    let idProducto = hiddenIdProducto.value;
+    let modeloComponente = hiddenIdProducto.dataset.modelo || '';
+
+    let idRegistro = selectSerie.value;
+    if (!idRegistro) {
+        alertBootstrap('Selecciona una serie de componente', 'warning');
+        return;
+    }
+
+    let serieName = selectSerie.options[selectSerie.selectedIndex].dataset.serie || selectSerie.options[selectSerie.selectedIndex].text;
+    let costo = parseFloat(inputCosto.value) || 0;
+    let nombreComponente = inputBuscar.value;
+
+    // Verificar duplicado
+    if (componentesAgregados.some(c => c.idRegistro == idRegistro)) {
+        alertBootstrap('Este componente ya fue agregado', 'warning');
+        return;
+    }
+
+    let comp = {
+        id: componenteIndex++,
+        idRegistro: idRegistro,
+        idProducto: idProducto,
+        nombre: nombreComponente,
+        serie: serieName,
+        costo: costo,
+        modelo: modeloComponente
+    };
+
+    componentesAgregados.push(comp);
+    renderComponentes();
+
+    // Limpiar campos
+    inputBuscar.value = '';
+    selectSerie.innerHTML = '<option value="">Primero selecciona un componente</option>';
+    selectSerie.disabled = true;
+    inputCosto.value = '';
+    document.getElementById('hidden-componente-idProducto').value = '';
+});
+
+function renderComponentes() {
+    let tbody = document.getElementById('tbody-componentes');
+    let tabla = document.getElementById('tabla-componentes');
+    let contenedorHidden = document.getElementById('hidden-componentes-container');
+
+    tbody.innerHTML = '';
+    contenedorHidden.innerHTML = '';
+
+    let totalCosto = 0;
+
+    if (componentesAgregados.length > 0) {
+        tabla.style.display = 'table';
+    } else {
+        tabla.style.display = 'none';
+    }
+
+    // Calculate the starting index for componentes (after the main items)
+    let mainItemCount = document.querySelectorAll('.body-form').length;
+
+    componentesAgregados.forEach((comp, index) => {
+        totalCosto += comp.costo;
+        let itemIdx = mainItemCount + index;
+
+        // Fila visual
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-3">
+                <span class="fw-bold">${comp.nombre}</span>
+                ${comp.modelo ? `<br><small class="text-muted" style="font-size:11px;">Mod: ${comp.modelo}</small>` : ''}
+            </td>
+            <td><small class="text-muted">${comp.serie}</small></td>
+            <td class="text-end">
+                <span class="text-danger fw-bold">S/ ${comp.costo.toFixed(2)}</span>
+            </td>
+            <td class="text-center pe-3">
+                <button type="button" class="btn btn-sm btn-danger py-0 px-2" onclick="removeComponente(${comp.id})">
+                    <i class="bi bi-x"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Hidden inputs — el componente se envía como un item más con precio 0 y su costo
+        contenedorHidden.innerHTML += `
+            <input type="hidden" name="items[${itemIdx}][idregistro]" value="${comp.idRegistro}">
+            <input type="hidden" name="items[${itemIdx}][idpublicacion]" value="NULO">
+            <input type="hidden" name="items[${itemIdx}][precioVenta]" value="0.01">
+            <input type="hidden" name="items[${itemIdx}][costo]" value="${comp.costo}">
+        `;
+    });
+
+    document.getElementById('total-componentes-text').innerText = totalCosto.toFixed(2);
+}
+
+window.removeComponente = function (id) {
+    componentesAgregados = componentesAgregados.filter(c => c.id !== id);
+    renderComponentes();
+};
