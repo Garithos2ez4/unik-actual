@@ -42,6 +42,15 @@
                 </select>
             </div>
             <div class="mb-3 col-6 col-lg-3">
+                <label for="categoria-product" class="form-label">Categoría:</label>
+                <select id="categoria-product" class="form-select">
+                    <option value="">-Todas-</option>
+                    @foreach($categorias as $cat)
+                        <option value="{{ $cat['nombreCategoria'] }}">{{ $cat['nombreCategoria'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3 col-12 col-lg-4">
                 <label for="grupo-product" id="grupo-label" class="form-label d-flex justify-content-between align-items-center">
                     <span>Grupo:</span>
                     <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 border-0" data-bs-toggle="modal" data-bs-target="#quickGrupoModal" style="font-size: 0.85rem; font-weight: 500;">
@@ -77,7 +86,7 @@
                     </div>
                 </div>
             </div>
-            <div class="mb-3 col-6 col-lg-2">
+            <div class="mb-3 col-6 col-lg-4">
                 <label for="estado-product" id="estado-label" class="form-label">
                     <i class="bi bi-info-circle-fill" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="<small>DISPONIBLE: En stock.</small><br><small>AGOTADO: Sin stock</small><br><small>EXCLUSIVO: Precio sin calculos.</small>"></i> 
                     Estado:
@@ -91,7 +100,7 @@
                   <option value="DESCONTINUADO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
                 </select>
             </div>
-            <div class="mb-3 col-6 col-lg-2">
+            <div class="mb-3 col-6 col-lg-4">
                 <label for="garantia-product" id="garantia-label" class="form-label">Garantia:</label>
                 <select name="garantia" id="garantia-product" class="form-select">
                   <option value="" {{ old('garantia') ? '' : 'selected' }}>-Elige la garantia-</option>
@@ -369,6 +378,7 @@
                   </form>
               </div>
           </div>
+      </div>
       </div>
     </div>
      <script src="{{ route('js.create-product-scripts',[$tc]) }}"></script>

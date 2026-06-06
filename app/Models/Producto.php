@@ -128,6 +128,30 @@ class Producto extends Model
        public function registros() {
         return $this->hasMany(RegistroProducto::class, 'idProducto', 'idProducto');
     }
+
+    /**
+     * Componentes hijos de este producto (si es un pack)
+     */
+    public function packHijos()
+    {
+        return $this->hasMany(ProductoPack::class, 'idProductoPack', 'idProducto');
+    }
+
+    /**
+     * Packs donde este producto es componente hijo
+     */
+    public function packPadres()
+    {
+        return $this->hasMany(ProductoPack::class, 'idProductoHijo', 'idProducto');
+    }
+
+    /**
+     * Determina si este producto es un pack divisible
+     */
+    public function esPack()
+    {
+        return $this->packHijos()->exists();
+    }
     
     
     public function estadoColor(){

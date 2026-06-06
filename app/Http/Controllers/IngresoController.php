@@ -8,6 +8,7 @@ use App\Services\IngresoProductoServiceInterface;
 use App\Services\UsuarioServiceInterface;
 use App\Services\ComprobanteServiceInterface;
 use App\Services\HeaderServiceInterface;
+use App\Services\DivisionPackServiceInterface;
 
 class IngresoController extends Controller
 {
@@ -15,16 +16,19 @@ class IngresoController extends Controller
     protected $ingresoService;
     protected $comprobanteService;
     protected $headerService;
+    protected $divisionPackService;
 
     public function __construct(HeaderServiceInterface $headerService,
                                 UsuarioServiceInterface $userService,
                                 IngresoProductoServiceInterface $ingresoService,
-                                ComprobanteServiceInterface $comprobanteService)
+                                ComprobanteServiceInterface $comprobanteService,
+                                DivisionPackServiceInterface $divisionPackService)
     {
         $this->userService = $userService;
         $this->ingresoService = $ingresoService;
         $this->comprobanteService = $comprobanteService;
         $this->headerService = $headerService;
+        $this->divisionPackService = $divisionPackService;
     }
     
     public function index($month,Request $request){
@@ -183,5 +187,169 @@ class IngresoController extends Controller
         }
         $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta accion','warning','btn-danger');
         return back();
+    }
+
+    /**
+     * AJAX: Verificar si un registro es un pack divisible
+     */
+    public function verificarPack(Request $request)
+    {
+        $idRegistro = $request->input('idRegistro');
+        $result = $this->divisionPackService->verificarPackDivisible($idRegistro);
+        return response()->json($result);
+    }
+
+    /**
+     * POST: Dividir un pack en sus componentes
+     */
+    public function dividirPack(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
+                try {
+                    $idRegistro = $request->input('idRegistro');
+                    $result = $this->divisionPackService->dividirPack($idRegistro);
+                    
+                    $this->headerService->sendFlashAlerts(
+                        'Pack Dividido',
+                        $result['message'],
+                        'success',
+                        'btn-success'
+                    );
+                    return back();
+                } catch (\Exception $e) {
+                    $this->headerService->sendFlashAlerts(
+                        'Error al Dividir',
+                        $e->getMessage(),
+                        'error',
+                        'btn-danger'
+                    );
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta accion', 'warning', 'btn-danger');
+        return back();
+    }
+
+    /**
+     * POST: Reunir componentes en un pack
+     */
+    public function reunirPack(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
+                try {
+                    $idProductoPack = $request->input('idProductoPack');
+                    $idRegistrosHijos = $request->input('idRegistrosHijos', []);
+                    $result = $this->divisionPackService->reunirPack($idProductoPack, $idRegistrosHijos);
+                    
+                    $this->headerService->sendFlashAlerts(
+                        'Pack Reunido',
+                        $result['message'],
+                        'success',
+                        'btn-success'
+                    );
+                    return back();
+                } catch (\Exception $e) {
+                    $this->headerService->sendFlashAlerts(
+                        'Error al Reunir',
+                        $e->getMessage(),
+                        'error',
+                        'btn-danger'
+                    );
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta accion', 'warning', 'btn-danger');
+        return back();
+    }
+
+    /**
+     * AJAX: Obtener componentes disponibles para reunión
+     */
+    public function getComponentesReunion(Request $request)
+    {
+        $idProductoPack = $request->input('idProductoPack');
+        $result = $this->divisionPackService->getComponentesParaReunion($idProductoPack);
+        return response()->json($result);
+    }
+    /**
+     * AJAX: Buscar un registro de pack por su número de serie
+     */
+    public function buscarPackPorSerie(Request $request)
+    {
+        $serie = $request->input('serie');
+        
+        $registro = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+            ->where('numeroSerie', $serie)
+            ->first();
+
+        if (!$registro) {
+            return response()->json(['success' => false, 'message' => 'No se encontró ningún producto con esta serie en el inventario.']);
+        }
+
+        if (!$registro->DetalleComprobante || !$registro->DetalleComprobante->Producto) {
+            return response()->json(['success' => false, 'message' => 'No se encontró el producto asociado a esta serie.']);
+        }
+
+        $producto = $registro->DetalleComprobante->Producto;
+        $estado = $registro->estado;
+
+        $esPack = \App\Models\ProductoPack::where('idProductoPack', $producto->idProducto)->exists();
+
+        if (!$esPack) {
+            return response()->json(['success' => false, 'message' => 'El producto asociado a esta serie no es un pack.']);
+        }
+
+        if ($estado !== 'NUEVO') {
+            return response()->json(['success' => false, 'message' => "El pack no puede ser dividido porque su estado actual es: $estado"]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'idRegistro' => $registro->idRegistro,
+                'nombreProducto' => $producto->nombreProducto,
+                'serie' => $registro->numeroSerie
+            ]
+        ]);
+    }
+
+    /**
+     * AJAX: Sugerencias de series de packs
+     */
+    public function buscarSeriesPackAjax(Request $request)
+    {
+        $query = $request->input('query');
+        if (strlen($query) < 3) {
+            return response()->json([]);
+        }
+
+        $registros = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+            ->where('numeroSerie', 'like', "%$query%")
+            ->where('estado', 'NUEVO')
+            ->take(10)
+            ->get();
+
+        $resultados = [];
+        foreach ($registros as $reg) {
+            $prod = $reg->DetalleComprobante->Producto ?? null;
+            if ($prod) {
+                // Verificar si es pack
+                $esPack = \App\Models\ProductoPack::where('idProductoPack', $prod->idProducto)->exists();
+                if ($esPack) {
+                    $resultados[] = [
+                        'serie' => $reg->numeroSerie,
+                        'nombreProducto' => $prod->nombreProducto
+                    ];
+                }
+            }
+        }
+
+        return response()->json($resultados);
     }
 }

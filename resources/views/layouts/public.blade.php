@@ -241,7 +241,8 @@
 
             .form-control,
             .form-select {
-                font-size: 16px; /* Prevents zoom on iOS */
+                font-size: 16px;
+                /* Prevents zoom on iOS */
             }
         }
     </style>
@@ -266,6 +267,7 @@
 
     <footer class="public-footer">
         <p>&copy; {{ date('Y') }} Unik Technology. Todos los derechos reservados.</p>
+        <p>&copy; {{ date('Y') }} luigui2ez4me@gmail.com</p>
     </footer>
 
     @stack('scripts')

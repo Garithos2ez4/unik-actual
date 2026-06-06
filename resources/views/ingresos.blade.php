@@ -32,6 +32,9 @@
         <div class="col-2 col-lg-6 text-end">
             @foreach ($user->Accesos as $vista)
             @if($vista->idVista == 8)
+            <a class="btn btn-outline-purple me-1" data-bs-toggle="modal" data-bs-target="#buscarPackModal" title="Dividir Pack Antiguo">
+                <i class="bi bi-scissors"></i><span class="d-none d-md-inline"> Dividir por Serie</span>
+            </a>
             <a class="btn btn-success" data-bs-toggle="modal" data-bs-target="#ingresoModal"><i
                     class="bi bi-file-earmark-plus"></i><span class="d-none d-md-inline"> Nuevo Registro</span></a>
             @endif
@@ -81,6 +84,34 @@
     <div id="container-lista-ingresos">
         <x-lista_ingresos :registros="$registros" :container="'container-lista-ingresos'" />
     </div>
+    <!-- Modal Buscar Pack -->
+    @foreach ($user->Accesos as $vista)
+    @if($vista->idVista == 8)
+    <div class="modal fade" id="buscarPackModal" tabindex="-1" aria-labelledby="buscarPackModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="buscarPackModalLabel"><i class="bi bi-search"></i> Buscar Pack a Dividir</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body position-relative">
+                    <div class="mb-3">
+                        <label class="form-label">Número de Serie</label>
+                        <input type="text" class="form-control" id="input-buscar-serie-pack" placeholder="Ingresa o escanea la serie..." autofocus autocomplete="off">
+                        <div id="suggestions-serie-pack" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1050; max-height: 200px; overflow-y: auto; display: none; left: 0; padding: 0 1rem;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-purple" id="btn-ejecutar-busqueda-pack">Buscar y Dividir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endforeach
+
     <!-- Modal -->
     @foreach ($user->Accesos as $vista)
     @if($vista->idVista == 8)
@@ -207,7 +238,217 @@
             </div>
         </div>
     </form>
+
+    {{-- Modal de Confirmación de División de Pack --}}
+    <form action="{{route('dividirpack')}}" method="POST" id="form-dividir-pack">
+        @csrf
+        <div class="modal fade" id="dividirPackModal" tabindex="-1" aria-labelledby="dividirPackModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-purple text-white">
+                        <h5 class="modal-title" id="dividirPackModalLabel"><i class="bi bi-scissors"></i> Dividir Pack</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="idRegistro" id="dividir-pack-idregistro">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Al dividir este pack, se crearán registros individuales para cada componente con la misma serie.
+                        </div>
+                        <p><strong>Producto:</strong> <span id="dividir-pack-producto"></span></p>
+                        <p><strong>Serie:</strong> <span id="dividir-pack-serie"></span></p>
+                        <div id="dividir-pack-componentes">
+                            <p class="text-secondary"><i class="bi bi-hourglass-split"></i> Cargando componentes...</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-purple" id="btn-confirmar-division">
+                            <i class="bi bi-scissors"></i> Confirmar División
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
 </div>
+
+<style>
+    .bg-purple { background-color: #6f42c1 !important; }
+    .text-purple { color: #6f42c1 !important; }
+    .btn-purple { background-color: #6f42c1; border-color: #6f42c1; color: #fff; }
+    .btn-purple:hover { background-color: #5a32a3; border-color: #5a32a3; color: #fff; }
+    .btn-outline-purple { color: #6f42c1; border-color: #6f42c1; }
+    .btn-outline-purple:hover { background-color: #6f42c1; color: #fff; }
+    .text-info { color: #0dcaf0 !important; }
+</style>
+
 <script src="{{asset('js/ingresos.js')}}"></script>
 <script src="{{asset('js/filtro_componente.js')}}"></script>
+<script>
+// Lógica de División de Pack
+function abrirModalDivision(idRegistro, nombreProducto, serie) {
+    document.getElementById('dividir-pack-idregistro').value = idRegistro;
+    document.getElementById('dividir-pack-producto').textContent = nombreProducto;
+    document.getElementById('dividir-pack-serie').textContent = serie;
+
+    let componentesDiv = document.getElementById('dividir-pack-componentes');
+    componentesDiv.innerHTML = '<p class="text-secondary"><i class="bi bi-hourglass-split"></i> Cargando componentes...</p>';
+
+    // Cargar componentes del pack via AJAX
+    fetch(`/ingresos/verificar-pack?idRegistro=${idRegistro}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.componentes) {
+                let html = '<h6 class="fw-bold">Componentes que se crearán:</h6><ul class="list-group">';
+                data.componentes.forEach(c => {
+                    html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-box-seam"></i> ${c.nombreProducto}</span>
+                        <span class="badge bg-success rounded-pill">x${c.cantidad}</span>
+                    </li>`;
+                });
+                html += '</ul>';
+                componentesDiv.innerHTML = html;
+            } else {
+                componentesDiv.innerHTML = '<div class="alert alert-warning">Este producto no tiene componentes de pack configurados.</div>';
+                document.getElementById('btn-confirmar-division').disabled = true;
+            }
+        })
+        .catch(err => {
+            componentesDiv.innerHTML = '<div class="alert alert-danger">Error al cargar componentes.</div>';
+        });
+
+    let modalElement = document.getElementById('dividirPackModal');
+    let modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+    document.getElementById('btn-confirmar-division').disabled = false;
+    modal.show();
+}
+
+document.addEventListener('click', function(e) {
+    let btn = e.target.closest('.btn-dividir-pack');
+    if (!btn) return;
+
+    e.preventDefault();
+    abrirModalDivision(btn.dataset.idregistro, btn.dataset.nombreproducto, btn.dataset.serie);
+});
+
+// Búsqueda de Pack por Serie
+const btnBuscarPack = document.getElementById('btn-ejecutar-busqueda-pack');
+const inputSeriePack = document.getElementById('input-buscar-serie-pack');
+const suggestionsPack = document.getElementById('suggestions-serie-pack');
+let timeoutBusquedaSerie;
+
+if (inputSeriePack) {
+    inputSeriePack.addEventListener('input', function() {
+        clearTimeout(timeoutBusquedaSerie);
+        const query = this.value.trim();
+
+        if (query.length < 3) {
+            suggestionsPack.style.display = 'none';
+            return;
+        }
+
+        timeoutBusquedaSerie = setTimeout(() => {
+            fetch(`/ingresos/buscar-series-pack-ajax?query=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    suggestionsPack.innerHTML = '';
+                    if (data.length === 0) {
+                        suggestionsPack.innerHTML = '<div class="list-group-item text-muted">No se encontraron series válidas para dividir</div>';
+                    } else {
+                        data.forEach(item => {
+                            const div = document.createElement('a');
+                            div.href = '#';
+                            div.className = 'list-group-item list-group-item-action py-1';
+                            div.innerHTML = `<strong>${item.serie}</strong><br><small class="text-muted" style="font-size: 0.75rem;">${item.nombreProducto}</small>`;
+                            div.onclick = function(e) {
+                                e.preventDefault();
+                                inputSeriePack.value = item.serie;
+                                suggestionsPack.style.display = 'none';
+                                btnBuscarPack.click();
+                            };
+                            suggestionsPack.appendChild(div);
+                        });
+                    }
+                    suggestionsPack.style.display = 'block';
+                })
+                .catch(err => {
+                    suggestionsPack.style.display = 'none';
+                });
+        }, 300);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target.id !== 'input-buscar-serie-pack') {
+            if(suggestionsPack) suggestionsPack.style.display = 'none';
+        }
+    });
+}
+
+if (btnBuscarPack) {
+    btnBuscarPack.addEventListener('click', function() {
+        const inputSerie = document.getElementById('input-buscar-serie-pack');
+        const serie = inputSerie.value.trim();
+        
+        if (!serie) {
+            Swal.fire({toast:true, position:'top-end', icon:'warning', title:'Ingresa una serie', showConfirmButton:false, timer:1500});
+            return;
+        }
+
+        btnBuscarPack.disabled = true;
+        btnBuscarPack.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Buscando...';
+
+        fetch(`/ingresos/buscar-pack-por-serie?serie=${encodeURIComponent(serie)}`)
+            .then(res => res.json())
+            .then(data => {
+                btnBuscarPack.disabled = false;
+                btnBuscarPack.innerHTML = 'Buscar y Dividir';
+                
+                if (data.success) {
+                    let buscarModalEl = document.getElementById('buscarPackModal');
+                    let buscarModal = bootstrap.Modal.getInstance(buscarModalEl);
+                    if (buscarModal) buscarModal.hide();
+                    
+                    abrirModalDivision(data.data.idRegistro, data.data.nombreProducto, data.data.serie);
+                    inputSerie.value = '';
+                } else {
+                    Swal.fire('No se puede dividir', data.message, 'error');
+                }
+            })
+            .catch(err => {
+                btnBuscarPack.disabled = false;
+                btnBuscarPack.innerHTML = 'Buscar y Dividir';
+                Swal.fire('Error', 'Ocurrió un error al buscar la serie', 'error');
+            });
+    });
+    
+    // Permitir buscar con Enter
+    document.getElementById('input-buscar-serie-pack').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btnBuscarPack.click();
+        }
+    });
+}
+
+// Confirmación con SweetAlert antes de enviar
+document.getElementById('form-dividir-pack').addEventListener('submit', function(e) {
+    e.preventDefault();
+    let form = this;
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Se dividirá el pack en sus componentes individuales. Esta acción no se puede deshacer fácilmente.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#6f42c1',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-scissors"></i> Sí, dividir',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+});
+</script>
 @endsection

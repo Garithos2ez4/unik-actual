@@ -280,6 +280,9 @@
             </div>
         </div>
         {{-- Fin videos --}}
+        
+        @include('components.modo_pack')
+
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
             <div class="col-6 mb-2">
                 <h3>Detalles</h3>
@@ -502,4 +505,6 @@
         }
     });
 </script>
+
+@include('js.modo-pack-scripts')
 @endsection

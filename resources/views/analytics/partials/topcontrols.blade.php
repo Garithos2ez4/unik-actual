@@ -4,7 +4,7 @@
             <div class="row align-items-end g-2">
                 <div class="col-6 col-md-2">
                     <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-event me-1"></i>Año</label>
-                    <select name="anio" class="form-select form-select-sm" id="filtro-anio" onchange="actualizarLimitesDia()">
+                    <select name="anio" class="form-select form-select-sm" id="filtro-anio" onchange="actualizarLimitesDia(event)">
                         @for($y = now()->year; $y >= 2026; $y--)
                         <option value="{{ $y }}" {{ ($filtros['anio'] ?? now()->year) == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endfor
@@ -12,7 +12,7 @@
                 </div>
                 <div class="col-6 col-md-2">
                     <label class="form-label mb-1 small fw-bold text-muted"><i class="bi bi-calendar-month me-1"></i>Mes</label>
-                    <select name="mes" class="form-select form-select-sm" id="filtro-mes" onchange="actualizarLimitesDia()">
+                    <select name="mes" class="form-select form-select-sm" id="filtro-mes" onchange="actualizarLimitesDia(event)">
                         @php
                         $meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
                         @endphp

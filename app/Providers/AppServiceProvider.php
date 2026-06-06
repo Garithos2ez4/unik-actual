@@ -121,6 +121,8 @@ use App\Services\TrasladoService;
 use App\Services\TrasladoServiceInterface;
 use App\Services\LicenciaServiceInterface;
 use App\Services\LicenciaService;
+use App\Services\DivisionPackServiceInterface;
+use App\Services\DivisionPackService;
 use App\Repositories\LicenciaRepository;
 use App\Repositories\LicenciaRepositoryInterface;
 use App\Repositories\RegistroUpdateRepository;
@@ -139,6 +141,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(LicenciaRepositoryInterface::class,LicenciaRepository::class);
         // Aquí enlazas la interfaz con la clase concreta
         $this->app->bind(LicenciaServiceInterface::class,LicenciaService::class);
+        $this->app->bind(DivisionPackServiceInterface::class,DivisionPackService::class);
         $this->app->bind(HeaderServiceInterface::class, HeaderService::class);
         $this->app->bind(CalculadoraServiceInterface::class, CalculadoraService::class);
         $this->app->bind(UsuarioServiceInterface::class, UsuarioService::class);

@@ -65,7 +65,8 @@ class IngresoProductoRepository implements IngresoProductoRepositoryInterface
             }
         }
 
-        return $query->orderBy('IngresoProducto.fechaIngreso', 'desc')->paginate($cant);
+        return $query->with('RegistroProducto.DetalleComprobante.Producto.packHijos.ProductoHijo')
+            ->orderBy('IngresoProducto.fechaIngreso', 'desc')->paginate($cant);
     }
 
     public function searchOne($column, $data)

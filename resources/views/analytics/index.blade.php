@@ -94,32 +94,22 @@
 </style>
 
 <script>
-    function actualizarLimitesDia() {
-        const anio = document.getElementById('filtro-anio').value;
-        const mes = document.getElementById('filtro-mes').value;
-        const diaInicio = document.getElementById('filtro-dia-inicio');
-        const diaFin = document.getElementById('filtro-dia-fin');
+    function actualizarLimitesDia(event) {
+        // Solo actualizar los valores de los días si el usuario cambia el año o mes manualmente
+        if (event && event.type === 'change') {
+            const anio = document.getElementById('filtro-anio').value;
+            const mes = document.getElementById('filtro-mes').value;
+            const diaInicio = document.getElementById('filtro-dia-inicio');
+            const diaFin = document.getElementById('filtro-dia-fin');
 
-        // Calcular primer y último día del mes seleccionado
-        const primerDia = `${anio}-${String(mes).padStart(2, '0')}-01`;
-        const ultimoDia = new Date(anio, mes, 0).getDate();
-        const ultimaFecha = `${anio}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+            // Calcular primer y último día del mes seleccionado
+            const primerDia = `${anio}-${String(mes).padStart(2, '0')}-01`;
+            const ultimoDia = new Date(anio, mes, 0).getDate();
+            const ultimaFecha = `${anio}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
-        diaInicio.min = primerDia;
-        diaInicio.max = ultimaFecha;
-        diaFin.min = primerDia;
-        diaFin.max = ultimaFecha;
-
-        // Si los valores actuales están fuera de rango, limpiarlos
-        if (diaInicio.value && (diaInicio.value < primerDia || diaInicio.value > ultimaFecha)) {
-            diaInicio.value = '';
-        }
-        if (diaFin.value && (diaFin.value < primerDia || diaFin.value > ultimaFecha)) {
-            diaFin.value = '';
+            diaInicio.value = primerDia;
+            diaFin.value = ultimaFecha;
         }
     }
-
-    // Inicializar límites al cargar
-    document.addEventListener('DOMContentLoaded', actualizarLimitesDia);
 </script>
 @endsection
