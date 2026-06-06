@@ -89,6 +89,15 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/ingresos/searchingresos', [IngresoController::class, 'searchIngreso'])->name('searchingresos');
     Route::get('/ingresos/getoneingreso', [IngresoController::class, 'getOneIngreso'])->name('getoneingreso');
+
+    // Rutas para División de Packs (Deben ir antes de /{month} para evitar colisión)
+    Route::get('/ingresos/verificar-pack', [IngresoController::class, 'verificarPack'])->name('verificarpack');
+    Route::post('/ingresos/dividir-pack', [IngresoController::class, 'dividirPack'])->name('dividirpack');
+    Route::post('/ingresos/reunir-pack', [IngresoController::class, 'reunirPack'])->name('reunirpack');
+    Route::get('/ingresos/componentes-reunion', [IngresoController::class, 'getComponentesReunion'])->name('componentesreunion');
+    Route::get('/ingresos/buscar-pack-por-serie', [IngresoController::class, 'buscarPackPorSerie'])->name('buscarpackporserie');
+    Route::get('/ingresos/buscar-series-pack-ajax', [IngresoController::class, 'buscarSeriesPackAjax'])->name('buscarseriespackajax');
+
     Route::get('/ingresos/{month}', [IngresoController::class, 'index'])->name('ingresos');
     Route::post('/ingreso/deleteingreso', [IngresoController::class, 'deleteIngreso'])->name('deleteingreso');
     Route::post('/ingreso/updateregistro', [IngresoController::class, 'updateRegistro'])->name('updateregistro');
@@ -115,6 +124,12 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
     Route::post('/producto/insertorupdatedetails', [ProductoController::class, 'insertOrUpdateDetails'])->name('insertorupdatedetails');
     Route::post('/producto/deletedetail/{idProducto}', [ProductoController::class, 'deleteDetail'])->name('deletedetail');
+
+    // Rutas para configuración de packs
+    Route::get('/producto/{idproducto}/pack-components', [ProductoController::class, 'getPackComponents'])->name('producto.pack.components');
+    Route::post('/producto/{idproducto}/pack-components', [ProductoController::class, 'addPackComponent'])->name('producto.pack.add');
+    Route::delete('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'removePackComponent'])->name('producto.pack.remove');
+
     Route::post('/producto/creargrupo-rapido', [ProductoController::class, 'quickCreateGrupo'])->name('quickcreategrupo');
 
 
@@ -176,6 +191,8 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/etiquetas', [\App\Http\Controllers\EnvioProvinciaController::class, 'etiquetas'])->name('etiquetas');
         Route::get('/lista-productos', [\App\Http\Controllers\EnvioProvinciaController::class, 'listaProductos'])->name('listaProductos');
         Route::get('/solicitudes', [\App\Http\Controllers\EnvioProvinciaController::class, 'obtenerSolicitudes'])->name('solicitudes');
+        Route::get('/sync-marvisur', [\App\Http\Controllers\Api\MarvisurSyncController::class, 'sync']);
+        Route::get('/sync-emtrafesa', [\App\Http\Controllers\Api\EmtrafesaSyncController::class, 'sync']);
 
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
