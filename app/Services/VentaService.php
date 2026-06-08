@@ -40,7 +40,7 @@ class VentaService implements VentaServiceInterface
             
             // Si no se envía fechaVenta, usar la actual
             if (!isset($ventaData['fechaVenta'])) {
-                $ventaData['fechaVenta'] = now()->toDateString();
+                $ventaData['fechaVenta'] = now()->toDateTimeString();
             }
 
             // 2. Crear la Venta (Cabecera)

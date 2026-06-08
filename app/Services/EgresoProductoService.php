@@ -419,7 +419,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         'idUser'      => $idUser,
                         'canal'       => $canal,
                         'numeroOrden' => $modelEgreso->numeroOrden,
-                        'fechaVenta'  => $modelEgreso->fechaCompra ? $modelEgreso->fechaCompra->toDateString() : now()->toDateString(),
+                        'fechaVenta'  => $modelEgreso->fechaCompra ? $modelEgreso->fechaCompra->toDateTimeString() : now()->toDateTimeString(),
                         'totalVenta'  => $nuevoPrecio,
                         'observacion' => 'Migración automática de egreso histórico',
                     ]);

@@ -112,6 +112,9 @@
     <!-- Desglose de Transferencias por Banco / Método de Pago -->
     @include('analytics.components.tienda.components.desglose_pagos')
 
+    <!-- Rendimiento por SKU / Producto -->
+    @include('analytics.components.tienda.components.tienda_sku')
+
     <!-- Scripts del gráfico -->
     @include('analytics.components.tienda.logic.scripts')
 

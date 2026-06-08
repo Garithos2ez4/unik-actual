@@ -1,36 +1,36 @@
-@extends('layouts.app')
+    @extends('layouts.app')
 
-@section('title', 'Detalle Tienda')
+    @section('title', 'Detalle Tienda')
 
-@section('content')
-<div class="container pb-5">
-    <!-- Encabezado -->
-    <div class="row mt-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="fw-bold"><i class="bi bi-shop text-primary me-2"></i>Detalle de Ventas - Tienda</h2>
-            <p class="text-secondary mb-0">Análisis específico de ventas directas realizadas en tienda física/web (sin intermediación de plataformas).</p>
-        </div>
-        <div class="col-md-6 text-md-end">
-            <a href="{{ route('dashboard.analitica') }}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="bi bi-arrow-left me-1"></i> Volver a Analítica
-            </a>
-        </div>
-    </div>
-
-    <!-- Controles de Filtros -->
-    @include('analytics.partials.topcontrols')
-
-    <!-- Contenedor Dinámico -->
-    <div id="tienda-data-container" class="mt-4">
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                <span class="visually-hidden">Cargando métricas...</span>
+    @section('content')
+    <div class="container pb-5">
+        <!-- Encabezado -->
+        <div class="row mt-4 align-items-center">
+            <div class="col-md-6">
+                <h2 class="fw-bold"><i class="bi bi-shop text-primary me-2"></i>Detalle de Ventas - Tienda</h2>
+                <p class="text-secondary mb-0">Análisis específico de ventas directas realizadas en tienda física/web (sin intermediación de plataformas).</p>
             </div>
-            <h5 class="mt-3 text-muted">Cargando métricas de tienda...</h5>
-            <p class="small text-muted">Obteniendo ventas y agrupando métodos de pago</p>
+            <div class="col-md-6 text-md-end">
+                <a href="{{ route('dashboard.analitica') }}" class="btn btn-outline-secondary rounded-pill px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Volver a Analítica
+                </a>
+            </div>
+        </div>
+
+        <!-- Controles de Filtros -->
+        @include('analytics.partials.topcontrols')
+
+        <!-- Contenedor Dinámico -->
+        <div id="tienda-data-container" class="mt-4">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Cargando métricas...</span>
+                </div>
+                <h5 class="mt-3 text-muted">Cargando métricas de tienda...</h5>
+                <p class="small text-muted">Obteniendo ventas y agrupando métodos de pago</p>
+            </div>
         </div>
     </div>
-</div>
 
-@include('analytics.components.tienda.logic.loader')
-@endsection
+    @include('analytics.components.tienda.logic.loader')
+    @endsection

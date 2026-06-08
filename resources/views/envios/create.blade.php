@@ -277,6 +277,8 @@
             urlSincronizacion = "{{ url('/envios-provincias/sync-marvisur') }}";
         } else if (nombreAgencia === 'EMTRAFESA') {
             urlSincronizacion = "{{ url('/envios-provincias/sync-emtrafesa') }}";
+        } else if (nombreAgencia === 'OLVA') {
+            urlSincronizacion = "{{ url('/envios-provincias/sync-olva') }}";
         } else {
             Swal.fire('No soportado', 'La agencia ' + nombreAgencia + ' aún no cuenta con sincronización automática.', 'info');
             return;

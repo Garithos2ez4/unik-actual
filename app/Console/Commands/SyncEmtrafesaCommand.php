@@ -100,13 +100,21 @@ class SyncEmtrafesaCommand extends Command
                 }
 
                 // 3. Buscar el Destino localmente
-                // Primero intentamos buscar por el distrito extraído si existe
                 $destino = null;
-                if (!empty($distritoStr)) {
+
+                // Primero intentamos buscar por distrito y provincia si tenemos ambos
+                if (!empty($distritoStr) && !empty($provinciaStr)) {
+                    $destino = Destino::whereHas('Provincia', function($q) use ($provinciaStr) {
+                        $q->where('nombre', $provinciaStr);
+                    })->where('nombre', $distritoStr)->first();
+                }
+
+                // Si no se encontró (o no había provincia), intentamos solo por el distrito
+                if (!$destino && !empty($distritoStr)) {
                     $destino = Destino::where('nombre', $distritoStr)->first();
                 }
 
-                // Si no se encuentra por distrito exacto, intentamos por el nombre de la sucursal (ej: "CHICLAYO")
+                // Si aún no se encuentra, intentamos por el nombre de la sucursal (ej: "CHICLAYO")
                 if (!$destino) {
                     $destino = Destino::where('nombre', $sucursalName)->first();
                 }

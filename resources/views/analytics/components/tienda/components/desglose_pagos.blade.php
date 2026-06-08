@@ -28,7 +28,7 @@
                                 @foreach($pagos as $pago)
                                 <tr>
                                     <td><span class="badge bg-light text-dark border">V-{{ str_pad($pago->idVenta, 5, '0', STR_PAD_LEFT) }}</span></td>
-                                    <td class="text-muted small">{{ \Carbon\Carbon::parse($pago->fechaVenta)->format('d/m/Y H:i') }}</td>
+                                    <td class="text-muted small">{{ \Carbon\Carbon::parse($pago->fechaPago)->format('d/m/Y H:i') }}</td>
                                     <td><span class="badge bg-secondary opacity-75"><i class="bi bi-person me-1"></i>{{ $pago->vendedor ?? 'N/A' }}</span></td>
                                     <td><span class="text-muted font-monospace">{{ $pago->nroOperacion ?: 'No Registrado' }}</span></td>
                                     <td class="text-end fw-semibold text-dark">S/ {{ number_format($pago->monto, 2) }}</td>

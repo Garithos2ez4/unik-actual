@@ -638,10 +638,10 @@ class AnalyticsController extends Controller
                 ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
                 ->leftJoin('CuentasTransferencia', 'PagoVenta.idCuentaBancaria', '=', 'CuentasTransferencia.idCuentaBancaria')
                 ->leftJoin('Banco', 'CuentasTransferencia.idBanco', '=', 'Banco.idBanco')
-                ->selectRaw("COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) as metodo_banco, PagoVenta.idVenta, Venta.fechaVenta, PagoVenta.monto, PagoVenta.nroOperacion, Usuario.user as vendedor")
+                ->selectRaw("CASE WHEN UPPER(MetodoPago.nombreMetodo) LIKE '%TRANSFERENCIA%' THEN COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) ELSE MetodoPago.nombreMetodo END as metodo_banco, PagoVenta.idVenta, Venta.fechaVenta, PagoVenta.fechaPago, PagoVenta.monto, PagoVenta.nroOperacion, Usuario.user as vendedor")
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-                ->orderByRaw('COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo)')
+                ->orderByRaw("CASE WHEN UPPER(MetodoPago.nombreMetodo) LIKE '%TRANSFERENCIA%' THEN COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) ELSE MetodoPago.nombreMetodo END")
                 ->orderByDesc('Venta.fechaVenta')
                 ->get()
                 ->groupBy('metodo_banco');
@@ -656,6 +656,33 @@ class AnalyticsController extends Controller
                 ->orderBy('fecha', 'asc')
                 ->get();
 
+            // ── Consulta para agrupar por SKU (Modelo) ───────────────────
+            $skusTienda = \App\Models\DetalleVenta::query()
+                ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
+                ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
+                ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
+                ->selectRaw("Producto.modelo as sku,
+                             SUM(DetalleVenta.cantidad) as total_unidades,
+                             SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
+                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
+                             SUM(($comisionTiendaExpr) * DetalleVenta.cantidad) as comision_tienda")
+                ->where('DetalleVenta.precioVenta', '>', 0.01)
+                ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+                ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->groupBy('Producto.modelo')
+                ->orderByDesc('ingresos')
+                ->get()
+                ->map(function ($sku) {
+                    $sku->ingresos = round($sku->ingresos, 2);
+                    $sku->costos = round($sku->costos, 2);
+                    $sku->ganancia = round($sku->ingresos - $sku->costos, 2);
+                    $sku->margen = $sku->ingresos > 0 ? round(($sku->ganancia / $sku->ingresos) * 100, 2) : 0;
+                    return $sku;
+                });
+
+            $skusMayorRotacion = $skusTienda->sortByDesc('total_unidades')->take(10)->values();
+            $skusMayorRentabilidad = $skusTienda->sortByDesc('ganancia')->take(10)->values();
+
             $ventasMes = [];
             for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
                 $dateStr = $date->format('Y-m-d');
@@ -667,7 +694,7 @@ class AnalyticsController extends Controller
                 ];
             }
 
-            return compact('ventasTienda', 'pagosTienda', 'detallePagosTienda', 'ventasMes');
+            return compact('ventasTienda', 'pagosTienda', 'detallePagosTienda', 'ventasMes', 'skusTienda', 'skusMayorRotacion', 'skusMayorRentabilidad');
         });
 
         return view('analytics.components.tienda.components.tienda_venta_data', $data + [

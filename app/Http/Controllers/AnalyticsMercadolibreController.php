@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
 use App\Models\Venta;
-use App\Models\DetalleVenta;
-use App\Models\EgresoProducto;
-use App\Models\Producto;
+
 
 class AnalyticsMercadolibreController extends Controller
 {
