@@ -117,6 +117,9 @@
                                     <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewSubAgencia" title="Nueva Oficina/Sucursal">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
+                                    <button class="btn btn-outline-success" type="button" onclick="sincronizarAgencia()" title="Sincronizar Sucursales Oficiales">
+                                        <i class="bi bi-cloud-arrow-down-fill"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -257,6 +260,57 @@
             labelDir.innerHTML = 'Dirección (Dir) <span class="text-muted">(Opcional)</span>';
         }
     });
+
+    function sincronizarAgencia() {
+        const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+        
+        if (!selectedOption || selectedOption.value === "") {
+            Swal.fire('Atención', 'Primero selecciona una Agencia de Transporte.', 'warning');
+            return;
+        }
+
+        const nombreAgencia = selectedOption.text.trim().toUpperCase();
+        let urlSincronizacion = '';
+        
+        if (nombreAgencia === 'MARVISUR') {
+            urlSincronizacion = "{{ url('/envios-provincias/sync-marvisur') }}";
+        } else if (nombreAgencia === 'EMTRAFESA') {
+            urlSincronizacion = "{{ url('/envios-provincias/sync-emtrafesa') }}";
+        } else {
+            Swal.fire('No soportado', 'La agencia ' + nombreAgencia + ' aún no cuenta con sincronización automática.', 'info');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Sincronizando ' + nombreAgencia + '...',
+            text: 'Descargando y mapeando sucursales oficiales. Esto puede tardar unos segundos...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch(urlSincronizacion)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sincronización Exitosa',
+                        text: 'Las sucursales oficiales de ' + nombreAgencia + ' se importaron correctamente.'
+                    });
+                    if (typeof cargarSubAgencias === 'function') {
+                        cargarSubAgencias(); // Recargar el select automáticamente
+                    }
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Error', 'Hubo un problema de red al intentar sincronizar.', 'error');
+            });
+    }
 </script>
 
 @endsection

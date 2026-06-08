@@ -1,40 +1,47 @@
-@extends('layouts.app')
+    <!-- Tendencia de Ventas -->
+    @include('analytics.components.tienda.components.trends')
 
-@section('title', 'Detalle Ripley')
-
-@section('content')
-<div class="container pb-5">
-    <!-- Encabezado -->
-    <div class="row mt-4 align-items-center">
-        <div class="col-md-6">
-            <h2 class="fw-bold"><i class="bi bi-shop text-warning me-2"></i>Detalle de Ventas - Ripley</h2>
-            <p class="text-secondary mb-0">Análisis específico de ventas, comisiones y márgenes en la plataforma Ripley.</p>
-        </div>
-        <div class="col-md-6 text-md-end">
-            <a href="{{ route('dashboard.analitica') }}" class="btn btn-outline-secondary rounded-pill px-4">
-                <i class="bi bi-arrow-left me-1"></i> Volver a Analítica
-            </a>
+    <!-- Resumen por Métodos de Pago -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-wallet2 me-2 text-primary"></i>Ingresos por Método de Pago</h5>
+            <div class="row g-3">
+                @forelse($pagosTienda as $pago)
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100" style="border-left: 4px solid var(--unik-primary) !important;">
+                            <div class="card-body p-3">
+                                <div class="text-uppercase small fw-bold text-secondary mb-1">{{ $pago->metodo_pago }}</div>
+                                <h4 class="fw-bold text-dark mb-0">S/ {{ number_format($pago->total_monto, 2) }}</h4>
+                                <div class="small text-muted mt-2"><i class="bi bi-receipt me-1"></i>{{ $pago->cantidad_transacciones }} transacciones</div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="alert alert-light border text-muted">
+                            <i class="bi bi-info-circle me-2"></i>No hay pagos registrados en este período.
+                        </div>
+                    </div>
+                @endforelse
+            </div>
         </div>
     </div>
-
-    <!-- Controles de Filtros -->
-    @include('analytics.partials.topcontrols')
 
     <!-- Tabla de Ventas -->
     <div class="card border-0 shadow-sm rounded-4 mt-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
             <h5 class="fw-bold mb-0 text-dark">
-                <i class="bi bi-table me-2 text-primary"></i>Historial de Operaciones
+                <i class="bi bi-table me-2 text-primary"></i>Historial de Operaciones - Tienda
             </h5>
         </div>
         <div class="card-body p-4">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="tablaRipley">
+                <table class="table table-hover align-middle mb-0" id="tablaTienda">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-uppercase small fw-bold text-secondary"># Venta</th>
-                            <th class="text-uppercase small fw-bold text-secondary">Fecha</th>
                             <th class="text-uppercase small fw-bold text-secondary">Vendedor</th>
+                            <th class="text-uppercase small fw-bold text-secondary">Fecha</th>
+                            <th class="text-uppercase small fw-bold text-secondary">Método de Pago</th>
                             <th class="text-uppercase small fw-bold text-secondary">Producto(s)</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Ingresos</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Costos Base</th>
@@ -43,11 +50,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($ventasRipley as $venta)
+                        @forelse($ventasTienda as $venta)
                         <tr>
-                            <td><span class="badge bg-light text-dark border">V-{{ str_pad($venta->idVenta, 5, '0', STR_PAD_LEFT) }}</span></td>
-                            <td class="text-muted small">{{ \Carbon\Carbon::parse($venta->fechaVenta)->format('d/m/Y') }}</td>
                             <td><span class="badge bg-secondary opacity-75"><i class="bi bi-person me-1"></i>{{ $venta->nombre_usuario ?? 'N/A' }}</span></td>
+                            <td class="text-muted small">{{ \Carbon\Carbon::parse($venta->fechaVenta)->format('d/m/Y') }}</td>
+                            <td><span class="badge bg-secondary opacity-75"><i class="bi bi-wallet2 me-1"></i>{{ $venta->metodos_pago ?? 'No Registrado' }}</span></td>
                             <td>
                                 <div class="text-truncate" style="max-width: 250px;" title="{{ $venta->modelo }}">
                                     {{ $venta->modelo }}
@@ -68,9 +75,9 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2 text-light"></i>
-                                No hay ventas registradas en Ripley.
+                                No hay ventas directas de tienda registradas en este período.
                             </td>
                         </tr>
                         @endforelse
@@ -78,13 +85,13 @@
                     <tfoot class="table-light fw-bold text-dark">
                         <tr>
                             <td colspan="4" class="text-end text-uppercase">Totales del Período:</td>
-                            <td class="text-end">S/ {{ number_format($ventasRipley->sum('ingresos'), 2) }}</td>
-                            <td class="text-end">S/ {{ number_format($ventasRipley->sum('costos'), 2) }}</td>
-                            <td class="text-end text-success">S/ {{ number_format($ventasRipley->sum('ganancia'), 2) }}</td>
+                            <td class="text-end">S/ {{ number_format($ventasTienda->sum('ingresos'), 2) }}</td>
+                            <td class="text-end">S/ {{ number_format($ventasTienda->sum('costos'), 2) }}</td>
+                            <td class="text-end text-success">S/ {{ number_format($ventasTienda->sum('ganancia'), 2) }}</td>
                             <td class="text-center">
                                 @php
-                                    $totIngresos = $ventasRipley->sum('ingresos');
-                                    $totGanancia = $ventasRipley->sum('ganancia');
+                                    $totIngresos = $ventasTienda->sum('ingresos');
+                                    $totGanancia = $ventasTienda->sum('ganancia');
                                     $totMargen = $totIngresos > 0 ? ($totGanancia / $totIngresos) * 100 : 0;
                                 @endphp
                                 @if($totMargen > 20)
@@ -101,5 +108,10 @@
             </div>
         </div>
     </div>
-</div>
-@endsection
+
+    <!-- Desglose de Transferencias por Banco / Método de Pago -->
+    @include('analytics.components.tienda.components.desglose_pagos')
+
+    <!-- Scripts del gráfico -->
+    @include('analytics.components.tienda.logic.scripts')
+

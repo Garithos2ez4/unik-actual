@@ -527,9 +527,32 @@ class AnalyticsController extends Controller
                 return $venta;
             });
 
-        return view('analytics.components.ripley', [
+        // ── Consulta para tendencia de ventas por mes (Gráfico) ────────
+        $ventasMesRaw = Venta::query()
+            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+            ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
+            ->where('DetalleVenta.precioVenta', '>', 0.01)
+            ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
+            ->orderBy('fecha', 'asc')
+            ->get();
+
+        $ventasMes = [];
+        for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
+            $found = $ventasMesRaw->firstWhere('fecha', $dateStr);
+            $ventasMes[] = [
+                'fecha' => $date->format('d/m'),
+                'total' => $found ? $found->total_unidades : 0,
+                'monto' => $found ? round($found->total_monto, 2) : 0
+            ];
+        }
+
+        return view('analytics.components.ripley.index', [
             'user' => $userModel,
             'ventasRipley' => $ventasRipley,
+            'ventasMes' => $ventasMes,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
@@ -547,7 +570,7 @@ class AnalyticsController extends Controller
         $tc = $this->calculadoraService->getTasaCambio();
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
 
-        return view('analytics.components.tienda_venta', [
+        return view('analytics.components.tienda.index', [
             'user' => $userModel,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
@@ -623,10 +646,31 @@ class AnalyticsController extends Controller
                 ->get()
                 ->groupBy('metodo_banco');
 
-            return compact('ventasTienda', 'pagosTienda', 'detallePagosTienda');
+            $ventasMesRaw = Venta::query()
+                ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
+                ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
+                ->where('DetalleVenta.precioVenta', '>', 0.01)
+                ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
+                ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
+                ->orderBy('fecha', 'asc')
+                ->get();
+
+            $ventasMes = [];
+            for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
+                $dateStr = $date->format('Y-m-d');
+                $found = $ventasMesRaw->firstWhere('fecha', $dateStr);
+                $ventasMes[] = [
+                    'fecha' => $date->format('d/m'),
+                    'total' => $found ? $found->total_unidades : 0,
+                    'monto' => $found ? round($found->total_monto, 2) : 0
+                ];
+            }
+
+            return compact('ventasTienda', 'pagosTienda', 'detallePagosTienda', 'ventasMes');
         });
 
-        return view('analytics.components.tienda_venta_data', $data + [
+        return view('analytics.components.tienda.components.tienda_venta_data', $data + [
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }

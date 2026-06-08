@@ -32,30 +32,5 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const container = document.getElementById('tienda-data-container');
-        
-        // Obtenemos los filtros de la URL (si existen)
-        const params = new URLSearchParams(window.location.search);
-        const endpoint = `{{ route('dashboard.analitica.tienda.data') }}?${params.toString()}`;
-
-        fetch(endpoint)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la petición');
-                return response.text();
-            })
-            .then(html => {
-                container.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error cargando datos de tienda:', error);
-                container.innerHTML = `
-                    <div class="alert alert-danger text-center mt-4">
-                        <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
-                        Ocurrió un error al cargar las métricas. Por favor, recarga la página.
-                    </div>`;
-            });
-    });
-</script>
+@include('analytics.components.tienda.logic.loader')
 @endsection

@@ -1,16 +1,17 @@
 {{-- Modo Pack --}}
-@if($producto->GrupoProducto && $producto->GrupoProducto->nombreGrupo === 'Cabezales' && $producto->GrupoProducto->CategoriaProducto && $producto->GrupoProducto->CategoriaProducto->nombreCategoria === 'Impresoras')
+@if($producto->GrupoProducto && in_array($producto->GrupoProducto->nombreGrupo, ['Cabezales', 'Cartucho']) && $producto->GrupoProducto->CategoriaProducto && $producto->GrupoProducto->CategoriaProducto->nombreCategoria === 'Impresoras')
+
 <div class="row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
     <div class="col-12 mb-2">
-        <h3>📦 Configuración de Componentes (Modo Pack)</h3>
+        <h3>&#128230; Configuraci&oacute;n de Componentes (Modo Pack)</h3>
     </div>
     <div class="col-12">
-        <p class="text-muted">Si este producto se vende o divide como un "Pack", agrega sus componentes aquí. Cuando ingreses este producto en el futuro, podrás dividirlo según esta configuración.</p>
+        <p class="text-muted">Si este producto se vende o divide como un "Pack", agrega sus componentes aqu&iacute;. Cuando ingreses este producto en el futuro, podr&aacute;s dividirlo seg&uacute;n esta configuraci&oacute;n.</p>
         
         <div class="row align-items-end mb-3">
             <div class="col-md-5 position-relative">
                 <label class="form-label">Buscar producto componente:</label>
-                <input type="text" class="form-control" id="search-component-input" placeholder="Escribe el modelo o código y selecciona de la lista...">
+                <input type="text" class="form-control" id="search-component-input" placeholder="Escribe el modelo o c&oacute;digo y selecciona de la lista...">
                 <div id="search-component-results" class="list-group position-absolute w-100 shadow" style="z-index: 1000; max-height: 200px; overflow-y: auto; display: none;">
                 </div>
             </div>
@@ -35,7 +36,7 @@
                         <th>Componente Hijo</th>
                         <th width="120" class="text-center">% Costo</th>
                         <th width="150" class="text-center">Cant. por Pack</th>
-                        <th width="100" class="text-center">Acción</th>
+                        <th width="100" class="text-center">Acci&oacute;n</th>
                     </tr>
                 </thead>
                 <tbody id="pack-components-list">

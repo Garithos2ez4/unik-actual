@@ -1,4 +1,5 @@
-@if($producto->GrupoProducto && $producto->GrupoProducto->nombreGrupo === 'Cabezales' && $producto->GrupoProducto->CategoriaProducto && $producto->GrupoProducto->CategoriaProducto->nombreCategoria === 'Impresoras')
+@if($producto->GrupoProducto && in_array($producto->GrupoProducto->nombreGrupo, ['Cabezales', 'Cartucho']) && $producto->GrupoProducto->CategoriaProducto && $producto->GrupoProducto->CategoriaProducto->nombreCategoria === 'Impresoras')
+
 <script>
     const productoIdEncriptado = "{{ encrypt($producto->idProducto) }}";
     

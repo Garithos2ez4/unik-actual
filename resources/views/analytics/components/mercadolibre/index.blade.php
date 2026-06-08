@@ -21,14 +21,13 @@
     @include('analytics.partials.topcontrols')
     <!-- Tendencias de Ventas -->
     @include('analytics.components.mercadolibre.components.trends')
+    <!-- Tabla de Ventas -->
+    @include('analytics.components.mercadolibre.components.historial_ventas')
     <!-- Cuentas Plataforma -->
     @include('analytics.components.mercadolibre.components.cuentas')
 
     <!-- Tabla Detallada por Cuentas -->
     @include('analytics.components.mercadolibre.components.tabla_cuentas')
-
-
-
     <!-- Tops de SKUs -->
     <div class="row">
         <div class="col-lg-6">
@@ -41,9 +40,6 @@
 
     <!-- Componentes de Datos -->
     @include('analytics.components.mercadolibre.components.mercadolibre_sku')
-
-    <!-- Tabla de Ventas -->
-    @include('analytics.components.mercadolibre.components.historial_ventas')
 </div>
 
 @include('analytics.components.mercadolibre.logic.scripts')
