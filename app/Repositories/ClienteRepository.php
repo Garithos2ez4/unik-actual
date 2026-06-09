@@ -14,7 +14,7 @@ class ClienteRepository implements ClienteRepositoryInterface
 
     public function all($cant)
     {
-        return Cliente::paginate($cant);
+        return Cliente::with('TipoDocumento')->orderBy('idCliente', 'desc')->paginate($cant);
     }
 
     public function getOne($column,$data)
@@ -30,7 +30,7 @@ class ClienteRepository implements ClienteRepositoryInterface
 
     public function searchCliente($doc,$cant)
     {
-        return Cliente::where(function($query) use ($doc) {
+        return Cliente::with('TipoDocumento')->where(function($query) use ($doc) {
             $query->where('numeroDocumento', 'LIKE', '%'.$doc.'%')
                   ->orWhere('nombre', 'LIKE', '%'.$doc.'%')
                   ->orWhere('apellidoPaterno', 'LIKE', '%'.$doc.'%')
@@ -38,9 +38,31 @@ class ClienteRepository implements ClienteRepositoryInterface
         })->take($cant)->get();
     }
 
+    public function searchClientePaginated($doc,$cant)
+    {
+        return Cliente::with('TipoDocumento')->where(function($query) use ($doc) {
+            $query->where('numeroDocumento', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('nombre', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('apellidoPaterno', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('apellidoMaterno', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('correo', 'LIKE', '%'.$doc.'%')
+                  ->orWhere('telefono', 'LIKE', '%'.$doc.'%');
+        })->orderBy('idCliente', 'desc')->paginate($cant);
+    }
+
     public function create(array $data)
     {
         return Cliente::create($data);
+    }
+
+    public function update(array $data, $id)
+    {
+        $cliente = Cliente::find($id);
+        if ($cliente) {
+            $cliente->update($data);
+            return $cliente;
+        }
+        return null;
     }
 
     public function getLast(){

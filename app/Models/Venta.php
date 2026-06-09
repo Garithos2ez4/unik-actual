@@ -29,7 +29,7 @@ class Venta extends Model
         'idCliente'   => 'int',
         'idUser'      => 'int',
         'totalVenta'  => 'float',
-        'fechaVenta'  => 'date',
+        'fechaVenta'  => 'datetime',
     ];
 
     // ─── Relaciones ────────────────────────────────────────────

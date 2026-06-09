@@ -60,8 +60,9 @@ function sendFormNewCliente() {
     }
 
     const formData = new FormData(formNewCliente);
+    const actionUrl = formNewCliente.getAttribute('action') || '/cliente/create';
 
-    fetch('/cliente/create', { 
+    fetch(actionUrl, { 
         method: 'POST',
         body: formData
     })
