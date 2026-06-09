@@ -90,11 +90,11 @@ class ExtractOlvaAgencias extends Command
         if (count($allData) > 0) {
             Storage::put('olva_agencias.json', json_encode($allData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-            $this->info("✅ Extracción de Tiendas/Agencias completada exitosamente.");
-            $this->info("🏢 Se extrajeron un total de {$totalAgencias} agencias a nivel nacional.");
-            $this->line("📂 Archivo guardado en: " . storage_path('app/olva_agencias.json'));
+            $this->info(" Extracción de Tiendas/Agencias completada exitosamente.");
+            $this->info(" Se extrajeron un total de {$totalAgencias} agencias a nivel nacional.");
+            $this->line(" Archivo guardado en: " . storage_path('app/olva_agencias.json'));
         } else {
-            $this->warn("⚠️ La respuesta fue vacía para todos los departamentos.");
+            $this->warn(" La respuesta fue vacía para todos los departamentos.");
         }
     }
 }
