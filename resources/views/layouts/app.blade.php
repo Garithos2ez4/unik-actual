@@ -134,7 +134,7 @@
                     <li class="list-group-item bg-sistema-uno menu-border"><a href="{{ route('calculadora') }}"
                             class="btn text-light">Calculadora <i class="bi bi-calculator"></i></a></li>
                     @php
-                    $order = [2, 1, 4, 11, 12, 5, 3, 6, 7, 15]; // Orden personalizado, 11 es Reclamos, 12 es Envios
+                    $order = [2, 1, 4, 11, 12, 5, 3, 6, 7, 15, 16]; // Orden personalizado, 11 es Reclamos, 12 es Envios, 16 es Reviews
                     @endphp
 
                     @foreach ($order as $idVista)
@@ -244,6 +244,12 @@
                     @case(15)
                     <li class="list-group-item bg-sistema-uno menu-border">
                         <a href="{{ route('colaboradores') }}" class="btn text-light">Colaboradores <i class="bi bi-people-fill"></i></a>
+                    </li>
+                    @break
+
+                    @case(16)
+                    <li class="list-group-item bg-sistema-uno menu-border">
+                        <a href="{{ route('reviews.index') }}" class="btn text-light">Reviews <i class="bi bi-star-half text-warning"></i></a>
                     </li>
                     @break
 

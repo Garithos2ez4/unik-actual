@@ -86,9 +86,9 @@
                                     <select name="idDestino" id="select-destino" class="form-select" required disabled onchange="cargarSubAgencias()">
                                         <option value="">Primero elija provincia...</option>
                                     </select>
-                                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewDestino" title="Nuevo Destino">
+                                    {{--<button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewDestino" title="Nuevo Destino">
                                         <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                    </button>--}}
                                 </div>
                             </div>
 

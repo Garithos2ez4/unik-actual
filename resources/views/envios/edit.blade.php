@@ -15,7 +15,7 @@
                     <form action="{{ route('envios.update', $envio->idEnvioProvincia) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        
+
                         <div class="row g-3">
                             <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-fill"></i> 1. Información del Cliente y Envío</h6>
 
@@ -47,7 +47,7 @@
                                 <select name="idPlataforma" id="idPlataforma" class="form-select" required onchange="filterAccounts()">
                                     <option value="">Seleccione plataforma...</option>
                                     @foreach($plataformas as $p)
-                                        <option value="{{ $p->idPlataforma }}" {{ $envio->idPlataforma == $p->idPlataforma ? 'selected' : '' }}>{{ $p->nombrePlataforma }}</option>
+                                    <option value="{{ $p->idPlataforma }}" {{ $envio->idPlataforma == $p->idPlataforma ? 'selected' : '' }}>{{ $p->nombrePlataforma }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -56,9 +56,9 @@
                                 <select name="idCuentaPlataforma" id="idCuentaPlataforma" class="form-select">
                                     <option value="">Seleccione cuenta...</option>
                                     @foreach($plataformas as $p)
-                                       @foreach($p->CuentasPlataforma as $c)
-                                           <option value="{{ $c->idCuentaPlataforma }}" data-plataforma="{{ $p->idPlataforma }}" {{ $envio->idCuentaPlataforma == $c->idCuentaPlataforma ? 'selected' : '' }}>{{ $c->nombreCuenta }} ({{ $p->nombrePlataforma }})</option>
-                                       @endforeach
+                                    @foreach($p->CuentasPlataforma as $c)
+                                    <option value="{{ $c->idCuentaPlataforma }}" data-plataforma="{{ $p->idPlataforma }}" {{ $envio->idCuentaPlataforma == $c->idCuentaPlataforma ? 'selected' : '' }}>{{ $c->nombreCuenta }} ({{ $p->nombrePlataforma }})</option>
+                                    @endforeach
                                     @endforeach
                                 </select>
                             </div>
@@ -69,23 +69,23 @@
                                 <select id="select-departamento" class="form-select" required onchange="cargarProvincias(this.value)">
                                     <option value="">Seleccione departamento...</option>
                                     @php
-                                        $selectedDeptoId = optional(optional(optional($envio->Destino)->Provincia)->Departamento)->idDepartamento;
+                                    $selectedDeptoId = optional(optional(optional($envio->Destino)->Provincia)->Departamento)->idDepartamento;
                                     @endphp
                                     @foreach($departamentos as $depto)
-                                        <option value="{{ $depto->idDepartamento }}" {{ $selectedDeptoId == $depto->idDepartamento ? 'selected' : '' }}>{{ $depto->nombre }}</option>
+                                    <option value="{{ $depto->idDepartamento }}" {{ $selectedDeptoId == $depto->idDepartamento ? 'selected' : '' }}>{{ $depto->nombre }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            
+
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Provincia <span class="text-danger">*</span></label>
                                 <select id="select-provincia" class="form-select" required onchange="cargarDestinos(this.value)">
                                     <option value="">Seleccione provincia...</option>
                                     @php
-                                        $selectedProvId = optional(optional($envio->Destino)->Provincia)->idProvincia;
+                                    $selectedProvId = optional(optional($envio->Destino)->Provincia)->idProvincia;
                                     @endphp
                                     @foreach($provincias as $prov)
-                                        <option value="{{ $prov->idProvincia }}" {{ $selectedProvId == $prov->idProvincia ? 'selected' : '' }}>{{ $prov->nombre }}</option>
+                                    <option value="{{ $prov->idProvincia }}" {{ $selectedProvId == $prov->idProvincia ? 'selected' : '' }}>{{ $prov->nombre }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -96,12 +96,12 @@
                                     <select name="idDestino" id="select-destino" class="form-select" required onchange="cargarSubAgencias()">
                                         <option value="">Seleccione destino...</option>
                                         @foreach($destinos as $destino)
-                                            <option value="{{ $destino->idDestino }}" {{ $envio->idDestino == $destino->idDestino ? 'selected' : '' }}>{{ $destino->nombre }}</option>
+                                        <option value="{{ $destino->idDestino }}" {{ $envio->idDestino == $destino->idDestino ? 'selected' : '' }}>{{ $destino->nombre }}</option>
                                         @endforeach
                                     </select>
-                                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewDestino" title="Nuevo Destino">
+                                    {{--<button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewDestino" title="Nuevo Destino">
                                         <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                    </button>--}}
                                 </div>
                             </div>
 
@@ -112,7 +112,7 @@
                                     <select name="idAgencia" class="form-select" required onchange="cargarSubAgencias()">
                                         <option value="">Seleccione agencia...</option>
                                         @foreach($agencias as $agencia)
-                                            <option value="{{ $agencia->idAgencia }}" {{ $envio->idAgencia == $agencia->idAgencia ? 'selected' : '' }}>{{ $agencia->nombre }}</option>
+                                        <option value="{{ $agencia->idAgencia }}" {{ $envio->idAgencia == $agencia->idAgencia ? 'selected' : '' }}>{{ $agencia->nombre }}</option>
                                         @endforeach
                                     </select>
                                     <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewAgencia" title="Nueva Agencia">
@@ -126,12 +126,12 @@
                                 <div class="input-group">
                                     <select name="idSubAgencia" id="select-subagencia" class="form-select" {{ $subagencias->isEmpty() ? 'disabled' : '' }}>
                                         @if($subagencias->isEmpty())
-                                            <option value="">Primero elija Agencia y Distrito...</option>
+                                        <option value="">Primero elija Agencia y Distrito...</option>
                                         @else
-                                            <option value="">Seleccione oficina...</option>
-                                            @foreach($subagencias as $sub)
-                                                <option value="{{ $sub->idSubAgencia }}" {{ $envio->idSubAgencia == $sub->idSubAgencia ? 'selected' : '' }}>{{ $sub->nombre_oficina }} ({{ $sub->direccion }})</option>
-                                            @endforeach
+                                        <option value="">Seleccione oficina...</option>
+                                        @foreach($subagencias as $sub)
+                                        <option value="{{ $sub->idSubAgencia }}" {{ $envio->idSubAgencia == $sub->idSubAgencia ? 'selected' : '' }}>{{ $sub->nombre_oficina }} ({{ $sub->direccion }})</option>
+                                        @endforeach
                                         @endif
                                     </select>
                                     <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewSubAgencia" title="Nueva Oficina/Sucursal">
@@ -178,8 +178,8 @@
                                 <label class="form-label fw-bold">Dato Adicional</label>
                                 <input type="text" name="dato_adicional" class="form-control" value="{{ $envio->dato_adicional }}" placeholder="Observaciones">
                             </div>
-                            
-                            
+
+
 
                             <div class="col-md-12 d-flex align-items-center mt-3">
                                 <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #fff8f8;">
@@ -251,7 +251,7 @@
     function sincronizarAgencia() {
         const selectAgencia = document.querySelector('select[name="idAgencia"]');
         const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
-        
+
         if (!selectedOption || selectedOption.value === "") {
             Swal.fire('Atención', 'Primero selecciona una Agencia de Transporte.', 'warning');
             return;
@@ -259,7 +259,7 @@
 
         const nombreAgencia = selectedOption.text.trim().toUpperCase();
         let urlSincronizacion = '';
-        
+
         if (nombreAgencia === 'MARVISUR') {
             urlSincronizacion = "{{ url('/envios-provincias/sync-marvisur') }}";
         } else if (nombreAgencia === 'EMTRAFESA') {
