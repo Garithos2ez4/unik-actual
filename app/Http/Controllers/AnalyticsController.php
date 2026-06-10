@@ -70,7 +70,8 @@ class AnalyticsController extends Controller
         // ── Helper Variables para la transición de sistema ────────
         $fechaTransicion = '2026-05-25';
         $ordenesIgnoradas = ['2026', '2026/SN', '2026-SN'];
-        $precioPubExpr = "COALESCE(Publicacion.precioPublicacion, COALESCE(Producto.precioDolar, 0) * $tc * 1.20)";
+        $subqueryTipoCambioEgreso = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(EgresoProducto.fechaCompra))) ASC LIMIT 1), $tc))";
+        $precioPubExpr = "COALESCE(Publicacion.precioPublicacion, COALESCE(Producto.precioDolar, 0) * $subqueryTipoCambioEgreso * 1.20)";
 
         // ── 1. Tendencia de ventas (diarias) ──────────────────
         $qVentas1 = DetalleVenta::query()
@@ -267,8 +268,10 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 8. Cálculos de Costos y Márgenes ──────────────────
+        $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+
         $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
              FROM EgresoProducto ep_inner
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -299,6 +302,8 @@ class AnalyticsController extends Controller
                 + ($precioPubExpr * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
             ELSE 0 END";
 
+        $subqueryTipoCambioEgresoCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Comprobante.fechaRegistro))) ASC LIMIT 1), $tc))";
+
         $qEgresos8 = EgresoProducto::query()
             ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
@@ -311,7 +316,7 @@ class AnalyticsController extends Controller
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, $precioPubExpr as ingresos,
                          (COALESCE(
                             NULLIF(CASE WHEN DetalleComprobante.precioUnitario > 1 THEN 
-                                (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $tc ELSE DetalleComprobante.precioUnitario END) 
+                                (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $subqueryTipoCambioEgresoCosto ELSE DetalleComprobante.precioUnitario END) 
                             ELSE NULL END, NULL),
                             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
                          ) + ($comisionFalabellaEgreso)) as costos")
@@ -361,121 +366,6 @@ class AnalyticsController extends Controller
         ]);
     }
 
-    public function falabella(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-            return redirect()->route('dashboard', ['user' => $userModel]);
-        }
-
-        $tc = $this->calculadoraService->getTasaCambio();
-        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
-
-        $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
-             FROM EgresoProducto ep_inner
-             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
-             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
-             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
-             LIMIT 1),
-            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
-        )";
-
-        $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
-                (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 END";
-
-        // Usamos el Modelo Venta para iniciar la consulta
-        $ventasFalabella = Venta::query()
-            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
-            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
-            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->selectRaw("Venta.idVenta, Venta.numeroOrden, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
-                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
-                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
-                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
-            ->where('DetalleVenta.precioVenta', '>', 0.01)
-            ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy('Venta.idVenta', 'Venta.numeroOrden', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
-            ->orderByDesc('Venta.fechaVenta')
-            ->get()
-            ->map(function ($venta) {
-                $venta->ingresos = round($venta->ingresos, 2);
-                $venta->costos   = round($venta->costos, 2);
-                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
-                $venta->comision_falabella = round($venta->comision_falabella, 2);
-                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
-                return $venta;
-            });
-
-        // ── Consulta para agrupar por SKU (Modelo) ───────────────────
-        $skusFalabella = \App\Models\DetalleVenta::query()
-            ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
-            ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->selectRaw("Producto.modelo as sku,
-                         SUM(DetalleVenta.cantidad) as total_unidades,
-                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
-                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
-            ->where('DetalleVenta.precioVenta', '>', 0.01)
-            ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy('Producto.modelo')
-            ->orderByDesc('ingresos')
-            ->get()
-            ->map(function ($sku) {
-                $sku->ingresos = round($sku->ingresos, 2);
-                $sku->costos = round($sku->costos, 2);
-                $sku->ganancia = round($sku->ingresos - $sku->costos, 2);
-                $sku->comision_falabella = round($sku->comision_falabella, 2);
-                $sku->margen = $sku->ingresos > 0 ? round(($sku->ganancia / $sku->ingresos) * 100, 2) : 0;
-                return $sku;
-            });
-
-        $skusMayorRotacion = $skusFalabella->sortByDesc('total_unidades')->take(5)->values();
-        $skusMayorRentabilidad = $skusFalabella->sortByDesc('ganancia')->take(5)->values();
-
-        // ── Consulta para tendencia de ventas por mes (Gráfico) ────────
-        $ventasMesRaw = Venta::query()
-            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
-            ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
-            ->where('DetalleVenta.precioVenta', '>', 0.01)
-            ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
-            ->orderBy('fecha', 'asc')
-            ->get();
-
-        $ventasMes = [];
-        for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
-            $dateStr = $date->format('Y-m-d');
-            $found = $ventasMesRaw->firstWhere('fecha', $dateStr);
-            $ventasMes[] = [
-                'fecha' => $date->format('d/m'),
-                'total' => $found ? $found->total_unidades : 0,
-                'monto' => $found ? round($found->total_monto, 2) : 0
-            ];
-        }
-
-        return view('analytics.components.falabella.index', [
-            'user' => $userModel,
-            'ventasFalabella' => $ventasFalabella,
-            'skusFalabella' => $skusFalabella,
-            'skusMayorRotacion' => $skusMayorRotacion,
-            'skusMayorRentabilidad' => $skusMayorRentabilidad,
-            'ventasMes' => $ventasMes,
-            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
-        ]);
-    }
-
     public function ripley(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
@@ -488,8 +378,10 @@ class AnalyticsController extends Controller
         $tc = $this->calculadoraService->getTasaCambio();
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
 
+        $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+
         $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
              FROM EgresoProducto ep_inner
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -584,8 +476,10 @@ class AnalyticsController extends Controller
         $cacheKey = "tienda_data_{$fechaInicio}_{$fechaFin}";
 
         $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () use ($fechaInicio, $fechaFin, $tc) {
+            $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+
             $costoVentaExpr = "COALESCE(
-                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
                  FROM EgresoProducto ep_inner
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante

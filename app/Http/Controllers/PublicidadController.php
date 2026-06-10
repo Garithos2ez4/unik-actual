@@ -43,18 +43,77 @@ class PublicidadController extends Controller
         
         if(!empty($idEmpresa)){
             $empresa = Empresa::where('idEmpresa','=',$idEmpresa)->first();
+            
+            // Subida de Logo, Icono y Fondo
+            if ($request->hasFile('logo')) {
+                if ($empresa->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($empresa->logo)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($empresa->logo);
+                }
+                $empresa->logo = $request->file('logo')->store('publicidad', 'public');
+            }
+            
+            if ($request->hasFile('icon')) {
+                if ($empresa->icon && \Illuminate\Support\Facades\Storage::disk('public')->exists($empresa->icon)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($empresa->icon);
+                }
+                $empresa->icon = $request->file('icon')->store('publicidad', 'public');
+            }
+            
+            if ($request->hasFile('fondo')) {
+                if ($empresa->fondo && \Illuminate\Support\Facades\Storage::disk('public')->exists($empresa->fondo)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($empresa->fondo);
+                }
+                $empresa->fondo = $request->file('fondo')->store('fondos_empresa', 'public');
+            }
+            
+            $empresa->save();
+
+            // Guardar Enlaces e Imágenes de Redes Sociales
             if(!empty($enlaces)){
                 foreach($enlaces as $id => $enlace){
                     $redSocial = EmpresaRedSocial::where('idEmpresa','=',$idEmpresa)->where('idRedSocial','=',$id)->first();
                     $redSocial->enlace = $enlace;
                     
+                    if ($request->hasFile("imgRed.$id")) {
+                        if ($redSocial->imagen && \Illuminate\Support\Facades\Storage::disk('public')->exists($redSocial->imagen)) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($redSocial->imagen);
+                        }
+                        $redSocial->imagen = $request->file("imgRed.$id")->store('publicidad', 'public');
+                    }
+                    
                     $redSocial->save();
                 }
             }
-            //dd($request->file('imgRed'));
+            
+            // Banners Principales y Verticales (img)
+            if ($request->hasFile('img')) {
+                foreach($request->file('img') as $idBanner => $fileBanner) {
+                    $banner = \App\Models\Publicidad::where('idEmpresa', $idEmpresa)->where('idPublicidad', $idBanner)->first();
+                    if ($banner) {
+                        if ($banner->imagenPublicidad && \Illuminate\Support\Facades\Storage::disk('public')->exists($banner->imagenPublicidad)) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($banner->imagenPublicidad);
+                        }
+                        $banner->imagenPublicidad = $fileBanner->store('publicidad', 'public');
+                        $banner->save();
+                    }
+                }
+            }
+
+            // Banners Campaña (imgPubli)
+            if ($request->hasFile('imgPubli')) {
+                foreach($request->file('imgPubli') as $idBanner => $fileBanner) {
+                    $banner = \App\Models\Publicidad::where('idEmpresa', $idEmpresa)->where('idPublicidad', $idBanner)->first();
+                    if ($banner) {
+                        if ($banner->imagenPublicidad && \Illuminate\Support\Facades\Storage::disk('public')->exists($banner->imagenPublicidad)) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($banner->imagenPublicidad);
+                        }
+                        $banner->imagenPublicidad = $fileBanner->store('publicidad', 'public');
+                        $banner->save();
+                    }
+                }
+            }
         }
         
-        echo("<script>alert('Funka')</script>");
-        return redirect()->route('publicidad');
+        return redirect()->route('publicidad')->with('success', 'Publicación actualizada correctamente');
     }
 }

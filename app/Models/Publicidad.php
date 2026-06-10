@@ -5,8 +5,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Publicidad extends Model
 {
- 
+    public $timestamps = false;
     protected $table = 'Publicidad';
+    protected $primaryKey = 'idPublicidad';
 
     protected $guarded = ['idPublicidad'];
     

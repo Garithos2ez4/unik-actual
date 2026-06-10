@@ -23,7 +23,9 @@ use App\Http\Controllers\PdfController;
 use App\Http\Controllers\LicenciaController;
 use App\Http\Controllers\ReclamoPlataformaController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\AnalyticsFallabellaController;
 use App\Http\Controllers\GananciaController;
+use App\Http\Controllers\ReviewController;
 
 //scripts
 use App\Http\Controllers\ScriptController;
@@ -63,7 +65,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/licencias', [LicenciaController::class, 'index'])->name('licencias.index');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
-    Route::get('/dashboard/analitica/falabella', [AnalyticsController::class, 'falabella'])->name('dashboard.analitica.falabella');
+    Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
     Route::get('/dashboard/analitica/mercadolibre', [\App\Http\Controllers\AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
     Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
@@ -193,6 +195,8 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/solicitudes', [\App\Http\Controllers\EnvioProvinciaController::class, 'obtenerSolicitudes'])->name('solicitudes');
         Route::get('/sync-marvisur', [\App\Http\Controllers\Api\MarvisurSyncController::class, 'sync']);
         Route::get('/sync-emtrafesa', [\App\Http\Controllers\Api\EmtrafesaSyncController::class, 'sync']);
+        Route::get('/sync-olva', [\App\Http\Controllers\Api\OlvaSyncController::class, 'sync']);
+        Route::get('/sync-shalom', [\App\Http\Controllers\Api\ShalomSyncController::class, 'sync']);
 
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
@@ -207,6 +211,10 @@ Route::middleware(['validate.session'])->group(function () {
         Route::post('/generar-link', [\App\Http\Controllers\EnvioProvinciaController::class, 'generarLinkPublico'])->name('generar-link');
         Route::post('/regenerar-link/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'regenerarLink'])->name('regenerar-link');
     });
+    // REVIEWS
+    Route::get('/dashboard/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::post('/dashboard/reviews/{id}/estado', [ReviewController::class, 'updateEstado'])->name('reviews.estado');
+
     // FALABELLA
     Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {
         Route::get('/productos', [PlataformaController::class, 'falabellaProductos'])->name('productos');
@@ -250,6 +258,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes');
     Route::get('/cliente/searchcliente', [ClienteController::class, 'searchCliente'])->name('searchcliente');
     Route::post('/cliente/create', [ClienteController::class, 'createCliente'])->name('createcliente');
+    Route::post('/cliente/update/{id}', [ClienteController::class, 'updateCliente'])->name('updatecliente');
 
     //Configuracion-WEB
     Route::get('/configuracion/web', [ConfiguracionController::class, 'web'])->name('configweb');

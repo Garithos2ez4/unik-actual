@@ -1,0 +1,19 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+
+// Rutas Públicas de Autenticación
+Route::post('/login', [AuthController::class, 'login']);
+
+// Rutas Protegidas (Requieren token Sanctum)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    
+    // Ruta por defecto de Laravel
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+});

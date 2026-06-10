@@ -23,13 +23,17 @@
             </div>
             <div class="col-md-3">
                 <div class="row">
+                    <div class="col-4 col-md-12 mb-2">
+                        <h6>Fondo:</h6>
+                        <img src="{{ $empresa->fondo ? asset('storage/'.$empresa->fondo) . '?' . time() : 'https://via.placeholder.com/1920x1080?text=Sin+Fondo' }}" alt="fondo" class="border rounded-3 w-100" style="object-fit: cover; max-height: 100px;">
+                    </div>
                     <div class="col-4 col-md-6 mb-2">
                         <h6>Icono:</h6>
-                        <img src="{{asset('storage/'.$empresa->icon)}}?{{ time() }}" alt="icono"  class="border rounded-3 w-100" >
+                        <img src="{{ $empresa->icon ? asset('storage/'.$empresa->icon) . '?' . time() : 'https://via.placeholder.com/512' }}" alt="icono"  class="border rounded-3 w-100" >
                     </div>
                     <div class="col-4 col-md-6 mb-2">
                         <h6>Logo:</h6>
-                        <img src="{{ asset('storage/'.$empresa->logo) }}?{{ time() }}" alt="logo" class="border rounded-3 w-100">
+                        <img src="{{ $empresa->logo ? asset('storage/'.$empresa->logo) . '?' . time() : 'https://via.placeholder.com/500x200' }}" alt="logo" class="border rounded-3 w-100">
                     </div>
                     <div class="col-4 col-md-12 mb-2">
                         <h6>Colores:</h6>
