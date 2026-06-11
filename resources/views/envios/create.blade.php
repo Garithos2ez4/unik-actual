@@ -120,6 +120,9 @@
                                     <button class="btn btn-outline-success" type="button" onclick="sincronizarAgencia()" title="Sincronizar Sucursales Oficiales">
                                         <i class="bi bi-cloud-arrow-down-fill"></i>
                                     </button>
+                                    <button class="btn btn-outline-danger" type="button" onclick="abrirCotizadorShalom()" title="Cotizar Envío (Shalom)">
+                                        <i class="bi bi-calculator"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -317,4 +320,5 @@
     }
 </script>
 
+@include('envios.logic.cotizador-shalom')
 @endsection

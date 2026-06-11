@@ -181,7 +181,7 @@
         </div>
 
         <div class="para-label">PARA:</div>
-        <p class="cliente-nombre">{{ $envio->Cliente->nombre ?? '' }} {{ $envio->Cliente->apellidoPaterno ?? '' }}</p>
+        <p class="cliente-nombre">{{ $envio->Cliente->nombre ?? '' }} {{ $envio->Cliente->apellidoPaterno ?? '' }} {{ $envio->Cliente->apellidoMaterno ?? '' }}</p>
         <p class="cliente-tel">{{ $envio->Cliente->telefono ?? '' }}</p>
 
         <div class="destino-label">DESTINO:</div>

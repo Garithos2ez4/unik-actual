@@ -149,7 +149,7 @@ return $iniciales . '.' . $ultima;
         }
 
         .print-page.layout-2 .rotulo, .print-page.layout-2 .items-picking-section {
-            zoom: 0.75;
+            zoom: 0.68;
             max-width: 20cm;
             margin-bottom: 0;
         }
@@ -624,7 +624,7 @@ return $iniciales . '.' . $ultima;
 
                         <div class="d-line-group">
                             <div class="d-label">Dpto.:</div>
-                            <div class="d-value" style="flex: 1;">{{ abreviarNombre($envio->Destino->Provincia->nombre ?? '') }}</div>
+                            <div class="d-value" style="flex: 1;">{{ abreviarNombre($envio->Destino->Provincia->Departamento->nombre ?? '') }}</div>
                             <div class="d-label" style="margin-left: 10px;">Ciu.:</div>
                             <div class="d-value" style="flex: 1;">{{ abreviarNombre($envio->Destino->nombre ?? '') }}</div>
                         </div>
