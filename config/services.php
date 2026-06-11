@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'falabella' => [
+        'base_url' => env('FALABELLA_BASE_URL', 'https://sellercenter-api.falabella.com'),
+        'user_id' => env('FALABELLA_USER_ID'),
+        'api_key' => env('FALABELLA_API_KEY'),
+        'version' => env('FALABELLA_VERSION', '1.0'),
+        'format' => env('FALABELLA_FORMAT', 'JSON'),
+        'sync_lookback_days' => (int) env('FALABELLA_SYNC_LOOKBACK_DAYS', 3),
+        'verify_ssl' => (bool) env('FALABELLA_VERIFY_SSL', true),
+    ],
+
 ];

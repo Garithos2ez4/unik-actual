@@ -70,13 +70,13 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
     Route::get('/dashboard/analitica/tienda/data', [AnalyticsController::class, 'tiendaData'])->name('dashboard.analitica.tienda.data');
-    
+
     // Rutas de Analítica de Envíos
     Route::get('/dashboard/analitica/envios', [\App\Http\Controllers\AnalyticsEnviosController::class, 'index'])->name('dashboard.analitica.envios');
     Route::get('/dashboard/analitica/envios/top-provincias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopProvincias'])->name('dashboard.analitica.envios.provincias');
     Route::get('/dashboard/analitica/envios/top-clientes', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopClientes'])->name('dashboard.analitica.envios.clientes');
     Route::get('/dashboard/analitica/envios/top-agencias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopAgencias'])->name('dashboard.analitica.envios.agencias');
-    
+
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
     Route::get('/ganancias/detalles', [GananciaController::class, 'getAllGananciasPorDetalle'])->name('ganancias.detalles');
@@ -197,6 +197,8 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/sync-emtrafesa', [\App\Http\Controllers\Api\EmtrafesaSyncController::class, 'sync']);
         Route::get('/sync-olva', [\App\Http\Controllers\Api\OlvaSyncController::class, 'sync']);
         Route::get('/sync-shalom', [\App\Http\Controllers\Api\ShalomSyncController::class, 'sync']);
+        Route::get('/shalom-terminals', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getTerminals']);
+        Route::post('/shalom-cotizar', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'calculate']);
 
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
