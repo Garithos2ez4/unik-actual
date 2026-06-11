@@ -118,6 +118,11 @@
                                 <a href="{{ route('envios.edit', $envio->idEnvioProvincia) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-pencil-square"></i> Editar
                                 </a>
+                                @if(stripos($envio->Agencia->nombre ?? '', 'flore') !== false && !empty($envio->numero_guia))
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="rastrearFlores({{ $envio->idEnvioProvincia }}, '{{ $envio->numero_guia }}')" title="Rastrear Paquete Flores">
+                                    <i class="bi bi-geo-alt-fill"></i> Rastrear
+                                </button>
+                                @endif
                             </td>
                         </tr>
                         @empty
@@ -134,6 +139,8 @@
         </div>
     </div>
 </div>
+
+@include('envios.logic.tracking-flores')
 
 <script>
     function accionSeleccionados(tipo) {

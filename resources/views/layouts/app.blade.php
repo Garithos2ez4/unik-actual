@@ -26,8 +26,9 @@
     @if (session('title') && session('message') && session('icon') && session('button'))
     <script>
         Swal.fire({
-            title: "{{ session('title') }}!",
-            text: "{{ session('message') }}",
+            title: @json(session('title').
+                '!'),
+            text: @json(session('message')),
             icon: "{{ session('icon') }}",
             iconColor: '#00b1b9',
             confirmButtonText: 'Aceptar',
@@ -58,17 +59,17 @@
                         <div class="row h-100 d-flex align-items-center text-end pt-2" id="header-user-nav"
                             style="cursor:pointer">
                             @php
-                                $bandejaText = trim(strip_tags(str_replace('&nbsp;', '', $user->bandeja)));
-                                $bandejaHash = md5($bandejaText);
-                                $cookieName = 'bandeja_read_' . $user->idUser;
-                                $cookieValue = $_COOKIE[$cookieName] ?? null;
-                                $hasPendientes = !empty($bandejaText) && $cookieValue !== $bandejaHash;
+                            $bandejaText = trim(strip_tags(str_replace('&nbsp;', '', $user->bandeja)));
+                            $bandejaHash = md5($bandejaText);
+                            $cookieName = 'bandeja_read_' . $user->idUser;
+                            $cookieValue = $_COOKIE[$cookieName] ?? null;
+                            $hasPendientes = !empty($bandejaText) && $cookieValue !== $bandejaHash;
                             @endphp
                             <h5 class="w-100"><i class="bi bi-person-circle"></i> {{ $user->user }}
                                 @if($hasPendientes)
-                                    <span class="badge bg-danger rounded-circle p-1 ms-1" style="font-size: 0.5rem;" title="Tienes pendientes asignados" id="nav-alert-icon">
-                                        <i class="bi bi-exclamation-circle-fill"></i>
-                                    </span>
+                                <span class="badge bg-danger rounded-circle p-1 ms-1" style="font-size: 0.5rem;" title="Tienes pendientes asignados" id="nav-alert-icon">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                </span>
                                 @endif
                             </h5>
                         </div>
@@ -83,7 +84,7 @@
                                             data-bs-toggle="modal" data-bs-target="#modalBandeja">
                                             <i class="bi bi-journal-bookmark-fill"></i> Pendientes
                                             @if(!empty($hasPendientes))
-                                                <i class="bi bi-exclamation-circle-fill ms-1" id="menu-alert-icon"></i>
+                                            <i class="bi bi-exclamation-circle-fill ms-1" id="menu-alert-icon"></i>
                                             @endif
                                         </a>
                                     </small>

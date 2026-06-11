@@ -212,6 +212,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::post('/destino', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeDestino'])->name('destino.store');
         Route::post('/generar-link', [\App\Http\Controllers\EnvioProvinciaController::class, 'generarLinkPublico'])->name('generar-link');
         Route::post('/regenerar-link/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'regenerarLink'])->name('regenerar-link');
+        Route::get('/tracking-flores/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'trackFlores'])->name('tracking-flores');
     });
     // REVIEWS
     Route::get('/dashboard/reviews', [ReviewController::class, 'index'])->name('reviews.index');

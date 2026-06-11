@@ -126,7 +126,55 @@
                                 </div>
                             </div>
 
-                            <!-- Dirección y Referencia -->
+                            <!-- Direccin y Referencia -->
+                            
+                            <!-- Medidas de Caja (Solo Shalom) -->
+                            <div class="col-md-12 mb-3 d-none" id="seccion_medidas_caja">
+                                <div class="card border-danger shadow-sm">
+                                    <div class="card-header bg-danger text-white py-2">
+                                        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Dimensiones del Paquete (Shalom)</h6>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="row g-2">
+                                            <div class="col-md-12">
+                                                <label class="form-label mb-0 fw-bold" style="font-size: 0.85rem">Tipo de Paquete predeterminado</label>
+                                                <select name="idTipoPaquete" id="tipo_caja_select" class="form-select form-select-sm border-danger" onchange="aplicarMedidasCaja()">
+                                                    <option value="custom">📦 Otra Medida (Personalizado / Vacio)</option>
+                                                    @if(isset($tiposPaquete))
+                                                        @foreach($tiposPaquete as $paquete)
+                                                            <option value="{{ $paquete->idTipoPaquete }}" data-w="{{ $paquete->ancho_defecto }}" data-h="{{ $paquete->alto_defecto }}" data-l="{{ $paquete->largo_defecto }}" data-wt="{{ $paquete->peso_maximo }}">{{ $paquete->icono }} {{ $paquete->nombre }}</option>
+                                                        @endforeach
+                                                    @endif
+                                                </select>
+                                            </div>
+                                            <div class="col-2">
+                                                <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Largo (m)</label>
+                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01">
+                                            </div>
+                                            <div class="col-2">
+                                                <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Ancho (m)</label>
+                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01">
+                                            </div>
+                                            <div class="col-2">
+                                                <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Alto (m)</label>
+                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01">
+                                            </div>
+                                            <div class="col-2">
+                                                <label class="form-label mb-0 fw-bold text-danger" style="font-size: 0.8rem">Peso (KG)</label>
+                                                <input type="number" name="peso" id="input_peso" class="form-control form-control-sm border-danger" step="0.01">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label mb-0 fw-bold text-success" style="font-size: 0.8rem">Tarifa Estimada</label>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text bg-success text-white border-success">S/</span>
+                                                    <input type="number" name="precio_envio" id="input_precio_envio" class="form-control border-success" step="0.01" placeholder="0.00">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-md-12 d-flex align-items-center mb-2">
                                 <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #f8f9fa;">
                                     <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1">
@@ -263,6 +311,86 @@
             labelDir.innerHTML = 'Dirección (Dir) <span class="text-muted">(Opcional)</span>';
         }
     });
+
+    function aplicarMedidasCaja() {
+        const select = document.getElementById('tipo_caja_select');
+        const val = select.value;
+
+        if (val === 'custom') {
+            document.getElementById('input_largo').value = '';
+            document.getElementById('input_ancho').value = '';
+            document.getElementById('input_alto').value = '';
+            document.getElementById('input_peso').value = '';
+            
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                input.readOnly = false;
+                input.classList.remove('bg-light');
+            });
+        } else {
+            const selectedOption = select.options[select.selectedIndex];
+            document.getElementById('input_largo').value = selectedOption.getAttribute('data-l');
+            document.getElementById('input_ancho').value = selectedOption.getAttribute('data-w');
+            document.getElementById('input_alto').value = selectedOption.getAttribute('data-h');
+            document.getElementById('input_peso').value = selectedOption.getAttribute('data-wt');
+            
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                input.readOnly = true;
+                input.classList.add('bg-light');
+            });
+        }
+    }
+
+    function cargarSubAgencias() {
+        const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        const idAgencia = selectAgencia.value;
+        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+        const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+        
+        // Mostrar/Ocultar seccion de medidas si es Shalom
+        if (nombreAgencia === 'SHALOM') {
+            document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+        } else {
+            document.getElementById('seccion_medidas_caja').classList.add('d-none');
+            // Limpiar valores
+            document.getElementById('tipo_caja_select').value = 'custom';
+            aplicarMedidasCaja();
+        }
+        
+        const idDestino = document.querySelector('select[name="idDestino"]').value;
+        const selectSubAgencia = document.getElementById('select-subagencia');
+
+        if (!idAgencia || !idDestino) {
+            selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
+            selectSubAgencia.disabled = true;
+            return;
+        }
+
+        fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
+            .then(response => response.json())
+            .then(data => {
+                let html = '<option value="">Seleccione oficina...</option>';
+                data.forEach(sub => {
+                    html += `<option value="${sub.idSubAgencia}">${sub.nombre_oficina} - ${sub.direccion}</option>`;
+                });
+                selectSubAgencia.innerHTML = html;
+                selectSubAgencia.disabled = false;
+            })
+            .catch(error => {
+                console.error("Error al cargar subagencias: ", error);
+            });
+    }
 
     function sincronizarAgencia() {
         const selectAgencia = document.querySelector('select[name="idAgencia"]');
