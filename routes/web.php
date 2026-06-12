@@ -221,7 +221,7 @@ Route::middleware(['validate.session'])->group(function () {
     // FALABELLA
     Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {
         Route::get('/productos', [PlataformaController::class, 'falabellaProductos'])->name('productos');
-        Route::get('/publicaciones', [PlataformaController::class, 'falabellaPublicaciones'])->name('publicaciones');
+        Route::get('/catalogo-fbf', [PlataformaController::class, 'falabellaPublicaciones'])->name('publicaciones');
         Route::get('/seller', [PlataformaController::class, 'sellerFalabella'])->name('seller');
         Route::get('/orders', [PlataformaController::class, 'falabellaOrders'])->name('orders');
         Route::get('/order/{order_id}', [PlataformaController::class, 'falabellaOrderDetails'])->name('order-details');

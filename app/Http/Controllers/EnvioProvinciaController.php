@@ -67,11 +67,13 @@ class EnvioProvinciaController extends Controller
                 $departamentos = Departamento::orderBy('nombre', 'asc')->get();
                 $provincias = Provincia::orderBy('nombre', 'asc')->get();
                 $documentos = \App\Models\TipoDocumento::all();
+                $tiposPaquete = \App\Models\TipoPaqueteEnvio::with('dimensiones')->where('estado', 1)->get();
 
                 return view('envios.create', [
                     'user' => $userModel,
                     'plataformas' => $plataformas,
                     'agencias' => $agencias,
+                    'tiposPaquete' => $tiposPaquete,
                     'departamentos' => $departamentos,
                     'provincias' => $provincias,
                     'documentos' => $documentos
@@ -233,7 +235,7 @@ class EnvioProvinciaController extends Controller
         }
 
         $ids = $request->query('ids');
-        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'Productos.Producto']);
+        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'Productos.Producto', 'Detalle']);
 
         if (!empty($ids)) {
             $idArray = explode(',', $ids);
@@ -288,10 +290,10 @@ class EnvioProvinciaController extends Controller
                     'AV. GRAU', // ORIGEN
                     optional($envio->Destino)->nombre ?? '',
                     $mercaderia,
-                    '0.1', // ALTO
-                    '0.1', // ANCHO
-                    '0.1', // LARGO
-                    '7',   // PESO
+                    optional($envio->Detalle)->alto ?? '0.1', // ALTO
+                    optional($envio->Detalle)->ancho ?? '0.1', // ANCHO
+                    optional($envio->Detalle)->largo ?? '0.1', // LARGO
+                    optional($envio->Detalle)->peso ?? '7',   // PESO
                     $cantidad
                 ], ';');
             }
@@ -587,6 +589,74 @@ class EnvioProvinciaController extends Controller
             ]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
+        }
+    }
+
+    public function trackFlores($id)
+    {
+        try {
+            $envio = EnvioProvincia::findOrFail($id);
+
+            if (empty($envio->numero_guia)) {
+                return response()->json(['success' => false, 'message' => 'El envío no tiene un número de guía registrado.']);
+            }
+
+            // Validar que tenga el formato SERIE-NUMERO
+            if (!str_contains($envio->numero_guia, '-')) {
+                return response()->json(['success' => false, 'message' => 'El formato de la guía debe ser SERIE-NUMERO (Ej: 5984-49745364).']);
+            }
+
+            $partes = explode('-', $envio->numero_guia);
+            $serie = trim($partes[0]);
+            $numero = trim($partes[1]);
+
+            // Flores usa diferentes códigos de documento: 09 (Guía), 03 (Boleta), 01 (Factura)
+            // Intentaremos con los 3 hasta obtener resultados.
+            $codigosDocumento = ['09', '03', '01'];
+            $resultadosList = [];
+            $ultimoMensaje = 'No se pudo conectar con el servidor de Transporte Flores.';
+
+            foreach ($codigosDocumento as $codDoc) {
+                $url = 'https://sfe.floreshnos.pe/ConsultaEncomiendas/Encomienda/ListEncomienda';
+                $response = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withOptions(['verify' => false])
+                    ->get($url, [
+                        'Serie' => $serie,
+                        'Numero' => $numero,
+                        'Codi_documento' => $codDoc,
+                        'Codi_empresa' => '1',
+                    ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (isset($data['EsCorrecto']) && $data['EsCorrecto'] == true) {
+                        $list = $data['Valor']['List'] ?? [];
+                        if (count($list) > 0) {
+                            $resultadosList = $list;
+                            break; // Encontramos datos, salimos del bucle
+                        }
+                    } else {
+                        $ultimoMensaje = $data['Mensaje'] ?? 'Error desconocido de la agencia Flores.';
+                    }
+                }
+            }
+
+            if (count($resultadosList) > 0) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $resultadosList
+                ]);
+            } else {
+                return response()->json([
+                    'success' => true,
+                    'data' => [] // Devolvemos vacío para que el frontend maneje el mensaje
+                ]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'No se pudo conectar con el servidor de Transporte Flores.']);
+
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $th->getMessage()]);
         }
     }
 }

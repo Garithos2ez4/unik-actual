@@ -17,6 +17,8 @@
             </a>
         </div>
     </div>
+    <!-- Filtros TopControls -->
+    @include('analytics.partials.topcontrols')
 
     <div class="row">
         <div class="col-lg-4">
@@ -35,7 +37,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         
         // Fetch Top Provincias
-        fetch('{{ route("dashboard.analitica.envios.provincias") }}')
+        fetch('{{ route("dashboard.analitica.envios.provincias") }}' + window.location.search)
             .then(response => response.json())
             .then(data => {
                 const tbody = document.querySelector('#tabla-top-provincias tbody');
@@ -60,7 +62,7 @@
             .catch(error => console.error('Error fetching top provincias:', error));
 
         // Fetch Top Clientes
-        fetch('{{ route("dashboard.analitica.envios.clientes") }}')
+        fetch('{{ route("dashboard.analitica.envios.clientes") }}' + window.location.search)
             .then(response => response.json())
             .then(data => {
                 const tbody = document.querySelector('#tabla-top-clientes tbody');
@@ -85,7 +87,7 @@
             .catch(error => console.error('Error fetching top clientes:', error));
             
         // Fetch Top Agencias
-        fetch('{{ route("dashboard.analitica.envios.agencias") }}')
+        fetch('{{ route("dashboard.analitica.envios.agencias") }}' + window.location.search)
             .then(response => response.json())
             .then(data => {
                 const tbody = document.querySelector('#tabla-top-agencias tbody');

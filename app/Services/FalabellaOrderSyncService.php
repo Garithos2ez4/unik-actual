@@ -180,11 +180,41 @@ class FalabellaOrderSyncService
 
         if (filled($status) && $status === 'pending') {
             // "Pendientes" agrupa todo lo que falta despachar (igual que Falabella)
-            $query->whereIn('status', ['pending', 'ready_to_ship']);
+            $query->where(function($q) {
+                $q->whereIn('status', ['pending', 'ready_to_ship'])
+                  ->orWhere(function($sub) {
+                      $sub->where(function($s) {
+                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                          })
+                          ->whereHas('items', function($iq) {
+                              $iq->whereIn('status', ['pending', 'ready_to_ship']);
+                          });
+                  });
+            });
         } elseif (filled($status) && $status !== 'all') {
-            $query->where('status', $status);
+            $query->where(function($q) use ($status) {
+                $q->where('status', $status)
+                  ->orWhere(function($sub) use ($status) {
+                      $sub->where(function($s) {
+                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                          })
+                          ->whereHas('items', function($iq) use ($status) {
+                              $iq->where('status', $status);
+                          });
+                  });
+            });
         } elseif (!filled($status)) {
-            $query->whereIn('status', ['pending', 'ready_to_ship']);
+            $query->where(function($q) {
+                $q->whereIn('status', ['pending', 'ready_to_ship'])
+                  ->orWhere(function($sub) {
+                      $sub->where(function($s) {
+                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                          })
+                          ->whereHas('items', function($iq) {
+                              $iq->whereIn('status', ['pending', 'ready_to_ship']);
+                          });
+                  });
+            });
         }
         // Si $status === 'all', no filtramos por estado
 
@@ -310,9 +340,29 @@ class FalabellaOrderSyncService
             });
 
         if (filled($status)) {
-            $query->where('status', $status);
+            $query->where(function($q) use ($status) {
+                $q->where('status', $status)
+                  ->orWhere(function($sub) use ($status) {
+                      $sub->where(function($s) {
+                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                          })
+                          ->whereHas('items', function($iq) use ($status) {
+                              $iq->where('status', $status);
+                          });
+                  });
+            });
         } else {
-            $query->whereIn('status', self::RETURN_STATUSES);
+            $query->where(function($q) {
+                $q->whereIn('status', self::RETURN_STATUSES)
+                  ->orWhere(function($sub) {
+                      $sub->where(function($s) {
+                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                          })
+                          ->whereHas('items', function($iq) {
+                              $iq->whereIn('status', self::RETURN_STATUSES);
+                          });
+                  });
+            });
         }
 
         return $query->orderByDesc('updated_at_falabella')->get();

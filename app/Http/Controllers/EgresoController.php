@@ -39,6 +39,9 @@ class EgresoController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 2) {
                 Carbon::setLocale('es');
+                if ($month === 'null' || empty($month)) {
+                    $month = Carbon::now()->format('Y-m');
+                }
                 $carbonMonth = Carbon::createFromFormat('Y-m', $month);
                 $diaSeleccionado = $request->query('dia');
                 $egresos = $this->egresoService->getEgresosByMonth($month, 150, $diaSeleccionado);

@@ -96,8 +96,35 @@
                                 <div class="small text-muted">{{ $order->shipping_city }}</div>
                             </td>
                             <td>
-                                <span class="badge rounded-pill px-3 bg-{{ $order->status == 'pending' ? 'warning' : ($order->status == 'ready_to_ship' ? 'info' : 'success') }}">
-                                    {{ $order->status }}
+                                @php
+                                    $orderStatus = $order->status;
+                                    if ((empty($orderStatus) || trim($orderStatus) === '-') && $order->items && $order->items->count() > 0) {
+                                        $orderStatus = $order->items->first()->status;
+                                    }
+
+                                    $statusMap = [
+                                        'pending' => 'Pendiente',
+                                        'ready_to_ship' => 'Listo para Enviar',
+                                        'shipped' => 'Enviado',
+                                        'delivered' => 'Entregado',
+                                        'canceled' => 'Cancelado',
+                                        'returned' => 'Devuelto',
+                                        'failed' => 'Fallido'
+                                    ];
+                                    $statusColor = [
+                                        'pending' => 'warning',
+                                        'ready_to_ship' => 'info',
+                                        'shipped' => 'primary',
+                                        'delivered' => 'success',
+                                        'canceled' => 'danger',
+                                        'returned' => 'danger',
+                                        'failed' => 'danger'
+                                    ];
+                                    $displayStatus = $statusMap[$orderStatus] ?? ucfirst($orderStatus);
+                                    $color = $statusColor[$orderStatus] ?? 'secondary';
+                                @endphp
+                                <span class="badge rounded-pill px-3 bg-{{ $color }}">
+                                    {{ $displayStatus }}
                                 </span>
                             </td>
                             <td>

@@ -53,7 +53,7 @@ class FalabellaApiService
         $response = Http::baseUrl(rtrim(config('services.falabella.base_url'), '/'))
             ->timeout(60)
             ->withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent' => 'LogunkApp/1.0 (+https://log.unikstoreperu.com)',
                 'Accept' => 'application/json'
             ])
             ->withOptions(['verify' => $this->resolveVerifyOption()])
@@ -404,7 +404,7 @@ class FalabellaApiService
             ->acceptJson()
             ->timeout((int) config('services.falabella.timeout', 30))
             ->withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent' => 'LogunkApp/1.0 (+https://log.unikstoreperu.com)'
             ])
             ->withOptions(['verify' => $this->resolveVerifyOption()])
             ->get('/', $params);

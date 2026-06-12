@@ -13,7 +13,11 @@ class EnvioProvinciaDetalle extends Model
         'idEnvioProvincia',
         'entrega_domicilio',
         'dir',
-        'ref'
+        'ref',
+        'peso',
+        'largo',
+        'ancho',
+        'alto'
     ];
 
     public function EnvioProvincia()
