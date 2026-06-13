@@ -132,7 +132,7 @@
                             <div class="col-md-12 mb-3 d-none" id="seccion_medidas_caja">
                                 <div class="card border-danger shadow-sm">
                                     <div class="card-header bg-danger text-white py-2">
-                                        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Dimensiones del Paquete (Shalom)</h6>
+                                        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Dimensiones del Paquete (Shalom / Olva)</h6>
                                     </div>
                                     <div class="card-body py-2">
                                         <div class="row g-2">
@@ -149,15 +149,15 @@
                                             </div>
                                             <div class="col-2">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Largo (m)</label>
-                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01">
+                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5">
                                             </div>
                                             <div class="col-2">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Ancho (m)</label>
-                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01">
+                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5">
                                             </div>
                                             <div class="col-2">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Alto (m)</label>
-                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01">
+                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5">
                                             </div>
                                             <div class="col-2">
                                                 <label class="form-label mb-0 fw-bold text-danger" style="font-size: 0.8rem">Peso (KG)</label>
@@ -174,6 +174,9 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Alerta de Restricciones Shalom -->
+                            <div class="col-md-12 mb-2 d-none" id="alerta_restricciones_shalom"></div>
 
                             <div class="col-md-12 d-flex align-items-center mb-2">
                                 <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #f8f9fa;">
@@ -358,8 +361,8 @@
         const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
         const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
         
-        // Mostrar/Ocultar seccion de medidas si es Shalom
-        if (nombreAgencia === 'SHALOM') {
+        // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
+        if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
             document.getElementById('seccion_medidas_caja').classList.remove('d-none');
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
@@ -449,4 +452,5 @@
 </script>
 
 @include('envios.logic.cotizador-shalom')
+@include('envios.logic.restricciones-shalom')
 @endsection

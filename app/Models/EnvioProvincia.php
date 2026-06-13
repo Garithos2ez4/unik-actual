@@ -80,4 +80,9 @@ class EnvioProvincia extends Model
     {
         return $this->hasOne(EnvioProvinciaDetalle::class, 'idEnvioProvincia', 'idEnvioProvincia');
     }
+
+    public function Dimension()
+    {
+        return $this->hasOne(EnvioDimension::class, 'idEnvioProvincia', 'idEnvioProvincia');
+    }
 }

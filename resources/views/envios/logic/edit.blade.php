@@ -332,6 +332,46 @@
         }
     }
 
+    function aplicarMedidasCaja() {
+        const select = document.getElementById('tipo_caja_select');
+        const val = select.value;
+
+        if (val === 'custom') {
+            document.getElementById('input_largo').value = '';
+            document.getElementById('input_ancho').value = '';
+            document.getElementById('input_alto').value = '';
+            document.getElementById('input_peso').value = '';
+            
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                input.readOnly = false;
+                input.classList.remove('bg-light');
+            });
+        } else {
+            const selectedOption = select.options[select.selectedIndex];
+            document.getElementById('input_largo').value = selectedOption.getAttribute('data-l');
+            document.getElementById('input_ancho').value = selectedOption.getAttribute('data-w');
+            document.getElementById('input_alto').value = selectedOption.getAttribute('data-h');
+            document.getElementById('input_peso').value = selectedOption.getAttribute('data-wt');
+            
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                input.readOnly = true;
+                input.classList.add('bg-light');
+            });
+        }
+    }
+
     function cargarSubAgencias() {
         const selectAgencia = document.querySelector('select[name="idAgencia"]');
         const selectDestino = document.getElementById('select-destino');
@@ -339,6 +379,23 @@
         
         const idAgencia = selectAgencia ? selectAgencia.value : '';
         const idDestino = selectDestino ? selectDestino.value : '';
+        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+        const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+
+        // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
+        const seccionMedidas = document.getElementById('seccion_medidas_caja');
+        if (seccionMedidas) {
+            if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
+                seccionMedidas.classList.remove('d-none');
+            } else {
+                seccionMedidas.classList.add('d-none');
+                // Limpiar valores si se oculta y no hay datos pre-guardados
+                if (document.getElementById('tipo_caja_select')) {
+                    document.getElementById('tipo_caja_select').value = 'custom';
+                    aplicarMedidasCaja();
+                }
+            }
+        }
         
         if (idAgencia && idDestino) {
             selectSubAgencia.innerHTML = '<option value="">Cargando oficinas...</option>';
@@ -367,4 +424,17 @@
             selectSubAgencia.disabled = true;
         }
     }
+
+    // Inicializar visualización de medidas al cargar la página si la agencia ya está seleccionada
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        if (selectAgencia && selectAgencia.value) {
+            const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+            const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+            if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
+                const seccionMedidas = document.getElementById('seccion_medidas_caja');
+                if (seccionMedidas) seccionMedidas.classList.remove('d-none');
+            }
+        }
+    });
 </script>

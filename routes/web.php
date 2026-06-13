@@ -199,6 +199,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/sync-shalom', [\App\Http\Controllers\Api\ShalomSyncController::class, 'sync']);
         Route::get('/shalom-terminals', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getTerminals']);
         Route::post('/shalom-cotizar', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'calculate']);
+        Route::get('/shalom-restricciones', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getRestricciones']);
 
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');

@@ -124,7 +124,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
 
     public function getEnvioById($id)
     {
-        return EnvioProvincia::with(['Detalle', 'Destino.Provincia.Departamento', 'Productos.Producto'])->findOrFail($id);
+        return EnvioProvincia::with(['Detalle', 'Destino.Provincia.Departamento', 'Productos.Producto', 'Dimension'])->findOrFail($id);
     }
 
     public function getUltimoEnvioCliente($idCliente)

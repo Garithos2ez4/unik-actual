@@ -123,6 +123,7 @@ class EnvioProvinciaController extends Controller
 
                 $subagencias = ($envio->idAgencia && $envio->idDestino) ? SubAgencia::where('idAgencia', $envio->idAgencia)->where('idDestino', $envio->idDestino)->orderBy('nombre_oficina', 'asc')->get() : collect();
                 $documentos = \App\Models\TipoDocumento::all();
+                $tiposPaquete = \App\Models\TipoPaqueteEnvio::all();
 
                 return view('envios.edit', [
                     'user' => $userModel,
@@ -133,7 +134,8 @@ class EnvioProvinciaController extends Controller
                     'provincias' => $provincias,
                     'destinos' => $destinos,
                     'subagencias' => $subagencias,
-                    'documentos' => $documentos
+                    'documentos' => $documentos,
+                    'tiposPaquete' => $tiposPaquete
                 ]);
             }
         }
@@ -235,7 +237,7 @@ class EnvioProvinciaController extends Controller
         }
 
         $ids = $request->query('ids');
-        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'Productos.Producto', 'Detalle']);
+        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'SubAgencia', 'Productos.Producto', 'Detalle', 'Dimension.tipoPaquete']);
 
         if (!empty($ids)) {
             $idArray = explode(',', $ids);
@@ -245,62 +247,71 @@ class EnvioProvinciaController extends Controller
             $envios = $query->whereDate('fecha_envio', $fecha)->get();
         }
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="envios_' . date('Y-m-d') . '.csv"',
-        ];
+        // Cargar la plantilla oficial de Shalom (preserva metadata, versión, hojas ocultas, validaciones)
+        $templatePath = storage_path('Formato-Pro-Masivo-2026_06_12_13.xlsx');
+        if (!file_exists($templatePath)) {
+            abort(500, 'Plantilla de Shalom no encontrada. Coloque el archivo en storage/');
+        }
 
-        $callback = function () use ($envios) {
-            $file = fopen('php://output', 'w');
-            fputs($file, "\xEF\xBB\xBF"); // BOM para Excel
-            fputcsv($file, [
-                'DESTINATARIO (DOC)',
-                'TELF. DESTINATARIO',
-                'CONTACTO (DOC)',
-                'TELF. CONTACTO',
-                'NRO GRR',
-                'ORIGEN',
-                'DESTINO',
-                'MERCADERIA',
-                'ALTO',
-                'ANCHO',
-                'LARGO',
-                'PESO',
-                'CANTIDAD'
-            ], ';');
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getSheet(0); // Hoja1
 
-            foreach ($envios as $envio) {
-                $mercaderia = $envio->Productos->map(function ($p) {
-                    return $p->Producto->nombreProducto ?? 'Producto';
-                })->implode(' / ');
+        // Limpiar fila de ejemplo (fila 2) que trae la plantilla
+        for ($col = 1; $col <= 13; $col++) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($colLetter . '2', '');
+        }
 
-                if (empty($mercaderia)) {
-                    $mercaderia = 'PAQUETE L';
+        // Escribir datos de envíos
+        $row = 2;
+        foreach ($envios as $envio) {
+            // Shalom exige que MERCADERIA sea un valor de su lista desplegable, no el nombre del producto
+            // Valores válidos: SOBRE, PAQUETE XXS, PAQUETE XS, PAQUETE S, PAQUETE M, PAQUETE L
+            $mercaderia = 'PAQUETE L'; // Default fallback
+            
+            if (optional(optional($envio->Dimension)->tipoPaquete)->nombre) {
+                $nombreTipo = strtoupper(trim($envio->Dimension->tipoPaquete->nombre));
+                $validos = ['SOBRE', 'PAQUETE XXS', 'PAQUETE XS', 'PAQUETE S', 'PAQUETE M', 'PAQUETE L'];
+                if (in_array($nombreTipo, $validos)) {
+                    $mercaderia = $nombreTipo;
                 }
-
-                $cantidad = $envio->Productos->sum('cantidad');
-                if ($cantidad == 0) $cantidad = 1; // Para evitar cantidad 0
-
-                fputcsv($file, [
-                    optional($envio->Cliente)->numeroDocumento ?? '',
-                    optional($envio->Cliente)->telefono ?? '',
-                    '', // CONTACTO (DOC)
-                    '', // TELF. CONTACTO
-                    $envio->numero_guia ?? '',
-                    'AV. GRAU', // ORIGEN
-                    optional($envio->Destino)->nombre ?? '',
-                    $mercaderia,
-                    optional($envio->Detalle)->alto ?? '0.1', // ALTO
-                    optional($envio->Detalle)->ancho ?? '0.1', // ANCHO
-                    optional($envio->Detalle)->largo ?? '0.1', // LARGO
-                    optional($envio->Detalle)->peso ?? '7',   // PESO
-                    $cantidad
-                ], ';');
             }
-            fclose($file);
-        };
 
-        return response()->stream($callback, 200, $headers);
+            $cantidad = $envio->Productos->sum('cantidad');
+            if ($cantidad == 0) $cantidad = 1;
+
+            // Extraer solo el nombre del terminal (último segmento de "DEPTO / PROV / DIST / TERMINAL")
+            $destinoRaw = optional($envio->SubAgencia)->nombre_oficina ?? optional($envio->Destino)->nombre ?? '';
+            $partes = explode(' / ', $destinoRaw);
+            $destino = trim(end($partes));
+
+            $sheet->setCellValueExplicit('A' . $row, optional($envio->Cliente)->numeroDocumento ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B' . $row, optional($envio->Cliente)->telefono ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('C' . $row, ''); // CONTACTO (DOC)
+            $sheet->setCellValue('D' . $row, ''); // TELF. CONTACTO
+            $sheet->setCellValue('E' . $row, $envio->numero_guia ?? ''); // NRO GRR
+            $sheet->setCellValue('F' . $row, 'JR. RAYMONDI'); // ORIGEN
+            $sheet->setCellValue('G' . $row, $destino); // DESTINO
+            $sheet->setCellValue('H' . $row, $mercaderia); // MERCADERIA
+            $sheet->setCellValue('I' . $row, floatval(optional($envio->Dimension)->alto_final ?? optional($envio->Detalle)->alto ?? 0.1));
+            $sheet->setCellValue('J' . $row, floatval(optional($envio->Dimension)->ancho_final ?? optional($envio->Detalle)->ancho ?? 0.1));
+            $sheet->setCellValue('K' . $row, floatval(optional($envio->Dimension)->largo_final ?? optional($envio->Detalle)->largo ?? 0.1));
+            $sheet->setCellValue('L' . $row, floatval(optional($envio->Dimension)->peso_final ?? optional($envio->Detalle)->peso ?? 7));
+            $sheet->setCellValue('M' . $row, intval($cantidad));
+
+            $row++;
+        }
+
+        // Generar archivo .xlsx (mismo formato que la plantilla original)
+        $filename = 'Formato-Pro-Masivo-' . date('Y_m_d_H') . '.xlsx';
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'shalom_excel_');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function etiquetas(Request $request)
