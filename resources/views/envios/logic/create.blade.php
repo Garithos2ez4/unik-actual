@@ -383,7 +383,9 @@
 
                         selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
                         data.forEach(sub => {
-                            selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${sub.nombre_oficina} (${sub.direccion})</option>`;
+                            const partes = sub.nombre_oficina.split(' / ');
+                            const nombreTerminal = partes[partes.length - 1];
+                            selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${nombreTerminal} (${sub.direccion})</option>`;
                         });
                         selectSubAgencia.disabled = false;
                     } else {

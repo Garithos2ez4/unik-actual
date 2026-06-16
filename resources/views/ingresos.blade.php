@@ -286,6 +286,18 @@
 <script src="{{asset('js/ingresos.js')}}"></script>
 <script src="{{asset('js/filtro_componente.js')}}"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('proveedor-select')) {
+        new TomSelect('#proveedor-select', {
+            create: false,
+            sortField: {
+                field: "text",
+                direction: "asc"
+            }
+        });
+    }
+});
+
 // Lógica de División de Pack
 function abrirModalDivision(idRegistro, nombreProducto, serie) {
     document.getElementById('dividir-pack-idregistro').value = idRegistro;

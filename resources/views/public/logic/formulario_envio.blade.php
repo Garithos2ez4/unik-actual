@@ -96,7 +96,38 @@
     }
 
     function cargarSubAgencias() {
-        // La funcionalidad de SubAgencias fue removida del formulario público.
+        const selectAgencia = document.getElementById('select-agencia');
+        const selectDestino = document.getElementById('select-destino');
+        const selectSubAgencia = document.getElementById('select-subagencia');
+        
+        const idAgencia = selectAgencia.value;
+        const idDestino = selectDestino.value;
+
+        if (!idAgencia || !idDestino) {
+            selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
+            selectSubAgencia.disabled = true;
+            return;
+        }
+
+        selectSubAgencia.innerHTML = '<option value="">Cargando oficinas...</option>';
+        selectSubAgencia.disabled = true;
+
+        fetch(`/formulario-envio/api/subagencias/${idAgencia}/${idDestino}`)
+            .then(r => r.json())
+            .then(data => {
+                let html = '<option value="">Seleccione oficina...</option>';
+                data.forEach(sub => {
+                    const partes = sub.nombre_oficina.split(' / ');
+                    const nombreTerminal = partes[partes.length - 1];
+                    html += `<option value="${sub.idSubAgencia}">${nombreTerminal} - ${sub.direccion}</option>`;
+                });
+                selectSubAgencia.innerHTML = html;
+                selectSubAgencia.disabled = false;
+            })
+            .catch(error => {
+                console.error("Error al cargar subagencias: ", error);
+                selectSubAgencia.innerHTML = '<option value="">Error al cargar</option>';
+            });
     }
 
     // ─── Autocompletar Cliente por Documento ───────────────────
@@ -158,7 +189,29 @@
                                                 selDest.innerHTML += `<option value="${d.idDestino}">${d.nombre}</option>`;
                                             });
                                             selDest.disabled = false;
-                                            if (env.idDestino) selDest.value = env.idDestino;
+                                            if (env.idDestino) {
+                                                selDest.value = env.idDestino;
+                                                // Cargar subagencias después de seleccionar el destino
+                                                if (env.idAgencia) {
+                                                    return fetch(`/formulario-envio/api/subagencias/${env.idAgencia}/${env.idDestino}`);
+                                                }
+                                            }
+                                        }
+                                    })
+                                    .then(r => {
+                                        if (r) return r.json();
+                                    })
+                                    .then(subData => {
+                                        if (subData) {
+                                            const selSub = document.getElementById('select-subagencia');
+                                            selSub.innerHTML = '<option value="">Seleccione oficina...</option>';
+                                            subData.forEach(s => {
+                                                 const partes = s.nombre_oficina.split(' / ');
+                                                 const nombreTerminal = partes[partes.length - 1];
+                                                 selSub.innerHTML += `<option value="${s.idSubAgencia}">${nombreTerminal} - ${s.direccion}</option>`;
+                                            });
+                                            selSub.disabled = false;
+                                            if (env.idSubAgencia) selSub.value = env.idSubAgencia;
                                         }
                                     })
                                     .catch(err => console.log('Error loading ubigeo cascade:', err));

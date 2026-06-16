@@ -237,7 +237,10 @@ class EnvioProvinciaController extends Controller
         }
 
         $ids = $request->query('ids');
-        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'SubAgencia', 'Productos.Producto', 'Detalle', 'Dimension.tipoPaquete']);
+        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'SubAgencia', 'Productos.Producto', 'Detalle', 'Dimension.tipoPaquete'])
+            ->whereHas('Agencia', function ($q) {
+                $q->where('nombre', 'LIKE', '%SHALOM%');
+            });
 
         if (!empty($ids)) {
             $idArray = explode(',', $ids);
@@ -262,6 +265,38 @@ class EnvioProvinciaController extends Controller
             $sheet->setCellValue($colLetter . '2', '');
         }
 
+        // Cargar nombres de subagencias de Shalom desde la Hoja2 del Excel cargado para mapeo exacto
+        $shalomNamesMap = [];
+        $normalize = function($str) {
+            $str = mb_strtoupper($str, 'UTF-8');
+            $unwanted_array = [
+                'Š'=>'S', 'š'=>'s', 'Ž'=>'Z', 'ž'=>'z', 'À'=>'A', 'Á'=>'A', 'Â'=>'A', 'Ã'=>'A', 'Ä'=>'A', 'Å'=>'A', 'Æ'=>'A', 'Ç'=>'C',
+                'È'=>'E', 'É'=>'E', 'Ê'=>'E', 'Ë'=>'E', 'Ì'=>'I', 'Í'=>'I', 'Î'=>'I', 'Ï'=>'I', 'Ñ'=>'N', 'Ò'=>'O', 'Ó'=>'O', 'Ô'=>'O',
+                'Õ'=>'O', 'Ö'=>'O', 'Ø'=>'O', 'Ù'=>'U', 'Ú'=>'U', 'Û'=>'U', 'Ü'=>'U', 'Ý'=>'Y', 'Þ'=>'B', 'ß'=>'Ss', 'à'=>'a', 'á'=>'a',
+                'â'=>'a', 'ã'=>'a', 'ä'=>'a', 'å'=>'a', 'æ'=>'a', 'ç'=>'c', 'è'=>'e', 'é'=>'e', 'â'=>'e', 'ë'=>'e', 'ì'=>'i', 'í'=>'i',
+                'î'=>'i', 'ï'=>'i', 'ð'=>'o', 'ñ'=>'n', 'ò'=>'o', 'ó'=>'o', 'ô'=>'o', 'õ'=>'o', 'ö'=>'o', 'ø'=>'o', 'ù'=>'u', 'ú'=>'u',
+                'û'=>'u', 'ü'=>'u', 'ý'=>'y', 'þ'=>'b', 'ÿ'=>'y'
+            ];
+            $str = strtr($str, $unwanted_array);
+            $str = preg_replace('/\s+/', ' ', $str);
+            return trim($str);
+        };
+
+        if ($spreadsheet->getSheetCount() > 1) {
+            $sheet2 = $spreadsheet->getSheet(1); // Hoja2
+            $highestRow = $sheet2->getHighestRow();
+            for ($r = 1; $r <= $highestRow; $r++) {
+                $nameVal = $sheet2->getCell('B' . $r)->getValue();
+                if ($nameVal) {
+                    $trimmed = trim($nameVal);
+                    if ($trimmed !== '') {
+                        $normalized = $normalize($trimmed);
+                        $shalomNamesMap[$normalized] = $trimmed;
+                    }
+                }
+            }
+        }
+
         // Escribir datos de envíos
         $row = 2;
         foreach ($envios as $envio) {
@@ -280,10 +315,32 @@ class EnvioProvinciaController extends Controller
             $cantidad = $envio->Productos->sum('cantidad');
             if ($cantidad == 0) $cantidad = 1;
 
-            // Extraer solo el nombre del terminal (último segmento de "DEPTO / PROV / DIST / TERMINAL")
+            // Extraer solo el nombre de la sucursal (último segmento de "DEPTO / PROV / DIST / TERMINAL")
             $destinoRaw = optional($envio->SubAgencia)->nombre_oficina ?? optional($envio->Destino)->nombre ?? '';
             $partes = explode(' / ', $destinoRaw);
             $destino = trim(end($partes));
+            $zona = trim(optional($envio->Destino)->nombre ?? '');
+
+            // Shalom a veces añade " - NOMBRE_ZONA" al final del nombre de la sucursal en su API, pero en su Excel lo omiten.
+            $suffix = " - " . $zona;
+            if (!empty($zona) && substr($destino, -strlen($suffix)) === $suffix) {
+                $destino = trim(substr($destino, 0, -strlen($suffix)));
+            }
+
+            // Intentar buscar match exacto o parcial en la lista de shalom_excel.txt
+            if (!empty($shalomNamesMap)) {
+                $destinoNorm = $normalize($destino);
+                if (isset($shalomNamesMap[$destinoNorm])) {
+                    $destino = $shalomNamesMap[$destinoNorm];
+                } else {
+                    foreach ($shalomNamesMap as $normKey => $exactValue) {
+                        if (strpos($normKey, $destinoNorm) !== false || strpos($destinoNorm, $normKey) !== false) {
+                            $destino = $exactValue;
+                            break;
+                        }
+                    }
+                }
+            }
 
             $sheet->setCellValueExplicit('A' . $row, optional($envio->Cliente)->numeroDocumento ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValueExplicit('B' . $row, optional($envio->Cliente)->telefono ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
@@ -668,6 +725,36 @@ class EnvioProvinciaController extends Controller
 
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => 'Error: ' . $th->getMessage()]);
+        }
+    }
+
+    public function syncAllAgencias()
+    {
+        // Al sincronizar 6 agencias masivamente se superan los 30 segundos límite de PHP,
+        // por lo que desactivamos el límite de tiempo.
+        set_time_limit(0);
+
+        try {
+            // No truncamos la tabla porque las sucursales ya están siendo referenciadas en envíos anteriores.
+            // Los comandos de Artisan ya tienen lógica de "updateOrCreate" interna.
+
+            // Ejecutar los comandos de sincronización
+            \Illuminate\Support\Facades\Artisan::call('sync:marvisur');
+            \Illuminate\Support\Facades\Artisan::call('sync:emtrafesa');
+            \Illuminate\Support\Facades\Artisan::call('sync:olva');
+            \Illuminate\Support\Facades\Artisan::call('sync:shalom');
+            \Illuminate\Support\Facades\Artisan::call('sync:espinoza');
+            \Illuminate\Support\Facades\Artisan::call('sync:flores');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sincronización masiva completada correctamente.'
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en sincronización masiva: ' . $th->getMessage()
+            ], 500);
         }
     }
 }

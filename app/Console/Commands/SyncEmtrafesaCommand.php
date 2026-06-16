@@ -56,6 +56,10 @@ class SyncEmtrafesaCommand extends Command
             }
 
             $sucursales = $json;
+
+            // --- BORRADO LÓGICO ---
+            SubAgencia::where('idAgencia', $agencia->idAgencia)->update(['estado' => 0]);
+
             $nuevas = 0;
             $existentes_actualizadas = 0;
             $omitidas = 0;
@@ -151,7 +155,8 @@ class SyncEmtrafesaCommand extends Command
                     $this->line("Creado: {$sucursalName} en Destino: {$destino->nombre}");
                 } else {
                     $subAgenciaExistente->update([
-                        'direccion' => substr($direccion, 0, 255)
+                        'direccion' => substr($direccion, 0, 255),
+                        'estado' => 1
                     ]);
                     $existentes_actualizadas++;
                 }

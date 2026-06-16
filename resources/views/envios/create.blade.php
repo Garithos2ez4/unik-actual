@@ -14,7 +14,7 @@
                 <div class="card-body p-4">
                     <form id="form-create-envio" action="{{ route('envios.store') }}" method="POST">
                         @csrf
-                        
+
                         <div class="row g-3">
                             <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-fill"></i> 1. Información del Cliente y Envío</h6>
 
@@ -46,7 +46,7 @@
                                 <select name="idPlataforma" id="idPlataforma" class="form-select" required onchange="filterAccounts()">
                                     <option value="">Seleccione plataforma...</option>
                                     @foreach($plataformas as $p)
-                                        <option value="{{ $p->idPlataforma }}">{{ $p->nombrePlataforma }}</option>
+                                    <option value="{{ $p->idPlataforma }}">{{ $p->nombrePlataforma }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -55,9 +55,9 @@
                                 <select name="idCuentaPlataforma" id="idCuentaPlataforma" class="form-select">
                                     <option value="">Seleccione cuenta...</option>
                                     @foreach($plataformas as $p)
-                                       @foreach($p->CuentasPlataforma as $c)
-                                           <option value="{{ $c->idCuentaPlataforma }}" data-plataforma="{{ $p->idPlataforma }}">{{ $c->nombreCuenta }} ({{ $p->nombrePlataforma }})</option>
-                                       @endforeach
+                                    @foreach($p->CuentasPlataforma as $c)
+                                    <option value="{{ $c->idCuentaPlataforma }}" data-plataforma="{{ $p->idPlataforma }}">{{ $c->nombreCuenta }} ({{ $p->nombrePlataforma }})</option>
+                                    @endforeach
                                     @endforeach
                                 </select>
                             </div>
@@ -68,11 +68,11 @@
                                 <select id="select-departamento" class="form-select" required onchange="cargarProvincias(this.value)">
                                     <option value="">Seleccione departamento...</option>
                                     @foreach($departamentos as $depto)
-                                        <option value="{{ $depto->idDepartamento }}">{{ $depto->nombre }}</option>
+                                    <option value="{{ $depto->idDepartamento }}">{{ $depto->nombre }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            
+
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Provincia <span class="text-danger">*</span></label>
                                 <select id="select-provincia" class="form-select" required disabled onchange="cargarDestinos(this.value)">
@@ -93,13 +93,13 @@
                             </div>
 
                             <!-- Agencia y Oficina/Sucursal -->
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label fw-bold">Agencia de Transporte <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <select name="idAgencia" class="form-select" required onchange="cargarSubAgencias()">
                                         <option value="">Seleccione agencia...</option>
                                         @foreach($agencias as $agencia)
-                                            <option value="{{ $agencia->idAgencia }}">{{ $agencia->nombre }}</option>
+                                        <option value="{{ $agencia->idAgencia }}">{{ $agencia->nombre }}</option>
                                         @endforeach
                                     </select>
                                     <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewAgencia" title="Nueva Agencia">
@@ -108,7 +108,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-9">
                                 <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
                                 <div class="input-group">
                                     <select name="idSubAgencia" id="select-subagencia" class="form-select" disabled>
@@ -117,7 +117,7 @@
                                     <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#modalNewSubAgencia" title="Nueva Oficina/Sucursal">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
-                                    <button class="btn btn-outline-success" type="button" onclick="sincronizarAgencia()" title="Sincronizar Sucursales Oficiales">
+                                    <button class="btn btn-outline-success" type="button" onclick="sincronizarAgencia()" title="Sincronizar Todas las Sucursales Oficiales">
                                         <i class="bi bi-cloud-arrow-down-fill"></i>
                                     </button>
                                     <button class="btn btn-outline-danger" type="button" onclick="abrirCotizadorShalom()" title="Cotizar Envío (Shalom)">
@@ -127,12 +127,12 @@
                             </div>
 
                             <!-- Direccin y Referencia -->
-                            
+
                             <!-- Medidas de Caja (Solo Shalom) -->
                             <div class="col-md-12 mb-3 d-none" id="seccion_medidas_caja">
                                 <div class="card border-danger shadow-sm">
                                     <div class="card-header bg-danger text-white py-2">
-                                        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Dimensiones del Paquete (Shalom / Olva)</h6>
+                                        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Dimensiones del Paquete (Shalom)</h6>
                                     </div>
                                     <div class="card-body py-2">
                                         <div class="row g-2">
@@ -141,29 +141,29 @@
                                                 <select name="idTipoPaquete" id="tipo_caja_select" class="form-select form-select-sm border-danger" onchange="aplicarMedidasCaja()">
                                                     <option value="custom">📦 Otra Medida (Personalizado / Vacio)</option>
                                                     @if(isset($tiposPaquete))
-                                                        @foreach($tiposPaquete as $paquete)
-                                                            <option value="{{ $paquete->idTipoPaquete }}" data-w="{{ $paquete->ancho_defecto }}" data-h="{{ $paquete->alto_defecto }}" data-l="{{ $paquete->largo_defecto }}" data-wt="{{ $paquete->peso_maximo }}">{{ $paquete->icono }} {{ $paquete->nombre }}</option>
-                                                        @endforeach
+                                                    @foreach($tiposPaquete as $paquete)
+                                                    <option value="{{ $paquete->idTipoPaquete }}" data-w="{{ $paquete->ancho_defecto }}" data-h="{{ $paquete->alto_defecto }}" data-l="{{ $paquete->largo_defecto }}" data-wt="{{ $paquete->peso_maximo }}">{{ $paquete->icono }} {{ $paquete->nombre }}</option>
+                                                    @endforeach
                                                     @endif
                                                 </select>
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Largo (m)</label>
-                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5">
+                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01">
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Ancho (m)</label>
-                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5">
+                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01">
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Alto (m)</label>
-                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5">
+                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01">
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 fw-bold text-danger" style="font-size: 0.8rem">Peso (KG)</label>
                                                 <input type="number" name="peso" id="input_peso" class="form-control form-control-sm border-danger" step="0.01">
                                             </div>
-                                            <div class="col-4">
+                                            <div class="col-4 d-none">
                                                 <label class="form-label mb-0 fw-bold text-success" style="font-size: 0.8rem">Tarifa Estimada</label>
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text bg-success text-white border-success">S/</span>
@@ -210,8 +210,8 @@
                                 <label class="form-label fw-bold">Dato Adicional</label>
                                 <input type="text" name="dato_adicional" class="form-control" placeholder="Observaciones">
                             </div>
-                            
-                            
+
+
 
                             <div class="col-md-12 d-flex align-items-center mt-3">
                                 <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #fff8f8;">
@@ -324,7 +324,7 @@
             document.getElementById('input_ancho').value = '';
             document.getElementById('input_alto').value = '';
             document.getElementById('input_peso').value = '';
-            
+
             const inputs = [
                 document.getElementById('input_peso'),
                 document.getElementById('input_largo'),
@@ -341,7 +341,7 @@
             document.getElementById('input_ancho').value = selectedOption.getAttribute('data-w');
             document.getElementById('input_alto').value = selectedOption.getAttribute('data-h');
             document.getElementById('input_peso').value = selectedOption.getAttribute('data-wt');
-            
+
             const inputs = [
                 document.getElementById('input_peso'),
                 document.getElementById('input_largo'),
@@ -360,9 +360,9 @@
         const idAgencia = selectAgencia.value;
         const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
         const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
-        
-        // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
-        if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
+
+        // Mostrar/Ocultar seccion de medidas si es Shalom
+        if (nombreAgencia === 'SHALOM') {
             document.getElementById('seccion_medidas_caja').classList.remove('d-none');
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
@@ -370,7 +370,7 @@
             document.getElementById('tipo_caja_select').value = 'custom';
             aplicarMedidasCaja();
         }
-        
+
         const idDestino = document.querySelector('select[name="idDestino"]').value;
         const selectSubAgencia = document.getElementById('select-subagencia');
 
@@ -385,7 +385,9 @@
             .then(data => {
                 let html = '<option value="">Seleccione oficina...</option>';
                 data.forEach(sub => {
-                    html += `<option value="${sub.idSubAgencia}">${sub.nombre_oficina} - ${sub.direccion}</option>`;
+                    const partes = sub.nombre_oficina.split(' / ');
+                    const nombreTerminal = partes[partes.length - 1];
+                    html += `<option value="${sub.idSubAgencia}">${nombreTerminal} - ${sub.direccion}</option>`;
                 });
                 selectSubAgencia.innerHTML = html;
                 selectSubAgencia.disabled = false;
@@ -396,47 +398,23 @@
     }
 
     function sincronizarAgencia() {
-        const selectAgencia = document.querySelector('select[name="idAgencia"]');
-        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
-        
-        if (!selectedOption || selectedOption.value === "") {
-            Swal.fire('Atención', 'Primero selecciona una Agencia de Transporte.', 'warning');
-            return;
-        }
-
-        const nombreAgencia = selectedOption.text.trim().toUpperCase();
-        let urlSincronizacion = '';
-        
-        if (nombreAgencia === 'MARVISUR') {
-            urlSincronizacion = "{{ url('/envios-provincias/sync-marvisur') }}";
-        } else if (nombreAgencia === 'EMTRAFESA') {
-            urlSincronizacion = "{{ url('/envios-provincias/sync-emtrafesa') }}";
-        } else if (nombreAgencia === 'OLVA') {
-            urlSincronizacion = "{{ url('/envios-provincias/sync-olva') }}";
-        } else if (nombreAgencia === 'SHALOM') {
-            urlSincronizacion = "{{ url('/envios-provincias/sync-shalom') }}";
-        } else {
-            Swal.fire('No soportado', 'La agencia ' + nombreAgencia + ' aún no cuenta con sincronización automática.', 'info');
-            return;
-        }
-
         Swal.fire({
-            title: 'Sincronizando ' + nombreAgencia + '...',
-            text: 'Descargando y mapeando sucursales oficiales. Esto puede tardar unos segundos...',
+            title: 'Sincronización Masiva',
+            text: 'Descargando y mapeando sucursales oficiales de TODAS las agencias (Olva, Shalom, Marvisur, Emtrafesa, Espinoza, Flores). Esto puede tardar unos minutos...',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
             }
         });
 
-        fetch(urlSincronizacion)
+        fetch("{{ url('/envios-provincias/sync-all') }}")
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Sincronización Exitosa',
-                        text: 'Las sucursales oficiales de ' + nombreAgencia + ' se importaron correctamente.'
+                        text: data.message
                     });
                     if (typeof cargarSubAgencias === 'function') {
                         cargarSubAgencias(); // Recargar el select automáticamente

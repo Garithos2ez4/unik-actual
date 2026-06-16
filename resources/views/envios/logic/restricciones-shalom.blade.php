@@ -13,6 +13,7 @@
             const json = await res.json();
             if (json.success && json.data) {
                 shalomRestricciones = json.data;
+                verificarRestriccionesShalom();
                 return shalomRestricciones;
             }
         } catch (e) {
@@ -68,9 +69,15 @@
         }
 
         const selectedSub = selectSub.options[selectSub.selectedIndex];
-        // El texto es "NOMBRE_OFICINA - DIRECCION", tomamos solo el nombre
         const nombreCompleto = selectedSub ? selectedSub.text : '';
-        const nombreOficina = nombreCompleto.split(' - ')[0].trim();
+        let nombreOficina = nombreCompleto;
+        if (nombreCompleto.includes(' - ')) {
+            nombreOficina = nombreCompleto.split(' - ')[0].trim();
+        } else if (nombreCompleto.includes(' (')) {
+            nombreOficina = nombreCompleto.split(' (')[0].trim();
+        } else {
+            nombreOficina = nombreCompleto.trim();
+        }
 
         const restriccion = buscarRestriccionPorNombre(nombreOficina);
         restriccionActual = restriccion;

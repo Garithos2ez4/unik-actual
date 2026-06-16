@@ -12,7 +12,7 @@
                     <small>Sección: ACTUALIZAR DESPACHO</small>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('envios.update', $envio->idEnvioProvincia) }}" method="POST">
+                    <form action="{{ route('envios.update', $envio->idEnvioProvincia) }}" method="POST" id="form-edit-envio">
                         @csrf
                         @method('PUT')
 
@@ -106,7 +106,7 @@
                             </div>
 
                             <!-- Agencia y Oficina/Sucursal -->
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label fw-bold">Agencia de Transporte <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <select name="idAgencia" class="form-select" required onchange="cargarSubAgencias()">
@@ -121,7 +121,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-9">
                                 <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
                                 <div class="input-group">
                                     <select name="idSubAgencia" id="select-subagencia" class="form-select" {{ $subagencias->isEmpty() ? 'disabled' : '' }}>
@@ -130,7 +130,11 @@
                                         @else
                                         <option value="">Seleccione oficina...</option>
                                         @foreach($subagencias as $sub)
-                                        <option value="{{ $sub->idSubAgencia }}" {{ $envio->idSubAgencia == $sub->idSubAgencia ? 'selected' : '' }}>{{ $sub->nombre_oficina }} ({{ $sub->direccion }})</option>
+                                        @php
+                                            $partes = explode(' / ', $sub->nombre_oficina);
+                                            $nombreTerminal = end($partes);
+                                        @endphp
+                                        <option value="{{ $sub->idSubAgencia }}" {{ $envio->idSubAgencia == $sub->idSubAgencia ? 'selected' : '' }}>{{ $nombreTerminal }} ({{ $sub->direccion }})</option>
                                         @endforeach
                                         @endif
                                     </select>
@@ -165,23 +169,23 @@
                                                     @endif
                                                 </select>
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Largo (m)</label>
-                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5" value="{{ optional($envio->Dimension)->largo_final }}">
+                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01" value="{{ optional($envio->Dimension)->largo_final }}">
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Ancho (m)</label>
-                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5" value="{{ optional($envio->Dimension)->ancho_final }}">
+                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01" value="{{ optional($envio->Dimension)->ancho_final }}">
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Alto (m)</label>
-                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01" max="1.5" value="{{ optional($envio->Dimension)->alto_final }}">
+                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01" value="{{ optional($envio->Dimension)->alto_final }}">
                                             </div>
-                                            <div class="col-2">
+                                            <div class="col-3">
                                                 <label class="form-label mb-0 fw-bold text-danger" style="font-size: 0.8rem">Peso (KG)</label>
                                                 <input type="number" name="peso" id="input_peso" class="form-control form-control-sm border-danger" step="0.01" value="{{ optional($envio->Dimension)->peso_final }}">
                                             </div>
-                                            <div class="col-4">
+                                            <div class="col-4 d-none">
                                                 <label class="form-label mb-0 fw-bold text-success" style="font-size: 0.8rem">Tarifa Estimada</label>
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text bg-success text-white border-success">S/</span>
@@ -225,7 +229,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Clave</label>
-                                <input type="text" name="clave" class="form-control" value="{{ $envio->clave }}" placeholder="Clave para recojo">
+                                <input type="text" id="input-clave" name="clave" class="form-control" value="{{ $envio->clave }}" placeholder="Clave para recojo">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Dato Adicional</label>
@@ -301,44 +305,107 @@
         }
     });
 
-    function sincronizarAgencia() {
-        const selectAgencia = document.querySelector('select[name="idAgencia"]');
-        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+    function aplicarMedidasCaja(isInitialLoad = false) {
+        const select = document.getElementById('tipo_caja_select');
+        const val = select.value;
 
-        if (!selectedOption || selectedOption.value === "") {
-            Swal.fire('Atención', 'Primero selecciona una Agencia de Transporte.', 'warning');
-            return;
-        }
+        if (val === 'custom') {
+            if (!isInitialLoad) {
+                document.getElementById('input_largo').value = '';
+                document.getElementById('input_ancho').value = '';
+                document.getElementById('input_alto').value = '';
+                document.getElementById('input_peso').value = '';
+            }
 
-        const nombreAgencia = selectedOption.text.trim().toUpperCase();
-        let urlSincronizacion = '';
-
-        if (nombreAgencia === 'MARVISUR') {
-            urlSincronizacion = "{{ url('/envios-provincias/sync-marvisur') }}";
-        } else if (nombreAgencia === 'EMTRAFESA') {
-            urlSincronizacion = "{{ url('/envios-provincias/sync-emtrafesa') }}";
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                input.readOnly = false;
+                input.classList.remove('bg-light');
+            });
         } else {
-            Swal.fire('No soportado', 'La agencia ' + nombreAgencia + ' aún no cuenta con sincronización automática.', 'info');
+            const selectedOption = select.options[select.selectedIndex];
+            if (!isInitialLoad) {
+                document.getElementById('input_largo').value = selectedOption.getAttribute('data-l');
+                document.getElementById('input_ancho').value = selectedOption.getAttribute('data-w');
+                document.getElementById('input_alto').value = selectedOption.getAttribute('data-h');
+                document.getElementById('input_peso').value = selectedOption.getAttribute('data-wt');
+            }
+
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                input.readOnly = true;
+                input.classList.add('bg-light');
+            });
+        }
+    }
+
+    function cargarSubAgencias() {
+        const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        const idAgencia = selectAgencia.value;
+        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+        const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+
+        // Mostrar/Ocultar seccion de medidas si es Shalom
+        if (nombreAgencia === 'SHALOM') {
+            document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+        } else {
+            document.getElementById('seccion_medidas_caja').classList.add('d-none');
+        }
+
+        const idDestino = document.querySelector('select[name="idDestino"]').value;
+        const selectSubAgencia = document.getElementById('select-subagencia');
+
+        if (!idAgencia || !idDestino) {
+            selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
+            selectSubAgencia.disabled = true;
             return;
         }
 
+        fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
+            .then(response => response.json())
+            .then(data => {
+                let html = '<option value="">Seleccione oficina...</option>';
+                data.forEach(sub => {
+                    const partes = sub.nombre_oficina.split(' / ');
+                    const nombreTerminal = partes[partes.length - 1];
+                    html += `<option value="${sub.idSubAgencia}">${nombreTerminal} - ${sub.direccion}</option>`;
+                });
+                selectSubAgencia.innerHTML = html;
+                selectSubAgencia.disabled = false;
+            })
+            .catch(error => {
+                console.error("Error al cargar subagencias: ", error);
+            });
+    }
+
+    function sincronizarAgencia() {
         Swal.fire({
-            title: 'Sincronizando ' + nombreAgencia + '...',
-            text: 'Descargando y mapeando sucursales oficiales. Esto puede tardar unos segundos...',
+            title: 'Sincronización Masiva',
+            text: 'Descargando y mapeando sucursales oficiales de TODAS las agencias (Olva, Shalom, Marvisur, Emtrafesa, Espinoza, Flores). Esto puede tardar unos minutos...',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
             }
         });
 
-        fetch(urlSincronizacion)
+        fetch("{{ url('/envios-provincias/sync-all') }}")
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Sincronización Exitosa',
-                        text: 'Las sucursales oficiales de ' + nombreAgencia + ' se importaron correctamente.'
+                        text: data.message
                     });
                     if (typeof cargarSubAgencias === 'function') {
                         cargarSubAgencias(); // Recargar el select automáticamente
@@ -351,7 +418,23 @@
                 Swal.fire('Error', 'Hubo un problema de red al intentar sincronizar.', 'error');
             });
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar sección de medidas y visibilidad según la agencia cargada
+        const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
+        const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+        
+        if (nombreAgencia === 'SHALOM') {
+            document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+        } else {
+            document.getElementById('seccion_medidas_caja').classList.add('d-none');
+        }
+
+        aplicarMedidasCaja(true); // true para no sobreescribir los valores cargados desde BD si es "custom"
+    });
 </script>
 
 @include('envios.logic.cotizador-shalom')
+@include('envios.logic.restricciones-shalom')
 @endsection

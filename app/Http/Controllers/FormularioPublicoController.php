@@ -195,6 +195,7 @@ class FormularioPublicoController extends Controller
                     'idProvincia' => $ultimoEnvio->Destino->idProvincia ?? null,
                     'idDestino' => $ultimoEnvio->idDestino,
                     'idAgencia' => $ultimoEnvio->idAgencia,
+                    'idSubAgencia' => $ultimoEnvio->idSubAgencia,
                     'entrega_domicilio' => $ultimoEnvio->Detalle->entrega_domicilio ?? 0,
                     'dir' => $ultimoEnvio->Detalle->dir ?? '',
                     'ref' => $ultimoEnvio->Detalle->ref ?? '',

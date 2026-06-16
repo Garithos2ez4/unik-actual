@@ -62,6 +62,10 @@ class SyncMarvisurCommand extends Command
             }
 
             $sucursales = $json['data']['Table'];
+
+            // --- BORRADO LÓGICO ---
+            SubAgencia::where('idAgencia', $agencia->idAgencia)->update(['estado' => 0]);
+
             $nuevas = 0;
             $existentes_actualizadas = 0;
             $omitidas = 0;
@@ -134,6 +138,7 @@ class SyncMarvisurCommand extends Command
                     $subAgenciaExistente->update([
                         'direccion' => substr($direccionFinal, 0, 255),
                         'telefono' => substr($telefonoFinal, 0, 50),
+                        'estado' => 1
                     ]);
                     $existentes_actualizadas++;
                 }

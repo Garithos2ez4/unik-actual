@@ -230,7 +230,7 @@
     });
 
     // Validación general del Formulario antes de Enviar
-    document.querySelector('form[action*="envios"]').addEventListener('submit', function(e) {
+    document.getElementById('form-edit-envio').addEventListener('submit', function(e) {
         const serials = [];
         let hasDuplicate = false;
         let duplicateSerial = '';
@@ -255,6 +255,48 @@
             e.preventDefault();
             alert(`Error: El número de serie "${duplicateSerial}" está duplicado en los productos a enviar.`);
             return false;
+        }
+
+        // Validar Shalom si está habilitado
+        if (typeof validarRestriccionesAntesDeGuardar === 'function') {
+            const selectAgencia = document.querySelector('select[name="idAgencia"]');
+            const selectedAgencia = selectAgencia.options[selectAgencia.selectedIndex];
+            const nombreAgencia = selectedAgencia ? selectedAgencia.text.trim().toUpperCase() : '';
+
+            if (nombreAgencia === 'SHALOM') {
+                // Validar dimensiones máximas (1.5m)
+                const MAX_DIM = 1.5;
+                const largo = parseFloat(document.getElementById('input_largo')?.value) || 0;
+                const ancho = parseFloat(document.getElementById('input_ancho')?.value) || 0;
+                const alto = parseFloat(document.getElementById('input_alto')?.value) || 0;
+
+                let dimErrores = [];
+                if (largo > MAX_DIM) dimErrores.push(`Largo: ${largo}m`);
+                if (ancho > MAX_DIM) dimErrores.push(`Ancho: ${ancho}m`);
+                if (alto > MAX_DIM) dimErrores.push(`Alto: ${alto}m`);
+
+                if (dimErrores.length > 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'error',
+                        title: '📐 Dimensiones fuera de rango',
+                        html: `
+                            <p>Las dimensiones no pueden superar <strong>${MAX_DIM} metros</strong>:</p>
+                            <div class="text-start" style="font-size:0.95rem;">
+                                ${dimErrores.map(e => `<div class="mb-1">• <strong>${e}</strong> (máx ${MAX_DIM}m)</div>`).join('')}
+                            </div>
+                        `,
+                        confirmButtonColor: '#dc3545',
+                        confirmButtonText: 'Corregir'
+                    });
+                    return false;
+                }
+
+                if (!validarRestriccionesAntesDeGuardar()) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
         }
 
         // Validar que haya al menos un producto seleccionado
@@ -407,7 +449,9 @@
                     if (data.length > 0) {
                         selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
                         data.forEach(sub => {
-                            selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${sub.nombre_oficina} (${sub.direccion})</option>`;
+                            const partes = sub.nombre_oficina.split(' / ');
+                            const nombreTerminal = partes[partes.length - 1];
+                            selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${nombreTerminal} (${sub.direccion})</option>`;
                         });
                         selectSubAgencia.disabled = false;
                     } else {

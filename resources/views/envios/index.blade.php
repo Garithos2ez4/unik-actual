@@ -52,6 +52,7 @@
                             <th>Guía</th>
                             <th>Clave</th>
                             <th>Destino</th>
+                            <th>Modalidad</th>
                             <th>Cliente</th>
                             <th>Plataforma/Cuenta</th>
                             <th>Producto/Cant</th>
@@ -79,6 +80,19 @@
                                     <span class="text-secondary">({{ $envio->Detalle->ref }})</span>
                                     @endif
                                 </small>
+                                @endif
+                            </td>
+                            <td>
+                                @if($envio->pago_destino)
+                                    <span class="badge bg-warning text-dark border mb-1"><i class="bi bi-cash-coin"></i> Pago Destino</span>
+                                @else
+                                    <span class="badge bg-success border mb-1"><i class="bi bi-cash"></i> Pago Origen</span>
+                                @endif
+                                <br>
+                                @if($envio->Detalle && $envio->Detalle->entrega_domicilio)
+                                    <span class="badge bg-primary"><i class="bi bi-house-door-fill"></i> Domicilio</span>
+                                @else
+                                    <span class="badge bg-secondary"><i class="bi bi-shop"></i> Agencia</span>
                                 @endif
                             </td>
                             <td>

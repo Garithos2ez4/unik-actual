@@ -197,6 +197,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/sync-emtrafesa', [\App\Http\Controllers\Api\EmtrafesaSyncController::class, 'sync']);
         Route::get('/sync-olva', [\App\Http\Controllers\Api\OlvaSyncController::class, 'sync']);
         Route::get('/sync-shalom', [\App\Http\Controllers\Api\ShalomSyncController::class, 'sync']);
+        Route::get('/sync-all', [\App\Http\Controllers\EnvioProvinciaController::class, 'syncAllAgencias']);
         Route::get('/shalom-terminals', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getTerminals']);
         Route::post('/shalom-cotizar', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'calculate']);
         Route::get('/shalom-restricciones', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getRestricciones']);

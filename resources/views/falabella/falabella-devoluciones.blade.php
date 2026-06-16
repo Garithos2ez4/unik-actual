@@ -6,6 +6,46 @@
 <div class="container-fluid">
 
     {{-- Header --}}
+    @php
+    $statMap = [
+        'canceled' => ['label' => 'Cancelada / Devolución', 'color' => 'danger', 'icon' => 'bi-x-circle-fill'],
+        'returned' => ['label' => 'Devuelta', 'color' => 'success', 'icon' => 'bi-check-circle-fill'],
+        'return_waiting_for_approval' => ['label' => 'Esperando aprobación', 'color' => 'warning', 'icon' => 'bi-hourglass-split'],
+        'return_shipped_by_customer' => ['label' => 'En camino', 'color' => 'info', 'icon' => 'bi-truck'],
+        'return_delivered_to_seller' => ['label' => 'Recibida por vendedor', 'color' => 'primary', 'icon' => 'bi-box-arrow-in-down'],
+    ];
+
+    $reasonMap = [
+        'NS_SHOW_AUTOMATED' => [
+            'title' => 'Punto de entrega',
+            'detail' => 'Cliente no retira el paquete, devolución activada por sistema'
+        ],
+        'CUSTOMER_REGRET' => [
+            'title' => 'Arrepentimiento de compra',
+            'detail' => 'El cliente decidió cancelar o devolver el producto'
+        ],
+        'FULFILLMENT_ISSUE' => [
+            'title' => 'Problema de Fulfillment / Inventario',
+            'detail' => 'Inconveniente logístico interno o falta de stock'
+        ],
+        'PRICE_ISSUE' => [
+            'title' => 'Problema de precio',
+            'detail' => 'Inconsistencia en el precio publicado de la orden'
+        ],
+        'ORDER_INFORMATION_CHANGE' => [
+            'title' => 'Cambio de información',
+            'detail' => 'El cliente modificó datos vitales del pedido'
+        ],
+        'NOT_DELIVERED_AFTER_RETRIES' => [
+            'title' => 'Entrega fallida',
+            'detail' => 'No se pudo entregar el paquete al cliente tras varios intentos'
+        ],
+        'CANCELLED_BY_CUSTOMER' => [
+            'title' => 'Cancelado por el cliente',
+            'detail' => 'El comprador canceló la orden antes o durante el proceso'
+        ]
+    ];
+    @endphp
     <div class="card shadow-sm border-0 mb-4" style="background: linear-gradient(135deg, #fff5f5, #fff);">
         <div class="card-body p-3">
             <div class="row align-items-center g-3">
@@ -71,14 +111,13 @@
     @if($returns->count() > 0)
     <div class="row g-3 mb-4">
         @php
-        $byStatus = $returns->groupBy('status');
-        $statMap = [
-        'canceled' => ['label' => 'Cancelada / Devolución', 'color' => 'danger', 'icon' => 'bi-x-circle-fill'],
-        'returned' => ['label' => 'Devuelta', 'color' => 'success', 'icon' => 'bi-check-circle-fill'],
-        'return_waiting_for_approval' => ['label' => 'Esperando aprobación', 'color' => 'warning', 'icon' => 'bi-hourglass-split'],
-        'return_shipped_by_customer' => ['label' => 'En camino', 'color' => 'info', 'icon' => 'bi-truck'],
-        'return_delivered_to_seller' => ['label' => 'Recibida por vendedor', 'color' => 'primary', 'icon' => 'bi-box-arrow-in-down'],
-        ];
+        $byStatus = $returns->groupBy(function($ret) {
+            $st = $ret->status;
+            if (empty($st) || $st === '-') {
+                $st = $ret->items->first()->status ?? '-';
+            }
+            return $st;
+        });
         @endphp
         <div class="col-md-3">
             <div class="card border-0 shadow-sm text-center py-3">
@@ -123,11 +162,21 @@
                     <tbody>
                         @forelse($returns as $return)
                         @php
-                        $statusInfo = $statMap[$return->status] ?? ['label' => $return->status, 'color' => 'secondary', 'icon' => 'bi-question-circle'];
-                        // Razón de devolución desde el payload
-                        $reason = data_get($return->payload, 'ReturnReason')
-                        ?? data_get($return->payload, '_normalized.return_reason')
-                        ?? 'No especificado';
+                        $realStatus = $return->status;
+                        if (empty($realStatus) || $realStatus === '-') {
+                            $firstItem = collect($return->items)->first();
+                            $realStatus = $firstItem ? $firstItem->status : '-';
+                        }
+                        $statusInfo = $statMap[$realStatus] ?? ['label' => $realStatus, 'color' => 'secondary', 'icon' => 'bi-question-circle'];
+                        
+                        // Extraer razón de devolución desde el primer ítem
+                        $firstItemInfo = collect($return->items)->first();
+                        $apiReason = $firstItemInfo ? ($firstItemInfo->payload['Reason'] ?? '') : '';
+                        
+                        $mappedReason = $reasonMap[$apiReason] ?? [
+                            'title' => $apiReason ?: 'Devolución general',
+                            'detail' => $apiReason ? 'Motivo reportado por API' : 'Motivo no especificado por Falabella'
+                        ];
                         @endphp
                         <tr>
                             <td class="ps-4" style="max-width: 280px;">
@@ -148,9 +197,9 @@
                                 </span>
                             </td>
                             <td style="max-width: 200px;">
-                                <div class="small text-muted">
-                                    <div class="text-dark">Punto de entrega</div>
-                                    <div>{{ $reason }}</div>
+                                <div class="small text-muted text-center">
+                                    <div class="text-dark fw-medium">{{ $mappedReason['title'] }}</div>
+                                    <div style="font-size: 11px;">{{ $mappedReason['detail'] }}</div>
                                 </div>
                             </td>
                             <td>

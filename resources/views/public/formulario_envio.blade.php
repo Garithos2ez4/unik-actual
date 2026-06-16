@@ -30,7 +30,7 @@
                     <select name="idTipoDocumento" id="idTipoDocumento" class="form-select" required>
                         <option value="">Seleccione...</option>
                         @foreach($documentos as $doc)
-                            <option value="{{ $doc->idTipoDocumento }}">{{ $doc->descripcion }}</option>
+                        <option value="{{ $doc->idTipoDocumento }}">{{ $doc->descripcion }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="col-12">
-                    <label class="form-label">Correo Electrónico</label>
+                    <label class="form-label">Correo Electrónico-(Opcional)</label>
                     <input type="email" name="correo" id="correo" class="form-control" placeholder="correo@ejemplo.com" maxlength="100" inputmode="email">
                 </div>
             </div>
@@ -77,7 +77,7 @@
                     <select id="select-departamento" class="form-select" required onchange="cargarProvincias(this.value)">
                         <option value="">Seleccione departamento...</option>
                         @foreach($departamentos as $depto)
-                            <option value="{{ $depto->idDepartamento }}">{{ $depto->nombre }}</option>
+                        <option value="{{ $depto->idDepartamento }}">{{ $depto->nombre }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -108,11 +108,16 @@
                     <select name="idAgencia" id="select-agencia" class="form-select" required onchange="cargarSubAgencias()">
                         <option value="">Seleccione agencia...</option>
                         @foreach($agencias as $agencia)
-                            <option value="{{ $agencia->idAgencia }}">{{ $agencia->nombre }}</option>
+                        <option value="{{ $agencia->idAgencia }}">{{ $agencia->nombre }}</option>
                         @endforeach
                     </select>
                 </div>
-
+                <div class="col-12 mt-2">
+                    <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
+                    <select name="idSubAgencia" id="select-subagencia" class="form-select" disabled>
+                        <option value="">Primero elija Agencia y Distrito...</option>
+                    </select>
+                </div>
 
                 <div class="col-12 mt-2">
                     <div class="form-check form-switch p-3 rounded" style="background-color: #f8f9fa; border: 1px solid #e2e8f0;">

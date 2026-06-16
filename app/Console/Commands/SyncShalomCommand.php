@@ -15,7 +15,7 @@ class SyncShalomCommand extends Command
 
     public function handle()
     {
-        $this->info("Iniciando sincronización con Shalom... 🥷");
+        $this->info("Iniciando sincronización con Shalom... ");
 
         $agencia = Agencia::where('nombre', 'SHALOM')->first();
         if (!$agencia) {
@@ -39,28 +39,26 @@ class SyncShalomCommand extends Command
 
                 if (isset($json['success']) && $json['success'] == true) {
                     $agencias = $json['data'];
-                    
-                    // Guardar respaldo JSON
+
+                    SubAgencia::where('idAgencia', $agencia->idAgencia)->update(['estado' => 0]);
+
                     \Illuminate\Support\Facades\Storage::put('shalom_agencias.json', json_encode($agencias, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-                    $this->line("📂 Archivo de respaldo: " . storage_path('app/shalom_agencias.json'));
+                    $this->line(" Archivo de respaldo: " . storage_path('app/shalom_agencias.json'));
 
                     $nuevas = 0;
                     $actualizadas = 0;
                     $omitidas = 0;
 
                     foreach ($agencias as $item) {
-                        // "zona" es el distrito en la API de Shalom
                         $zona = trim($item['zona'] ?? '');
-                        // "nombre" es la ruta completa o el nombre comercial de la sucursal
                         $nombreSucursal = trim($item['nombre'] ?? '');
                         $direccion = trim($item['direccion'] ?? 'S/N');
                         $ubigeo = trim($item['ubigeo'] ?? '');
-                        
+
                         if (empty($zona)) {
                             continue;
                         }
 
-                        // Diccionario de equivalencias (Shalom -> Local)
                         $aliases = [
                             'CERCADO LIMA' => 'LIMA',
                             'ATE-VITARTE' => 'ATE',
@@ -80,7 +78,6 @@ class SyncShalomCommand extends Command
 
                         $zonaBusqueda = isset($aliases[$zona]) ? $aliases[$zona] : $zona;
 
-                        // Buscar el Destino por zona (distrito) o su alias
                         $destino = Destino::whereRaw('UPPER(nombre) = ?', [strtoupper($zonaBusqueda)])->first();
 
                         if (!$destino) {
@@ -89,7 +86,6 @@ class SyncShalomCommand extends Command
                             continue;
                         }
 
-                        // Crear o actualizar SubAgencia
                         $subAgenciaExistente = SubAgencia::where('idAgencia', $agencia->idAgencia)
                             ->where('idDestino', $destino->idDestino)
                             ->where('nombre_oficina', $nombreSucursal)
@@ -108,6 +104,7 @@ class SyncShalomCommand extends Command
                         } else {
                             $subAgenciaExistente->update([
                                 'direccion' => substr($direccion, 0, 255),
+                                'estado' => 1
                             ]);
                             $actualizadas++;
                         }
@@ -117,14 +114,12 @@ class SyncShalomCommand extends Command
                     $this->info("- Nuevas Sub-Agencias: {$nuevas}");
                     $this->info("- Actualizadas con Dirección: {$actualizadas}");
                     $this->info("- Omitidas (Sin destino local): {$omitidas}");
-
                 } else {
                     $this->error("El servidor respondió, pero rechazó la petición. ¿El token expiró?");
                 }
             } else {
                 $this->error("❌ Error HTTP " . $response->status() . ". ¡El token Bearer ha expirado o es inválido!");
             }
-
         } catch (\Exception $e) {
             $this->error("❌ Error crítico: " . $e->getMessage());
         }

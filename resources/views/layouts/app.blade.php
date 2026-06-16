@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'T��tulo por defecto')</title>
+    <title>@yield('title', 'Tittulo por defecto')</title>
     <link rel="icon" href="{{ asset('storage/logos/logosysredondo.webp') }}" type="image/webp">
     <link rel="stylesheet" href="{{ asset('css/bootstrap/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/sweetalert/sweetalert2.min.css') }}">
@@ -20,6 +20,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="{{ route('js.header-scripts') }}?v=1.02"></script>
 
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <style>
+        .ts-dropdown {
+            z-index: 9999 !important;
+        }
+    </style>
 </head>
 
 <body style="position: relative">
