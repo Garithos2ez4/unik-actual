@@ -58,7 +58,7 @@ class EgresoProducto extends Model
      */
     public function DetalleVenta()
     {
-        return $this->hasOne(DetalleVenta::class, 'idEgreso', 'idEgreso');
+        return $this->hasOne(DetalleVenta::class, 'idEgreso', 'idEgreso')->withoutGlobalScope('completado');
     }
 
     /**

@@ -46,6 +46,6 @@ class Venta extends Model
 
     public function DetallesVenta()
     {
-        return $this->hasMany(DetalleVenta::class, 'idVenta', 'idVenta');
+        return $this->hasMany(DetalleVenta::class, 'idVenta', 'idVenta')->withoutGlobalScope('completado');
     }
 }

@@ -70,6 +70,9 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
             }
 
+            $esHerramienta = (bool)$details->es_herramienta;
+            $precioFinalSoles = $esHerramienta ? 0 : round($precioDolarTotal * $tc_a_usar, 2);
+
             return [
                 'nombreProducto' => $producto->nombreProducto,
                 'codigoProducto' => $producto->codigoProducto,
@@ -80,7 +83,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'idGrupo' => $producto->idGrupo,
                 'image' => $producto->imagenProducto1,
                 'marca' => $producto->MarcaProducto->nombreMarca,
-                'precioSoles' => round($precioDolarTotal * $tc_a_usar, 2)
+                'es_herramienta' => $esHerramienta,
+                'precioSoles' => $precioFinalSoles
             ];
         });
         return $result;
@@ -113,6 +117,9 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
             }
 
+            $esHerramienta = (bool)$egreso->es_herramienta;
+            $precioFinalSoles = $esHerramienta ? 0 : round($precioDolarTotal * $tc_a_usar, 2);
+
             $result = [
                 'nombreProducto' => $producto->nombreProducto,
                 'codigoProducto' => $producto->codigoProducto,
@@ -122,7 +129,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'modelo' => $producto->modelo,
                 'image' => $producto->imagenProducto1,
                 'marca' => $producto->MarcaProducto->nombreMarca,
-                'precioSoles' => round($precioDolarTotal * $tc_a_usar, 2)
+                'es_herramienta' => $esHerramienta,
+                'precioSoles' => $precioFinalSoles
             ];
             return $result;
         }
@@ -284,8 +292,12 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     }
                 }
 
-                // Validamos que el producto est en un estado vendible (NUEVO)
-                if ($registro->estado !== 'NUEVO') {
+                // Determinar si el producto es un Reseteador (herramienta de servicio) usando la columna es_herramienta
+                $esReseteador = (bool)$registro->es_herramienta;
+                $productoAsociado = \App\Models\Producto::with('GrupoProducto')->find($registro->DetalleComprobante->idProducto ?? null);
+
+                // Validamos que el producto est en un estado vendible (NUEVO), a menos que sea un Reseteador
+                if (!$esReseteador && $registro->estado !== 'NUEVO') {
                     throw new \Exception("La serie {$registro->numeroSerie} no se puede vender porque esta en estado {$registro->estado}.");
                 }
 
@@ -319,18 +331,32 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 $this->egresoRepository->create($data); // Guardamos la nueva venta
                 $egresosGenerados[$idRegistro] = $data['idEgreso'];
 
-                $arrayRegistro = [
-                    'estado' => 'ENTREGADO',
-                    'fechaMovimiento' => $data['fechaCompra'],
-                    'observacion' => ''
-                ]; // Limpiamos la observación para la nueva venta
+                if (!$esReseteador) {
+                    $arrayRegistro = [
+                        'estado' => 'ENTREGADO',
+                        'fechaMovimiento' => $data['fechaCompra'],
+                        'observacion' => ''
+                    ]; // Limpiamos la observación para la nueva venta
 
-                $this->registroRepository->update($idRegistro, $arrayRegistro);
-                $producto = $this->updateStock($idAlmacen, $idRegistro);
+                    $this->registroRepository->update($idRegistro, $arrayRegistro);
+                    $producto = $this->updateStock($idAlmacen, $idRegistro);
+                } else {
+                    $arrayRegistro = [
+                        'estado' => 'EN_USO', // Mantenemos como herramienta en uso
+                        'fechaMovimiento' => $data['fechaCompra'],
+                        'observacion' => 'Utilizado para servicio de reseteo'
+                    ];
+                    $this->registroRepository->update($idRegistro, $arrayRegistro);
+                    $producto = clone $productoAsociado; // No restamos stock
+                    $producto->idProducto = $productoAsociado->idProducto; // Aseguramos que el objeto tenga el idProducto
+                }
+
                 $productos[] = $producto;
 
-                // Validar estado del producto (por si se agotó)
-                $this->productoRepository->validateState($producto->idProducto);
+                // Validar estado del producto (por si se agotó), solo si no es reseteador
+                if (!$esReseteador) {
+                    $this->productoRepository->validateState($producto->idProducto);
+                }
             }
         }
         return [
@@ -373,7 +399,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     $nuevoPrecio = 0.1;
                 }
 
-                $detalleVenta = \App\Models\DetalleVenta::where('idEgreso', $idEgreso)->first();
+                $detalleVenta = \App\Models\DetalleVenta::withoutGlobalScope('completado')->where('idEgreso', $idEgreso)->first();
                 if ($detalleVenta) {
                     $detalleVenta->precioVenta = $nuevoPrecio;
                     $detalleVenta->save();
@@ -471,13 +497,50 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             ];
             $this->registroRepository->update($registro->idRegistro, $dataRegistro);
 
-            // 3. Retornamos el stock al inventario
-            $idProducto = $registro->DetalleComprobante->Producto->idProducto;
-            $idAlmacen = $registro->idAlmacen;
-            $this->inventarioRepository->addStock($idProducto, $idAlmacen);
+            // Determinar si es Reseteador leyendo directamente la columna es_herramienta de RegistroProducto
+            $esReseteador = (bool)$registro->es_herramienta;
+            $productoFisico = $registro->DetalleComprobante->Producto ?? null;
 
-            // Validar estado del producto (por si ahora hay stock)
-            $this->productoRepository->validateState($idProducto);
+            // 3. Retornamos el stock al inventario SOLO si no es reseteador
+            if (!$esReseteador) {
+                $idProducto = $productoFisico->idProducto;
+                $idAlmacen = $registro->idAlmacen;
+                $this->inventarioRepository->addStock($idProducto, $idAlmacen);
+
+                // Validar estado del producto (por si ahora hay stock)
+                $this->productoRepository->validateState($idProducto);
+            }
+
+            // 4. Actualizar estado financiero de DetalleVenta y Venta
+            $detalleVentaDevuelto = \App\Models\DetalleVenta::withoutGlobalScope('completado')->where('idEgreso', $idEgreso)->first();
+            if ($detalleVentaDevuelto) {
+                $detalleVentaDevuelto->estado = 'DEVUELTO';
+                $detalleVentaDevuelto->save();
+
+                $ventaDevuelta = $detalleVentaDevuelto->Venta;
+                if ($ventaDevuelta) {
+                    $nuevoTotalDevuelto = \App\Models\DetalleVenta::where('idVenta', $ventaDevuelta->idVenta)
+                        ->selectRaw('SUM(precioVenta * cantidad) as total')
+                        ->first()
+                        ->total ?? 0;
+
+                    $ventaDevuelta->totalVenta = floatval($nuevoTotalDevuelto);
+                    $ventaDevuelta->save();
+
+                    $pagosDevuelto = \App\Models\PagoVenta::where('idVenta', $ventaDevuelta->idVenta)->get();
+                    if ($pagosDevuelto->count() === 1) {
+                        $pagoUnico = $pagosDevuelto->first();
+                        $pagoUnico->monto = floatval($nuevoTotalDevuelto);
+                        $pagoUnico->save();
+                    } elseif ($pagosDevuelto->count() > 1) {
+                        $diferencia = floatval($nuevoTotalDevuelto) - $pagosDevuelto->sum('monto');
+                        $ultimoPago = $pagosDevuelto->last();
+                        $ultimoPago->monto += $diferencia;
+                        if ($ultimoPago->monto < 0) $ultimoPago->monto = 0;
+                        $ultimoPago->save();
+                    }
+                }
+            }
         }
     }
 

@@ -22,7 +22,15 @@ class DetalleVenta extends Model
         'precioVenta',    // El precio real cobrado
         'cantidad',
         'origenPrecio',   // 'TIENDA' | 'PUBLICACION' | 'NEGOCIADO'
+        'estado',         // 'COMPLETADO' | 'DEVUELTO'
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope('completado', function (\Illuminate\Database\Eloquent\Builder $builder) {
+            $builder->where('DetalleVenta.estado', '=', 'COMPLETADO');
+        });
+    }
 
     protected $casts = [
         'idDetalleVenta'  => 'int',

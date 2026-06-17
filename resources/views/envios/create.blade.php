@@ -126,9 +126,6 @@
                                 </div>
                             </div>
 
-                            <!-- Direccin y Referencia -->
-
-                            <!-- Medidas de Caja (Solo Shalom) -->
                             <div class="col-md-12 mb-3 d-none" id="seccion_medidas_caja">
                                 <div class="card border-danger shadow-sm">
                                     <div class="card-header bg-danger text-white py-2">

@@ -131,6 +131,10 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/producto/{idproducto}/pack-components', [ProductoController::class, 'getPackComponents'])->name('producto.pack.components');
     Route::post('/producto/{idproducto}/pack-components', [ProductoController::class, 'addPackComponent'])->name('producto.pack.add');
     Route::delete('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'removePackComponent'])->name('producto.pack.remove');
+    
+    // Rutas para Herramientas de Servicio (Reseteadores)
+    Route::get('/producto/{idproducto}/series-herramienta', [ProductoController::class, 'getSeriesHerramienta'])->name('producto.series.herramienta');
+    Route::post('/producto/toggle-herramienta', [ProductoController::class, 'toggleHerramienta'])->name('producto.toggle.herramienta');
 
     Route::post('/producto/creargrupo-rapido', [ProductoController::class, 'quickCreateGrupo'])->name('quickcreategrupo');
 

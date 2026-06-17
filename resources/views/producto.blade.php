@@ -2,8 +2,8 @@
 
 @section('title', 'Producto | '.$producto->codigoProducto)
 
-@section('og_title', 'T赤tulo de Ejemplo para Open Graph')
-@section('og_description', 'Descripci車n de ejemplo que aparece en la vista previa.')
+@section('og_title', 'Titulo de Ejemplo para Open Graph')
+@section('og_description', 'Descripcion de ejemplo que aparece en la vista previa.')
 @section('og_image', 'https://www.tusitio.com/imagenes/ejemplo.jpg')
 @section('og_url', url()->current())
 @section('og_type', 'article')
@@ -280,7 +280,7 @@
             </div>
         </div>
         {{-- Fin videos --}}
-        
+
         @include('components.modo_pack')
 
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
@@ -346,6 +346,12 @@
                 </button>
                 @endif
                 @endforeach
+
+                @if(isset($producto->GrupoProducto) && (str_contains(strtolower($producto->GrupoProducto->nombreGrupo), 'reset') || $producto->idGrupo == 77))
+                <button type="button" class="btn btn-warning mt-3 text-nowrap shadow" onclick="openServiciosModal({{ $producto->idProducto }})">
+                    <i class="bi bi-tools"></i> Herramientas de Servicio
+                </button>
+                @endif
             </div>
             <div class="col-6 text-center">
                 <button type="submit" class="btn btn-success" id="btnSave" disabled>Guardar <i class="bi bi-floppy"></i></button>
@@ -356,6 +362,45 @@
     </form>
     <br>
     <br>
+</div>
+
+<!-- Modal Herramientas de Servicio -->
+<div class="modal fade" id="modalServicios" tabindex="-1" aria-labelledby="modalServiciosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="modalServiciosLabel"><i class="bi bi-tools"></i> Administrar Herramientas de Servicio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    Aquí puedes marcar series específicas de este producto para que sean tratadas como herramientas de taller/servicio.
+                    Las series marcadas aquí no descontarán inventario cuando se cobren servicios con ellas.
+                </p>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>N° Serie</th>
+                                <th>Almacén</th>
+                                <th>Estado Actual</th>
+                                <th class="text-center">Herramienta de Servicio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-series-servicios">
+                            <tr>
+                                <td colspan="4" class="text-center">Cargando series...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="{{ route('js.update-product-scripts', [$tc]) }}"></script>
@@ -394,6 +439,99 @@
             `/pdf/producto-series/${idProducto}/${idAlmacen}`,
             '_blank'
         );
+    }
+
+    // Funciones para Herramientas de Servicio
+    function openServiciosModal(idProducto) {
+        const modal = new bootstrap.Modal(document.getElementById('modalServicios'));
+        modal.show();
+        loadSeriesServicios(idProducto);
+    }
+
+    function loadSeriesServicios(idProducto) {
+        const tbody = document.getElementById('tbody-series-servicios');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">Cargando series...</td></tr>';
+
+        fetch(`/producto/${idProducto}/series-herramienta`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    tbody.innerHTML = '';
+                    if (data.series.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay series registradas para este producto.</td></tr>';
+                        return;
+                    }
+
+                    data.series.forEach(serie => {
+                        const isChecked = serie.es_herramienta ? 'checked' : '';
+                        const badgeClass = serie.estado === 'NUEVO' ? 'bg-success' : (serie.estado === 'EN_USO' ? 'bg-warning text-dark' : 'bg-secondary');
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="fw-bold">${serie.numeroSerie}</td>
+                                <td>${serie.almacen}</td>
+                                <td><span class="badge ${badgeClass}">${serie.estado}</span></td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-flex justify-content-center">
+                                        <input class="form-check-input" style="cursor:pointer;" type="checkbox" role="switch" 
+                                            onchange="toggleHerramienta(${serie.idRegistro}, this)" ${isChecked}>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-danger">Error: ${data.message}</td></tr>`;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" class="text-danger">Error de conexión al cargar las series.</td></tr>';
+            });
+    }
+
+    function toggleHerramienta(idRegistro, checkbox) {
+        const isChecked = checkbox.checked;
+        checkbox.disabled = true; // deshabilitar mientras carga
+
+        fetch(`{{ route('producto.toggle.herramienta') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    idRegistro: idRegistro,
+                    es_herramienta: isChecked
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                checkbox.disabled = false;
+                if (!data.success) {
+                    checkbox.checked = !isChecked; // revertir
+                    Swal.fire('Error', data.message, 'error');
+                } else {
+                    // Pequeño toast o notificación visual opcional
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Serie actualizada'
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                checkbox.disabled = false;
+                checkbox.checked = !isChecked; // revertir
+                Swal.fire('Error', 'Error de conexión al guardar.', 'error');
+            });
     }
 </script>
 
