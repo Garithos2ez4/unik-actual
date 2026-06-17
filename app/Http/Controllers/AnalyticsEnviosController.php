@@ -37,10 +37,20 @@ class AnalyticsEnviosController extends Controller
         return [$fechaInicio, $fechaFin, $anio, $mes];
     }
 
+    private function validateAccess($userModel, int $idVista)
+    {
+        return $userModel->Accesos->contains('idVista', $idVista);
+    }
+
     public function index(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
         
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
 
         $filtros = compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin];
@@ -53,6 +63,10 @@ class AnalyticsEnviosController extends Controller
 
     public function getTopProvincias(Request $request)
     {
+        $userModel = $this->headerService->getModelUser();
+        if (!$this->validateAccess($userModel, 13)) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
         [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
 
         // Obtener el top 5 de destinos/provincias
@@ -76,6 +90,11 @@ class AnalyticsEnviosController extends Controller
 
     public function getTopClientes(Request $request)
     {
+        $userModel = $this->headerService->getModelUser();
+        if (!$this->validateAccess($userModel, 13)) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
 
         // Obtener el top 5 de clientes con más envíos
@@ -99,6 +118,10 @@ class AnalyticsEnviosController extends Controller
 
     public function getTopAgencias(Request $request)
     {
+        $userModel = $this->headerService->getModelUser();
+        if (!$this->validateAccess($userModel, 13)) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
         [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
 
         // Obtener el top 5 de agencias

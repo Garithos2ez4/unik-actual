@@ -8,4 +8,9 @@
 </div>
 <input type="hidden" id="dashboardurl" value="{{route('dashboard')}}">
 <script src="{{asset('js/dashboard.js')}}"></script>
+
+@if(isset($devolucionesHoy) && $devolucionesHoy->count() > 0)
+    @include('components.modal_devoluciones_hoy', ['devoluciones' => $devolucionesHoy])
+@endif
+
 @endsection

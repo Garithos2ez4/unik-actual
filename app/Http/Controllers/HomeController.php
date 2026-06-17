@@ -4,19 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Services\DashboardServiceInterface;
 use App\Services\HeaderServiceInterface;
+use App\Services\FalabellaOrderSyncService;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
     protected $dashboardService;
     protected $headerService;
+    protected $falabellaOrderSyncService;
 
     public function __construct(
         DashboardServiceInterface $dashboardService,
-        HeaderServiceInterface $headerService
+        HeaderServiceInterface $headerService,
+        FalabellaOrderSyncService $falabellaOrderSyncService
     ) {
         $this->dashboardService = $dashboardService;
         $this->headerService = $headerService;
+        $this->falabellaOrderSyncService = $falabellaOrderSyncService;
     }
 
     public function index(Request $request)
@@ -160,6 +164,31 @@ class HomeController extends Controller
             $stock[] = ['almacen' => $almacen, 'cantidad' => $this->dashboardService->getInventoryByAlmacen($almacen->idAlmacen)->sum('stock')];
         }
 
+        // Devoluciones de hoy (Falabella) para Resumen Gerencial
+        $devolucionesHoy = collect();
+        $tieneAccesoAnalitica = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 13) {
+                $tieneAccesoAnalitica = true;
+                break;
+            }
+        }
+
+        if ($tieneAccesoAnalitica) {
+            // Sincronizar automáticamente 1 vez por hora para no saturar la API ni ralentizar el Dashboard
+            $cacheKey = 'falabella_returns_sync_' . now()->toDateString();
+            if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+                try {
+                    $this->falabellaOrderSyncService->syncReturnsByDateRange(now()->toDateString(), now()->toDateString());
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addMinutes(60));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Error auto-sync devoluciones en dashboard: ' . $e->getMessage());
+                }
+            }
+
+            $devolucionesHoy = $this->falabellaOrderSyncService->getReturns(now()->toDateString(), now()->toDateString(), null);
+        }
+
         if ($request->query('query')) {
             return response()->json([
                 view('components.dashboard_content', [
@@ -179,7 +208,8 @@ class HomeController extends Controller
                     'publicacionesTopMonto' => $publicacionesTopMonto,
                     'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
                     'productosConFallas' => $productosConFallas,
-                    'ventas7Dias' => $ventas7Dias
+                    'ventas7Dias' => $ventas7Dias,
+                    'devolucionesHoy' => $devolucionesHoy,
                 ])->render(),
             ]);
         }
@@ -201,7 +231,8 @@ class HomeController extends Controller
             'publicacionesTopMonto' => $publicacionesTopMonto,
             'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
             'productosConFallas' => $productosConFallas,
-            'ventas7Dias' => $ventas7Dias
+            'ventas7Dias' => $ventas7Dias,
+            'devolucionesHoy' => $devolucionesHoy,
         ]);
     }
 

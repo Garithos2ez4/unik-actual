@@ -59,7 +59,7 @@ class ProductoController extends Controller
                     'estados' => $this->productoService->filtroEstados('idGrupo',decrypt($idGrupo))
                 ];
 
-                return view('productos',[
+                return view('productos.productos',[
                     'user' => $userModel,
                     'grupos' => $grupos,
                     'categorias' => $categorias,
@@ -88,7 +88,7 @@ class ProductoController extends Controller
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $almacenes = $this->productoService->getAllAlmacen();
 
-                return view('producto',['user' => $userModel,
+                return view('productos.producto',['user' => $userModel,
                                         'producto' => $producto,
                                         'marcas' => $marcas,
                                         'proveedor' => $proveedor,

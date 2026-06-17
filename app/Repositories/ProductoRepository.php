@@ -305,11 +305,11 @@ class ProductoRepository implements ProductoRepositoryInterface
         }
 
         if (isset($filtros['marca'])) {
-            $query->where('idMarca', '=', $filtros['marca']);
+            $query->where('Producto.idMarca', '=', $filtros['marca']);
         }
 
         if (isset($filtros['estado'])) {
-            $query->where('estadoProductoWeb', '=', $filtros['estado']);
+            $query->where('Producto.estadoProductoWeb', '=', $filtros['estado']);
         }
 
         if (isset($filtros['almacen'])) {
