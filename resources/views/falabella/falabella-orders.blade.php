@@ -129,15 +129,19 @@
                             </td>
                             <td>
                                 <div class="small">
-                                    @foreach($order->items as $item)
+                                    @forelse($order->items as $item)
                                     <div class="fw-bold text-primary">{{ $item->shop_sku ?: $item->falabella_sku }}</div>
-                                    @endforeach
+                                    @empty
+                                        @if($order->items_count > 0)
+                                            <span class="text-danger" style="font-size: 10px;">Pendiente API</span>
+                                        @endif
+                                    @endforelse
                                 </div>
                             </td>
                             <td>
                                 <div class="fw-bold text-center">{{ $order->items_count }} uds</div>
                                 <div class="small text-muted">
-                                    @foreach($order->items->take(3) as $item)
+                                    @forelse($order->items->take(3) as $item)
                                     <div class="mb-1">
                                         <span class="d-block text-dark fw-bold" title="{{ $item->name }}">
                                             {{ $item->name }}
@@ -145,7 +149,15 @@
                                         <span class="d-block text-muted  " style="font-size: 10px; max-width: 150px;" title="SKU Seller">{{ $item->seller_sku }}</span>
 
                                     </div>
-                                    @endforeach
+                                    @empty
+                                        @if($order->items_count > 0)
+                                            <div class="text-center mt-1">
+                                                <a href="{{ route('plataformas.falabella.orders', ['search' => $order->order_number ?? $order->order_id]) }}" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size: 11px;" title="La API de Falabella falló al descargar los items. Clic para intentar forzar carga.">
+                                                    <i class="bi bi-cloud-download"></i> Cargar Items
+                                                </a>
+                                            </div>
+                                        @endif
+                                    @endforelse
                                     @if($order->items->count() > 3)
                                     <span class="text-primary" style="font-size: 10px;">+{{ $order->items->count() - 3 }} más</span>
                                     @endif

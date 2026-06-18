@@ -56,6 +56,9 @@
         <div id="container-lista-egresos">
             <x-lista_egresos :egresos="$egresos" :container="'container-lista-egresos'" :usuarios="$usuarios" />
         </div>
+        <div class="d-flex justify-content-center mt-3">
+            {{ $egresos->withQueryString()->links('pagination::bootstrap-5') }}
+        </div>
 
 
         <!-- Modal -->

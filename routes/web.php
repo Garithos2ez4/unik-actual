@@ -152,6 +152,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
     Route::get('/egresos/pendientes-envios', [EgresoController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
+    Route::post('/egresos/pendientes-envios/mark', [EgresoController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');

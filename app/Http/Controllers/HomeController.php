@@ -266,7 +266,7 @@ class HomeController extends Controller
         return view('stockmin_dashboard', [
             'user' => $userModel,
             'productos' => $productos,
-            'tc' => $this->calculadoraService->getTasaCambio()
+            'tc' => app(\App\Services\CalculadoraServiceInterface::class)->getTasaCambio()
         ]);
     }
 

@@ -389,6 +389,7 @@ class EgresoController extends Controller
 
                             if ($registro) {
                                 $series[] = [
+                                    'idEnvioProducto' => $pe->idEnvioProvinciaProducto,
                                     'serial' => $serialClasificado,
                                     'producto' => $registro->DetalleComprobante->Producto->nombreProducto ?? 'Producto desconocido',
                                     'envio' => $pe->EnvioProvincia->toArray(),
@@ -408,6 +409,22 @@ class EgresoController extends Controller
         }
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function markPendienteEgresado(Request $request)
+    {
+        $idEnvioProducto = $request->input('id_envio_producto');
+        $serial = $request->input('serial');
+
+        $envioProducto = \App\Models\EnvioProvinciaProducto::find($idEnvioProducto);
+        if ($envioProducto && $envioProducto->nota_producto) {
+            $nota = $envioProducto->nota_producto;
+            $nota = preg_replace('/S\/N:\s*' . preg_quote($serial, '/') . '/', 'EGRESADO: ' . $serial, $nota);
+            $envioProducto->nota_producto = $nota;
+            $envioProducto->save();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false, 'message' => 'No encontrado']);
     }
 
     public function searchRegistro(Request $request)

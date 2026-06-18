@@ -69,9 +69,14 @@
                                 <span class="badge bg-secondary fs-6" id="serial-{{ $loop->index }}">{{ $item['serial'] }}</span>
                             </td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="copiarSerial('{{ $item['serial'] }}', this)">
-                                    <i class="bi bi-clipboard"></i> Copiar
-                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="copiarSerial('{{ $item['serial'] }}', this)">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="marcarEgresado('{{ $item['idEnvioProducto'] }}', '{{ $item['serial'] }}', this)" title="Marcar como ya egresado (ocultar de la lista)">
+                                        <i class="bi bi-check-all"></i> Egresado
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -105,6 +110,47 @@
         }).catch(err => {
             console.error('Error al copiar: ', err);
             alert('No se pudo copiar el serial. ' + err);
+        });
+    }
+
+    function marcarEgresado(idEnvioProducto, serial, btnElement) {
+        if (!confirm('¿Estás seguro que deseas marcar el serial "' + serial + '" como ya egresado o ignorado? Desaparecerá de esta lista para siempre.')) {
+            return;
+        }
+        
+        let originalText = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="spinner-border spinner-border-sm"></i>';
+        btnElement.disabled = true;
+
+        fetch('{{ route("egresos.pendientes_envios.mark") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                id_envio_producto: idEnvioProducto,
+                serial: serial
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let row = btnElement.closest('tr');
+                row.style.transition = 'opacity 0.5s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 500);
+            } else {
+                alert('Error al marcar como egresado: ' + (data.message || 'Desconocido'));
+                btnElement.innerHTML = originalText;
+                btnElement.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('Error de red o de servidor.');
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
         });
     }
 </script>
