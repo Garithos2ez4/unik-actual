@@ -267,15 +267,74 @@ class EnvioProvinciaController extends Controller
 
         // Cargar nombres de subagencias de Shalom desde la Hoja2 del Excel cargado para mapeo exacto
         $shalomNamesMap = [];
-        $normalize = function($str) {
+        $normalize = function ($str) {
             $str = mb_strtoupper($str, 'UTF-8');
             $unwanted_array = [
-                'Š'=>'S', 'š'=>'s', 'Ž'=>'Z', 'ž'=>'z', 'À'=>'A', 'Á'=>'A', 'Â'=>'A', 'Ã'=>'A', 'Ä'=>'A', 'Å'=>'A', 'Æ'=>'A', 'Ç'=>'C',
-                'È'=>'E', 'É'=>'E', 'Ê'=>'E', 'Ë'=>'E', 'Ì'=>'I', 'Í'=>'I', 'Î'=>'I', 'Ï'=>'I', 'Ñ'=>'N', 'Ò'=>'O', 'Ó'=>'O', 'Ô'=>'O',
-                'Õ'=>'O', 'Ö'=>'O', 'Ø'=>'O', 'Ù'=>'U', 'Ú'=>'U', 'Û'=>'U', 'Ü'=>'U', 'Ý'=>'Y', 'Þ'=>'B', 'ß'=>'Ss', 'à'=>'a', 'á'=>'a',
-                'â'=>'a', 'ã'=>'a', 'ä'=>'a', 'å'=>'a', 'æ'=>'a', 'ç'=>'c', 'è'=>'e', 'é'=>'e', 'â'=>'e', 'ë'=>'e', 'ì'=>'i', 'í'=>'i',
-                'î'=>'i', 'ï'=>'i', 'ð'=>'o', 'ñ'=>'n', 'ò'=>'o', 'ó'=>'o', 'ô'=>'o', 'õ'=>'o', 'ö'=>'o', 'ø'=>'o', 'ù'=>'u', 'ú'=>'u',
-                'û'=>'u', 'ü'=>'u', 'ý'=>'y', 'þ'=>'b', 'ÿ'=>'y'
+                'Š' => 'S',
+                'š' => 's',
+                'Ž' => 'Z',
+                'ž' => 'z',
+                'À' => 'A',
+                'Á' => 'A',
+                'Â' => 'A',
+                'Ã' => 'A',
+                'Ä' => 'A',
+                'Å' => 'A',
+                'Æ' => 'A',
+                'Ç' => 'C',
+                'È' => 'E',
+                'É' => 'E',
+                'Ê' => 'E',
+                'Ë' => 'E',
+                'Ì' => 'I',
+                'Í' => 'I',
+                'Î' => 'I',
+                'Ï' => 'I',
+                'Ñ' => 'N',
+                'Ò' => 'O',
+                'Ó' => 'O',
+                'Ô' => 'O',
+                'Õ' => 'O',
+                'Ö' => 'O',
+                'Ø' => 'O',
+                'Ù' => 'U',
+                'Ú' => 'U',
+                'Û' => 'U',
+                'Ü' => 'U',
+                'Ý' => 'Y',
+                'Þ' => 'B',
+                'ß' => 'Ss',
+                'à' => 'a',
+                'á' => 'a',
+                'â' => 'a',
+                'ã' => 'a',
+                'ä' => 'a',
+                'å' => 'a',
+                'æ' => 'a',
+                'ç' => 'c',
+                'è' => 'e',
+                'é' => 'e',
+                'â' => 'e',
+                'ë' => 'e',
+                'ì' => 'i',
+                'í' => 'i',
+                'î' => 'i',
+                'ï' => 'i',
+                'ð' => 'o',
+                'ñ' => 'n',
+                'ò' => 'o',
+                'ó' => 'o',
+                'ô' => 'o',
+                'õ' => 'o',
+                'ö' => 'o',
+                'ø' => 'o',
+                'ù' => 'u',
+                'ú' => 'u',
+                'û' => 'u',
+                'ü' => 'u',
+                'ý' => 'y',
+                'þ' => 'b',
+                'ÿ' => 'y'
             ];
             $str = strtr($str, $unwanted_array);
             $str = preg_replace('/\s+/', ' ', $str);
@@ -303,7 +362,7 @@ class EnvioProvinciaController extends Controller
             // Shalom exige que MERCADERIA sea un valor de su lista desplegable, no el nombre del producto
             // Valores válidos: SOBRE, PAQUETE XXS, PAQUETE XS, PAQUETE S, PAQUETE M, PAQUETE L
             $mercaderia = 'PAQUETE L'; // Default fallback
-            
+
             if (optional(optional($envio->Dimension)->tipoPaquete)->nombre) {
                 $nombreTipo = strtoupper(trim($envio->Dimension->tipoPaquete->nombre));
                 $validos = ['SOBRE', 'PAQUETE XXS', 'PAQUETE XS', 'PAQUETE S', 'PAQUETE M', 'PAQUETE L'];
@@ -312,10 +371,9 @@ class EnvioProvinciaController extends Controller
                 }
             }
 
-            $cantidad = $envio->Productos->sum('cantidad');
-            if ($cantidad == 0) $cantidad = 1;
+            // Por solicitud del usuario, la cantidad en el Excel masivo SIEMPRE debe ser 1
+            $cantidad = 1;
 
-            // Extraer solo el nombre de la sucursal (último segmento de "DEPTO / PROV / DIST / TERMINAL")
             $destinoRaw = optional($envio->SubAgencia)->nombre_oficina ?? optional($envio->Destino)->nombre ?? '';
             $partes = explode(' / ', $destinoRaw);
             $destino = trim(end($partes));
@@ -722,7 +780,6 @@ class EnvioProvinciaController extends Controller
             }
 
             return response()->json(['success' => false, 'message' => 'No se pudo conectar con el servidor de Transporte Flores.']);
-
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => 'Error: ' . $th->getMessage()]);
         }

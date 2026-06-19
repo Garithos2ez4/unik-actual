@@ -37,7 +37,7 @@
 
                 <div class="col-12 col-sm-6">
                     <label class="form-label">N° de Documento <span class="required-star">*</span></label>
-                    <input type="text" name="numeroDocumento" id="numeroDocumento" class="form-control" placeholder="Ej: 72345678" required maxlength="20" inputmode="numeric">
+                    <input type="text" name="numeroDocumento" id="numeroDocumento" class="form-control" placeholder="Ej: 72345678" required maxlength="20" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
 
                 <div class="col-12 col-sm-6">
@@ -57,7 +57,7 @@
 
                 <div class="col-12 col-sm-6">
                     <label class="form-label">Celular / Teléfono <span class="required-star">*</span></label>
-                    <input type="tel" name="telefono" id="telefono" class="form-control" placeholder="Ej: 987654321" required maxlength="20" inputmode="tel">
+                    <input type="tel" name="telefono" id="telefono" class="form-control" placeholder="Ej: 987654321" required minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
                 </div>
 
                 <div class="col-12">

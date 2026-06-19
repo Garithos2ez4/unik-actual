@@ -164,7 +164,7 @@
                                                     <option value="custom" {{ optional($envio->Dimension)->idTipoPaquete ? '' : 'selected' }}>📦 Otra Medida (Personalizado / Vacio)</option>
                                                     @if(isset($tiposPaquete))
                                                         @foreach($tiposPaquete as $paquete)
-                                                            <option value="{{ $paquete->idTipoPaquete }}" data-w="{{ $paquete->ancho_defecto }}" data-h="{{ $paquete->alto_defecto }}" data-l="{{ $paquete->largo_defecto }}" data-wt="{{ $paquete->peso_maximo }}" {{ optional($envio->Dimension)->idTipoPaquete == $paquete->idTipoPaquete ? 'selected' : '' }}>{{ $paquete->icono }} {{ $paquete->nombre }}</option>
+                                                            <option value="{{ $paquete->idTipoPaquete }}" data-agencia="{{ $paquete->idAgencia }}" data-w="{{ $paquete->ancho_defecto }}" data-h="{{ $paquete->alto_defecto }}" data-l="{{ $paquete->largo_defecto }}" data-wt="{{ $paquete->peso_maximo }}" {{ optional($envio->Dimension)->idTipoPaquete == $paquete->idTipoPaquete ? 'selected' : '' }}>{{ $paquete->icono }} {{ $paquete->nombre }}</option>
                                                         @endforeach
                                                     @endif
                                                 </select>
@@ -355,9 +355,30 @@
         const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
         const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
 
-        // Mostrar/Ocultar seccion de medidas si es Shalom
-        if (nombreAgencia === 'SHALOM') {
+        // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
+        if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
             document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+            
+            // Filtrar opciones del select por idAgencia
+            const selectCaja = document.getElementById('tipo_caja_select');
+            const options = selectCaja.querySelectorAll('option[data-agencia]');
+            
+            options.forEach(opt => {
+                if (opt.getAttribute('data-agencia') == idAgencia) {
+                    opt.style.display = ''; // Mostrar
+                } else {
+                    opt.style.display = 'none'; // Ocultar
+                }
+            });
+            
+            // Si la opción seleccionada no pertenece a la agencia actual y no es 'custom', resetear a custom
+            if (selectCaja.value !== 'custom') {
+                const selectedOpt = selectCaja.options[selectCaja.selectedIndex];
+                if (selectedOpt && selectedOpt.getAttribute('data-agencia') != idAgencia) {
+                    selectCaja.value = 'custom';
+                    aplicarMedidasCaja();
+                }
+            }
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
         }
@@ -424,9 +445,22 @@
         const selectAgencia = document.querySelector('select[name="idAgencia"]');
         const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
         const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+        const idAgencia = selectAgencia.value;
         
-        if (nombreAgencia === 'SHALOM') {
+        if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
             document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+            
+            // Filtrar opciones del select por idAgencia
+            const selectCaja = document.getElementById('tipo_caja_select');
+            const options = selectCaja.querySelectorAll('option[data-agencia]');
+            
+            options.forEach(opt => {
+                if (opt.getAttribute('data-agencia') == idAgencia) {
+                    opt.style.display = ''; // Mostrar
+                } else {
+                    opt.style.display = 'none'; // Ocultar
+                }
+            });
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
         }
@@ -437,4 +471,5 @@
 
 @include('envios.logic.cotizador-shalom')
 @include('envios.logic.restricciones-shalom')
+@include('envios.logic.restricciones-olva')
 @endsection

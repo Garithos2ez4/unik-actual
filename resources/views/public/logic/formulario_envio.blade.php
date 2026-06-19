@@ -133,6 +133,17 @@
     // ─── Autocompletar Cliente por Documento ───────────────────
     document.getElementById('numeroDocumento').addEventListener('input', function(e) {
         let val = e.target.value.trim();
+        
+        // Desbloquear campos por defecto mientras escribe
+        const fieldsToLock = ['nombre', 'apellidoPaterno', 'apellidoMaterno'];
+        fieldsToLock.forEach(id => {
+            let el = document.getElementById(id);
+            if (el) {
+                el.readOnly = false;
+                el.classList.remove('bg-light');
+            }
+        });
+
         // Buscar solo si el documento tiene 8 (DNI) o 11 (RUC) caracteres
         if (val.length === 8 || val.length === 11) {
             fetch(`/formulario-envio/api/buscar-cliente/${val}`)
@@ -141,9 +152,26 @@
                     if (data.success) {
                         const c = data.cliente;
                         if (c.idTipoDocumento) document.getElementById('idTipoDocumento').value = c.idTipoDocumento;
-                        if (c.nombre) document.getElementById('nombre').value = c.nombre;
-                        if (c.apellidoPaterno) document.getElementById('apellidoPaterno').value = c.apellidoPaterno;
-                        if (c.apellidoMaterno) document.getElementById('apellidoMaterno').value = c.apellidoMaterno;
+                        
+                        if (c.nombre) {
+                            let el = document.getElementById('nombre');
+                            el.value = c.nombre;
+                            el.readOnly = true;
+                            el.classList.add('bg-light');
+                        }
+                        if (c.apellidoPaterno) {
+                            let el = document.getElementById('apellidoPaterno');
+                            el.value = c.apellidoPaterno;
+                            el.readOnly = true;
+                            el.classList.add('bg-light');
+                        }
+                        if (c.apellidoMaterno) {
+                            let el = document.getElementById('apellidoMaterno');
+                            el.value = c.apellidoMaterno;
+                            el.readOnly = true;
+                            el.classList.add('bg-light');
+                        }
+                        
                         if (c.telefono) document.getElementById('telefono').value = c.telefono;
                         if (c.correo) document.getElementById('correo').value = c.correo;
 
@@ -279,6 +307,19 @@
                 icon: 'error',
                 title: 'Campos incompletos',
                 html: 'Por favor completa:<br><b>' + faltantes.join(', ') + '</b>',
+                confirmButtonColor: '#00b1b9'
+            });
+            return;
+        }
+
+        const telefonoVal = document.getElementById('telefono').value.trim();
+        if (telefonoVal.length !== 9) {
+            e.preventDefault();
+            document.getElementById('telefono').style.borderColor = '#ef4444';
+            Swal.fire({
+                icon: 'error',
+                title: 'Número inválido',
+                text: 'El número de celular debe tener exactamente 9 dígitos.',
                 confirmButtonColor: '#00b1b9'
             });
             return;

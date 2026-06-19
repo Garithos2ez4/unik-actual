@@ -206,6 +206,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/shalom-terminals', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getTerminals']);
         Route::post('/shalom-cotizar', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'calculate']);
         Route::get('/shalom-restricciones', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getRestricciones']);
+        Route::get('/olva-cajas', [\App\Http\Controllers\Api\OlvaTarifaController::class, 'getCajas']);
 
         // AJAX Endpoints
         Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');

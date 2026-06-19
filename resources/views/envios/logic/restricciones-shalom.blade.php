@@ -71,10 +71,21 @@
         const selectedSub = selectSub.options[selectSub.selectedIndex];
         const nombreCompleto = selectedSub ? selectedSub.text : '';
         let nombreOficina = nombreCompleto;
-        if (nombreCompleto.includes(' - ')) {
-            nombreOficina = nombreCompleto.split(' - ')[0].trim();
-        } else if (nombreCompleto.includes(' (')) {
-            nombreOficina = nombreCompleto.split(' (')[0].trim();
+
+        // Primero, si tiene un guion que NO está dentro de un paréntesis, separamos por guion.
+        // Pero la forma más segura para el formato de Shalom suele ser: "NOMBRE TERMINAL - DIRECCION" o "NOMBRE TERMINAL (DIRECCION)"
+        // Vamos a limpiar todo lo que esté después del primer " (" o " - "
+        let indexParentesis = nombreCompleto.indexOf(' (');
+        let indexGuion = nombreCompleto.indexOf(' - ');
+
+        if (indexParentesis !== -1 && indexGuion !== -1) {
+            // Tomamos el separador que aparezca primero
+            let minIndex = Math.min(indexParentesis, indexGuion);
+            nombreOficina = nombreCompleto.substring(0, minIndex).trim();
+        } else if (indexParentesis !== -1) {
+            nombreOficina = nombreCompleto.substring(0, indexParentesis).trim();
+        } else if (indexGuion !== -1) {
+            nombreOficina = nombreCompleto.substring(0, indexGuion).trim();
         } else {
             nombreOficina = nombreCompleto.trim();
         }
@@ -111,7 +122,7 @@
             return;
         }
 
-        // Construir info de restricciones para recibir
+        // Construir info de restricciones para recibir😁
         const pesoMax = parseFloat(restriccion.recibe.hasta.kg) || 0;
         const volMax = parseFloat(restriccion.recibe.hasta.m3) || 0;
         const dimRecibe = restriccion.dimensiones?.recibe || {};
@@ -119,28 +130,28 @@
         const altoMax = parseFloat(dimRecibe.alto) || 0;
         const anchoMax = parseFloat(dimRecibe.ancho) || 0;
 
-        let detallesHtml = `<div class="d-flex flex-wrap gap-3 mt-1">`;
-        detallesHtml += `<span class="badge bg-primary bg-opacity-10 text-white border border-primary px-2 py-1"><i class="bi bi-building"></i> ${restriccion.tipo_agencia}</span>`;
+        let detallesHtml = `<div class="d-flex flex-wrap gap-3 mt-2">`;
+        detallesHtml += `<span class="badge bg-primary text-white border border-primary px-3 py-2 fs-6"><i class="bi bi-building"></i> ${restriccion.tipo_agencia}</span>`;
 
         if (pesoMax > 0) {
-            detallesHtml += `<span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2 py-1">⚖️ Máx: <strong>${pesoMax} KG</strong></span>`;
+            detallesHtml += `<span class="badge bg-warning text-dark border border-warning px-3 py-2 fs-6">⚖️ Máx: <strong>${pesoMax} KG</strong></span>`;
         }
         if (volMax > 0) {
-            detallesHtml += `<span class="badge bg-info bg-opacity-10 text-dark border border-info px-2 py-1">📦 Máx: <strong>${volMax} m³</strong></span>`;
+            detallesHtml += `<span class="badge bg-info text-dark border border-info px-3 py-2 fs-6">📦 Máx: <strong>${volMax} m³</strong></span>`;
         }
         if (largoMax > 0 && altoMax > 0 && anchoMax > 0) {
-            detallesHtml += `<span class="badge bg-secondary bg-opacity-10 text-dark border border-secondary px-2 py-1">📐 Dim: <strong>${largoMax}×${anchoMax}×${altoMax} m</strong></span>`;
+            detallesHtml += `<span class="badge bg-secondary text-white border border-secondary px-3 py-2 fs-6">📐 Dim: <strong>${largoMax}×${anchoMax}×${altoMax} m</strong></span>`;
         }
         if (restriccion.reparto == 1) {
-            detallesHtml += `<span class="badge bg-success bg-opacity-10 text-dark border border-success px-2 py-1">🚚 Con Reparto</span>`;
+            detallesHtml += `<span class="badge bg-success text-white border border-success px-3 py-2 fs-6">🚚 Con Reparto</span>`;
         }
         detallesHtml += `</div>`;
 
         alertaDiv.innerHTML = `
-            <div class="alert alert-warning border-warning d-flex align-items-start py-2 mb-0" style="font-size: 0.85rem;">
-                <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-warning mt-1"></i>
+            <div class="alert alert-warning border-warning d-flex align-items-center py-3 mb-0" style="font-size: 1.15rem;">
+                <i class="bi bi-exclamation-triangle-fill me-3 fs-1 text-warning"></i>
                 <div>
-                    <strong>⚠️ Restricciones de "${restriccion.nombre_terminal}" (Recepción)</strong>
+                    <strong class="fs-5">⚠️ Restricciones de "${restriccion.nombre_terminal}" (Recepción)</strong>
                     ${detallesHtml}
                 </div>
             </div>`;
@@ -262,13 +273,20 @@
             }
         }
 
+        // Validar campos requeridos en el form antes de enviar
+        const form = document.getElementById('form-create-envio');
+        if (form && !form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
         // Continuar con el flujo original
         let clave = document.getElementById('input-clave').value.trim();
         if (clave !== '') {
             var myModal = new bootstrap.Modal(document.getElementById('confirmSaveModal'));
             myModal.show();
-        } else {
-            document.getElementById('form-create-envio').submit();
+        } else if (form) {
+            form.submit();
         }
     }
 
