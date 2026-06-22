@@ -139,6 +139,7 @@ class FormularioPublicoController extends Controller
             'entrega_domicilio' => $request->has('entrega_domicilio') ? 1 : 0,
             'dir' => $request->dir ?? '',
             'ref' => $request->ref ?? '',
+            'origen' => 'FORMULARIO_PUBLICO',
         ]);
 
         // Marcar solicitud como procesada
@@ -176,6 +177,50 @@ class FormularioPublicoController extends Controller
             ->where('estado', 1)
             ->orderBy('nombre_oficina', 'asc')
             ->get(['idSubAgencia', 'nombre_oficina', 'direccion']);
+
+        // Filtrar agencias de Shalom que no reciben paquetes (Ej. Aeropuertos, México, Luna Pizarro)
+        if ($idAgencia == 1) { // 1 = SHALOM
+            try {
+                // Obtener las restricciones usando el controlador (consulta API en tiempo real + caché local)
+                $shalomController = app(\App\Http\Controllers\Api\ShalomTarifaController::class);
+                $response = $shalomController->getRestricciones();
+                $restriccionesData = json_decode($response->getContent(), true)['data'] ?? [];
+
+                if (!empty($restriccionesData)) {
+                    $subagencias = $subagencias->filter(function ($sub) use ($restriccionesData) {
+                        $partes = explode(' / ', $sub->nombre_oficina);
+                        $nombreOficina = trim(end($partes));
+                        $nombreNorm = preg_replace('/\s+/', ' ', strtoupper($nombreOficina));
+                        
+                        $restriccion = null;
+                        foreach ($restriccionesData as $term) {
+                            $terminalName = $term['nombre_terminal'] ?? '';
+                            $terminalNorm = preg_replace('/\s+/', ' ', strtoupper(trim($terminalName)));
+                            if (empty($terminalNorm)) continue;
+                            
+                            if ($terminalNorm === $nombreNorm || str_contains($nombreNorm, $terminalNorm) || str_contains($terminalNorm, $nombreNorm)) {
+                                $restriccion = $term;
+                                break;
+                            }
+                        }
+                        
+                        if (!$restriccion) {
+                            return true; 
+                        }
+                        
+                        $puedeRecibir = isset($restriccion['recibe']) 
+                                        && is_array($restriccion['recibe']) 
+                                        && !empty($restriccion['recibe']) 
+                                        && isset($restriccion['recibe']['hasta']);
+                                        
+                        return $puedeRecibir;
+                    })->values(); // Re-indexar para evitar problemas con JSON array/object
+                }
+            } catch (\Exception $e) {
+                // Si falla la consulta a la API, no filtramos y mostramos todo por defecto
+            }
+        }
+
         return response()->json($subagencias);
     }
 

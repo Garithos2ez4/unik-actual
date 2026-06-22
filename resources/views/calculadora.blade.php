@@ -180,6 +180,12 @@
         </div>
         <h2 id="proba"></h2>
     </div>
-    <script src="{{ route('js.calculator-scripts') }}"></script>
-    
+    <script>
+        window.APP_DATA = {
+            facturacionFactor: {{ ($valores->facturacion / 100) + 1 }},
+            igvFactor: {{ ($valores->igv / 100) + 1 }},
+            tasaCambio: {{ $valores->tasaCambio }}
+        };
+    </script>
+    <script src="{{ asset('js/calculator-scripts.js') }}?v=1.00"></script>
 @endsection

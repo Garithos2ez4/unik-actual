@@ -112,7 +112,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-12 mt-2">
+                <div class="col-12 mt-2" id="container-subagencia" style="display:none;">
                     <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
                     <select name="idSubAgencia" id="select-subagencia" class="form-select" disabled>
                         <option value="">Primero elija Agencia y Distrito...</option>

@@ -76,6 +76,9 @@ function sendFormNewCliente() {
     .then(data => {
         objectCliente = data;
         alertBootstrap('Cliente '+data.numeroDocumento+' registrado.', 'success');
+        if (typeof window.onClienteCreado === "function") {
+            window.onClienteCreado(data);
+        }
     }) 
     .catch(error => {
         console.log('error: ' + error);

@@ -523,7 +523,19 @@ class EgresoController extends Controller
 
         $queryBuilder = \App\Models\Producto::query()
             ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
-            ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1', 'MarcaProducto.nombreMarca', 'Producto.precioDolar');
+            ->select(
+                'Producto.idProducto', 
+                'Producto.nombreProducto', 
+                'Producto.modelo', 
+                'Producto.codigoProducto', 
+                'Producto.imagenProducto1', 
+                'MarcaProducto.nombreMarca', 
+                'Producto.precioDolar',
+                'Producto.idGrupo',
+                'Producto.gananciaExtra',
+                'Producto.estadoProductoWeb',
+                'Producto.usar_tc_fijo'
+            );
 
         if ($tipo === 'componente') {
             $queryBuilder->whereIn('Producto.idGrupo', [51, 52, 94]);
@@ -542,6 +554,52 @@ class EgresoController extends Controller
             })
             ->take(10)
             ->get();
+            
+        // Calcular precio de venta sugerido igual que la Web
+        $calculadora1 = \App\Models\Calculadora::find(1);
+        $calculadora2 = \App\Models\Calculadora::find(2);
+        
+        $tcSunat = $calculadora1 ? $calculadora1->tasaCambio : 3.42;
+        $tcFijo = $calculadora2 ? $calculadora2->tasaCambio : 3.80;
+        $igv = $calculadora1 ? $calculadora1->igv : 18;
+        $facturacion = $calculadora1 ? $calculadora1->facturacion : 1;
+        $empresaUnik = \App\Models\Empresa::find(2);
+        $comisionEmpresa = $empresaUnik ? $empresaUnik->comision : 5;
+
+        // Caché de comisiones
+        $comisionesPorGrupo = [];
+
+        foreach ($productos as $p) {
+            $tc = $p->usar_tc_fijo ? $tcFijo : $tcSunat;
+            $precioSolesBase = $p->precioDolar * $tc;
+            $gananciaSoles = $p->gananciaExtra * $tc;
+            
+            // Rango de comisión
+            $comisionRango = 0;
+            if (!isset($comisionesPorGrupo[$p->idGrupo])) {
+                $comisionesPorGrupo[$p->idGrupo] = \App\Models\Comision::where('idGrupoProducto', $p->idGrupo)->with('RangoPrecio')->get();
+            }
+            foreach ($comisionesPorGrupo[$p->idGrupo] as $com) {
+                if ($com->RangoPrecio && $precioSolesBase > $com->RangoPrecio->rangoMin && $precioSolesBase < $com->RangoPrecio->rangoMax) {
+                    $comisionRango = $com->comision;
+                    break;
+                }
+            }
+            
+            $precioIgv = $precioSolesBase * (1 + ($igv / 100));
+            $precioSinFacturar = $precioIgv * (1 + ($comisionRango / 100));
+            $precioFacturado = $precioSinFacturar * (1 + ($facturacion / 100));
+            
+            if ($p->estadoProductoWeb == 'EXCLUSIVO' || $p->estadoProductoWeb == 'OFERTA') {
+                $precioCalculado = $precioIgv;
+            } else {
+                $precioCalculado = ($precioSinFacturar + $precioFacturado) / 2;
+            }
+            
+            $totalSoles = $precioCalculado * (1 + ($comisionEmpresa / 100)) + $gananciaSoles;
+            
+            $p->precioWebSoles = round($totalSoles, 1);
+        }
 
         return response()->json($productos);
     }

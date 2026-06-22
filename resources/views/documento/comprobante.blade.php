@@ -362,7 +362,13 @@
         </form>
     </div>
     <x-scanner :multiple="true" />
-    <script src="{{ route('js.documento-scripts', [$documento->idComprobante]) }}"></script>
+    <script>
+        window.APP_DATA = {
+            idComprobante: {{ $documento->idComprobante }},
+            estados: @json($estados)
+        };
+    </script>
+    <script src="{{ asset('js/documento-scripts.js') }}?v=1.00"></script>
     <script src="{{asset('js/documento.js')}}"></script>
 
 @endsection

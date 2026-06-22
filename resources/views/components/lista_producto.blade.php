@@ -99,5 +99,9 @@
     </div>
     @endif
     <x-paginacion :justify="'end'" :coleccion="$productos" :container="$container"/>
-    <script src="{{ route('js.list-product-scripts',[$tc]) }}"></script>
+    <script>
+        window.APP_DATA = window.APP_DATA || {};
+        window.APP_DATA.tc = {{ $tc ?? '0' }};
+    </script>
+    <script src="{{ asset('js/list-products-scripts.js') }}?v=1.00"></script>
 </div>

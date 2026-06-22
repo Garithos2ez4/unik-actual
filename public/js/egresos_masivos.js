@@ -61,7 +61,7 @@
         suggestionsEl.innerHTML = productos.map(p => {
             const imgSrc = p.imagenProducto1 ? window.assetUrl + '/' + p.imagenProducto1 : '';
             return `
-                    <li class="list-group-item list-group-item-action d-flex align-items-center" style="cursor:pointer" data-id="${p.idProducto}" data-nombre="${escapeHtml(p.nombreProducto)}" data-marca="${escapeHtml(p.nombreMarca || '')}" data-modelo="${escapeHtml(p.modelo || '')}" data-codigo="${escapeHtml(p.codigoProducto || '')}" data-img="${escapeHtml(imgSrc)}" data-precio="${p.precioDolar || 0}">
+                    <li class="list-group-item list-group-item-action d-flex align-items-center" style="cursor:pointer" data-id="${p.idProducto}" data-nombre="${escapeHtml(p.nombreProducto)}" data-marca="${escapeHtml(p.nombreMarca || '')}" data-modelo="${escapeHtml(p.modelo || '')}" data-codigo="${escapeHtml(p.codigoProducto || '')}" data-img="${escapeHtml(imgSrc)}" data-precio="${p.precioDolar || 0}" data-precioweb="${p.precioWebSoles || 0}">
                         ${imgSrc ? `<img src="${imgSrc}" style="width:35px;height:35px;object-fit:contain;margin-right:8px;border-radius:4px;background:#f1f1f1">` : ''}
                         <div>
                             <strong>${escapeHtml(p.nombreProducto)}</strong><br>
@@ -80,7 +80,8 @@
                     modelo: this.dataset.modelo,
                     codigoProducto: this.dataset.codigo,
                     imagenProducto1: this.dataset.img,
-                    precioDolar: this.dataset.precio
+                    precioDolar: this.dataset.precio,
+                    precioWebSoles: this.dataset.precioweb
                 });
             });
         });
@@ -111,10 +112,16 @@
         document.getElementById('suggestions-sku-masivo').innerHTML = '';
         document.getElementById('sku-validate-masivo').className = 'bi bi-check-circle text-success';
 
-        // Calcular precio sugerido en Soles basado en USD * tasa de cambio
-        const tasaCambio = parseFloat(window.tasaCambio) || 3.42;
-        const precioDolar = parseFloat(producto.precioDolar) || 0;
-        const precioSugeridoSoles = (precioDolar * tasaCambio).toFixed(2);
+        // Calcular precio sugerido en Soles usando el precio calculado por el backend o fallback
+        const precioWebSoles = parseFloat(producto.precioWebSoles) || 0;
+        let precioSugeridoSoles = 0;
+        if (precioWebSoles > 0) {
+            precioSugeridoSoles = precioWebSoles.toFixed(2);
+        } else {
+            const tasaCambio = parseFloat(window.tasaCambio) || 3.42;
+            const precioDolar = parseFloat(producto.precioDolar) || 0;
+            precioSugeridoSoles = (precioDolar * tasaCambio).toFixed(2);
+        }
 
         // Asignar al input de precio unitario
         document.getElementById('input-precio-unitario-masivo').value = precioSugeridoSoles > 0 ? precioSugeridoSoles : '';
@@ -343,11 +350,17 @@
             document.getElementById('suggestions-sku-masivo').innerHTML = '';
             document.getElementById('sku-validate-masivo').className = 'bi bi-check-circle text-success';
 
-            // Si es "No aplica", restauramos el precio original del producto en USD * tasa de cambio
+            // Si es "No aplica", restauramos el precio original del producto en USD * tasa de cambio o el calculado de Web
             if (productoSeleccionado) {
-                const tasaCambio = parseFloat(window.tasaCambio) || 3.42;
-                const precioDolar = parseFloat(productoSeleccionado.precioDolar) || 0;
-                const precioSugeridoSoles = (precioDolar * tasaCambio).toFixed(2);
+                const precioWebSoles = parseFloat(productoSeleccionado.precioWebSoles) || 0;
+                let precioSugeridoSoles = 0;
+                if (precioWebSoles > 0) {
+                    precioSugeridoSoles = precioWebSoles.toFixed(2);
+                } else {
+                    const tasaCambio = parseFloat(window.tasaCambio) || 3.42;
+                    const precioDolar = parseFloat(productoSeleccionado.precioDolar) || 0;
+                    precioSugeridoSoles = (precioDolar * tasaCambio).toFixed(2);
+                }
                 document.getElementById('input-precio-unitario-masivo').value = precioSugeridoSoles > 0 ? precioSugeridoSoles : '';
             }
         } else {

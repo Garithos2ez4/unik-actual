@@ -108,7 +108,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-9">
+                            <div class="col-md-9" id="container-subagencia" style="display:none;">
                                 <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
                                 <div class="input-group">
                                     <select name="idSubAgencia" id="select-subagencia" class="form-select" disabled>

@@ -26,10 +26,10 @@
     function buscarRestriccionPorNombre(nombreSubagencia) {
         if (!shalomRestricciones || !nombreSubagencia) return null;
 
-        const nombreNorm = nombreSubagencia.trim().toUpperCase();
+        const nombreNorm = nombreSubagencia.trim().toUpperCase().replace(/\s+/g, ' ');
 
         for (const [id, terminal] of Object.entries(shalomRestricciones)) {
-            const terminalNorm = terminal.nombre_terminal?.trim().toUpperCase();
+            const terminalNorm = terminal.nombre_terminal?.trim().toUpperCase().replace(/\s+/g, ' ');
             if (!terminalNorm) continue;
 
             // Match exacto o parcial

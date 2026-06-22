@@ -42,7 +42,19 @@
     const inputClienteNombre = document.getElementById('input-cliente-nombre');
     const inputClienteTelefono = document.getElementById('input-cliente-telefono');
 
+    window.onClienteCreado = function(cliente) {
+        inputClienteId.value = cliente.idCliente;
+        inputClienteNombre.value = `${cliente.nombre} ${cliente.apellidoPaterno || ''} ${cliente.apellidoMaterno || ''}`.trim();
+        inputClienteTelefono.value = cliente.telefono || '';
+        inputSearchCliente.value = cliente.numeroDocumento;
+        suggestionCliente.innerHTML = '';
+    };
+
     inputSearchCliente.addEventListener('input', function() {
+        inputClienteId.value = '';
+        inputClienteNombre.value = '';
+        inputClienteTelefono.value = '';
+
         if (this.value.length > 2) {
             fetch(`/cliente/searchcliente?query=${this.value}`)
                 .then(response => response.json())
@@ -231,6 +243,12 @@
 
     // Validación general del Formulario antes de Enviar
     document.getElementById('form-edit-envio').addEventListener('submit', function(e) {
+        if (!inputClienteId.value) {
+            e.preventDefault();
+            Swal.fire('Error', 'Debe buscar y seleccionar un cliente de la lista de sugerencias o crear uno nuevo.', 'error');
+            return false;
+        }
+
         const serials = [];
         let hasDuplicate = false;
         let duplicateSerial = '';
@@ -446,7 +464,9 @@
             fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
                 .then(response => response.json())
                 .then(data => {
+                    const containerSub = document.getElementById('container-subagencia');
                     if (data.length > 0) {
+                        if (containerSub) containerSub.style.display = 'block';
                         selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
                         data.forEach(sub => {
                             const partes = sub.nombre_oficina.split(' / ');
@@ -455,6 +475,7 @@
                         });
                         selectSubAgencia.disabled = false;
                     } else {
+                        if (containerSub) containerSub.style.display = 'none';
                         selectSubAgencia.innerHTML = '<option value="">Sin oficinas registradas...</option>';
                         selectSubAgencia.disabled = true;
                     }

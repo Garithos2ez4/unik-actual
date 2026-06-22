@@ -47,6 +47,27 @@ class GananciaController extends Controller
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
             ELSE 0 END";
 
+        $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+
+        $costosComponentesSub = "COALESCE((SELECT SUM(
+            COALESCE(
+                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                 FROM EgresoProducto ep_inner
+                 INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+                 INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+                 INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 LIMIT 1),
+                COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
+            ) * dv_comp.cantidad
+        )
+        FROM DetalleVenta dv_comp
+        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
+        WHERE dv_comp.idVenta = DetalleVenta.idVenta
+        AND dv_comp.precioVenta <= 0.01) / 
+        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+        , 0)";
+
         $ganancias = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
@@ -58,7 +79,7 @@ class GananciaController extends Controller
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo_raw,
                          GROUP_CONCAT(RegistroProducto.numeroSerie SEPARATOR ', ') as series,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM(({$costoExpr} + ({$comisionFalabellaExpr})) * DetalleVenta.cantidad) as costos,
+                         SUM(({$costoExpr} + ({$comisionFalabellaExpr})) * DetalleVenta.cantidad + ({$costosComponentesSub})) as costos,
                          SUM(({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')

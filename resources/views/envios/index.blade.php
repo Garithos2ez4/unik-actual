@@ -57,7 +57,7 @@
                             <th>Plataforma/Cuenta</th>
                             <th>Producto/Cant</th>
                             <th>Registrado Por</th>
-                            <th>Fecha</th>
+                            <th>Sede / Oficina</th>
                             <th class="text-end pe-3">Acciones</th>
                         </tr>
                     </thead>
@@ -127,7 +127,18 @@
                             <td>
                                 <span class="badge bg-light text-dark border"><i class="bi bi-person-fill"></i> {{ $envio->Usuario->user ?? 'Sistema' }}</span>
                             </td>
-                            <td>{{ $envio->fecha_envio->format('d-m-Y') }}</td>
+                            <td>
+                                @if($envio->SubAgencia)
+                                    @php
+                                        $partes = explode(' / ', $envio->SubAgencia->nombre_oficina);
+                                        $nombreTerminal = end($partes);
+                                    @endphp
+                                     <div class="fw-bold">{{ $nombreTerminal }}</div>
+                                     <small class="text-muted d-block" style="font-size: 10px; max-width: 180px; white-space: normal; word-break: break-word;">{{ $envio->SubAgencia->direccion }}</small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
                             <td class="text-end pe-3">
                                 <a href="{{ route('envios.edit', $envio->idEnvioProvincia) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-pencil-square"></i> Editar

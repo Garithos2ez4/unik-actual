@@ -81,7 +81,12 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
                     ]
                 );
             } else {
-                EnvioProvinciaDetalle::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
+                EnvioProvinciaDetalle::where('idEnvioProvincia', $envio->idEnvioProvincia)
+                    ->where(function ($query) {
+                        $query->where('origen', '!=', 'FORMULARIO_PUBLICO')
+                              ->orWhereNull('origen');
+                    })
+                    ->delete();
             }
 
             $hasDimensions = isset($data['peso']) || isset($data['largo']) || isset($data['ancho']) || isset($data['alto']) || isset($data['idTipoPaquete']);

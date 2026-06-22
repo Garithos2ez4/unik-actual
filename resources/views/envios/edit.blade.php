@@ -16,17 +16,29 @@
                         @csrf
                         @method('PUT')
 
+                        @php $esFormularioPublico = (optional($envio->Detalle)->origen === 'FORMULARIO_PUBLICO'); @endphp
                         <div class="row g-3">
                             <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-fill"></i> 1. Información del Cliente y Envío</h6>
+
+                            @if($esFormularioPublico)
+                            <div class="col-md-12">
+                                <div class="alert alert-info d-flex align-items-center py-2 mb-0" role="alert">
+                                    <i class="bi bi-lock-fill me-2"></i>
+                                    <small>Datos del cliente bloqueados (envío registrado desde formulario público).</small>
+                                </div>
+                            </div>
+                            @endif
 
                             <!-- Cliente -->
                             <div class="col-md-12">
                                 <label class="form-label fw-bold">Buscar Cliente <span class="text-danger">*</span></label>
                                 <div class="input-group" id="div-input-group-cliente" style="position: relative">
-                                    <input type="text" class="form-control" value="{{ optional($envio->Cliente)->numeroDocumento ?? optional($envio->Cliente)->nombre }}" placeholder="Buscar por Nro Documento o Nombre..." id="input-search-cliente" autocomplete="off">
+                                    <input type="text" class="form-control {{ $esFormularioPublico ? 'bg-light' : '' }}" value="{{ optional($envio->Cliente)->numeroDocumento ?? optional($envio->Cliente)->nombre }}" placeholder="Buscar por Nro Documento o Nombre..." id="input-search-cliente" autocomplete="off" {{ $esFormularioPublico ? 'readonly' : '' }}>
+                                    @if(!$esFormularioPublico)
                                     <button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" title="Nuevo Cliente">
                                         <i class="bi bi-person-plus-fill"></i>
                                     </button>
+                                    @endif
                                     <ul class="list-group w-100 shadow" style="position: absolute; top:100%; z-index: 1000;" id="suggestion-cliente"></ul>
                                 </div>
                                 <input type="hidden" name="idCliente" id="input-cliente-id" value="{{ $envio->idCliente }}" required>
@@ -121,7 +133,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-9">
+                            <div class="col-md-9" id="container-subagencia" {{ $subagencias->isEmpty() ? 'style=display:none;' : '' }}>
                                 <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
                                 <div class="input-group">
                                     <select name="idSubAgencia" id="select-subagencia" class="form-select" {{ $subagencias->isEmpty() ? 'disabled' : '' }}>
@@ -203,7 +215,10 @@
                             <!-- Dirección y Referencia -->
                             <div class="col-md-12 d-flex align-items-center mb-2">
                                 <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #f8f9fa;">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1" {{ optional($envio->Detalle)->entrega_domicilio ? 'checked' : '' }}>
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1" {{ optional($envio->Detalle)->entrega_domicilio ? 'checked' : '' }} {{ $esFormularioPublico ? 'disabled' : '' }}>
+                                    @if($esFormularioPublico && optional($envio->Detalle)->entrega_domicilio)
+                                        <input type="hidden" name="entrega_domicilio" value="1">
+                                    @endif
                                     <label class="form-check-label fw-bold text-primary" for="entrega_domicilio">¿Entrega a Domicilio?</label>
                                 </div>
                             </div>
@@ -212,11 +227,11 @@
                                 <label class="form-label fw-bold" id="label-dir">
                                     {{ optional($envio->Detalle)->entrega_domicilio ? 'Dirección Exacta (Dir)' : 'Dirección (Dir)' }} <span class="text-muted">(Opcional)</span>
                                 </label>
-                                <input type="text" name="dir" class="form-control" maxlength="100" value="{{ $envio->Detalle->dir ?? '' }}" placeholder="Dirección de envío">
+                                <input type="text" name="dir" class="form-control {{ $esFormularioPublico ? 'bg-light' : '' }}" maxlength="100" value="{{ $envio->Detalle->dir ?? '' }}" placeholder="Dirección de envío" {{ $esFormularioPublico ? 'readonly' : '' }}>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Referencia (Ref) <span class="text-muted">(Opcional)</span></label>
-                                <input type="text" name="ref" class="form-control" maxlength="100" value="{{ $envio->Detalle->ref ?? '' }}" placeholder="Referencia del lugar">
+                                <input type="text" name="ref" class="form-control {{ $esFormularioPublico ? 'bg-light' : '' }}" maxlength="100" value="{{ $envio->Detalle->ref ?? '' }}" placeholder="Referencia del lugar" {{ $esFormularioPublico ? 'readonly' : '' }}>
                             </div>
 
                             <hr class="my-4">

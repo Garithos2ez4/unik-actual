@@ -70,6 +70,25 @@ class AnalyticsMercadolibreController extends Controller
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
 
+        $costosComponentesSub = "COALESCE((SELECT SUM(
+            COALESCE(
+                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $tc ELSE dc_inner.precioUnitario END
+                 FROM EgresoProducto ep_inner
+                 INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+                 INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+                 INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 LIMIT 1),
+                COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
+            ) * dv_comp.cantidad
+        )
+        FROM DetalleVenta dv_comp
+        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
+        WHERE dv_comp.idVenta = DetalleVenta.idVenta
+        AND dv_comp.precioVenta <= 0.01) / 
+        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+        , 0)";
+
         $comisionMercadoLibreExpr = "0";
 
         // Usamos el Modelo Venta para iniciar la consulta
@@ -81,7 +100,7 @@ class AnalyticsMercadolibreController extends Controller
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")
@@ -110,7 +129,7 @@ class AnalyticsMercadolibreController extends Controller
                 'cuentasplataforma.nombreCuenta',
                 DB::raw('COUNT(DISTINCT Venta.idVenta) as cantidad_ventas'),
                 DB::raw('SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_ingresos'),
-                DB::raw("SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad) as total_costos")
+                DB::raw("SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as total_costos")
             )
             ->groupBy('cuentasplataforma.nombreCuenta')
             ->orderByDesc('total_ingresos')
@@ -131,7 +150,7 @@ class AnalyticsMercadolibreController extends Controller
             ->selectRaw("Producto.modelo as sku,
                          SUM(DetalleVenta.cantidad) as total_unidades,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")

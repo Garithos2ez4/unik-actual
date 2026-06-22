@@ -39,7 +39,8 @@ class EnvioProvinciaController extends Controller
                     'Agencia',
                     'Destino',
                     'Productos.Producto',
-                    'Detalle'
+                    'Detalle',
+                    'SubAgencia'
                 ])->whereDate('fecha_envio', $fecha)
                     ->orderBy('fecha_envio', 'desc')
                     ->get();

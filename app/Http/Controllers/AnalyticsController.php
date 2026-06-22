@@ -286,13 +286,32 @@ class AnalyticsController extends Controller
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
             ELSE 0 END";
 
+        $costosComponentesSub = "COALESCE((SELECT SUM(
+            COALESCE(
+                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                 FROM EgresoProducto ep_inner
+                 INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+                 INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+                 INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 LIMIT 1),
+                COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
+            ) * dv_comp.cantidad
+        )
+        FROM DetalleVenta dv_comp
+        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
+        WHERE dv_comp.idVenta = DetalleVenta.idVenta
+        AND dv_comp.precioVenta <= 0.01) / 
+        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+        , 0)";
+
         $qVentas8 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, 
                          (DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos, 
-                         ((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) as costos")
+                         ((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) + ($costosComponentesSub) as costos")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0.01)
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
@@ -393,6 +412,25 @@ class AnalyticsController extends Controller
 
         $comisionRipleyExpr = "0";
 
+        $costosComponentesSub = "COALESCE((SELECT SUM(
+            COALESCE(
+                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                 FROM EgresoProducto ep_inner
+                 INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+                 INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+                 INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 LIMIT 1),
+                COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
+            ) * dv_comp.cantidad
+        )
+        FROM DetalleVenta dv_comp
+        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
+        WHERE dv_comp.idVenta = DetalleVenta.idVenta
+        AND dv_comp.precioVenta <= 0.01) / 
+        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+        , 0)";
+
         // Usamos el Modelo Venta para iniciar la consulta
         $ventasRipley = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
@@ -402,7 +440,7 @@ class AnalyticsController extends Controller
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad) as costos,
+                         SUM((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
@@ -491,6 +529,25 @@ class AnalyticsController extends Controller
 
             $comisionTiendaExpr = "0";
 
+            $costosComponentesSub = "COALESCE((SELECT SUM(
+                COALESCE(
+                    (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                     FROM EgresoProducto ep_inner
+                     INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+                     INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+                     INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+                     WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                     LIMIT 1),
+                    COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
+                ) * dv_comp.cantidad
+            )
+            FROM DetalleVenta dv_comp
+            LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
+            WHERE dv_comp.idVenta = DetalleVenta.idVenta
+            AND dv_comp.precioVenta <= 0.01) / 
+            GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+            , 0)";
+
             $ventasTienda = Venta::query()
                 ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
                 ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
@@ -499,7 +556,7 @@ class AnalyticsController extends Controller
                              GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                              (SELECT GROUP_CONCAT(DISTINCT MetodoPago.nombreMetodo SEPARATOR ', ') FROM PagoVenta JOIN MetodoPago ON PagoVenta.idMetodoPago = MetodoPago.idMetodoPago WHERE PagoVenta.idVenta = Venta.idVenta) as metodos_pago,
                              SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
+                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                              0 as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.01)
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
@@ -558,7 +615,7 @@ class AnalyticsController extends Controller
                 ->selectRaw("Producto.modelo as sku,
                              SUM(DetalleVenta.cantidad) as total_unidades,
                              SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad) as costos,
+                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                              SUM(($comisionTiendaExpr) * DetalleVenta.cantidad) as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.01)
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")

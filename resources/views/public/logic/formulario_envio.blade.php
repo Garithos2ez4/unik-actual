@@ -99,6 +99,7 @@
         const selectAgencia = document.getElementById('select-agencia');
         const selectDestino = document.getElementById('select-destino');
         const selectSubAgencia = document.getElementById('select-subagencia');
+        const containerSub = document.getElementById('container-subagencia');
         
         const idAgencia = selectAgencia.value;
         const idDestino = selectDestino.value;
@@ -106,6 +107,7 @@
         if (!idAgencia || !idDestino) {
             selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
             selectSubAgencia.disabled = true;
+            if (containerSub) containerSub.style.display = 'none';
             return;
         }
 
@@ -115,14 +117,23 @@
         fetch(`/formulario-envio/api/subagencias/${idAgencia}/${idDestino}`)
             .then(r => r.json())
             .then(data => {
-                let html = '<option value="">Seleccione oficina...</option>';
-                data.forEach(sub => {
-                    const partes = sub.nombre_oficina.split(' / ');
-                    const nombreTerminal = partes[partes.length - 1];
-                    html += `<option value="${sub.idSubAgencia}">${nombreTerminal} - ${sub.direccion}</option>`;
-                });
-                selectSubAgencia.innerHTML = html;
-                selectSubAgencia.disabled = false;
+                if (containerSub) {
+                    if (!data || data.length === 0) {
+                        containerSub.style.display = 'none';
+                        selectSubAgencia.innerHTML = '<option value="">Sin oficinas disponibles</option>';
+                        selectSubAgencia.value = '';
+                    } else {
+                        containerSub.style.display = 'block';
+                        let html = '<option value="">Seleccione oficina...</option>';
+                        data.forEach(sub => {
+                            const partes = sub.nombre_oficina.split(' / ');
+                            const nombreTerminal = partes[partes.length - 1];
+                            html += `<option value="${sub.idSubAgencia}">${nombreTerminal} - ${sub.direccion}</option>`;
+                        });
+                        selectSubAgencia.innerHTML = html;
+                        selectSubAgencia.disabled = false;
+                    }
+                }
             })
             .catch(error => {
                 console.error("Error al cargar subagencias: ", error);
@@ -230,8 +241,10 @@
                                         if (r) return r.json();
                                     })
                                     .then(subData => {
-                                        if (subData) {
-                                            const selSub = document.getElementById('select-subagencia');
+                                        const containerSub = document.getElementById('container-subagencia');
+                                        const selSub = document.getElementById('select-subagencia');
+                                        if (subData && subData.length > 0) {
+                                            if (containerSub) containerSub.style.display = 'block';
                                             selSub.innerHTML = '<option value="">Seleccione oficina...</option>';
                                             subData.forEach(s => {
                                                  const partes = s.nombre_oficina.split(' / ');
@@ -240,6 +253,10 @@
                                             });
                                             selSub.disabled = false;
                                             if (env.idSubAgencia) selSub.value = env.idSubAgencia;
+                                        } else {
+                                            if (containerSub) containerSub.style.display = 'none';
+                                            selSub.innerHTML = '<option value="">Sin oficinas disponibles</option>';
+                                            selSub.value = '';
                                         }
                                     })
                                     .catch(err => console.log('Error loading ubigeo cascade:', err));

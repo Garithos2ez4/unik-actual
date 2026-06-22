@@ -403,8 +403,14 @@
     </div>
 </div>
 
-<script src="{{ route('js.update-product-scripts', [$tc]) }}"></script>
+<script>
+    window.APP_DATA = {
+        tc: {{ $tc ?? '0' }},
+        productoIdEncriptado: "{{ encrypt($producto->idProducto) }}"
+    };
+</script>
+<script src="{{ asset('js/update-product-scripts.js') }}?v=1.00"></script>
 @include('productos.logic.producto_scripts')
 
-@include('js.modo-pack-scripts')
+<script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.00"></script>
 @endsection

@@ -381,5 +381,14 @@
       </div>
       </div>
     </div>
-     <script src="{{ route('js.create-product-scripts',[$tc]) }}"></script>
+      <script>
+          window.APP_DATA = {
+              tc: {{ $tc ?? '0' }},
+              tasaFija: {{ $tasaFija ?? '0' }},
+              codigos: @json($codigos->mapWithKeys(function($cod) {
+                  return [$cod->codigoProducto => $cod->idGrupo];
+              }))
+          };
+      </script>
+      <script src="{{ asset('js/create-product-scripts.js') }}?v=1.01"></script>
 @endsection

@@ -14,10 +14,7 @@ class EnvioProvinciaDetalle extends Model
         'entrega_domicilio',
         'dir',
         'ref',
-        'peso',
-        'largo',
-        'ancho',
-        'alto'
+        'origen'
     ];
 
     public function EnvioProvincia()

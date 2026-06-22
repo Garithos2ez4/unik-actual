@@ -347,7 +347,7 @@
         </div>
     </form>
 </div>
-<script src="{{ route('js.config-calculos.js') }}"></script>
+<script src="{{ asset('js/config-calculos-scripts.js') }}?v=1.00"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 

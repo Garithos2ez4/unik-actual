@@ -18,7 +18,7 @@
     <script src="{{ asset('js/sheetjs/xlsx.full.min.js') }}"></script>
     <script src="{{ asset('js/quill.js') }}"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="{{ route('js.header-scripts') }}?v=1.02"></script>
+    <script src="{{ asset('js/header-scripts.js') }}?v=1.02"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
