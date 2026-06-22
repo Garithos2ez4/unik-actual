@@ -208,10 +208,22 @@
                 .then(data => {
                     if (data.success) {
                         navigator.clipboard.writeText(data.link).then(() => {
+
+                            // Banner de aviso si son las 5pm o más en Lima
+                            const avisoBanner = data.es_despues_5pm
+                                ? `<div class="alert alert-warning text-start py-2 mb-3" style="border-radius:8px;">
+                                       <i class="bi bi-clock-fill me-1"></i>
+                                       <strong>⚠️ Aviso de horario:</strong> Son las 5:00 PM o más.
+                                       El envío se registrará en la agencia el <strong>${data.fecha_registro_real}</strong>.
+                                       El cliente verá este aviso también en su formulario.
+                                   </div>`
+                                : '';
+
                             Swal.fire({
                                 icon: 'success',
                                 title: '¡Link copiado!',
-                                html: `<p>El link fue copiado al portapapeles.</p>
+                                html: `${avisoBanner}
+                                       <p class="mb-2">El link fue copiado al portapapeles.</p>
                                        <div class="input-group mt-3">
                                            <input type="text" class="form-control form-control-sm" value="${data.link}" readonly id="link-generado">
                                            <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('link-generado').value)">

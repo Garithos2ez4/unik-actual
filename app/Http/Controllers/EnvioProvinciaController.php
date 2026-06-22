@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\HeaderServiceInterface;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\EnvioProvincia;
 use App\Models\Agencia;
@@ -91,7 +92,7 @@ class EnvioProvinciaController extends Controller
         try {
             $data = $request->all();
             $data['idUser'] = $this->headerService->getModelUser()->idUser;
-            $data['fecha_envio'] = date('Y-m-d');
+            $data['fecha_envio'] = resolver_fecha_envio();
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
             $productos = $request->input('productos', []);
 
@@ -642,20 +643,26 @@ class EnvioProvinciaController extends Controller
             $token = \Illuminate\Support\Str::random(32);
 
             $solicitud = \App\Models\SolicitudEnvio::create([
-                'idUser' => $userModel->idUser,
-                'token' => $token,
-                'estado' => 'PENDIENTE',
+                'idUser'           => $userModel->idUser,
+                'token'            => $token,
+                'estado'           => 'PENDIENTE',
                 'token_expires_at' => now()->addMinutes(20),
             ]);
 
             $baseUrl = rtrim(config('app.public_envio_url', url('/')), '/');
             $link = "{$baseUrl}/formulario-envio/{$token}";
 
+            // Determinar si se está generando el link después del horario de cierre (17:00 Lima)
+            $esDespues5pm    = es_despues_del_corte();
+            $fechaRegistroReal = calcular_fecha_real_legible();
+
             return response()->json([
-                'success' => true,
-                'link' => $link,
-                'idSolicitud' => $solicitud->idSolicitud,
-                'expira_en' => '20 minutos'
+                'success'           => true,
+                'link'              => $link,
+                'idSolicitud'       => $solicitud->idSolicitud,
+                'expira_en'         => '20 minutos',
+                'es_despues_5pm'    => $esDespues5pm,
+                'fecha_registro_real' => $fechaRegistroReal,
             ]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);

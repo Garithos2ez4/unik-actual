@@ -261,17 +261,20 @@ class ProductoController extends Controller
 
                 
                 if(!empty($tipoprecio)){
+                    $inputPrecio = $request->input('precio') ?? 0;
+                    $inputGanancia = $request->input('ganancia') ?? 0;
+
                     if($tipoprecio == 'SOL'){
-                        $precio = $request->input('precio') / $this->calculadoraService->getTasaCambio();
-                        $ganancia = $request->input('ganancia')/ $this->calculadoraService->getTasaCambio();
+                        $precio = $inputPrecio / $this->calculadoraService->getTasaCambio();
+                        $ganancia = $inputGanancia / $this->calculadoraService->getTasaCambio();
 
                     }else{
-                        $precio = $request->input('precio');
-                        $ganancia = $request->input('ganancia');
+                        $precio = $inputPrecio;
+                        $ganancia = $inputGanancia;
                     }
                 }else{
-                    $precio = null;
-                    $ganancia = null;
+                    $precio = 0;
+                    $ganancia = 0;
                 }
 
                 if(isset($nombre, $upc, $modelo, $partnumber)){
