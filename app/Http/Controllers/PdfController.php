@@ -65,7 +65,9 @@ class PdfController extends Controller
         ];
 
         $pdf = Pdf::loadView('pdf.series_by_products', $data);
-        return $pdf->stream("Series_disponibles_{$producto->modelo}" . ($almacen ? "_{$almacen->descripcion}" : '') . ".pdf");
+        $filename = "Series_disponibles_{$producto->modelo}" . ($almacen ? "_{$almacen->descripcion}" : '') . ".pdf";
+        $filename = str_replace(['/', '\\'], '-', $filename);
+        return $pdf->stream($filename);
     }
 
     public function garantiaPdf($idGarantia)

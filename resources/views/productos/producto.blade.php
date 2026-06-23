@@ -231,6 +231,7 @@
             ->first();
             @endphp
 
+            @if($inventario && $inventario->stock > 0)
             <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label">
                     Stock {{ $almacen->descripcion }}:
@@ -261,7 +262,9 @@
                     @endforeach
                 </select>
             </div>
+            @endif
             @endforeach
+            @if($producto->Inventario_Proveedor && $producto->Inventario_Proveedor->stock > 0)
             <div class="col-6 col-md-4 col-lg-2">
                 <label class="form-label">Stock {{$producto->Inventario_Proveedor->Preveedor->nombreProveedor}}:</label>
                 <input name="stockproveedor" value="{{$producto->Inventario_Proveedor->stock}}" type="number" class="form-control input-edit" disabled>
@@ -277,6 +280,7 @@
                     @endforeach
                 </select>
             </div>
+            @endif
         </div>
         {{-- Prueba de VIDEOS --}}
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">

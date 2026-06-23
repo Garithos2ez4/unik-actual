@@ -514,68 +514,73 @@ class EnvioProvinciaController extends Controller
 
         $terminos = array_filter(explode(' ', $query), 'strlen');
 
-        // 1. Buscar productos serializados en RegistroProducto
-        $registros = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+        // 1. Buscar Registros donde el numero de serie coincida con el query (búsqueda manual de serie)
+        $registrosPorSerie = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
             ->where('estado', '!=', 'ENTREGADO')
             ->where('estado', '!=', 'INVALIDO')
-            ->where(function ($queryGroup) use ($terminos, $query) {
-                $queryGroup->where('numeroSerie', 'LIKE', '%' . $query . '%')
-                    ->orWhereHas('DetalleComprobante.Producto', function ($q) use ($terminos) {
-                        $q->where(function ($subQ) use ($terminos) {
-                            foreach ($terminos as $termino) {
-                                $subQ->where(function ($wQ) use ($termino) {
-                                    $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
-                                        ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
-                                        ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
-                                });
-                            }
-                        });
-                    });
-            })
-            ->take(50)
+            ->where('numeroSerie', 'LIKE', '%' . $query . '%')
+            ->take(15)
             ->get();
 
-        // Recopilar idProducto de registros para evitar duplicados
-        $idsFromRegistros = $registros->map(function ($r) {
-            return $r->DetalleComprobante?->Producto?->idProducto;
-        })->filter()->unique()->toArray();
-
-        // 2. Buscar directamente en tabla Producto (para productos sin serialización)
-        $productosFormateados = collect();
-
-        $productos = \App\Models\Producto::where(function ($q) use ($terminos) {
-            $q->where(function ($subQ) use ($terminos) {
-                foreach ($terminos as $termino) {
-                    $subQ->where(function ($wQ) use ($termino) {
-                        $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
-                            ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
-                            ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
-                    });
-                }
-            });
+        // 2. Buscar Productos que coincidan con los términos (nombre, codigo, modelo)
+        $productos = \App\Models\Producto::where(function ($subQ) use ($terminos) {
+            foreach ($terminos as $termino) {
+                $subQ->where(function ($wQ) use ($termino) {
+                    $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
+                        ->orWhere('codigoProducto', 'LIKE', '%' . $termino . '%')
+                        ->orWhere('modelo', 'LIKE', '%' . $termino . '%');
+                });
+            }
         })
-            ->whereNotIn('idProducto', $idsFromRegistros)
-            ->take(50)
-            ->get();
+        ->take(20)
+        ->get();
 
-        // Formatear para mantener la misma estructura que el frontend espera
-        $productosFormateados = $productos->map(function ($prod) {
-            return [
-                'numeroSerie' => null,
-                'detalle_comprobante' => [
-                    'producto' => [
-                        'idProducto' => $prod->idProducto,
-                        'nombreProducto' => $prod->nombreProducto,
-                        'codigoProducto' => $prod->codigoProducto,
-                    ]
-                ]
-            ];
-        });
+        $resultadosFinales = collect();
+        $productosAgregados = [];
 
-        // 3. Combinar ambos resultados
-        $resultados = array_merge($registros->toArray(), $productosFormateados->toArray());
+        // Agregar los encontrados por serie directamente, pero solo UNO por producto
+        // Así, si buscan "524", no agregamos los 15 seriales de la misma tinta, sino solo el primero.
+        // Pero si buscan "100004", encontrará ese específicamente y lo agregará.
+        foreach ($registrosPorSerie as $reg) {
+            $idProd = $reg->DetalleComprobante?->Producto?->idProducto;
+            if ($idProd && !in_array($idProd, $productosAgregados)) {
+                $resultadosFinales->push($reg);
+                $productosAgregados[] = $idProd;
+            }
+        }
 
-        return response()->json($resultados);
+        // Para los productos encontrados que no han sido agregados por la búsqueda de serie,
+        // buscar UN registro disponible (el primero)
+        foreach ($productos as $prod) {
+            if (!in_array($prod->idProducto, $productosAgregados)) {
+                $primerRegistro = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+                    ->where('estado', '!=', 'ENTREGADO')
+                    ->where('estado', '!=', 'INVALIDO')
+                    ->whereHas('DetalleComprobante', function ($q) use ($prod) {
+                        $q->where('idProducto', $prod->idProducto);
+                    })
+                    ->first();
+
+                if ($primerRegistro) {
+                    $resultadosFinales->push($primerRegistro);
+                } else {
+                    $resultadosFinales->push([
+                        'numeroSerie' => null,
+                        'detalle_comprobante' => [
+                            'producto' => [
+                                'idProducto' => $prod->idProducto,
+                                'nombreProducto' => $prod->nombreProducto,
+                                'codigoProducto' => $prod->codigoProducto,
+                                'modelo' => $prod->modelo,
+                            ]
+                        ]
+                    ]);
+                }
+                $productosAgregados[] = $prod->idProducto;
+            }
+        }
+
+        return response()->json($resultadosFinales->values()->all());
     }
 
     public function getDestinosPorProvincia($idProvincia)
