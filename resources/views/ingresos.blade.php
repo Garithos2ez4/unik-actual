@@ -201,6 +201,19 @@
                                 </select>
                             </div>
                             <div class="col-6 pt-2">
+                                <label class="form-label fw-bold">Ubicación Específica (Opcional):</label>
+                                <select id="ubicacion-especifica-modal-detail" name="ubicacion_especifica" class="form-select">
+                                    <option value="">Seleccione Rack/Estante</option>
+                                    @foreach ($almacenes as $almacen)
+                                        @foreach($almacen->Ubicaciones as $ubicacion)
+                                            <option value="{{$ubicacion->idUbicacion}}" data-almacen="{{$almacen->idAlmacen}}" class="d-none ubicacion-option">
+                                                {{$ubicacion->nombre}}
+                                            </option>
+                                        @endforeach
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6 pt-2">
                                 <label class="form-label fw-bold">Estado:</label>
                                 <select id="state-modal-detail" name="estado" class="form-select">
                                     @foreach ($estados as $estado)

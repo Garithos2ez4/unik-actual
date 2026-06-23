@@ -35,7 +35,7 @@ class ProductoController extends Controller
             if($acceso->idVista == 2){
                 // Obtener datos comunes
                 $productos = $this->productoService->getAllProductsByColumn('idGrupo',decrypt($idGrupo),15,$request->query('filtro'))->appends($request->all());
-                $almacenes = $this->productoService->getAllAlmacen();
+                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
 
                 // Si es petición AJAX (paginación o filtro)
                 if($request->query('page') || $request->query('filtro')){
@@ -86,7 +86,7 @@ class ProductoController extends Controller
                 $marcas = $this->productoService->getAllLabelMarca();
                 $proveedor = $this->productoService->getAllLabelProveedor();
                 $grupos = $this->productoService->getAllLabelGrupo();
-                $almacenes = $this->productoService->getAllAlmacen();
+                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
 
                 return view('productos.producto',['user' => $userModel,
                                         'producto' => $producto,
@@ -116,7 +116,7 @@ class ProductoController extends Controller
                 $marcas = $this->productoService->getAllLabelMarca();
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $proveedor = $this->productoService->getAllLabelProveedor();
-                $almacenes = $this->productoService->getAllAlmacen();
+                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
                 $categorias = $this->productoService->getAllLabelCategory();
                 $tipos = app(\App\Services\ConfiguracionServiceInterface::class)->getAllTipoProductos();
 
@@ -190,7 +190,7 @@ class ProductoController extends Controller
                 //variables del controlador
                 $input = $request->input('search');
                 $productos = $this->productoService->searchProducts($input, 25, $request->query('filtro'));
-                $almacenes = $this->productoService->getAllAlmacen();
+                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
                 
                 // Obtener marcas filtradas por búsqueda si hay término de búsqueda
                 if($input) {
@@ -509,6 +509,11 @@ class ProductoController extends Controller
 
                     if (!is_null($stock)){
                         $this->productoService->updateInventory(decrypt($idProducto),$stock);
+                    }
+
+                    $ubicacion = $request->input('ubicacion');
+                    if (!is_null($ubicacion)) {
+                        $this->productoService->updateUbicacion(decrypt($idProducto), $ubicacion);
                     }
 
                     if (!is_null($proveedor) && !is_null($stockproveedor)) {

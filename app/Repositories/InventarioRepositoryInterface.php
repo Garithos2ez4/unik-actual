@@ -12,6 +12,7 @@ interface InventarioRepositoryInterface
     public function searchList(string $column, mixed $data);
     public function create(array $data);
     public function update(mixed $id, array $data);
+    public function updateUbicacion(mixed $idProducto, array $data);
     public function addStock(mixed $idProducto, mixed $idAlmacen);
     public function removeStock(mixed $idProducto, mixed $idAlmacen);
 }

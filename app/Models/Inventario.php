@@ -34,7 +34,8 @@ class Inventario extends Model
     
     protected $fillable = ['idProducto',
                             'idAlmacen',
-                            'stock'
+                            'stock',
+                            'ubicacion_fisica'
                             ];
 
     
@@ -58,6 +59,11 @@ class Inventario extends Model
         return $this->belongsTo(Producto::class,'idProducto','idProducto');
     }
     
+
+    public function UbicacionAlmacen()
+    {
+        return $this->belongsTo(UbicacionAlmacen::class, 'ubicacion_fisica', 'idUbicacion');
+    }
 
     /**
      * Obtener las relaciones del modelo.

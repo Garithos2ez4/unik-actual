@@ -39,6 +39,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
     protected $grupoRepository;
     protected $tipoProductoRepository;
     protected $sugerenciaRepository;
+    protected $ubicacionAlmacenRepository;
 
     private $pathMarca;
     private $pathGrupo;
@@ -60,7 +61,8 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         ComisionPlataformaRepositoryInterface $comisionPlataformaRepository,
         GrupoProductoRepositoryInterface $grupoRepository,
         TipoProductoRepositoryInterface $tipoProductoRepository,
-        CaracteristicasSugerenciasRepositoryInterface $sugerenciaRepository
+        CaracteristicasSugerenciasRepositoryInterface $sugerenciaRepository,
+        \App\Repositories\UbicacionAlmacenRepositoryInterface $ubicacionAlmacenRepository
     ) {
         $this->categoriaRepository = $categoriaRepository;
         $this->rangoRepository = $rangoRepository;
@@ -79,6 +81,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         $this->grupoRepository = $grupoRepository;
         $this->tipoProductoRepository = $tipoProductoRepository;
         $this->sugerenciaRepository = $sugerenciaRepository;
+        $this->ubicacionAlmacenRepository = $ubicacionAlmacenRepository;
 
         // Determinar dinámicamente la ruta según el entorno para que funcione tanto en local como en producción
         if (app()->environment('local')) {
@@ -540,5 +543,35 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         $categoria = $this->categoriaRepository->getLast();
         $id = $categoria ? $categoria->idCategoria : 0;
         return $id + 1;
+    }
+
+    public function createUbicacionAlmacen($idAlmacen, $nombre, $descripcion)
+    {
+        if ($idAlmacen && $nombre) {
+            $data = [
+                'idAlmacen' => $idAlmacen,
+                'nombre' => $nombre,
+                'descripcion' => $descripcion
+            ];
+            $this->ubicacionAlmacenRepository->create($data);
+        }
+    }
+
+    public function updateUbicacionAlmacen($id, $nombre, $descripcion)
+    {
+        if ($id && $nombre) {
+            $data = [
+                'nombre' => $nombre,
+                'descripcion' => $descripcion
+            ];
+            $this->ubicacionAlmacenRepository->update($id, $data);
+        }
+    }
+
+    public function deleteUbicacionAlmacen($id)
+    {
+        if ($id) {
+            $this->ubicacionAlmacenRepository->delete($id);
+        }
     }
 }

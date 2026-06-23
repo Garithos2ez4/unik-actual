@@ -82,6 +82,7 @@ function dataModalDetalle(json) {
     let proveedor = document.getElementById('proveedor-modal-detail');
     let hidden = document.getElementById('idregistro-modal-detail');
     let ubicacion = document.getElementById('almacen-modal-detail');
+    let ubicacionEspecifica = document.getElementById('ubicacion-especifica-modal-detail');
 
     titleProduct.textContent = json.registro_producto.detalle_comprobante.producto.nombreProducto;
     serialNumber.textContent = json.registro_producto.numeroSerie;
@@ -98,6 +99,21 @@ function dataModalDetalle(json) {
     observacion.value = json.registro_producto.observacion;
     hidden.value = json.registro_producto.idRegistro;
     ubicacion.value = json.registro_producto.idAlmacen;
+    
+    // Filtrar opciones de ubicación
+    Array.from(ubicacionEspecifica.options).forEach(option => {
+        if(option.value === "") {
+            option.classList.remove('d-none');
+            return;
+        }
+        if (option.getAttribute('data-almacen') == json.registro_producto.idAlmacen) {
+            option.classList.remove('d-none');
+        } else {
+            option.classList.add('d-none');
+        }
+    });
+
+    ubicacionEspecifica.value = json.registro_producto.ubicacion_especifica || '';
 
     // Normalizar para quitar acentos para comparar mejor
     let normalizedState = stateJson.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -245,6 +261,24 @@ document.querySelector('form[action$="updateregistro"]').addEventListener('submi
             });
         }
     }
+});
+
+document.getElementById('almacen-modal-detail').addEventListener('change', function() {
+    let idAlmacen = this.value;
+    let ubicacionEspecifica = document.getElementById('ubicacion-especifica-modal-detail');
+    ubicacionEspecifica.value = ''; // Reset
+    
+    Array.from(ubicacionEspecifica.options).forEach(option => {
+        if(option.value === "") {
+            option.classList.remove('d-none');
+            return;
+        }
+        if (option.getAttribute('data-almacen') == idAlmacen) {
+            option.classList.remove('d-none');
+        } else {
+            option.classList.add('d-none');
+        }
+    });
 });
 
 // Manejador para el checkbox de fallo de entrega

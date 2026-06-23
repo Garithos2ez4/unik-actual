@@ -113,6 +113,7 @@ class AnalyticsFallabellaController extends Controller
                          SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
             ->where('DetalleVenta.precioVenta', '>', 0.01)
+            ->where('DetalleVenta.estado', 'COMPLETADO')
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy('Venta.idVenta', 'Venta.numeroOrden', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
@@ -160,6 +161,7 @@ class AnalyticsFallabellaController extends Controller
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
             ->where('DetalleVenta.precioVenta', '>', 0.01)
+            ->where('DetalleVenta.estado', 'COMPLETADO')
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))

@@ -304,6 +304,9 @@ Route::middleware(['validate.session'])->group(function () {
     //Configuracion-INVENTARIO
     Route::get('/configuracion/inventario', [ConfiguracionController::class, 'inventario'])->name('configinventario');
     Route::post('/configuracion/createalamcen', [ConfiguracionController::class, 'createAlmacen'])->name('createalmacen');
+    Route::post('/configuracion/createubicacion', [ConfiguracionController::class, 'createUbicacionAlmacen'])->name('createubicacion');
+    Route::post('/configuracion/updateubicacion/{id}', [ConfiguracionController::class, 'updateUbicacionAlmacen'])->name('updateubicacion');
+    Route::post('/configuracion/deleteubicacion/{id}', [ConfiguracionController::class, 'deleteUbicacionAlmacen'])->name('deleteubicacion');
     Route::post('/configuracion/createproveedor', [ConfiguracionController::class, 'createProveedor'])->name('createproveedor');
 
     Route::get('/generateSerialPdf/{idDocumento}', [PdfController::class, 'generateSerialPdf'])->name('generarSeriesPdf');

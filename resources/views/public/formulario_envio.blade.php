@@ -15,6 +15,18 @@
         @endif
     </div>
 
+    @if($esDespues5pm)
+    <div class="alert alert-info d-flex align-items-start gap-2 mx-3 mt-3 mb-0" style="border-radius: 10px; font-size: 0.92rem;">
+        <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>
+        <div>
+            <strong>Información sobre tu pedido:</strong><br>
+            Tu pedido será registrado en la agencia de transporte el
+            <strong>{{ $fechaRegistroReal }}</strong>,
+            ya que este formulario fue generado después del horario de atención (5:00 PM, hora Perú).
+        </div>
+    </div>
+    @endif
+
     <div class="public-card-body">
         <form id="form-envio-publico" action="{{ route('formulario.publico.store', $token) }}" method="POST" novalidate>
             @csrf

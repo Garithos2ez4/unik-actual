@@ -21,6 +21,7 @@ interface ProductoServiceInterface
     public function getAllLabelProveedor();
     public function getAllAlmacen();
     public function updateInventory($idProducto,$array);
+    public function updateUbicacion($idProducto,$array);
     public function updateSeguimiento($idProducto,$array);
     public function getLastCodesProducts();
     public function searchAjaxProducts($column,$query);

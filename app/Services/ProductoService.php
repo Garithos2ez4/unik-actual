@@ -325,6 +325,20 @@ class ProductoService implements ProductoServiceInterface
         
     }
     
+    public function updateUbicacion($idProduct, $array){
+        if (!$idProduct) {
+            return null;
+        }
+    
+        try {
+            $this->inventarioRepository->updateUbicacion($idProduct, $array);
+    
+            return true;
+        } catch (Exception $e) {
+            throw new \InvalidArgumentException($e->getMessage());
+        }
+    }
+    
     public function updateSeguimiento($idProducto,$array){
         if(!is_null($idProducto) && !is_null($array)){
             $this->proveedorInventarioRepository->update($idProducto,$array);

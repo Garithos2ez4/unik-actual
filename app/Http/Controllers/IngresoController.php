@@ -51,7 +51,7 @@ class IngresoController extends Controller
                 
                 $documentos = $this->ingresoService->getAllTipoComprobante();
 
-                $almacenes = $this->ingresoService->getAllAlmacen();
+                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
 
                 $estados = [['value' => 'NUEVO', 'name' => 'Nuevo'],
                     ['value' => 'ABIERTO', 'name' => 'Abierto'],
@@ -176,11 +176,12 @@ class IngresoController extends Controller
         $idRegistro =  $request->input('idregistro');
         $estado =  $request->input('estado');
         $observacion =  $request->input('observacion');
+        $ubicacion_especifica = $request->input('ubicacion_especifica');
 
         foreach($userModel->Accesos as $acceso){
             if($acceso->idVista == 2){
                 if(isset($idRegistro)){
-                    $this->ingresoService->updateRegistro($idRegistro,$estado,$observacion);
+                    $this->ingresoService->updateRegistro($idRegistro,$estado,$observacion,$ubicacion_especifica);
                 }
                 return back();
             }

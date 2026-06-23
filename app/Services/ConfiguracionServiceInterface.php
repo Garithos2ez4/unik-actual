@@ -40,4 +40,7 @@ interface ConfiguracionServiceInterface
     public function createCategoriaProducto($nombre,$icon);
     public function updateCategoriaProducto($id,$nombre,$icon);
     public function removeSugerencia($idSugerencia,$tipo);
+    public function createUbicacionAlmacen($idAlmacen, $nombre, $descripcion);
+    public function updateUbicacionAlmacen($id, $nombre, $descripcion);
+    public function deleteUbicacionAlmacen($id);
 }

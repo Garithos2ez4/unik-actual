@@ -80,6 +80,20 @@ class InventarioRepository implements InventarioRepositoryInterface
         return $inventarios;
     }
 
+    public function updateUbicacion(mixed $idProducto, array $data)
+    {
+        $inventarios = Inventario::where('idProducto', '=', $idProducto, 'and')->get();
+        foreach ($inventarios as $inventario) {
+            foreach ($data as $almacen => $ubicacion) {
+                if ($inventario->idAlmacen == $almacen) {
+                    $inventario->update(['ubicacion_fisica' => $ubicacion]);
+                }
+            }
+        }
+
+        return $inventarios;
+    }
+
     public function addStock(mixed $idProducto, mixed $idAlmacen)
     {
         try {

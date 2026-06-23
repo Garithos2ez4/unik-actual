@@ -92,10 +92,11 @@ class IngresoProductoService implements IngresoProductoServiceInterface
         }
     }
 
-    public function updateRegistro($idRegistro,$estado,$observacion){
+    public function updateRegistro($idRegistro,$estado,$observacion,$ubicacion_especifica=null){
         $data = ['estado' => (is_null($estado) ? 'NUEVO' : $estado) ,
                 'fechaMovimiento' => now(),
-                'observacion' => $observacion];
+                'observacion' => $observacion,
+                'ubicacion_especifica' => $ubicacion_especifica];
         $this->registroProductoRepository->update($idRegistro,$data);
     }
     

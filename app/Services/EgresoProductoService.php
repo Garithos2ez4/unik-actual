@@ -53,7 +53,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $egresos = $this->registroRepository->searchByEgreso($serial, 7, $excludeArray);
         $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
             $producto = $details->DetalleComprobante->Producto;
-            $precioInventario = $details->DetalleComprobante->precioUnitario ?? 0;
+            $detalleComprobante = $details->DetalleComprobante ?? null;
+            $precioInventario = $detalleComprobante->precioUnitario ?? 0;
+            if ($precioInventario > 1 && $detalleComprobante && $detalleComprobante->Comprobante && strtoupper($detalleComprobante->Comprobante->moneda) === 'SOL') {
+                $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+            }
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
@@ -100,7 +104,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
         if ($egreso) {
             $producto = $egreso->DetalleComprobante->Producto;
-            $precioInventario = $egreso->DetalleComprobante->precioUnitario ?? 0;
+            $detalleComprobante = $egreso->DetalleComprobante ?? null;
+            $precioInventario = $detalleComprobante->precioUnitario ?? 0;
+            if ($precioInventario > 1 && $detalleComprobante && $detalleComprobante->Comprobante && strtoupper($detalleComprobante->Comprobante->moneda) === 'SOL') {
+                $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+            }
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);

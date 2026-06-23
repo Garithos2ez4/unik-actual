@@ -14,6 +14,6 @@ interface IngresoProductoServiceInterface
     public function filtroAlmacen($date);
     public function filtroProveedor($date);
     public function filtroEstado($date);
-    public function updateRegistro($idRegistro,$estado,$observacion);
+    public function updateRegistro($idRegistro,$estado,$observacion,$ubicacion_especifica=null);
     public function getOneIngreso($data);
 }

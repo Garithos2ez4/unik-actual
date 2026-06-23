@@ -21,7 +21,8 @@ class RegistroProducto extends Model
         'numeroSerie',
         'estado',
         'fechaMovimiento',
-        'observacion'
+        'observacion',
+        'ubicacion_especifica'
     ];
 
     protected $hidden = [];
@@ -85,6 +86,11 @@ class RegistroProducto extends Model
         // Usamos el operador ?-> (nullsafe) para evitar errores si algún dato se borró
         return $this->DetalleComprobante?->Producto?->nombreProducto ?? 'Nombre no disponible';
     }
+    public function UbicacionAlmacen()
+    {
+        return $this->belongsTo(UbicacionAlmacen::class, 'ubicacion_especifica', 'idUbicacion');
+    }
+
     /**
      * Obtener las relaciones del modelo.
      */

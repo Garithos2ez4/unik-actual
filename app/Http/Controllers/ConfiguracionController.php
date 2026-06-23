@@ -87,7 +87,8 @@ class ConfiguracionController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
-                $almacenes = $this->configuracionService->getAllAlmacenes();
+                // Eager load ubicaciones for the view
+                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
                 $proveedores = $this->configuracionService->getAllProveedores();
 
                 return view('configinventario', [
@@ -568,6 +569,54 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 $this->configuracionService->createAlmacen($descripcion);
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function createUbicacionAlmacen(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $idAlmacen = $request->input('idAlmacen');
+        $nombre = $request->input('nombre');
+        $descripcion = $request->input('descripcion');
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $this->configuracionService->createUbicacionAlmacen($idAlmacen, $nombre, $descripcion);
+                $this->headerService->sendFlashAlerts('Éxito', 'Ubicación añadida correctamente', 'success', 'btn-success');
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function deleteUbicacionAlmacen($id)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                // Posible mejora: Verificar si está en uso antes de borrar
+                $this->configuracionService->deleteUbicacionAlmacen($id);
+                $this->headerService->sendFlashAlerts('Éxito', 'Ubicación eliminada correctamente', 'success', 'btn-success');
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function updateUbicacionAlmacen(Request $request, $id)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $nombre = $request->input('nombre');
+        $descripcion = $request->input('descripcion');
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $this->configuracionService->updateUbicacionAlmacen($id, $nombre, $descripcion);
+                $this->headerService->sendFlashAlerts('Éxito', 'Ubicación actualizada correctamente', 'success', 'btn-success');
                 return back();
             }
         }

@@ -243,6 +243,24 @@
                     class="form-control {{ $ingresoEdit }}"
                     disabled>
             </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label" title="Ubicación en {{ $almacen->descripcion }}">
+                    Ubicación {{ $almacen->descripcion }}:
+                </label>
+
+                <select
+                    name="ubicacion[{{ $almacen->idAlmacen }}]"
+                    class="form-select input-edit"
+                    disabled>
+                    <option value="">Seleccione Rack/Estante</option>
+                    @foreach($almacen->Ubicaciones as $ubicacion)
+                    <option value="{{ $ubicacion->idUbicacion }}"
+                        {{ ($inventario && $inventario->ubicacion_fisica == $ubicacion->idUbicacion) ? 'selected' : '' }}>
+                        {{ $ubicacion->nombre }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
             @endforeach
             <div class="col-6 col-md-4 col-lg-2">
                 <label class="form-label">Stock {{$producto->Inventario_Proveedor->Preveedor->nombreProveedor}}:</label>
@@ -324,7 +342,7 @@
                 $stockAlmacen = $inv->stock;
                 if ($stockAlmacen > 0) {
                 $almacenId = $inv->idAlmacen;
-                $descripcionAlmacen = $inv->almacen->descripcion ?? 'Almac谷n Desconocido';
+                $descripcionAlmacen = $inv->almacen->descripcion ?? 'Almacén Desconocido';
                 echo '<button type="button" class="btn btn-danger mb-2 text-nowrap" onclick="reportSerials(' . $almacenId . ')">';
                     echo '<i class="bi bi-file-earmark-pdf"></i> Series - ' . $descripcionAlmacen . '</button>';
                 }
@@ -405,7 +423,11 @@
 
 <script>
     window.APP_DATA = {
-        tc: {{ $tc ?? '0' }},
+        tc: {
+            {
+                $tc ?? '0'
+            }
+        },
         productoIdEncriptado: "{{ encrypt($producto->idProducto) }}"
     };
 </script>
