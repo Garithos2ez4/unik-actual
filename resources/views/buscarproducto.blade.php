@@ -28,5 +28,6 @@
     </div>
     @endif
 </div>
+@include('productos.partials.modal_ubicacion_base')
 <script src="{{ asset('js/filtro_componente.js') }}"></script>
 @endsection

@@ -316,6 +316,21 @@ class ProductoRepository implements ProductoRepositoryInterface
             $query->whereHas('Inventario', function ($q) use ($filtros) {
                 $q->where('idAlmacen', $filtros['almacen'])
                     ->where('stock', '>', 0);
+                    
+                if (isset($filtros['rack']) && $filtros['rack'] !== '') {
+                    $q->where(function ($subQ) use ($filtros) {
+                        $subQ->where('ubicacion_fisica', $filtros['rack'])
+                             ->orWhereExists(function ($query) use ($filtros) {
+                                 $query->select(\DB::raw(1))
+                                       ->from('RegistroProducto')
+                                       ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalle')
+                                       ->whereColumn('DetalleComprobante.idProducto', 'Inventario.idProducto')
+                                       ->whereColumn('RegistroProducto.idAlmacen', 'Inventario.idAlmacen')
+                                       ->whereNotIn('RegistroProducto.estado', ['ENTREGADO', 'INVALIDO'])
+                                       ->where('RegistroProducto.ubicacion_especifica', $filtros['rack']);
+                             });
+                    });
+                }
             });
         }
     }

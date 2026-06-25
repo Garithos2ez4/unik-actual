@@ -32,6 +32,15 @@ class Venta extends Model
         'fechaVenta'  => 'datetime',
     ];
 
+    protected static function booted()
+    {
+        $clearCache = function () {
+            \Illuminate\Support\Facades\Cache::increment('analytics_tienda_version');
+        };
+        static::saved($clearCache);
+        static::deleted($clearCache);
+    }
+
     // ─── Relaciones ────────────────────────────────────────────
 
     public function Cliente()

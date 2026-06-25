@@ -78,6 +78,13 @@
                                 @endforeach
 
                             </div>
+                            <div class="row mt-2 text-center">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-sm btn-outline-info btn-ver-ubicacion" style="font-size: 0.75rem;" data-id="{{ $pro->idProducto }}">
+                                        <i class="bi bi-geo-alt"></i> Ver Ubicación
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="d-none d-lg-block col-md-1 text-center">
                             <small>{{$pro->Inventario_Proveedor->Preveedor->nombreProveedor}}</small>

@@ -545,25 +545,31 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         return $id + 1;
     }
 
-    public function createUbicacionAlmacen($idAlmacen, $nombre, $descripcion)
+    public function createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $foto = null)
     {
         if ($idAlmacen && $nombre) {
             $data = [
                 'idAlmacen' => $idAlmacen,
                 'nombre' => $nombre,
-                'descripcion' => $descripcion
+                'descripcion' => $descripcion,
+                'foto' => $foto
             ];
             $this->ubicacionAlmacenRepository->create($data);
         }
     }
 
-    public function updateUbicacionAlmacen($id, $nombre, $descripcion)
+    public function updateUbicacionAlmacen($id, $nombre, $descripcion, $foto = null)
     {
         if ($id && $nombre) {
             $data = [
                 'nombre' => $nombre,
                 'descripcion' => $descripcion
             ];
+            
+            if ($foto !== null) {
+                $data['foto'] = $foto;
+            }
+            
             $this->ubicacionAlmacenRepository->update($id, $data);
         }
     }

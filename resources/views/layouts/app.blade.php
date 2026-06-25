@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="{{ asset('css/bootstrap/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/sweetalert/sweetalert2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/boxicons/boxicons.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons/bootstrap-icons.css') }}">
+    <!-- Added CDN to support newer icons like bi-openai -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/quill.css') }}">
 

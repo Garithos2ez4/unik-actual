@@ -582,9 +582,15 @@ class ConfiguracionController extends Controller
         $idAlmacen = $request->input('idAlmacen');
         $nombre = $request->input('nombre');
         $descripcion = $request->input('descripcion');
+        
+        $rutaFoto = null;
+        if ($request->hasFile('foto')) {
+            $rutaFoto = $request->file('foto')->store('racks', 'public');
+        }
+
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
-                $this->configuracionService->createUbicacionAlmacen($idAlmacen, $nombre, $descripcion);
+                $this->configuracionService->createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $rutaFoto);
                 $this->headerService->sendFlashAlerts('Éxito', 'Ubicación añadida correctamente', 'success', 'btn-success');
                 return back();
             }
@@ -613,9 +619,15 @@ class ConfiguracionController extends Controller
         $userModel = $this->headerService->getModelUser();
         $nombre = $request->input('nombre');
         $descripcion = $request->input('descripcion');
+        
+        $rutaFoto = null;
+        if ($request->hasFile('foto')) {
+            $rutaFoto = $request->file('foto')->store('racks', 'public');
+        }
+
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
-                $this->configuracionService->updateUbicacionAlmacen($id, $nombre, $descripcion);
+                $this->configuracionService->updateUbicacionAlmacen($id, $nombre, $descripcion, $rutaFoto);
                 $this->headerService->sendFlashAlerts('Éxito', 'Ubicación actualizada correctamente', 'success', 'btn-success');
                 return back();
             }

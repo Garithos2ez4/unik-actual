@@ -35,14 +35,73 @@
         </div>
         <div class="col-4 col-lg-2">
             <small>Almacén</small>
-            <select class="form-select form-select-sm filtro-componente" name="filtro[almacen]">
+            <select class="form-select form-select-sm filtro-componente" name="filtro[almacen]" id="select-filtro-almacen">
                 <option value="">Todos</option>
                 @foreach ($almacenes as $almacen)
-                <option value="{{ $almacen->idAlmacen }}">
+                <option value="{{ $almacen->idAlmacen }}" {{ request()->input('filtro.almacen') == $almacen->idAlmacen ? 'selected' : '' }}>
                     {{ $almacen->descripcion }}
                 </option>
                 @endforeach
             </select>
         </div>
+        <div class="col-4 col-lg-2" id="div-filtro-rack" style="display: {{ request()->input('filtro.almacen') ? 'block' : 'none' }};">
+            <small>Rack/Estante</small>
+            <select class="form-select form-select-sm filtro-componente" name="filtro[rack]" id="select-filtro-rack">
+                <option value="">Todos los Racks</option>
+                @foreach ($almacenes as $almacen)
+                    @foreach ($almacen->Ubicaciones as $rack)
+                        <option value="{{ $rack->idUbicacion }}" data-almacen="{{ $almacen->idAlmacen }}" style="display: none;" {{ request()->input('filtro.rack') == $rack->idUbicacion ? 'selected' : '' }}>
+                            {{ $rack->nombre }}
+                        </option>
+                    @endforeach
+                @endforeach
+            </select>
+        </div>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAlmacen = document.getElementById('select-filtro-almacen');
+        const selectRack = document.getElementById('select-filtro-rack');
+        const divRack = document.getElementById('div-filtro-rack');
+
+        function updateRacks() {
+            const almacenId = selectAlmacen.value;
+            
+            // Mostrar u ocultar el div del Rack
+            if (almacenId) {
+                divRack.style.display = 'block';
+            } else {
+                divRack.style.display = 'none';
+                selectRack.value = "";
+            }
+
+            // Filtrar las opciones del Rack
+            let hasValidOptions = false;
+            Array.from(selectRack.options).forEach(option => {
+                if (option.value === "") return; // Option "Todos"
+                
+                if (option.getAttribute('data-almacen') === almacenId) {
+                    option.style.display = 'block';
+                    hasValidOptions = true;
+                } else {
+                    option.style.display = 'none';
+                    // Si la opción seleccionada actualmente se oculta, resetear a "Todos"
+                    if (option.selected) {
+                        selectRack.value = "";
+                    }
+                }
+            });
+        }
+
+        if (selectAlmacen) {
+            // No agregamos 'change' a filterSubmit aquí, lo dejamos a filtro_componente.js
+            // Solo escuchamos el evento para cambiar la UI antes del submit
+            selectAlmacen.addEventListener('change', updateRacks);
+            
+            // Inicializar al cargar
+            updateRacks();
+        }
+    });
+</script>

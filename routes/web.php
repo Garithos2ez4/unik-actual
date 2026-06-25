@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -113,6 +114,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/producto/nuevoproducto', [ProductoController::class, 'create'])->name('createproducto');
     Route::get('/producto/especificaciones/{idProducto}', [ProductoController::class, 'details'])->name('details');
     Route::get('/producto/{idproducto}', [ProductoController::class, 'update'])->name('producto');
+    Route::get('/producto/{id}/ubicacion-html', [ProductoController::class, 'obtenerUbicacionHtml']);
     Route::post('/producto/createdetails', [ProductoController::class, 'createDetails'])->name('createdetails');
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
     Route::post('/producto/insertorupdatedetails', [ProductoController::class, 'insertOrUpdateDetails'])->name('insertorupdatedetails');
@@ -132,6 +134,9 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/traslado', [TrasladoController::class, 'index'])->name('traslados');
     Route::post('/traslado/updateregistroalmacen', [TrasladoController::class, 'updateRegistroAlmacen'])->name('updateregistroalmacen');
+    Route::get('/traslado/search-producto-ajax', [TrasladoController::class, 'searchProductoAjax'])->name('traslado.searchproducto');
+    Route::get('/traslado/series-disponibles', [TrasladoController::class, 'getSeriesDisponibles'])->name('traslado.seriesdisponibles');
+    Route::post('/traslado/search-multiple-series', [TrasladoController::class, 'searchMultipleSeries'])->name('traslado.searchmultipleseries');
 
     Route::get('/documento/searchdocument', [DocumentoController::class, 'searchDocument'])->name('searchdocument');
     Route::get('/documento/{id}/{bool}', [DocumentoController::class, 'index'])->name('documento');

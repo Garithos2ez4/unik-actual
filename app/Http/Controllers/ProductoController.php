@@ -401,6 +401,28 @@ class ProductoController extends Controller
         $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
         return redirect()->route('dashboard',['user' => $userModel]);
     }
+    public function obtenerUbicacionHtml($id)
+    {
+        try {
+            $producto = Producto::with(['Inventario', 'Inventario_Proveedor.Preveedor'])->findOrFail($id);
+            $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+            
+            $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionAlmacen', 'Almacen'])
+                ->where('estado', '!=', 'ENTREGADO')
+                ->where('estado', '!=', 'INVALIDO')
+                ->whereHas('DetalleComprobante', function ($q) use ($id) {
+                    $q->where('idProducto', $id);
+                })
+                ->get();
+
+            $html = view('productos.partials.modal_ubicacion_body', compact('producto', 'almacenes', 'seriesDisponibles'))->render();
+
+            return response()->json(['html' => $html]);
+        } catch (\Exception $e) {
+            \Log::error('Error en obtenerUbicacionHtml: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json(['error' => 'Error interno del servidor.'], 500);
+        }
+    }
 
     public function updateProduct($idProducto,Request $request){
         $userModel = $this->headerService->getModelUser();

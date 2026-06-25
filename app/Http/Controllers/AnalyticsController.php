@@ -513,7 +513,10 @@ class AnalyticsController extends Controller
         
         $cacheKey = "tienda_data_{$fechaInicio}_{$fechaFin}";
 
-        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () use ($fechaInicio, $fechaFin, $tc) {
+        $version = \Illuminate\Support\Facades\Cache::get('analytics_tienda_version', 1);
+        $cacheKey = "tienda_data_{$fechaInicio}_{$fechaFin}_v{$version}";
+
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(30), function () use ($fechaInicio, $fechaFin, $tc) {
             $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
 
             $costoVentaExpr = "COALESCE(

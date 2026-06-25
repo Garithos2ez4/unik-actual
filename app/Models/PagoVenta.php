@@ -31,6 +31,15 @@ class PagoVenta extends Model
         'fechaPago'    => 'datetime'
     ];
 
+    protected static function booted()
+    {
+        $clearCache = function () {
+            \Illuminate\Support\Facades\Cache::increment('analytics_tienda_version');
+        };
+        static::saved($clearCache);
+        static::deleted($clearCache);
+    }
+
     public function Venta()
     {
         return $this->belongsTo(Venta::class, 'idVenta', 'idVenta');

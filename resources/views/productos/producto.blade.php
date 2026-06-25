@@ -203,11 +203,15 @@
                 <input type="text" name="partnumber" class="form-control input-edit" value="{{$producto->partNumber}}" aria-describedby="basic-addon1" maxlength="50" disabled>
             </div>
         </div>
+
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
             <div class="mb-2 col-6">
                 <h3>Inventario disponible</h3>
             </div>
             <div class="mb-2 col-6 text-end">
+                <button type="button" class="btn btn-info btn-sm text-white fw-bold shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#modalUbicacion-{{$producto->idProducto}}">
+                    <i class="bi bi-geo-alt-fill"></i> Ver Ubicación Exacta
+                </button>
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
                 @php
                 $ingresoEdit = "";
@@ -261,26 +265,45 @@
                     </option>
                     @endforeach
                 </select>
+
+                @php
+                $racksEspecificos = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
+                $q->where('idProducto', $producto->idProducto);
+                })
+                ->where('idAlmacen', $almacen->idAlmacen)
+                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+                ->whereNotNull('ubicacion_especifica')
+                ->with('UbicacionAlmacen')
+                ->get()
+                ->pluck('UbicacionAlmacen.nombre')
+                ->unique()
+                ->filter()
+                ->toArray();
+                @endphp
+                @if(count($racksEspecificos) > 0)
+                <small class="text-muted d-block mt-1" style="font-size: 0.75rem; line-height: 1.2;">
+                    <i class="bi bi-geo-alt-fill text-danger"></i> Series en: <strong>{{ implode(', ', $racksEspecificos) }}</strong>
+                </small>
+                @endif
             </div>
             @endif
             @endforeach
-            @if($producto->Inventario_Proveedor && $producto->Inventario_Proveedor->stock > 0)
             <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Stock {{$producto->Inventario_Proveedor->Preveedor->nombreProveedor}}:</label>
-                <input name="stockproveedor" value="{{$producto->Inventario_Proveedor->stock}}" type="number" class="form-control input-edit" disabled>
+                <label class="form-label">Stock Proveedor:</label>
+                <input name="stockproveedor" value="{{ $producto->Inventario_Proveedor ? $producto->Inventario_Proveedor->stock : 0 }}" type="number" class="form-control input-edit" disabled>
             </div>
             <div class="col-6 col-md-4 col-lg-3">
                 <label for="grupo-product" id="proveedor-label" class="form-label">Proveedor:</label>
                 <select name="proveedor" id="proveedor-product" class="form-select input-edit" disabled>
+                    <option value="">Seleccione Proveedor</option>
                     @foreach($proveedor as $pro)
                     <option value="{{ $pro['idProveedor'] }}"
-                        {{ $producto->Inventario_Proveedor->Preveedor->idProveedor == $pro['idProveedor'] ? 'selected' : '' }}>
+                        {{ ($producto->Inventario_Proveedor && $producto->Inventario_Proveedor->idProveedor == $pro['idProveedor']) ? 'selected' : '' }}>
                         {{ $pro['nombreProveedor'] }}
                     </option>
                     @endforeach
                 </select>
             </div>
-            @endif
         </div>
         {{-- Prueba de VIDEOS --}}
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
@@ -427,11 +450,7 @@
 
 <script>
     window.APP_DATA = {
-        tc: {
-            {
-                $tc ?? '0'
-            }
-        },
+        tc: parseFloat("{{ $tc ?? '0' }}"),
         productoIdEncriptado: "{{ encrypt($producto->idProducto) }}"
     };
 </script>
@@ -439,4 +458,7 @@
 @include('productos.logic.producto_scripts')
 
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.00"></script>
+
+@include('productos.modals.ubicacion')
+
 @endsection

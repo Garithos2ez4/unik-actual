@@ -81,6 +81,10 @@
         <div id="container-list-products">
             <x-lista_producto :productos="$productos" :tc="$tc" :container="'container-list-products'" />
         </div>
+        </div>
     </div>
+    
+    @include('productos.partials.modal_ubicacion_base')
+
     <script src="{{asset('js/filtro_componente.js')}}"></script>
 @endsection

@@ -38,6 +38,15 @@ class EgresoProducto extends Model
 
     ];
 
+    protected static function booted()
+    {
+        $clearCache = function () {
+            \Illuminate\Support\Facades\Cache::increment('analytics_tienda_version');
+        };
+        static::saved($clearCache);
+        static::deleted($clearCache);
+    }
+
     public function RegistroProducto()
     {
         return $this->hasOne(RegistroProducto::class, 'idRegistro', 'idRegistro');

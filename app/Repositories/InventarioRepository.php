@@ -85,8 +85,22 @@ class InventarioRepository implements InventarioRepositoryInterface
         $inventarios = Inventario::where('idProducto', '=', $idProducto, 'and')->get();
         foreach ($inventarios as $inventario) {
             foreach ($data as $almacen => $ubicacion) {
-                if ($inventario->idAlmacen == $almacen) {
+                if ($inventario->idAlmacen == $almacen && $ubicacion) {
                     $inventario->update(['ubicacion_fisica' => $ubicacion]);
+                    
+                    // Asignar este rack a todas las series que NO tengan un rack asignado
+                    $registrosIds = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($idProducto) {
+                            $q->where('idProducto', $idProducto);
+                        })
+                        ->where('idAlmacen', $almacen)
+                        ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+                        ->whereNull('ubicacion_especifica')
+                        ->pluck('idRegistro');
+
+                    if ($registrosIds->isNotEmpty()) {
+                        \App\Models\RegistroProducto::whereIn('idRegistro', $registrosIds)
+                            ->update(['ubicacion_especifica' => $ubicacion]);
+                    }
                 }
             }
         }

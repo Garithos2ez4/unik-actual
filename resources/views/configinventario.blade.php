@@ -39,7 +39,14 @@
                             <ul class="list-group mb-2">
                                 @forelse($almacen->Ubicaciones as $ubicacion)
                                 <li class="list-group-item d-flex justify-content-between align-items-center p-1">
-                                    <small>{{$ubicacion->nombre}} <span class="text-secondary">({{$ubicacion->descripcion}})</span></small>
+                                    <small>
+                                        {{$ubicacion->nombre}} <span class="text-secondary">({{$ubicacion->descripcion}})</span>
+                                        @if($ubicacion->foto)
+                                        <a href="{{$ubicacion->foto_url}}" target="_blank" title="Ver Foto del Estante">
+                                            <i class="bi bi-image text-info ms-1"></i>
+                                        </a>
+                                        @endif
+                                    </small>
                                     <div>
                                         <button type="button" class="btn btn-sm btn-warning p-0 px-1 text-white" title="Editar" data-bs-toggle="modal" data-bs-target="#editRackModal{{$ubicacion->idUbicacion}}"><i class="bi bi-pencil"></i></button>
                                         <form action="{{route('deleteubicacion', $ubicacion->idUbicacion)}}" method="POST" class="d-inline">
@@ -56,7 +63,7 @@
                         @foreach($almacen->Ubicaciones as $ubicacion)
                         <div class="modal fade" id="editRackModal{{$ubicacion->idUbicacion}}" tabindex="-1" aria-labelledby="editRackModalLabel{{$ubicacion->idUbicacion}}" aria-hidden="true">
                             <div class="modal-dialog">
-                                <form action="{{route('updateubicacion', $ubicacion->idUbicacion)}}" method="POST">
+                                <form action="{{route('updateubicacion', $ubicacion->idUbicacion)}}" method="POST" enctype="multipart/form-data">
                                     @csrf
                                     <div class="modal-content">
                                         <div class="modal-header">
@@ -72,6 +79,13 @@
                                                 <label class="form-label">Descripci&oacute;n (Opcional):</label>
                                                 <input type="text" class="form-control" name="descripcion" value="{{$ubicacion->descripcion}}">
                                             </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Foto del Estante/Rack (Opcional):</label>
+                                                <input type="file" class="form-control" name="foto" accept="image/*">
+                                                @if($ubicacion->foto)
+                                                <small class="text-success"><i class="bi bi-check-circle"></i> Ya cuenta con una foto. Sube otra para reemplazarla.</small>
+                                                @endif
+                                            </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -86,7 +100,7 @@
                 </div>
 
                 <!-- Modal para Nuevo Rack -->
-                <form action="{{route('createubicacion')}}" method="POST">
+                <form action="{{route('createubicacion')}}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="idAlmacen" value="{{$almacen->idAlmacen}}">
                     <div class="modal fade" id="rackModal{{$almacen->idAlmacen}}" tabindex="-1" aria-labelledby="rackModalLabel{{$almacen->idAlmacen}}" aria-hidden="true">
@@ -104,6 +118,10 @@
                                     <div class="mb-3">
                                         <label class="form-label">Descripci&oacute;n (Opcional):</label>
                                         <input type="text" class="form-control" name="descripcion">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Foto del Estante/Rack (Opcional):</label>
+                                        <input type="file" class="form-control" name="foto" accept="image/*">
                                     </div>
                                 </div>
                                 <div class="modal-footer">

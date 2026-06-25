@@ -30,6 +30,12 @@ class DetalleVenta extends Model
         static::addGlobalScope('completado', function (\Illuminate\Database\Eloquent\Builder $builder) {
             $builder->where('DetalleVenta.estado', '=', 'COMPLETADO');
         });
+
+        $clearCache = function () {
+            \Illuminate\Support\Facades\Cache::increment('analytics_tienda_version');
+        };
+        static::saved($clearCache);
+        static::deleted($clearCache);
     }
 
     protected $casts = [
