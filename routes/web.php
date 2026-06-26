@@ -92,6 +92,13 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/ingresos/buscar-pack-por-serie', [IngresoController::class, 'buscarPackPorSerie'])->name('buscarpackporserie');
     Route::get('/ingresos/buscar-series-pack-ajax', [IngresoController::class, 'buscarSeriesPackAjax'])->name('buscarseriespackajax');
 
+    // Rutas para Unión Libre de componentes en Pack
+    Route::get('/ingresos/packs-para-union',         [IngresoController::class, 'getPacksParaUnion'])->name('packs.para.union');
+    Route::get('/ingresos/buscar-padres-pack-ajax',   [IngresoController::class, 'buscarPadresPackAjax'])->name('buscar.padres.pack.ajax');
+    Route::get('/ingresos/componentes-union',         [IngresoController::class, 'getComponentesUnion'])->name('componentes.union');
+    Route::post('/ingresos/unir-componentes-en-pack', [IngresoController::class, 'unirComponentesEnPack'])->name('unir.componentes.pack');
+
+
     Route::get('/ingresos/{month}', [IngresoController::class, 'index'])->name('ingresos');
     Route::post('/ingreso/deleteingreso', [IngresoController::class, 'deleteIngreso'])->name('deleteingreso');
     Route::post('/ingreso/updateregistro', [IngresoController::class, 'updateRegistro'])->name('updateregistro');

@@ -73,6 +73,7 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
             ->where('RegistroProducto.estado', '!=', 'ENTREGADO')
             ->where('RegistroProducto.estado', '!=', 'INVALIDO')
             ->where('RegistroProducto.estado', '!=', 'DIVIDIDO')
+            ->where('RegistroProducto.estado', '!=', 'REUNIDO')
             ->where('RegistroProducto.numeroSerie', 'LIKE', "%{$serial}%");
 
         if (!empty($excludeArray)) {
@@ -103,6 +104,7 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
                 $query2 = RegistroProducto::where('estado', '!=', 'ENTREGADO')
                     ->where('estado', '!=', 'INVALIDO')
                     ->where('estado', '!=', 'DIVIDIDO')
+                    ->where('estado', '!=', 'REUNIDO')
                     ->where('numeroSerie', 'LIKE', "%{$serial}%")
                     ->whereNotIn('idRegistro', $allExcluded)
                     ->take($faltan);
@@ -123,6 +125,7 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
         return RegistroProducto::where('estado', '!=', 'ENTREGADO', 'and')
             ->where('estado', '!=', 'INVALIDO', 'and')
             ->where('estado', '!=', 'DIVIDIDO', 'and')
+            ->where('estado', '!=', 'REUNIDO', 'and')
             ->where('numeroSerie', '=', $serial, 'and')
             ->first();
     }

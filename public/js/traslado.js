@@ -56,7 +56,7 @@ if(inputBuscarProducto) {
     });
 }
 
-let seriesTemporalesProducto = [];
+let seriesSeleccionadas = new Set(); // IDs de las series checked
 
 function cargarSeriesDeProducto(item) {
     let idProducto = item.idProducto;
@@ -79,33 +79,133 @@ function cargarSeriesDeProducto(item) {
 
             // Guardar temporalmente
             seriesTemporalesProducto = seriesNuevas;
+            seriesSeleccionadas.clear();
+
+            // Poblar el filtro de almacén
+            const selectFiltro = document.getElementById('select-filtro-almacen');
+            selectFiltro.innerHTML = '<option value="">Todos</option>';
+            let almacenesUnicos = new Set();
+            seriesNuevas.forEach(s => {
+                let nombreAlmacen = s.almacen ? s.almacen.descripcion : (s.almacen_nombre || 'Sin almacén');
+                almacenesUnicos.add(nombreAlmacen);
+            });
+            Array.from(almacenesUnicos).sort().forEach(nombre => {
+                let opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                selectFiltro.appendChild(opt);
+            });
 
             // Mostrar el modal
-            document.getElementById('modal-cantidad-producto-nombre').textContent = modelo;
-            document.getElementById('modal-cantidad-disponible').textContent = seriesNuevas.length;
+            document.getElementById('modal-seleccion-producto-nombre').textContent = modelo;
+            document.getElementById('modal-seleccion-disponible').textContent = seriesNuevas.length;
             
-            let inputCantidad = document.getElementById('input-cantidad-trasladar');
+            let inputCantidad = document.getElementById('input-cantidad-autoseleccionar');
             inputCantidad.max = seriesNuevas.length;
-            inputCantidad.value = 1;
+            inputCantidad.value = 0;
+            
+            document.getElementById('check-todas-series').checked = false;
 
-            let modalEl = document.getElementById('modalCantidadSeries');
+            renderSeriesTraslado();
+
+            let modalEl = document.getElementById('modalSeleccionSeries');
             let modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.show();
         });
 }
 
-function confirmarCantidadSeries() {
-    let inputCantidad = document.getElementById('input-cantidad-trasladar');
-    let cantidadRequerida = parseInt(inputCantidad.value);
-    let cantidadMaxima = parseInt(inputCantidad.max);
+function getSeriesVisibles() {
+    let filtro = document.getElementById('select-filtro-almacen').value;
+    if (!filtro) return seriesTemporalesProducto;
+    
+    return seriesTemporalesProducto.filter(s => {
+        let nombreAlmacen = s.almacen ? s.almacen.descripcion : (s.almacen_nombre || 'Sin almacén');
+        return nombreAlmacen === filtro;
+    });
+}
 
-    if (isNaN(cantidadRequerida) || cantidadRequerida < 1 || cantidadRequerida > cantidadMaxima) {
-        alertBootstrap('Por favor, ingresa una cantidad válida entre 1 y ' + cantidadMaxima, 'warning');
+function renderSeriesTraslado() {
+    const tbody = document.getElementById('tbody-series');
+    let visibles = getSeriesVisibles();
+    
+    // Actualizar max de autoseleccionar basado en las visibles
+    document.getElementById('input-cantidad-autoseleccionar').max = visibles.length;
+    // document.getElementById('input-cantidad-autoseleccionar').value = 0; // Opcional: resetear input al filtrar
+
+    if (!visibles.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No hay series disponibles para este filtro</td></tr>';
         return;
     }
 
-    // Recortar el array a la cantidad solicitada
-    let seriesATrasladar = seriesTemporalesProducto.slice(0, cantidadRequerida);
+    tbody.innerHTML = visibles.map((s, i) => {
+        const checked = seriesSeleccionadas.has(s.idRegistro) ? 'checked' : '';
+        return `
+            <tr class="${checked ? 'table-primary' : ''}">
+                <td style="padding-left: 1rem;"><input type="checkbox" class="check-serie" data-id="${s.idRegistro}" ${checked} onchange="toggleSerie(${s.idRegistro}, this)"></td>
+                <td>${i + 1}</td>
+                <td><code>${escapeHtml(s.numeroSerie)}</code></td>
+                <td><small>${escapeHtml(s.almacen ? s.almacen.descripcion : (s.almacen_nombre || '-'))}</small></td>
+            </tr>
+        `;
+    }).join('');
+    
+    document.getElementById('span-cantidad-seleccionadas').textContent = seriesSeleccionadas.size;
+    syncCantidadInput();
+}
+
+window.toggleSerie = function (idRegistro, checkbox) {
+    if (checkbox.checked) {
+        seriesSeleccionadas.add(idRegistro);
+    } else {
+        seriesSeleccionadas.delete(idRegistro);
+    }
+    syncCantidadInput();
+    renderSeriesTraslado();
+};
+
+window.toggleTodasSeries = function (checkbox) {
+    let visibles = getSeriesVisibles();
+    if (checkbox.checked) {
+        visibles.forEach(s => seriesSeleccionadas.add(s.idRegistro));
+    } else {
+        // Solo quitar los visibles
+        visibles.forEach(s => seriesSeleccionadas.delete(s.idRegistro));
+    }
+    renderSeriesTraslado();
+};
+
+function syncCantidadInput() {
+    let visibles = getSeriesVisibles();
+    let seleccionadasVisibles = visibles.filter(s => seriesSeleccionadas.has(s.idRegistro)).length;
+    document.getElementById('input-cantidad-autoseleccionar').value = seleccionadasVisibles;
+    document.getElementById('check-todas-series').checked = (seleccionadasVisibles === visibles.length && visibles.length > 0);
+}
+
+document.getElementById('input-cantidad-autoseleccionar').addEventListener('input', function () {
+    let visibles = getSeriesVisibles();
+    let n = parseInt(this.value) || 0;
+    if (n < 0) n = 0;
+    if (n > visibles.length) n = visibles.length;
+    this.value = n;
+
+    // Quitar todas las visibles primero
+    visibles.forEach(s => seriesSeleccionadas.delete(s.idRegistro));
+    
+    // Volver a agregar n
+    for (let i = 0; i < n; i++) {
+        seriesSeleccionadas.add(visibles[i].idRegistro);
+    }
+    
+    renderSeriesTraslado();
+});
+
+function confirmarSeleccionSeries() {
+    if (seriesSeleccionadas.size === 0) {
+        alertBootstrap('Por favor selecciona al menos una serie para trasladar.', 'warning');
+        return;
+    }
+
+    let seriesATrasladar = seriesTemporalesProducto.filter(s => seriesSeleccionadas.has(s.idRegistro));
     
     let agregadas = 0;
     seriesATrasladar.forEach(serie => {
@@ -117,12 +217,24 @@ function confirmarCantidadSeries() {
     }
 
     // Cerrar modal
-    let modalEl = document.getElementById('modalCantidadSeries');
+    let modalEl = document.getElementById('modalSeleccionSeries');
     let modal = bootstrap.Modal.getInstance(modalEl);
     if(modal) modal.hide();
     
     // Limpiar temporal
     seriesTemporalesProducto = [];
+    seriesSeleccionadas.clear();
+}
+
+function escapeHtml(unsafe) {
+    if(!unsafe) return '';
+    return unsafe
+         .toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }
 
 // 2. Procesar Pegado Masivo

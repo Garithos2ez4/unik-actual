@@ -54,6 +54,7 @@ class TrasladoController extends Controller
         if(empty($query)) return response()->json([]);
 
         $productos = \App\Models\Producto::where('modelo', 'like', "%$query%")
+            ->orWhere('nombreProducto', 'like', "%$query%")
             ->orWhere('codigoProducto', 'like', "%$query%")
             ->orWhere('partNumber', 'like', "%$query%")
             ->with(['MarcaProducto'])

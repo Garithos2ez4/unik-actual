@@ -12,12 +12,9 @@ class DetalleComprobante extends Model
     
     protected $primaryKey = 'idDetalleComprobante';
 
-    protected $guarded = ['idDetalleComprobante'];
-    
     protected $fillable = ['idDetalleComprobante',
                             'idComprobante',
                             'idProducto',
-                            'cantidad',
                             'medida',
                             'precioUnitario',
                             'precioCompra'
@@ -33,7 +30,7 @@ class DetalleComprobante extends Model
         'idDetalleComprobante' => 'int',
         'idComprobante' => 'int',
         'idProducto' => 'int',
-        'cantidad' => 'int',
+        'medida' => 'string',
         'precioUnitario' => 'float',
         'precioCompra' => 'float'
     ];

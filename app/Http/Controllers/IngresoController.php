@@ -9,6 +9,7 @@ use App\Services\UsuarioServiceInterface;
 use App\Services\ComprobanteServiceInterface;
 use App\Services\HeaderServiceInterface;
 use App\Services\DivisionPackServiceInterface;
+use App\Services\UnionPackServiceInterface;
 
 class IngresoController extends Controller
 {
@@ -17,18 +18,21 @@ class IngresoController extends Controller
     protected $comprobanteService;
     protected $headerService;
     protected $divisionPackService;
+    protected $unionPackService;
 
     public function __construct(HeaderServiceInterface $headerService,
                                 UsuarioServiceInterface $userService,
                                 IngresoProductoServiceInterface $ingresoService,
                                 ComprobanteServiceInterface $comprobanteService,
-                                DivisionPackServiceInterface $divisionPackService)
+                                DivisionPackServiceInterface $divisionPackService,
+                                UnionPackServiceInterface $unionPackService)
     {
         $this->userService = $userService;
         $this->ingresoService = $ingresoService;
         $this->comprobanteService = $comprobanteService;
         $this->headerService = $headerService;
         $this->divisionPackService = $divisionPackService;
+        $this->unionPackService = $unionPackService;
     }
     
     public function index($month,Request $request){
@@ -67,7 +71,7 @@ class IngresoController extends Controller
                             'estados' => $this->ingresoService->filtroEstado($month)];
 
                 
-                return view('ingresos',['user' => $userModel,
+                return view('ingresos.ingresos',['user' => $userModel,
                                         'registros' => $registros,
                                         'documentos' => $documentos,
                                         'proveedores' => $proveedores,
@@ -245,7 +249,7 @@ class IngresoController extends Controller
                 try {
                     $idProductoPack = $request->input('idProductoPack');
                     $idRegistrosHijos = $request->input('idRegistrosHijos', []);
-                    $result = $this->divisionPackService->reunirPack($idProductoPack, $idRegistrosHijos);
+                    $result = $this->unionPackService->reunirPack($idProductoPack, $idRegistrosHijos);
                     
                     $this->headerService->sendFlashAlerts(
                         'Pack Reunido',
@@ -275,9 +279,70 @@ class IngresoController extends Controller
     public function getComponentesReunion(Request $request)
     {
         $idProductoPack = $request->input('idProductoPack');
-        $result = $this->divisionPackService->getComponentesParaReunion($idProductoPack);
+        $result = $this->unionPackService->getComponentesParaReunion($idProductoPack);
         return response()->json($result);
     }
+
+    /**
+     * AJAX: Lista de packs que se pueden armar con el stock actual
+     */
+    public function getPacksParaUnion(Request $request)
+    {
+        $result = $this->unionPackService->getPacksDisponiblesParaUnion();
+        return response()->json($result);
+    }
+
+    /**
+     * AJAX: Componentes requeridos + disponibles para un pack específico (con modelo)
+     */
+    public function getComponentesUnion(Request $request)
+    {
+        $idProductoPack = (int) $request->input('idProductoPack');
+        $result = $this->unionPackService->getComponentesRequeridosParaUnion($idProductoPack);
+        return response()->json($result);
+    }
+
+    /**
+     * POST: Unir componentes individuales para formar un pack nuevo
+     */
+    public function unirComponentesEnPack(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
+                try {
+                    $idProductoPack   = (int) $request->input('idProductoPack');
+                    $idRegistrosHijos = $request->input('idRegistrosHijos', []);
+                    $idAlmacenDestino = (int) $request->input('idAlmacenDestino');
+
+                    $result = $this->unionPackService->unirComponentesEnPack(
+                        $idProductoPack,
+                        array_map('intval', $idRegistrosHijos),
+                        $idAlmacenDestino
+                    );
+
+                    $this->headerService->sendFlashAlerts(
+                        'Pack Armado',
+                        $result['message'],
+                        'success',
+                        'btn-success'
+                    );
+                    return back();
+                } catch (\Exception $e) {
+                    $this->headerService->sendFlashAlerts(
+                        'Error al Armar Pack',
+                        $e->getMessage(),
+                        'error',
+                        'btn-danger'
+                    );
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta accion', 'warning', 'btn-danger');
+        return back();
+    }
+
     /**
      * AJAX: Buscar un registro de pack por su número de serie
      */
@@ -349,6 +414,41 @@ class IngresoController extends Controller
                     ];
                 }
             }
+        }
+
+        return response()->json($resultados);
+    }
+
+    /**
+     * AJAX: Buscar productos que pueden ser padres (packs) filtrados por grupos específicos.
+     */
+    public function buscarPadresPackAjax(Request $request)
+    {
+        $query = $request->input('query');
+        if (empty($query)) return response()->json([]);
+
+        // IDs de grupos permitidos: Cabezales, Tintas, Cartuchos...
+        $gruposPermitidos = [124, 155, 156, 157, 158, 159, 44, 79];
+
+        $productos = \App\Models\Producto::whereIn('idGrupo', $gruposPermitidos)
+            ->where(function ($q) use ($query) {
+                $q->where('modelo', 'like', "%$query%")
+                  ->orWhere('nombreProducto', 'like', "%$query%")
+                  ->orWhere('codigoProducto', 'like', "%$query%")
+                  ->orWhere('partNumber', 'like', "%$query%");
+            })
+            ->select('idProducto', 'nombreProducto', 'modelo', 'codigoProducto', 'partNumber')
+            ->take(15)
+            ->get();
+
+        $resultados = [];
+        foreach ($productos as $prod) {
+            $resultados[] = [
+                'idProducto' => $prod->idProducto,
+                'nombreProducto' => $prod->nombreProducto,
+                'modelo' => $prod->modelo,
+                'codigo' => $prod->codigoProducto
+            ];
         }
 
         return response()->json($resultados);

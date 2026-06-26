@@ -64,8 +64,8 @@ class GananciaController extends Controller
         FROM DetalleVenta dv_comp
         LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
         WHERE dv_comp.idVenta = DetalleVenta.idVenta
-        AND dv_comp.precioVenta <= 0.01) / 
-        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+        AND dv_comp.precioVenta <= 0.10) / 
+        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
         , 0)";
 
         $ganancias = Venta::query()

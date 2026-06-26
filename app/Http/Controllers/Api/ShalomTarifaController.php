@@ -169,16 +169,64 @@ class ShalomTarifaController extends Controller
         }
 
         try {
-            $response = Http::withoutVerifying()
-                ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept' => 'application/json',
-                ])
-                ->timeout(15)
-                ->get('https://pro.shalom.pe/envia_ya/service_order/restricciones-categorias');
+            // 1. Obtener una nueva sesión de Shalom
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/service_order/create');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_HEADER, 1);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $sessionResponse = curl_exec($ch);
+            curl_close($ch);
 
-            if ($response->successful()) {
-                $json = $response->json();
+            // Extraer Cookies
+            preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $sessionResponse, $matches);
+            $cookies = array();
+            $xsrfToken = '';
+            foreach($matches[1] as $item) {
+                parse_str($item, $cookie);
+                $cookies = array_merge($cookies, $cookie);
+                if (strpos($item, 'XSRF-TOKEN=') === 0) {
+                    $xsrfToken = substr($item, 11);
+                }
+            }
+
+            // Construir la cabecera de Cookie
+            $cookieString = '';
+            foreach ($cookies as $k => $v) {
+                if($k != 'expires' && $k != 'Max-Age' && $k != 'path' && $k != 'httponly') {
+                    $cookieString .= $k . '=' . $v . '; ';
+                }
+            }
+            
+            // Decodificar XSRF-TOKEN
+            $decodedXsrf = urldecode($xsrfToken);
+
+            // 2. Realizar el GET a la API de Restricciones
+            $ch2 = curl_init();
+            curl_setopt($ch2, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/service_order/restricciones-categorias');
+            curl_setopt($ch2, CURLOPT_RETURNTRANSFER, 1);
+            
+            $headers = [
+                'Accept: application/json',
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer: https://pro.shalom.pe/envia_ya/service_order/create',
+                'X-Requested-With: XMLHttpRequest',
+            ];
+            
+            if ($decodedXsrf) {
+                $headers[] = 'X-XSRF-TOKEN: ' . $decodedXsrf;
+            }
+
+            curl_setopt($ch2, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch2, CURLOPT_COOKIE, $cookieString);
+            curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+            
+            $res2 = curl_exec($ch2);
+            $httpcode = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+            curl_close($ch2);
+
+            if ($httpcode == 200) {
+                $json = json_decode($res2, true);
 
                 if (isset($json['valor']) && $json['valor'] === true && isset($json['data'])) {
                     // Guardar en caché
@@ -189,14 +237,20 @@ class ShalomTarifaController extends Controller
 
                     return response()->json(['success' => true, 'data' => $json['data']]);
                 }
-
-                return response()->json(['success' => false, 'message' => 'La API de Shalom no devolvió datos válidos.']);
             }
 
-            return response()->json(['success' => false, 'message' => 'Error HTTP ' . $response->status() . ' al consultar restricciones.']);
+            // Fallback si la API falla (ej. error 401, timeout, cambio de seguridad en Shalom)
+            if (file_exists($cachePath)) {
+                $cached = json_decode(file_get_contents($cachePath), true);
+                if ($cached && isset($cached['data'])) {
+                    return response()->json(['success' => true, 'data' => $cached['data'], 'from_cache' => true]);
+                }
+            }
+
+            return response()->json(['success' => false, 'message' => 'Error HTTP ' . $httpcode . ' al consultar restricciones, y no hay caché disponible.']);
 
         } catch (\Exception $e) {
-            // Si falla la API pero hay caché expirado, usarlo como fallback
+            // Si falla la ejecución
             if (file_exists($cachePath)) {
                 $cached = json_decode(file_get_contents($cachePath), true);
                 if ($cached && isset($cached['data'])) {

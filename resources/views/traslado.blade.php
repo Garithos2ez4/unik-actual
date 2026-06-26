@@ -5,7 +5,7 @@
 @section('content')
 
 <style>
-    .modal {
+    #modalConfirmacion.modal {
     display: none;
     position: fixed;
     z-index: 9999; 
@@ -16,7 +16,7 @@
     background-color: rgba(0, 0, 0, 0.4); 
 }
 
-.modal-content {
+#modalConfirmacion .modal-content {
     background-color: #fefefe;
     margin: 15% auto;
     padding: 20px;
@@ -67,7 +67,7 @@ button {
                 <div class="col-8 col-lg-9" style="position:relative">
                     <div class="input-group" style="z-index:1000">
                         <span class="input-group-text bg-primary text-white"><i class="bi bi-box-seam"></i></span>
-                        <input type="text" class="form-control" placeholder="Buscar Producto (Modelo, Código)..." id="search-producto" autocomplete="off">
+                        <input type="text" class="form-control" placeholder="Buscar Producto (Nombre, Modelo, Código)..." id="search-producto" autocomplete="off">
                         <ul class="list-group shadow w-100" style="position:absolute;top:100%;z-index:1050;max-height:250px;overflow-y:auto" id="suggestions-producto"></ul>
                     </div>
                 </div>
@@ -118,28 +118,52 @@ button {
         </div>
     </div>
 
-    {{-- Modal Cantidad Series --}}
-    <div class="modal fade" id="modalCantidadSeries" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
+    {{-- Modal Seleccionar Series --}}
+    <div class="modal fade" id="modalSeleccionSeries" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content border-primary shadow">
                 <div class="modal-header bg-primary text-white py-2">
-                    <h6 class="modal-title mb-0"><i class="bi bi-box-seam"></i> Trasladar Producto</h6>
+                    <h6 class="modal-title mb-0"><i class="bi bi-list-ul"></i> Seleccionar Series: <span id="modal-seleccion-producto-nombre"></span></h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body text-center">
-                    <h6 id="modal-cantidad-producto-nombre" class="fw-bold mb-1">Producto</h6>
-                    <p class="text-muted small mb-3">Hay <strong id="modal-cantidad-disponible" class="text-success">0</strong> series disponibles.</p>
-                    
-                    <label class="form-label fw-bold small">¿Cuántas deseas trasladar?</label>
-                    <div class="input-group input-group-lg mx-auto" style="max-width: 150px;">
-                        <input type="number" id="input-cantidad-trasladar" class="form-control text-center fw-bold" min="1" value="1">
+                <div class="modal-body p-0">
+                    <div class="p-3 bg-light border-bottom d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                        <div>
+                            <span class="text-muted small">Disponibles: <strong id="modal-seleccion-disponible" class="text-success">0</strong></span>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="form-label mb-0 small fw-bold text-nowrap">Filtrar Almacén:</label>
+                                <select id="select-filtro-almacen" class="form-select form-select-sm" style="min-width: 150px;" onchange="renderSeriesTraslado()">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 border-start ps-3">
+                                <label class="form-label mb-0 small fw-bold">Autoseleccionar:</label>
+                                <input type="number" id="input-cantidad-autoseleccionar" class="form-control form-control-sm text-center" style="width: 80px;" min="0" value="0">
+                            </div>
+                        </div>
                     </div>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('input-cantidad-trasladar').value = document.getElementById('input-cantidad-trasladar').max">Todas</button>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width:40px; padding-left: 1rem;"><input type="checkbox" id="check-todas-series" onclick="toggleTodasSeries(this)"></th>
+                                    <th>#</th>
+                                    <th>Número de Serie</th>
+                                    <th>Almacén</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-series"></tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="modal-footer justify-content-center py-2">
-                    <button type="button" class="btn btn-primary w-100" onclick="confirmarCantidadSeries()">Agregar a la lista</button>
+                <div class="modal-footer py-2 d-flex justify-content-between">
+                    <span class="fw-bold text-primary"><span id="span-cantidad-seleccionadas">0</span> seleccionadas</span>
+                    <div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmarSeleccionSeries()"><i class="bi bi-check-circle"></i> Agregar a la lista</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -191,5 +215,5 @@ button {
 <script>
     var almacenes = @json($almacenes);
 </script>
-<script src="{{ asset('js/traslado.js') }}"></script>
+<script src="{{ asset('js/traslado.js') }}?v={{ time() }}"></script>
 @endsection

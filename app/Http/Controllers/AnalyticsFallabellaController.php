@@ -97,8 +97,8 @@ class AnalyticsFallabellaController extends Controller
         FROM DetalleVenta dv_comp
         LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
         WHERE dv_comp.idVenta = DetalleVenta.idVenta
-        AND dv_comp.precioVenta <= 0.01) / 
-        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.01), 1)
+        AND dv_comp.precioVenta <= 0.10) / 
+        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
         , 0)";
 
         // Usamos el Modelo Venta para iniciar la consulta
@@ -112,7 +112,7 @@ class AnalyticsFallabellaController extends Controller
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
-            ->where('DetalleVenta.precioVenta', '>', 0.01)
+            ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->where('DetalleVenta.estado', 'COMPLETADO')
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
@@ -138,7 +138,7 @@ class AnalyticsFallabellaController extends Controller
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
-            ->where('DetalleVenta.precioVenta', '>', 0.01)
+            ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy('Producto.modelo')
@@ -160,7 +160,7 @@ class AnalyticsFallabellaController extends Controller
         $ventasMesRaw = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
-            ->where('DetalleVenta.precioVenta', '>', 0.01)
+            ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->where('DetalleVenta.estado', 'COMPLETADO')
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])

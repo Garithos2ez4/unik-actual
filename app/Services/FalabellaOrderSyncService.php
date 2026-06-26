@@ -118,8 +118,8 @@ class FalabellaOrderSyncService
         $createdBefore = $day->copy()->endOfDay()->toIso8601String();
 
         $response = $this->falabellaApiService->getOrders([
-            'CreatedAfter' => $createdAfter,
-            'CreatedBefore' => $createdBefore,
+            'UpdatedAfter' => $createdAfter,
+            'UpdatedBefore' => $createdBefore,
             'Limit' => 100,
             'Status' => $status ?: null,
         ]);
@@ -231,10 +231,9 @@ class FalabellaOrderSyncService
     {
         $lookbackCutoff = now()->subDays($lookbackDays)->startOfDay();
 
-        // Solo órdenes fuera del rango del lookback (las del rango ya fueron actualizadas)
+        // Verificar TODAS las órdenes locales que siguen como pending/ready_to_ship para evitar que se queden atascadas
         $staleOrders = FalabellaOrder::whereIn('status', ['pending', 'ready_to_ship'])
             ->whereNotNull('created_at_falabella')
-            ->where('created_at_falabella', '<', $lookbackCutoff)
             ->get();
 
         if ($staleOrders->isEmpty()) {
