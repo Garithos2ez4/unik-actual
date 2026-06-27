@@ -61,6 +61,9 @@ class SyncMarvisurCommand extends Command
                 return;
             }
 
+            // Guardar respaldo JSON local por seguridad (anti-Cloudflare)
+            file_put_contents(storage_path('app/marvisur_agencias.json'), json_encode($json, JSON_PRETTY_PRINT));
+
             $sucursales = $json['data']['Table'];
 
             // --- BORRADO LÓGICO ---
@@ -96,18 +99,55 @@ class SyncMarvisurCommand extends Command
                 // Si contiene "LIMA", lo mapeamos automáticamente al destino "LIMA"
                 $destinoName = str_contains(strtoupper($sucursalName), 'LIMA') ? 'LIMA' : $sucursalName;
 
-                // Buscar el Destino localmente
-                $destino = Destino::where('nombre', $destinoName)->first();
+                // Limpieza de números romanos y sufijos de Marvisur (ej: ATE II -> ATE)
+                $destinoName = preg_replace('/\s+(II|III|IV|V|ALMACEN|EXPRESS|CORPORATIVOS)$/i', '', $destinoName);
+                $destinoName = trim($destinoName);
 
-                // Intentar buscar por Provincia si el destino no se encontró (Marvisur da la provincia ahora)
-                if (!$destino && !empty($item['provincia'])) {
+                $excepciones = [
+                    'AGUAYTIA' => 'PADRE ABAD',
+                    'BAGUA CHICA' => 'BAGUA',
+                    'CANTA CALLAO' => 'CALLAO',
+                    'CAÑETE' => 'SAN VICENTE DE CAÑETE',
+                    'CERRO DE PASCO' => 'CHAUPIMARCA',
+                    'CERRO JULI' => 'JOSE LUIS BUSTAMANTE Y RIVERO',
+                    'CHINCHA' => 'CHINCHA ALTA',
+                    'CIUDAD DE DIOS' => 'PACASMAYO',
+                    'CONO NORTE' => 'CERRO COLORADO',
+                    'CORPORATIVOS' => 'LIMA',
+                    'FIORI' => 'SAN MARTIN DE PORRES',
+                    'GARCI CARBAJAL' => 'AREQUIPA',
+                    'HUAYCAN' => 'ATE',
+                    'LAS MALVINAS' => 'LIMA',
+                    'MANCHAY' => 'PACHACAMAC',
+                    'MARVI' => 'LA VICTORIA',
+                    'MARVI EXPRESS' => 'LA VICTORIA',
+                    'MAZUKO' => 'INAMBARI',
+                    'PEDREGAL' => 'MAJES',
+                    'PEDRO RUIZ GALLO' => 'JAZAN',
+                    'PUCALLPA' => 'CALLERIA',
+                    'QUILLABAMBA' => 'SANTA ANA',
+                    'TALARA' => 'PARIÑAS',
+                    'TINGO MARIA' => 'RUPA-RUPA',
+                    'VILLA MARIA' => 'VILLA MARIA DEL TRIUNFO',
+                ];
+
+                if (array_key_exists(strtoupper($destinoName), $excepciones)) {
+                    $destinoName = $excepciones[strtoupper($destinoName)];
+                }
+
+                $destino = null;
+
+                // Intentar buscar por Provincia y Distrito primero para evitar homónimos
+                if (!empty($item['provincia'])) {
                     $provinciaStr = trim($item['provincia']);
                     $destino = Destino::whereHas('Provincia', function($q) use ($provinciaStr) {
                         $q->where('nombre', $provinciaStr);
-                    })->where('nombre', $sucursalName)->first();
-                    
-                    // Si aún no hay destino exacto pero tenemos provincia, podríamos intentar crear el destino?
-                    // Por ahora mantendremos la regla de omitirlo si no existe.
+                    })->where('nombre', $destinoName)->first();
+                }
+
+                // Si no se encontró (o no enviaron provincia), buscar solo por el destino como fallback
+                if (!$destino) {
+                    $destino = Destino::where('nombre', $destinoName)->first();
                 }
 
                 if (!$destino) {

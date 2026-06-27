@@ -367,9 +367,13 @@ class EnvioProvinciaController extends Controller
 
             if (optional(optional($envio->Dimension)->tipoPaquete)->nombre) {
                 $nombreTipo = strtoupper(trim($envio->Dimension->tipoPaquete->nombre));
+                // Valid Shalom options, sorted from most specific to least specific to avoid partial matches
                 $validos = ['SOBRE', 'PAQUETE XXS', 'PAQUETE XS', 'PAQUETE S', 'PAQUETE M', 'PAQUETE L'];
-                if (in_array($nombreTipo, $validos)) {
-                    $mercaderia = $nombreTipo;
+                foreach ($validos as $valido) {
+                    if (strpos($nombreTipo, $valido) !== false) {
+                        $mercaderia = $valido;
+                        break;
+                    }
                 }
             }
 

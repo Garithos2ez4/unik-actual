@@ -34,6 +34,8 @@ class SyncOlvaCommand extends Command
         // --- BORRADO LÓGICO ---
         SubAgencia::where('idAgencia', $agencia->idAgencia)->update(['estado' => 0]);
 
+        $todasLasTiendas = []; // Para el respaldo JSON
+
         // 2. Iterar por los 25 departamentos
         for ($i = 1; $i <= 25; $i++) {
             try {
@@ -51,6 +53,7 @@ class SyncOlvaCommand extends Command
 
                 if ($response->successful() && !empty($response->json())) {
                     $tiendas = $response->json();
+                    $todasLasTiendas = array_merge($todasLasTiendas, $tiendas); // Acumular para respaldo local
 
                     foreach ($tiendas as $tienda) {
                         $nombreSucursalOriginal = trim($tienda['nombres'] ?? '');
@@ -120,6 +123,7 @@ class SyncOlvaCommand extends Command
                             'PIURA - LOS GERANIOS' => 'PIURA',
                             'PIURA - SANTA ISABEL' => 'PIURA',
                             'INAMBARI - MAZUCO' => 'INAMBARI',
+                            'OLVA VMT' => 'VILLA MARIA DEL TRIUNFO',
                         ];
 
                         if (array_key_exists($nombreLimpio, $excepciones)) {
@@ -136,7 +140,15 @@ class SyncOlvaCommand extends Command
                         }
 
 
-                        $destino = Destino::whereRaw('UPPER(nombre) = ?', [$nombreLimpio])->first();
+                        $destino = Destino::select('destinos.*')
+                            ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
+                            ->where('provincias.idDepartamento', $i)
+                            ->whereRaw('UPPER(destinos.nombre) = ?', [$nombreLimpio])
+                            ->first();
+
+                        if (!$destino) {
+                            $destino = Destino::whereRaw('UPPER(nombre) = ?', [$nombreLimpio])->first();
+                        }
 
                         if (!$destino) {
                             $this->warn("\nDestino no encontrado para: {$nombreSucursalOriginal} (Buscado como: {$nombreLimpio})");
@@ -179,6 +191,9 @@ class SyncOlvaCommand extends Command
 
         $bar->finish();
         $this->newLine(2);
+
+        // Guardar respaldo JSON local por seguridad (anti-Cloudflare)
+        file_put_contents(storage_path('app/olva_agencias.json'), json_encode($todasLasTiendas, JSON_PRETTY_PRINT));
 
         $this->info("¡Sincronización OLVA Completada!");
         $this->info("- Nuevas Sub-Agencias: {$nuevas}");

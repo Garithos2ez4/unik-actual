@@ -23,19 +23,30 @@ class SyncShalomCommand extends Command
             return;
         }
 
-        $tokenMagico = 'Bearer web-23027e18-742e-441f-bced-96027c306163@1780955419@28d2d7dfa93b373922582fcd43664c945e8e9563b06804f56a42e8b55dce15a4';
-
+        $tokenMagico = 'Bearer web-ae5e1e0f-5118-4b18-93ab-e5d51026dc57@1782579587@e2adae89f7a194ae111c8627e5e5fd8c300a80298b5c570683e5930432d452e3';
         try {
             $response = Http::withoutVerifying()
                 ->withHeaders([
                     'Authorization' => $tokenMagico,
-                    'Accept' => 'application/json',
-                    'User-Agent' => 'Mozilla/5.0'
+                    'Accept' => 'application/json, text/plain, */*',
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
+                    'Origin' => 'https://shalom.com.pe',
+                    'Referer' => 'https://shalom.com.pe/',
+                    'sec-ch-ua' => '"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"',
+                    'sec-ch-ua-mobile' => '?0',
+                    'sec-ch-ua-platform' => '"Windows"',
+                    'sec-fetch-dest' => 'empty',
+                    'sec-fetch-mode' => 'cors',
+                    'sec-fetch-site' => 'cross-site',
                 ])
-                ->post('https://serviceswebapi.shalomcontrol.com/api/v1/web/agencias/listar');
+                ->asJson()
+                ->post('https://serviceswebapi.shalomcontrol.com/api/v1/web/agencias/listar', [
+                    'limit' => 1000,
+                ]);
 
             if ($response->successful()) {
                 $json = $response->json();
+                $this->line("HTTP " . $response->status() . " - Respuesta: " . substr($response->body(), 0, 500));
 
                 if (isset($json['success']) && $json['success'] == true) {
                     $agencias = $json['data'];
@@ -77,8 +88,24 @@ class SyncShalomCommand extends Command
                         ];
 
                         $zonaBusqueda = isset($aliases[$zona]) ? $aliases[$zona] : $zona;
+                        $provinciaBusqueda = isset($item['provincia']) ? (isset($aliases[trim($item['provincia'])]) ? $aliases[trim($item['provincia'])] : trim($item['provincia'])) : '';
+                        $departamentoBusqueda = isset($item['departamento']) ? (isset($aliases[trim($item['departamento'])]) ? $aliases[trim($item['departamento'])] : trim($item['departamento'])) : '';
 
-                        $destino = Destino::whereRaw('UPPER(nombre) = ?', [strtoupper($zonaBusqueda)])->first();
+                        $destino = Destino::select('destinos.*')
+                            ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
+                            ->join('departamentos', 'provincias.idDepartamento', '=', 'departamentos.idDepartamento')
+                            ->whereRaw('UPPER(destinos.nombre) = ?', [strtoupper($zonaBusqueda)])
+                            ->when(!empty($provinciaBusqueda), function ($q) use ($provinciaBusqueda) {
+                                return $q->whereRaw('UPPER(provincias.nombre) = ?', [strtoupper($provinciaBusqueda)]);
+                            })
+                            ->when(!empty($departamentoBusqueda), function ($q) use ($departamentoBusqueda) {
+                                return $q->whereRaw('UPPER(departamentos.nombre) = ?', [strtoupper($departamentoBusqueda)]);
+                            })
+                            ->first();
+
+                        if (!$destino) {
+                            $destino = Destino::whereRaw('UPPER(nombre) = ?', [strtoupper($zonaBusqueda)])->first();
+                        }
 
                         if (!$destino) {
                             $this->warn("  Destino no encontrado para la zona: {$zona} (sucursal: {$nombreSucursal})");

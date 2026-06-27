@@ -271,7 +271,11 @@ class AnalyticsController extends Controller
         $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
 
         $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+            (SELECT CASE 
+                            WHEN rp_inner.es_herramienta = 1 THEN 0
+                            WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto 
+                            ELSE dc_inner.precioUnitario 
+                        END
              FROM EgresoProducto ep_inner
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -288,7 +292,11 @@ class AnalyticsController extends Controller
 
         $costosComponentesSub = "COALESCE((SELECT SUM(
             COALESCE(
-                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                (SELECT CASE 
+                            WHEN rp_inner.es_herramienta = 1 THEN 0
+                            WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto 
+                            ELSE dc_inner.precioUnitario 
+                        END
                  FROM EgresoProducto ep_inner
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -400,7 +408,11 @@ class AnalyticsController extends Controller
         $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
 
         $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+            (SELECT CASE 
+                            WHEN rp_inner.es_herramienta = 1 THEN 0
+                            WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto 
+                            ELSE dc_inner.precioUnitario 
+                        END
              FROM EgresoProducto ep_inner
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -414,7 +426,11 @@ class AnalyticsController extends Controller
 
         $costosComponentesSub = "COALESCE((SELECT SUM(
             COALESCE(
-                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                (SELECT CASE 
+                            WHEN rp_inner.es_herramienta = 1 THEN 0
+                            WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto 
+                            ELSE dc_inner.precioUnitario 
+                        END
                  FROM EgresoProducto ep_inner
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -440,7 +456,7 @@ class AnalyticsController extends Controller
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
+                         SUM(CASE WHEN UPPER(Producto.modelo) LIKE '%RESET%' THEN 0 ELSE ((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) END) as costos,
                          SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
@@ -510,7 +526,7 @@ class AnalyticsController extends Controller
     {
         $tc = $this->calculadoraService->getTasaCambio();
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
-        
+
         $cacheKey = "tienda_data_{$fechaInicio}_{$fechaFin}";
 
         $version = \Illuminate\Support\Facades\Cache::get('analytics_tienda_version', 1);
@@ -520,7 +536,11 @@ class AnalyticsController extends Controller
             $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
 
             $costoVentaExpr = "COALESCE(
-                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                (SELECT CASE 
+                            WHEN rp_inner.es_herramienta = 1 THEN 0
+                            WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto 
+                            ELSE dc_inner.precioUnitario 
+                        END
                  FROM EgresoProducto ep_inner
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -534,7 +554,11 @@ class AnalyticsController extends Controller
 
             $costosComponentesSub = "COALESCE((SELECT SUM(
                 COALESCE(
-                    (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
+                    (SELECT CASE 
+                                WHEN rp_inner.es_herramienta = 1 THEN 0
+                                WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto 
+                                ELSE dc_inner.precioUnitario 
+                            END
                      FROM EgresoProducto ep_inner
                      INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                      INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
@@ -559,7 +583,7 @@ class AnalyticsController extends Controller
                              GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                              (SELECT GROUP_CONCAT(DISTINCT MetodoPago.nombreMetodo SEPARATOR ', ') FROM PagoVenta JOIN MetodoPago ON PagoVenta.idMetodoPago = MetodoPago.idMetodoPago WHERE PagoVenta.idVenta = Venta.idVenta) as metodos_pago,
                              SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
+                             SUM(CASE WHEN UPPER(Producto.modelo) LIKE '%RESET%' THEN 0 ELSE ((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) END) as costos,
                              0 as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
@@ -618,7 +642,7 @@ class AnalyticsController extends Controller
                 ->selectRaw("Producto.modelo as sku,
                              SUM(DetalleVenta.cantidad) as total_unidades,
                              SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                             SUM((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
+                             SUM(CASE WHEN UPPER(Producto.modelo) LIKE '%RESET%' THEN 0 ELSE ((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) END) as costos,
                              SUM(($comisionTiendaExpr) * DetalleVenta.cantidad) as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")

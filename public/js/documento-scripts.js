@@ -37,8 +37,18 @@ let divColOptions = createDiv(['col-8','text-end','pe-0'],null);
 let divColDelete = createDiv(['col-4','text-start'],null);
 
 let divColCantidad = createDiv(['col-1','col-md-1','text-center'],null);
-let h5Cantidad = createH5(null,'header-cantidad-product-' + inputHiddenProduct.value,'0');
-
+let h5Cantidad = document.createElement('input');
+h5Cantidad.type = 'number';
+h5Cantidad.id = 'header-cantidad-product-' + inputHiddenProduct.value;
+h5Cantidad.value = '0';
+h5Cantidad.min = '0';
+h5Cantidad.classList.add('form-control', 'form-control-sm', 'text-center', 'p-1', 'mx-auto');
+h5Cantidad.style.width = '60px';
+h5Cantidad.addEventListener('change', function() {
+    if(typeof adjustGenericSeries === 'function') {
+        adjustGenericSeries(inputHiddenProduct.value, parseInt(this.value) || 0, productInput.dataset.id);
+    }
+});
 // Checkbox para seleccionar todos los seriales de este producto
 let divCheckAll = createDiv(['form-check','d-flex','justify-content-center','mb-0'],null);
 let checkAll = document.createElement('input');
@@ -107,7 +117,15 @@ buttonOption.ariaExpanded = 'false';
 buttonOption.ariaControls = 'collapse-product-'+index;
 buttonOption.classList.add('btn','btn-sm','btn-secondary','me-2');
 buttonOption.innerHTML = '<i class="bi bi-three-dots-vertical"></i>';
+let buttonAddMassive = createButton(['btn', 'btn-purple', 'btn-sm', 'me-2'],
+null,
+'<i class="bi bi-clipboard-plus-fill"></i>',
+'button',
+[() => promptMassiveSeries(inputHiddenProduct.value, productInput.dataset.id)]
+);
+
 divColButtons.appendChild(buttonOption);
+divColButtons.appendChild(buttonAddMassive);
 divColButtons.appendChild(buttonAdd);
 
 divRow.appendChild(divColCantidad);

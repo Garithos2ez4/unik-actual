@@ -237,7 +237,11 @@ function countProducts(id) {
     let precioTot = document.getElementById('header-preciototal-product-' + id);
     let hiddenPrecioTot = document.getElementById('header-hidden-preciototal-' + id);
 
-    cant.textContent = items.length;
+    if (cant.tagName === 'INPUT') {
+        cant.value = items.length;
+    } else {
+        cant.textContent = items.length;
+    }
     precioTot.textContent = items.length * precioUni.dataset.price;
     precioTot.dataset.total = items.length * precioUni.dataset.price;
     hiddenPrecioTot.value = items.length * precioUni.dataset.price;
@@ -521,3 +525,64 @@ document.getElementById('btn-list-scan-codes').addEventListener('click', functio
         updateBtnAdd();
     });
 });
+
+function promptMassiveSeries(id, idProducto) {
+    Swal.fire({
+        title: 'Ingreso Masivo de Series',
+        html: '<div class="text-start mb-2"><small class="text-muted">Pega la lista de series separadas por comas (,) o saltos de línea.</small></div>' +
+              '<textarea id="swal-textarea-series" class="form-control" rows="8" placeholder="Ejemplo:\nSERIE123\nSERIE456\nSERIE789"></textarea>',
+        showCancelButton: true,
+        confirmButtonText: 'Agregar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6f42c1',
+        preConfirm: () => {
+            const textarea = document.getElementById('swal-textarea-series');
+            return textarea ? textarea.value : '';
+        }
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            // Dividir por comas o saltos de línea, limpiar espacios vacíos
+            let rawSeries = result.value.split(/[\n,]+/);
+            let series = rawSeries.map(s => s.trim()).filter(s => s.length > 0);
+            
+            if (series.length > 0) {
+                series.forEach(serial => {
+                    createItemList(id, serial, idProducto);
+                });
+                countProducts(id);
+                updateBtnAdd();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Series agregadas!',
+                    text: `Se agregaron ${series.length} series con éxito.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        }
+    });
+}
+
+function adjustGenericSeries(id, targetCount, idProducto) {
+    let items = document.querySelectorAll('.item-list-product-' + id);
+    let currentCount = items.length;
+
+    if (targetCount > currentCount) {
+        // Añadir items genéricos
+        let diff = targetCount - currentCount;
+        for (let i = 0; i < diff; i++) {
+            createItemList(id, '0', idProducto); 
+        }
+        invalidarChecks(id);
+    } else if (targetCount < currentCount) {
+        // Eliminar items desde el final
+        let diff = currentCount - targetCount;
+        for (let i = 0; i < diff; i++) {
+            items[items.length - 1 - i].remove();
+        }
+    }
+    
+    countProducts(id);
+    updateBtnAdd();
+}

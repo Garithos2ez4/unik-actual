@@ -55,6 +55,9 @@ class SyncEmtrafesaCommand extends Command
                 return;
             }
 
+            // Guardar respaldo JSON local por seguridad (anti-Cloudflare)
+            file_put_contents(storage_path('app/emtrafesa_agencias.json'), json_encode($json, JSON_PRETTY_PRINT));
+
             $sucursales = $json;
 
             // --- BORRADO LÓGICO ---
