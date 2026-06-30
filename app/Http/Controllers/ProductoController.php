@@ -424,6 +424,39 @@ class ProductoController extends Controller
         }
     }
 
+    public function obtenerHistorialPreciosHtml($id)
+    {
+        try {
+            $producto = Producto::findOrFail($id);
+
+            $historial = \Illuminate\Support\Facades\DB::select("
+                SELECT
+                    c.fechaRegistro,
+                    c.numeroComprobante,
+                    c.moneda,
+                    c.totalCompra,
+                    dc.precioUnitario,
+                    dc.precioCompra,
+                    dc.medida,
+                    pv.nombreProveedor,
+                    htc.tasa_cambio
+                FROM DetalleComprobante dc
+                INNER JOIN Comprobante c ON c.idComprobante = dc.idComprobante
+                LEFT JOIN Preveedor pv ON pv.idProveedor = c.idProveedor
+                LEFT JOIN historial_tipo_cambio htc ON htc.fecha = c.fechaRegistro
+                WHERE dc.idProducto = ?
+                ORDER BY c.fechaRegistro DESC
+            ", [$id]);
+
+            $html = view('productos.partials.modal_historial_precios_body', compact('producto', 'historial'))->render();
+
+            return response()->json(['html' => $html]);
+        } catch (\Exception $e) {
+            \Log::error('Error en obtenerHistorialPreciosHtml: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json(['error' => 'Error interno del servidor.'], 500);
+        }
+    }
+
     public function updateProduct($idProducto,Request $request){
         $userModel = $this->headerService->getModelUser();
         foreach($userModel->Accesos as $acceso){

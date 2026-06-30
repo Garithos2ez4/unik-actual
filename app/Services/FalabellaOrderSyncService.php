@@ -32,29 +32,42 @@ class FalabellaOrderSyncService
 
         if ($orderId === '') return null;
 
-        $order = FalabellaOrder::updateOrCreate(
-            ['order_id' => $orderId],
-            [
-                'order_number'          => $normalized['order_number'] ?? null,
-                'customer_name'         => $normalized['customer_name'] ?: null,
-                'customer_email'        => $normalized['customer_email'] ?: null,
-                'status'                => $normalized['status'] ?: null,
-                'statuses'              => $normalized['statuses'] ?? [],
-                'price'                 => $normalized['price'] ?? null,
-                'payment_method'        => $normalized['payment_method'] ?: null,
-                'shipping_type'         => $normalized['shipping_type'] ?: null,
-                'delivery_info'         => $normalized['delivery_info'] ?: null,
-                'items_count'           => (int) ($normalized['items_count'] ?? 0),
-                'created_at_falabella'  => $this->parseDate($normalized['created_at'] ?? null),
-                'updated_at_falabella'  => $this->parseDate($normalized['updated_at'] ?? null),
-                'promised_shipping_time' => $this->parseDate($normalized['promised_shipping_time'] ?? null),
-                'shipping_city'         => $normalized['city'] ?: null,
-                'shipping_address'      => $normalized['address'] ?: null,
-                'payload'               => $orderPayload,
-                'synced_at'             => now(),
-                'sync_date'             => $syncDate ?: now()->toDateString(),
-            ]
-        );
+        $attributes = ['order_id' => $orderId];
+        $values = [
+            'order_number'          => $normalized['order_number'] ?? null,
+            'customer_name'         => $normalized['customer_name'] ?: null,
+            'customer_email'        => $normalized['customer_email'] ?: null,
+            'status'                => $normalized['status'] ?: null,
+            'statuses'              => $normalized['statuses'] ?? [],
+            'price'                 => $normalized['price'] ?? null,
+            'payment_method'        => $normalized['payment_method'] ?: null,
+            'shipping_type'         => $normalized['shipping_type'] ?: null,
+            'delivery_info'         => $normalized['delivery_info'] ?: null,
+            'items_count'           => (int) ($normalized['items_count'] ?? 0),
+            'created_at_falabella'  => $this->parseDate($normalized['created_at'] ?? null),
+            'updated_at_falabella'  => $this->parseDate($normalized['updated_at'] ?? null),
+            'promised_shipping_time' => $this->parseDate($normalized['promised_shipping_time'] ?? null),
+            'shipping_city'         => $normalized['city'] ?: null,
+            'shipping_address'      => $normalized['address'] ?: null,
+            'payload'               => $orderPayload,
+            'synced_at'             => now(),
+            'sync_date'             => $syncDate ?: now()->toDateString(),
+        ];
+
+        try {
+            $order = FalabellaOrder::updateOrCreate($attributes, $values);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->errorInfo[1] == 1062) {
+                $order = FalabellaOrder::where('order_id', $orderId)->first();
+                if ($order) {
+                    $order->update($values);
+                } else {
+                    throw $e;
+                }
+            } else {
+                throw $e;
+            }
+        }
 
         // Sincronizar items de esta orden
         try {
@@ -86,23 +99,36 @@ class FalabellaOrderSyncService
                     }
                 }
 
-                $order->items()->updateOrCreate(
-                    ['order_item_id' => (string) ($item['order_item_id'] ?? '')],
-                    [
-                        'order_id'      => (string) ($item['order_id'] ?? $order->order_id),
-                        'order_number'  => $item['order_number'] ?? $order->order_number,
-                        'seller_sku'    => $sellerSku,
-                        'falabella_sku' => $falabellaSku,
-                        'shop_sku'      => $falabellaSku,
-                        'name'          => $item['name'] ?? null,
-                        'status'        => $item['status'] ?? null,
-                        'price'         => $item['price'] ?? null,
-                        'quantity'      => (int) ($item['quantity'] ?? 1),
-                        'tracking_code' => $item['tracking_code'] ?? null,
-                        'package_id'    => $item['package_id'] ?? null,
-                        'payload'       => $itemPayload,
-                    ]
-                );
+                $itemAttributes = ['order_item_id' => (string) ($item['order_item_id'] ?? '')];
+                $itemValues = [
+                    'order_id'      => (string) ($item['order_id'] ?? $order->order_id),
+                    'order_number'  => $item['order_number'] ?? $order->order_number,
+                    'seller_sku'    => $sellerSku,
+                    'falabella_sku' => $falabellaSku,
+                    'shop_sku'      => $falabellaSku,
+                    'name'          => $item['name'] ?? null,
+                    'status'        => $item['status'] ?? null,
+                    'price'         => $item['price'] ?? null,
+                    'quantity'      => (int) ($item['quantity'] ?? 1),
+                    'tracking_code' => $item['tracking_code'] ?? null,
+                    'package_id'    => $item['package_id'] ?? null,
+                    'payload'       => $itemPayload,
+                ];
+
+                try {
+                    $order->items()->updateOrCreate($itemAttributes, $itemValues);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($e->errorInfo[1] == 1062) {
+                        $existingItem = $order->items()->where('order_item_id', $itemAttributes['order_item_id'])->first();
+                        if ($existingItem) {
+                            $existingItem->update($itemValues);
+                        } else {
+                            throw $e;
+                        }
+                    } else {
+                        throw $e;
+                    }
+                }
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Error sincronizando items de orden {$orderId}: " . $e->getMessage());

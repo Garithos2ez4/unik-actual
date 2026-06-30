@@ -280,7 +280,7 @@ class AnalyticsController extends Controller
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
              LIMIT 1),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
@@ -301,7 +301,7 @@ class AnalyticsController extends Controller
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
                  INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
                  LIMIT 1),
                 COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
             ) * dv_comp.cantidad
@@ -342,10 +342,11 @@ class AnalyticsController extends Controller
             ->leftJoin('Plataforma', 'CuentasPlataforma.idPlataforma', '=', 'Plataforma.idPlataforma')
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, $precioPubExpr as ingresos,
                          (COALESCE(
-                            NULLIF(CASE WHEN DetalleComprobante.precioUnitario > 1 THEN 
+                            NULLIF(CASE WHEN RegistroProducto.es_herramienta = 1 THEN 0
+                                        WHEN DetalleComprobante.precioUnitario > 1 THEN 
                                 (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $subqueryTipoCambioEgresoCosto ELSE DetalleComprobante.precioUnitario END) 
                             ELSE NULL END, NULL),
-                            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
+                            CASE WHEN RegistroProducto.es_herramienta = 1 THEN 0 ELSE COALESCE(Producto.precioDolar, 0) * $tc * 1.18 END
                          ) + ($comisionFalabellaEgreso)) as costos")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
@@ -417,7 +418,7 @@ class AnalyticsController extends Controller
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
              LIMIT 1),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
@@ -435,7 +436,7 @@ class AnalyticsController extends Controller
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
                  INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
                  LIMIT 1),
                 COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
             ) * dv_comp.cantidad
@@ -545,7 +546,7 @@ class AnalyticsController extends Controller
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
                  INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                 WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+                 WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
                  LIMIT 1),
                 COALESCE(Producto.precioDolar, 0) * $tc * 1.18
             )";
@@ -563,7 +564,7 @@ class AnalyticsController extends Controller
                      INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                      INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
                      INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                     WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                     WHERE ep_inner.idEgreso = dv_comp.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
                      LIMIT 1),
                     COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
                 ) * dv_comp.cantidad

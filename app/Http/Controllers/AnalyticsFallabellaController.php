@@ -72,7 +72,7 @@ class AnalyticsFallabellaController extends Controller
              INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
              INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND dc_inner.precioUnitario > 1
+             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
              LIMIT 1),
             COALESCE(Producto.precioDolar, 0) * $tc * 1.18
         )";
@@ -89,7 +89,7 @@ class AnalyticsFallabellaController extends Controller
                  INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
                  INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
                  INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND dc_inner.precioUnitario > 1
+                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
                  LIMIT 1),
                 COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
             ) * dv_comp.cantidad

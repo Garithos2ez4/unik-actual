@@ -122,6 +122,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/producto/especificaciones/{idProducto}', [ProductoController::class, 'details'])->name('details');
     Route::get('/producto/{idproducto}', [ProductoController::class, 'update'])->name('producto');
     Route::get('/producto/{id}/ubicacion-html', [ProductoController::class, 'obtenerUbicacionHtml']);
+    Route::get('/producto/{id}/historial-precios-html', [ProductoController::class, 'obtenerHistorialPreciosHtml']);
     Route::post('/producto/createdetails', [ProductoController::class, 'createDetails'])->name('createdetails');
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
     Route::post('/producto/insertorupdatedetails', [ProductoController::class, 'insertOrUpdateDetails'])->name('insertorupdatedetails');

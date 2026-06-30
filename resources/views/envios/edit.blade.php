@@ -373,6 +373,11 @@
         // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
         if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
             document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+            // Rehabilitar los inputs al mostrar la sección
+            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
             
             // Filtrar opciones del select por idAgencia
             const selectCaja = document.getElementById('tipo_caja_select');
@@ -396,6 +401,11 @@
             }
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
+            // Deshabilitar los inputs para que no bloqueen la validación del formulario
+            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
         }
 
         const idDestino = document.querySelector('select[name="idDestino"]').value;
@@ -478,6 +488,11 @@
             });
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
+            // Deshabilitar inputs al cargar para agencias que no usan paquete
+            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
         }
 
         aplicarMedidasCaja(true); // true para no sobreescribir los valores cargados desde BD si es "custom"

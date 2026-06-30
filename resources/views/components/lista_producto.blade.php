@@ -79,9 +79,14 @@
 
                             </div>
                             <div class="row mt-2 text-center">
-                                <div class="col-12">
+                                <div class="col-6">
                                     <button type="button" class="btn btn-sm btn-outline-info btn-ver-ubicacion" style="font-size: 0.75rem;" data-id="{{ $pro->idProducto }}">
-                                        <i class="bi bi-geo-alt"></i> Ver Ubicación
+                                        <i class="bi bi-geo-alt"></i> Ubicación
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-ver-historial-precios" style="font-size: 0.75rem;" data-id="{{ $pro->idProducto }}">
+                                        <i class="bi bi-graph-up-arrow"></i> Historial
                                     </button>
                                 </div>
                             </div>

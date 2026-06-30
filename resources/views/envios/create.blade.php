@@ -146,19 +146,19 @@
                                             </div>
                                             <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Largo (m)</label>
-                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01">
+                                                <input type="number" name="largo" id="input_largo" class="form-control form-control-sm" step="0.01" min="0.01" disabled>
                                             </div>
                                             <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Ancho (m)</label>
-                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01">
+                                                <input type="number" name="ancho" id="input_ancho" class="form-control form-control-sm" step="0.01" min="0.01" disabled>
                                             </div>
                                             <div class="col-3">
                                                 <label class="form-label mb-0 text-muted" style="font-size: 0.8rem">Alto (m)</label>
-                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01">
+                                                <input type="number" name="alto" id="input_alto" class="form-control form-control-sm" step="0.01" min="0.01" disabled>
                                             </div>
                                             <div class="col-3">
                                                 <label class="form-label mb-0 fw-bold text-danger" style="font-size: 0.8rem">Peso (KG)</label>
-                                                <input type="number" name="peso" id="input_peso" class="form-control form-control-sm border-danger" step="0.01">
+                                                <input type="number" name="peso" id="input_peso" class="form-control form-control-sm border-danger" step="0.01" disabled>
                                             </div>
                                             <div class="col-4 d-none">
                                                 <label class="form-label mb-0 fw-bold text-success" style="font-size: 0.8rem">Tarifa Estimada</label>
@@ -361,6 +361,11 @@
         // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
         if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
             document.getElementById('seccion_medidas_caja').classList.remove('d-none');
+            // Rehabilitar los inputs al mostrar la sección
+            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
             
             // Filtrar opciones del select por idAgencia
             const selectCaja = document.getElementById('tipo_caja_select');
@@ -384,6 +389,11 @@
             }
         } else {
             document.getElementById('seccion_medidas_caja').classList.add('d-none');
+            // Deshabilitar los inputs para que no bloqueen la validación del formulario
+            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
             // Limpiar valores
             document.getElementById('tipo_caja_select').value = 'custom';
             aplicarMedidasCaja();

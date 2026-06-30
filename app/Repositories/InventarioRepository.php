@@ -68,11 +68,49 @@ class InventarioRepository implements InventarioRepositoryInterface
         foreach ($inventarios as $inventario) {
             foreach ($data as $almacen => $stock) {
                 if ($inventario->idAlmacen == $almacen) {
+                    $oldStock = $inventario->stock;
                     $array = array();
                     $array['idAlmacen'] = $almacen;
                     $array['stock'] = $stock;
 
                     $inventario->update($array);
+
+                    // Sincronizar series genéricas (RegistroProducto)
+                    if ($stock > $oldStock) {
+                        $diff = $stock - $oldStock;
+                        $detalle = \App\Models\DetalleComprobante::where('idProducto', $idProducto)->latest('idDetalleComprobante')->first();
+                        if ($detalle) {
+                            for ($i = 0; $i < $diff; $i++) {
+                                \App\Models\RegistroProducto::create([
+                                    'idDetalleComprobante' => $detalle->idDetalleComprobante,
+                                    'idAlmacen' => $almacen,
+                                    'numeroSerie' => 'nulo',
+                                    'estado' => 'NUEVO',
+                                    'fechaMovimiento' => now(),
+                                ]);
+                            }
+                        }
+                    } elseif ($stock < $oldStock) {
+                        $diff = $oldStock - $stock;
+                        // Eliminar series genéricas sobrantes
+                        $seriesToDelete = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function ($q) use ($idProducto) {
+                            $q->where('idProducto', $idProducto);
+                        })
+                            ->where('idAlmacen', $almacen)
+                            ->whereIn('estado', ['NUEVO', 'ABIERTO'])
+                            ->where(function ($q) {
+                                $q->whereNull('numeroSerie')
+                                  ->orWhere('numeroSerie', 'nulo')
+                                  ->orWhere('numeroSerie', 'N/A')
+                                  ->orWhere('numeroSerie', '');
+                            })
+                            ->limit($diff)
+                            ->get();
+
+                        foreach ($seriesToDelete as $s) {
+                            $s->delete();
+                        }
+                    }
                 }
             }
         }
