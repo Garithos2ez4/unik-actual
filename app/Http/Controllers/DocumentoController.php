@@ -24,7 +24,7 @@ class DocumentoController extends Controller
         $userModel = $this->headerService->getModelUser();
         //variables propias del controlador
         $documento = $this->comprobanteService->getOneById(decrypt($id));
-        $ubicaciones = $this->comprobanteService->getAllAlmacen();
+        $ubicaciones = $this->comprobanteService->getAllAlmacen()->load('Ubicaciones');
         $registros = $this->comprobanteService->getAllRegistrosByComprobanteId(decrypt($id));
         $registrosFiltrados = $registros->filter(function($register) {
             return strpos($register->numeroSerie, 'UNK-') !== false;

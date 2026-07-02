@@ -31,16 +31,42 @@
                         </div>
                         <div class="col-6 pt-2">
                             <label class="form-label fw-bold">Ubicación Específica (Opcional):</label>
-                            <select id="ubicacion-especifica-modal-detail" name="ubicacion_especifica" class="form-select">
-                                <option value="">Seleccione Rack/Estante</option>
-                                @foreach ($almacenes as $almacen)
-                                @foreach($almacen->Ubicaciones as $ubicacion)
-                                <option value="{{$ubicacion->idUbicacion}}" data-almacen="{{$almacen->idAlmacen}}" class="d-none ubicacion-option">
-                                    {{$ubicacion->nombre}}
-                                </option>
-                                @endforeach
-                                @endforeach
-                            </select>
+                            @php
+                                $ubicacionesExactasGlobal = \App\Models\UbicacionEstante::where('estado', 1)
+                                    ->orderBy('idAlmacen')
+                                    ->orderBy('nombre_rack')
+                                    ->orderBy('fila_estante')
+                                    ->get();
+                                
+                                $racksPorAlmacen = [];
+                                foreach($ubicacionesExactasGlobal as $ue) {
+                                    $racksPorAlmacen[$ue->idAlmacen][$ue->nombre_rack][] = $ue;
+                                }
+                            @endphp
+                            <div class="d-flex gap-2">
+                                <select id="rack-modal-detail" class="form-select" onchange="updateFilaDetail(this)">
+                                    <option value="">Estante...</option>
+                                    @foreach($racksPorAlmacen as $idAlm => $racks)
+                                        @foreach($racks as $rackName => $filas)
+                                            <option value="{{ $rackName }}" data-almacen="{{ $idAlm }}" class="d-none rack-option">
+                                                {{ $rackName }}
+                                            </option>
+                                        @endforeach
+                                    @endforeach
+                                </select>
+                                <select id="ubicacion-especifica-modal-detail" name="ubicacion_especifica" class="form-select">
+                                    <option value="">Fila...</option>
+                                    @foreach($racksPorAlmacen as $idAlm => $racks)
+                                        @foreach($racks as $rackName => $filas)
+                                            @foreach($filas as $ue)
+                                                <option value="{{ $ue->idUbicacionExacta }}" data-almacen="{{ $idAlm }}" data-rack="{{ $rackName }}" class="d-none fila-option">
+                                                    Fila {{ $ue->fila_estante }}
+                                                </option>
+                                            @endforeach
+                                        @endforeach
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
                         <div class="col-6 pt-2">
                             <label class="form-label fw-bold">Estado:</label>

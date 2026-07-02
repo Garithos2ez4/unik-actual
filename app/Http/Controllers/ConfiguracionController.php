@@ -582,6 +582,7 @@ class ConfiguracionController extends Controller
         $idAlmacen = $request->input('idAlmacen');
         $nombre = $request->input('nombre');
         $descripcion = $request->input('descripcion');
+        $num_filas = $request->input('num_filas', 1);
         
         $rutaFoto = null;
         if ($request->hasFile('foto')) {
@@ -590,8 +591,40 @@ class ConfiguracionController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
-                $this->configuracionService->createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $rutaFoto);
+                $this->configuracionService->createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $rutaFoto, $num_filas);
                 $this->headerService->sendFlashAlerts('Éxito', 'Ubicación añadida correctamente', 'success', 'btn-success');
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function addFila(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $idAlmacen = $request->input('idAlmacen');
+        $nombre_rack = $request->input('nombre_rack');
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $this->configuracionService->addFilaToRack($idAlmacen, $nombre_rack);
+                $this->headerService->sendFlashAlerts('Éxito', 'Fila agregada correctamente', 'success', 'btn-success');
+                return back();
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function deleteFila($idUbicacionExacta)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $this->configuracionService->deleteFilaFromRack($idUbicacionExacta);
+                $this->headerService->sendFlashAlerts('Éxito', 'Fila eliminada correctamente', 'success', 'btn-success');
                 return back();
             }
         }

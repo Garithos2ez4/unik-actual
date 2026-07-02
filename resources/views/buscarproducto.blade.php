@@ -29,5 +29,6 @@
     @endif
 </div>
 @include('productos.partials.modal_ubicacion_base')
+@include('productos.partials.modal_historial_precios_base')
 <script src="{{ asset('js/filtro_componente.js') }}"></script>
 @endsection

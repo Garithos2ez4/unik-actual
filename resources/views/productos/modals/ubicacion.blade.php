@@ -33,11 +33,10 @@
                             // 1. Identificar la ubicación general por defecto
                             $rackGeneralNombre = 'Sin asignar';
                             $rackGeneralFoto = null;
-                            if($inventario->ubicacion_fisica) {
-                            $ubiModel = $almacen->Ubicaciones->where('idUbicacion', $inventario->ubicacion_fisica)->first();
-                            if($ubiModel) {
-                            $rackGeneralNombre = $ubiModel->nombre;
-                            if($ubiModel->foto) $rackGeneralFoto = $ubiModel->foto_url;
+                            if($inventario->idUbicacionExacta) {
+                            $ubiExacta = $inventario->UbicacionExacta;
+                            if($ubiExacta) {
+                            $rackGeneralNombre = $ubiExacta->nombre_completo;
                             }
                             }
 
@@ -47,7 +46,8 @@
                             })
                             ->where('idAlmacen', $almacen->idAlmacen)
                             ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
-                            ->with('UbicacionAlmacen')
+                            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+                            ->with('UbicacionExacta')
                             ->get();
 
                             // 3. Agrupar y contar las cantidades por estante
@@ -55,9 +55,9 @@
 
                             if($seriesAlmacen->count() > 0) {
                             foreach($seriesAlmacen as $serie) {
-                            // Si la serie tiene ubicación propia la usa, sino hereda la general
-                            $nombreRack = $serie->UbicacionAlmacen ? $serie->UbicacionAlmacen->nombre : $rackGeneralNombre;
-                            $fotoRack = $serie->UbicacionAlmacen ? ($serie->UbicacionAlmacen->foto ? $serie->UbicacionAlmacen->foto_url : null) : $rackGeneralFoto;
+                            // Si la serie tiene una ubicación específica, usamos esa, sino usamos la general del inventario
+                            $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : $rackGeneralNombre;
+                            $fotoRack = null;
 
                             if(!isset($distribucion[$nombreRack])) {
                             $distribucion[$nombreRack] = ['cantidad' => 0, 'foto' => $fotoRack];
@@ -124,7 +124,7 @@
                 </div>
                 @php
                 // Obtener series disponibles para este producto
-                $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionAlmacen', 'Almacen'])
+                $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
                 ->where('estado', '!=', 'ENTREGADO')
                 ->where('estado', '!=', 'INVALIDO')
                 ->whereHas('DetalleComprobante', function ($q) use ($producto) {
@@ -150,8 +150,9 @@
                                 <td>{{ $serie->Almacen ? $serie->Almacen->descripcion : '-' }}</td>
                                 <td class="fw-bold text-primary">{{ $serie->numeroSerie }}</td>
                                 <td>
-                                    @if($serie->UbicacionAlmacen)
-                                    <span class="badge bg-info text-dark">{{ $serie->UbicacionAlmacen->nombre }}</span>
+                                    {{-- Si tiene ubicación específica asignada --}}
+                                    @if($serie->UbicacionExacta)
+                                    <span class="badge bg-info text-dark">{{ $serie->UbicacionExacta->nombre_completo }}</span>
                                     @else
                                     <span class="text-muted fst-italic">Sin asignar</span>
                                     @endif

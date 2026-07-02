@@ -16,4 +16,6 @@
         <x-lista_producto :productos="$productos" :tc="$tc" :container="'container-list-products-dashboard'" />
     </div>
 </div>
+@include('productos.partials.modal_ubicacion_base')
+@include('productos.partials.modal_historial_precios_base')
 @endsection

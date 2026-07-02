@@ -293,13 +293,13 @@
                                 <div class="col-12 mb-2">
                                     <input type="hidden" name="id" value="" class="form-control" id="id-modal-password">
                                     <label class="form-label">Nueva contraseña</label>
-                                    <input type="password" name="pass" class="form-control" id="pass-modal-password">
+                                    <input type="password" name="pass" class="form-control" id="pass-modal-password" autocomplete="new-password">
                                     <small id="passwordError" class="text-danger"></small>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">Confirmar contraseña</label>
                                     <input type="password" name="confirmpass" class="form-control"
-                                        id="confirmpass-modal-password">
+                                        id="confirmpass-modal-password" autocomplete="new-password">
                                     <small id="confirmPasswordError" class="text-danger"></small>
                                 </div>
                             </div>

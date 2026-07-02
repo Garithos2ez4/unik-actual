@@ -365,7 +365,8 @@
     <script>
         window.APP_DATA = {
             idComprobante: {{ $documento->idComprobante }},
-            estados: @json($estados)
+            estados: @json($estados),
+            almacenes: @json($ubicaciones)
         };
     </script>
     <script src="{{ asset('js/documento-scripts.js') }}?v=1.00"></script>

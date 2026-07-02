@@ -248,23 +248,43 @@
                     class="form-control {{ $ingresoEdit }}"
                     disabled>
             </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label" title="Ubicación en {{ $almacen->descripcion }}">
+            <div class="col-6 col-md-3 col-lg-3">
+                <label class="form-label" title="Ubicación exacta en {{ $almacen->descripcion }}">
                     Ubicación {{ $almacen->descripcion }}:
                 </label>
+                @php
+                    $ubicacionesExactas = \App\Models\UbicacionEstante::where('idAlmacen', $almacen->idAlmacen)
+                        ->where('estado', 1)
+                        ->orderBy('nombre_rack')
+                        ->orderBy('fila_estante')
+                        ->get()
+                        ->groupBy('nombre_rack');
+                        
+                    $currentRackName = ($inventario && $inventario->UbicacionExacta) ? $inventario->UbicacionExacta->nombre_rack : '';
+                @endphp
+                <div class="d-flex gap-2">
+                    <select class="form-select input-edit rack-selector" data-target="fila-select-{{$almacen->idAlmacen}}" disabled onchange="updateFilas(this)">
+                        <option value="">— Estante —</option>
+                        @foreach($ubicacionesExactas as $rackName => $filas)
+                        <option value="{{ $rackName }}" {{ $currentRackName == $rackName ? 'selected' : '' }}>
+                            {{ $rackName }}
+                        </option>
+                        @endforeach
+                    </select>
 
-                <select
-                    name="ubicacion[{{ $almacen->idAlmacen }}]"
-                    class="form-select input-edit"
-                    disabled>
-                    <option value="">Seleccione Rack/Estante</option>
-                    @foreach($almacen->Ubicaciones as $ubicacion)
-                    <option value="{{ $ubicacion->idUbicacion }}"
-                        {{ ($inventario && $inventario->ubicacion_fisica == $ubicacion->idUbicacion) ? 'selected' : '' }}>
-                        {{ $ubicacion->nombre }}
-                    </option>
-                    @endforeach
-                </select>
+                    <select name="idUbicacionExacta[{{ $almacen->idAlmacen }}]" id="fila-select-{{$almacen->idAlmacen}}" class="form-select input-edit fila-selector" disabled>
+                        <option value="">— Fila —</option>
+                        @foreach($ubicacionesExactas as $rackName => $filas)
+                            @foreach($filas as $ue)
+                            <option value="{{ $ue->idUbicacionExacta }}" data-rack="{{ $rackName }}" 
+                                {{ ($inventario && $inventario->idUbicacionExacta == $ue->idUbicacionExacta) ? 'selected' : '' }}
+                                class="{{ $currentRackName != $rackName ? 'd-none' : '' }}">
+                                Fila {{ $ue->fila_estante }}
+                            </option>
+                            @endforeach
+                        @endforeach
+                    </select>
+                </div>
 
                 @php
                 $racksEspecificos = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
@@ -273,9 +293,9 @@
                 ->where('idAlmacen', $almacen->idAlmacen)
                 ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
                 ->whereNotNull('ubicacion_especifica')
-                ->with('UbicacionAlmacen')
+                ->with('UbicacionExacta')
                 ->get()
-                ->pluck('UbicacionAlmacen.nombre')
+                ->pluck('UbicacionExacta.nombre_completo')
                 ->unique()
                 ->filter()
                 ->toArray();
@@ -460,5 +480,32 @@
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.00"></script>
 
 @include('productos.modals.ubicacion')
+
+<script>
+function updateFilas(rackSelect) {
+    let targetId = rackSelect.getAttribute('data-target');
+    let filaSelect = document.getElementById(targetId);
+    let selectedRack = rackSelect.value;
+    
+    let hasValidOption = false;
+    Array.from(filaSelect.options).forEach(function(opt) {
+        if (opt.value === "") return;
+        if (opt.getAttribute('data-rack') === selectedRack) {
+            opt.classList.remove('d-none');
+            if(!hasValidOption) {
+                opt.selected = true; // Selecciona la primera fila válida
+                hasValidOption = true;
+            }
+        } else {
+            opt.classList.add('d-none');
+            opt.selected = false;
+        }
+    });
+    
+    if(!selectedRack) {
+        filaSelect.value = "";
+    }
+}
+</script>
 
 @endsection

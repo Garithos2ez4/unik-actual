@@ -320,6 +320,20 @@ class ProductoService implements ProductoServiceInterface
         }
     }
 
+    public function updateUbicacion($idProduct, $array)
+    {
+        if (!$idProduct) {
+            return null;
+        }
+
+        try {
+            $this->inventarioRepository->updateUbicacion($idProduct, $array);
+            return true;
+        } catch (Exception $e) {
+            throw new \InvalidArgumentException($e->getMessage());
+        }
+    }
+
     public function validateDuplicySerial($id, $serial)
     {
         return $this->productoRepository->validateSerial($id, $serial);
@@ -337,21 +351,6 @@ class ProductoService implements ProductoServiceInterface
             return true;
         } catch (Exception $e) {
             // Manejo de excepciones
-            throw new \InvalidArgumentException($e->getMessage());
-        }
-    }
-
-    public function updateUbicacion($idProduct, $array)
-    {
-        if (!$idProduct) {
-            return null;
-        }
-
-        try {
-            $this->inventarioRepository->updateUbicacion($idProduct, $array);
-
-            return true;
-        } catch (Exception $e) {
             throw new \InvalidArgumentException($e->getMessage());
         }
     }

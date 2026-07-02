@@ -319,7 +319,7 @@ class ProductoRepository implements ProductoRepositoryInterface
                     
                 if (isset($filtros['rack']) && $filtros['rack'] !== '') {
                     $q->where(function ($subQ) use ($filtros) {
-                        $subQ->where('ubicacion_fisica', $filtros['rack'])
+                        $subQ->where('idUbicacionExacta', $filtros['rack'])
                              ->orWhereExists(function ($query) use ($filtros) {
                                  $query->select(\DB::raw(1))
                                        ->from('RegistroProducto')

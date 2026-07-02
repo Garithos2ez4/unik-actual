@@ -120,9 +120,9 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/productos/{cat}/{grup}', [ProductoController::class, 'index'])->name('productos');
     Route::get('/producto/nuevoproducto', [ProductoController::class, 'create'])->name('createproducto');
     Route::get('/producto/especificaciones/{idProducto}', [ProductoController::class, 'details'])->name('details');
-    Route::get('/producto/{idproducto}', [ProductoController::class, 'update'])->name('producto');
     Route::get('/producto/{id}/ubicacion-html', [ProductoController::class, 'obtenerUbicacionHtml']);
     Route::get('/producto/{id}/historial-precios-html', [ProductoController::class, 'obtenerHistorialPreciosHtml']);
+    Route::get('/producto/{idproducto}', [ProductoController::class, 'update'])->name('producto');
     Route::post('/producto/createdetails', [ProductoController::class, 'createDetails'])->name('createdetails');
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
     Route::post('/producto/insertorupdatedetails', [ProductoController::class, 'insertOrUpdateDetails'])->name('insertorupdatedetails');
@@ -132,7 +132,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/producto/{idproducto}/pack-components', [ProductoController::class, 'getPackComponents'])->name('producto.pack.components');
     Route::post('/producto/{idproducto}/pack-components', [ProductoController::class, 'addPackComponent'])->name('producto.pack.add');
     Route::delete('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'removePackComponent'])->name('producto.pack.remove');
-    
+
     // Rutas para Herramientas de Servicio (Reseteadores)
     Route::get('/producto/{idproducto}/series-herramienta', [ProductoController::class, 'getSeriesHerramienta'])->name('producto.series.herramienta');
     Route::post('/producto/toggle-herramienta', [ProductoController::class, 'toggleHerramienta'])->name('producto.toggle.herramienta');
@@ -320,6 +320,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/configuracion/createubicacion', [ConfiguracionController::class, 'createUbicacionAlmacen'])->name('createubicacion');
     Route::post('/configuracion/updateubicacion/{id}', [ConfiguracionController::class, 'updateUbicacionAlmacen'])->name('updateubicacion');
     Route::post('/configuracion/deleteubicacion/{id}', [ConfiguracionController::class, 'deleteUbicacionAlmacen'])->name('deleteubicacion');
+    Route::post('/configuracion/addfila', [ConfiguracionController::class, 'addFila'])->name('addfila');
+    Route::get('/configuracion/deletefila/{id}', [ConfiguracionController::class, 'deleteFila'])->name('deletefila');
     Route::post('/configuracion/createproveedor', [ConfiguracionController::class, 'createProveedor'])->name('createproveedor');
 
     Route::get('/generateSerialPdf/{idDocumento}', [PdfController::class, 'generateSerialPdf'])->name('generarSeriesPdf');

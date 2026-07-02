@@ -35,7 +35,7 @@ class Inventario extends Model
     protected $fillable = ['idProducto',
                             'idAlmacen',
                             'stock',
-                            'ubicacion_fisica'
+                            'idUbicacionExacta'
                             ];
 
     
@@ -60,9 +60,9 @@ class Inventario extends Model
     }
     
 
-    public function UbicacionAlmacen()
+    public function UbicacionExacta()
     {
-        return $this->belongsTo(UbicacionAlmacen::class, 'ubicacion_fisica', 'idUbicacion');
+        return $this->belongsTo(UbicacionEstante::class, 'idUbicacionExacta', 'idUbicacionExacta');
     }
 
     /**

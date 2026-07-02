@@ -118,15 +118,15 @@ class InventarioRepository implements InventarioRepositoryInterface
         return $inventarios;
     }
 
-    public function updateUbicacion(mixed $idProducto, array $data)
+    public function updateUbicacion(mixed $idProducto, array $data, $filaEstanteArray = null)
     {
         $inventarios = Inventario::where('idProducto', '=', $idProducto, 'and')->get();
         foreach ($inventarios as $inventario) {
-            foreach ($data as $almacen => $ubicacion) {
-                if ($inventario->idAlmacen == $almacen && $ubicacion) {
-                    $inventario->update(['ubicacion_fisica' => $ubicacion]);
-                    
-                    // Asignar este rack a todas las series que NO tengan un rack asignado
+            foreach ($data as $almacen => $idUbicacionExacta) {
+                if ($inventario->idAlmacen == $almacen) {
+                    $inventario->update(['idUbicacionExacta' => $idUbicacionExacta ?: null]);
+
+                    // Asignar ubicacion_especifica a series sin asignar
                     $registrosIds = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($idProducto) {
                             $q->where('idProducto', $idProducto);
                         })
@@ -137,7 +137,7 @@ class InventarioRepository implements InventarioRepositoryInterface
 
                     if ($registrosIds->isNotEmpty()) {
                         \App\Models\RegistroProducto::whereIn('idRegistro', $registrosIds)
-                            ->update(['ubicacion_especifica' => $ubicacion]);
+                            ->update(['ubicacion_especifica' => $idUbicacionExacta ?: null]);
                     }
                 }
             }

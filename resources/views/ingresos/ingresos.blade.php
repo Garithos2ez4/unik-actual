@@ -131,7 +131,7 @@
     }
 </style>
 
-<script src="{{asset('js/ingresos/ingresos.js')}}"></script>
+<script src="{{asset('js/ingresos/ingresos.js')}}?v=1.1"></script>
 <script src="{{asset('js/filtro_componente.js')}}"></script>
 <script src="{{asset('js/ingresos/division_producto.js')}}"></script>
 <script>

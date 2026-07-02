@@ -407,7 +407,7 @@ class ProductoController extends Controller
             $producto = Producto::with(['Inventario', 'Inventario_Proveedor.Preveedor'])->findOrFail($id);
             $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
             
-            $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionAlmacen', 'Almacen'])
+            $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
                 ->where('estado', '!=', 'ENTREGADO')
                 ->where('estado', '!=', 'INVALIDO')
                 ->whereHas('DetalleComprobante', function ($q) use ($id) {
@@ -566,7 +566,7 @@ class ProductoController extends Controller
                         $this->productoService->updateInventory(decrypt($idProducto),$stock);
                     }
 
-                    $ubicacion = $request->input('ubicacion');
+                    $ubicacion = $request->input('idUbicacionExacta');
                     if (!is_null($ubicacion)) {
                         $this->productoService->updateUbicacion(decrypt($idProducto), $ubicacion);
                     }

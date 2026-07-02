@@ -86,9 +86,9 @@ class RegistroProducto extends Model
         // Usamos el operador ?-> (nullsafe) para evitar errores si algún dato se borró
         return $this->DetalleComprobante?->Producto?->nombreProducto ?? 'Nombre no disponible';
     }
-    public function UbicacionAlmacen()
+    public function UbicacionExacta()
     {
-        return $this->belongsTo(UbicacionAlmacen::class, 'ubicacion_especifica', 'idUbicacion');
+        return $this->belongsTo(UbicacionEstante::class, 'ubicacion_especifica', 'idUbicacionExacta');
     }
 
     /**

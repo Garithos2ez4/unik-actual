@@ -118,7 +118,24 @@ function createItemList(id, serial, idProducto) {
     selectEstado.value = 'NUEVO';
     divColEstado.appendChild(selectEstado);
 
-    let divColObservacion = createDiv(['d-none', 'd-md-block', 'col-md-5', 'col-lg-6'], null);
+    let divColRack = createDiv(['d-none', 'd-md-block', 'col-md-2', 'col-lg-2'], null);
+    let selectRack = document.createElement('select');
+    selectRack.classList.add('form-select', 'form-select-sm', 'select-ubicacion-item');
+    selectRack.name = 'detalle[' + id + '][ingreso][' + cont + '][idUbicacion]';
+    let optionsHtml = '<option value="">Estante...</option>';
+    let currentAlmacenId = document.getElementById('select-almacen').value;
+    if(window.APP_DATA && window.APP_DATA.almacenes) {
+        let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == currentAlmacenId);
+        if(almacen && almacen.ubicaciones) {
+            almacen.ubicaciones.forEach(ubi => {
+                optionsHtml += `<option value="${ubi.idUbicacion}">${ubi.nombre}</option>`;
+            });
+        }
+    }
+    selectRack.innerHTML = optionsHtml;
+    divColRack.appendChild(selectRack);
+
+    let divColObservacion = createDiv(['d-none', 'd-md-block', 'col-md-3', 'col-lg-4'], null);
     let inputObservacion = createInput(['form-control', 'form-control-sm'], null, 'text', null, 'detalle[' + id + '][ingreso][' + cont + '][observacion]');
     inputObservacion.placeholder = "Observaciones...";
     divColObservacion.appendChild(inputObservacion);
@@ -131,10 +148,20 @@ function createItemList(id, serial, idProducto) {
 
     divRow.appendChild(divColSerialNumber);
     divRow.appendChild(divColEstado);
+    divRow.appendChild(divColRack);
     divRow.appendChild(divColObservacion);
     divRow.appendChild(divColDelete);
     liItem.appendChild(divRow);
     headerLi.after(liItem);
+    
+    if (typeof TomSelect !== 'undefined') {
+        selectRack.tomselect = new TomSelect(selectRack, {
+            create: false,
+            placeholder: "Estante...",
+            allowEmptyOption: true,
+        });
+    }
+    
     updateBtnAdd();
 }
 
@@ -586,3 +613,33 @@ function adjustGenericSeries(id, targetCount, idProducto) {
     countProducts(id);
     updateBtnAdd();
 }
+
+document.getElementById('select-almacen')?.addEventListener('change', function() {
+    let currentAlmacenId = this.value;
+    let newOptions = [{value: '', text: 'Estante...'}];
+    let optionsHtml = '<option value="">Estante...</option>';
+    if(window.APP_DATA && window.APP_DATA.almacenes) {
+        let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == currentAlmacenId);
+        if(almacen && almacen.ubicaciones) {
+            almacen.ubicaciones.forEach(ubi => {
+                newOptions.push({value: ubi.idUbicacion, text: ubi.nombre});
+                optionsHtml += `<option value="${ubi.idUbicacion}">${ubi.nombre}</option>`;
+            });
+        }
+    }
+    document.querySelectorAll('.select-ubicacion-item').forEach(s => {
+        if (s.tomselect) {
+            let prevVal = s.tomselect.getValue();
+            s.tomselect.clearOptions();
+            newOptions.forEach(opt => s.tomselect.addOption(opt));
+            s.tomselect.refreshOptions(false);
+            if(newOptions.some(o => o.value == prevVal)) {
+                s.tomselect.setValue(prevVal);
+            }
+        } else {
+            let prevVal = s.value;
+            s.innerHTML = optionsHtml;
+            if([...s.options].some(o => o.value == prevVal)) s.value = prevVal;
+        }
+    });
+});

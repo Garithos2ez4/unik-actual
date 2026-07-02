@@ -100,12 +100,11 @@ function dataModalDetalle(json) {
     hidden.value = json.registro_producto.idRegistro;
     ubicacion.value = json.registro_producto.idAlmacen;
     
-    // Filtrar opciones de ubicación
-    Array.from(ubicacionEspecifica.options).forEach(option => {
-        if(option.value === "") {
-            option.classList.remove('d-none');
-            return;
-        }
+    let rackEspecifico = document.getElementById('rack-modal-detail');
+    
+    // Filtrar Racks por almacen
+    Array.from(rackEspecifico.options).forEach(option => {
+        if(option.value === "") { option.classList.remove('d-none'); return; }
         if (option.getAttribute('data-almacen') == json.registro_producto.idAlmacen) {
             option.classList.remove('d-none');
         } else {
@@ -113,7 +112,37 @@ function dataModalDetalle(json) {
         }
     });
 
-    ubicacionEspecifica.value = json.registro_producto.ubicacion_especifica || '';
+    // Set fila value safely
+    let targetId = String(json.registro_producto.ubicacion_especifica || '');
+    let foundFila = false;
+    
+    Array.from(ubicacionEspecifica.options).forEach(opt => {
+        if (opt.value === targetId && targetId !== '') {
+            opt.selected = true;
+            foundFila = true;
+        }
+    });
+
+    if (foundFila) {
+        let selectedFila = ubicacionEspecifica.options[ubicacionEspecifica.selectedIndex];
+        let rackName = selectedFila.getAttribute('data-rack');
+        let almacenId = json.registro_producto.idAlmacen;
+        
+        // Find the matching rack option that also matches the almacen
+        Array.from(rackEspecifico.options).forEach(opt => {
+            if (opt.value === rackName && opt.getAttribute('data-almacen') == almacenId) {
+                opt.selected = true;
+            }
+        });
+    } else {
+        rackEspecifico.value = '';
+        ubicacionEspecifica.value = '';
+    }
+
+    // Now filter filas based on selected rack
+    if(typeof updateFilaDetail === 'function') {
+        updateFilaDetail(rackEspecifico);
+    }
 
     // Normalizar para quitar acentos para comparar mejor
     let normalizedState = stateJson.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -280,6 +309,34 @@ document.getElementById('almacen-modal-detail').addEventListener('change', funct
         }
     });
 });
+
+window.updateFilaDetail = function(rackSelect) {
+    let selectedRack = rackSelect.value;
+    let selectedAlmacen = rackSelect.options[rackSelect.selectedIndex] ? rackSelect.options[rackSelect.selectedIndex].getAttribute('data-almacen') : null;
+    let filaSelect = document.getElementById('ubicacion-especifica-modal-detail');
+    
+    Array.from(filaSelect.options).forEach(option => {
+        if(option.value === "") {
+            option.classList.remove('d-none');
+            return;
+        }
+        if (option.getAttribute('data-rack') === selectedRack && option.getAttribute('data-almacen') == selectedAlmacen) {
+            option.classList.remove('d-none');
+        } else {
+            option.classList.add('d-none');
+        }
+    });
+    
+    if (!selectedRack) {
+        filaSelect.value = '';
+    } else {
+        // Ensure the current fila selection matches the rack and almacen, otherwise reset
+        let selectedFilaOption = filaSelect.options[filaSelect.selectedIndex];
+        if (selectedFilaOption && (selectedFilaOption.getAttribute('data-rack') !== selectedRack || selectedFilaOption.getAttribute('data-almacen') != selectedAlmacen)) {
+            filaSelect.value = '';
+        }
+    }
+}
 
 // Manejador para el checkbox de fallo de entrega
 document.getElementById("check-fallo-entrega").addEventListener("change", function () {

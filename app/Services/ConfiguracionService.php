@@ -440,7 +440,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
             'nombreGrupo' => $nombre,
             'idTipoProducto' => $tipo
         ];
-        
+
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             if ($img) {
@@ -545,7 +545,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         return $id + 1;
     }
 
-    public function createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $foto = null)
+    public function createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $foto = null, $num_filas = 1)
     {
         if ($idAlmacen && $nombre) {
             $data = [
@@ -561,23 +561,58 @@ class ConfiguracionService implements ConfiguracionServiceInterface
     public function updateUbicacionAlmacen($id, $nombre, $descripcion, $foto = null)
     {
         if ($id && $nombre) {
+            $oldUbicacion = $this->ubicacionAlmacenRepository->getOne($id);
+            $oldName = $oldUbicacion ? $oldUbicacion->nombre : null;
+            $oldAlmacenId = $oldUbicacion ? $oldUbicacion->idAlmacen : null;
+
             $data = [
                 'nombre' => $nombre,
                 'descripcion' => $descripcion
             ];
-            
+
             if ($foto !== null) {
                 $data['foto'] = $foto;
             }
-            
+
             $this->ubicacionAlmacenRepository->update($id, $data);
+
+            if ($oldName && $oldName !== $nombre) {
+                \App\Models\UbicacionEstante::where('idAlmacen', $oldAlmacenId)
+                    ->where('nombre_rack', $oldName)
+                    ->update(['nombre_rack' => $nombre]);
+            }
         }
     }
 
     public function deleteUbicacionAlmacen($id)
     {
         if ($id) {
+            $oldUbicacion = $this->ubicacionAlmacenRepository->getOne($id);
+            if ($oldUbicacion) {
+                \App\Models\UbicacionEstante::where('idAlmacen', $oldUbicacion->idAlmacen)
+                    ->where('nombre_rack', $oldUbicacion->nombre)
+                    ->delete();
+            }
             $this->ubicacionAlmacenRepository->delete($id);
         }
+    }
+
+    public function addFilaToRack($idAlmacen, $nombre_rack)
+    {
+        $maxFila = \App\Models\UbicacionEstante::where('idAlmacen', $idAlmacen)
+            ->where('nombre_rack', $nombre_rack)
+            ->max('fila_estante') ?? 0;
+
+        \App\Models\UbicacionEstante::create([
+            'idAlmacen' => $idAlmacen,
+            'nombre_rack' => $nombre_rack,
+            'fila_estante' => $maxFila + 1,
+            'estado' => 1
+        ]);
+    }
+
+    public function deleteFilaFromRack($idUbicacionExacta)
+    {
+        \App\Models\UbicacionEstante::where('idUbicacionExacta', $idUbicacionExacta)->delete();
     }
 }
