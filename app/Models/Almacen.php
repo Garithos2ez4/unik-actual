@@ -40,6 +40,11 @@ class Almacen extends Model
         return $this->hasMany(UbicacionAlmacen::class, 'idAlmacen', 'idAlmacen');
     }
 
+    public function Filas()
+    {
+        return $this->hasMany(UbicacionEstante::class, 'idAlmacen', 'idAlmacen');
+    }
+
     /**
      * Obtener las relaciones del modelo.
      */

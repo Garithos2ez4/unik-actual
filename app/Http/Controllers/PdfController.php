@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Services\PdfServiceInterface;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
+use App\Models\UbicacionAlmacen;
+use App\Models\UbicacionEstante;
+use App\Models\RegistroProducto;
 
 class PdfController extends Controller
 {
@@ -48,6 +51,50 @@ class PdfController extends Controller
 
         $pdf = Pdf::loadView('pdf.stock_pdf', $data);
         return $pdf->stream('reporte_stock_' . $nombreAlmacen . '_' . $fechaActual . '.pdf');
+    }
+
+    public function reportEstantePdf($idUbicacion)
+    {
+        $estante = UbicacionAlmacen::with('Almacen')->findOrFail($idUbicacion);
+        $fechaActual = Carbon::now()->format('d-m-Y');
+
+        // Buscar todas las filas de este estante
+        $filas = UbicacionEstante::where('nombre_rack', $estante->nombre)
+            ->where('idAlmacen', $estante->idAlmacen)
+            ->orderBy('fila_estante')
+            ->get();
+
+        foreach ($filas as $fila) {
+            // Buscar los registros de productos en esta fila, ignorando los que ya no están
+            $registros = RegistroProducto::with('DetalleComprobante.Producto')
+                ->whereHas('DetalleComprobante.Producto')
+                ->where('ubicacion_especifica', $fila->idUbicacionExacta)
+                ->whereNotIn('estado', ['INVALIDO', 'ENTREGADO', 'VENDIDO', 'SALIDA'])
+                ->get();
+            
+            // Agrupar por idProducto y estado, para contar por separado
+            $agrupados = $registros->groupBy(function ($item) {
+                return $item->DetalleComprobante->idProducto . '-' . $item->estado;
+            })->map(function ($items) {
+                return [
+                    'producto' => $items->first()->DetalleComprobante->Producto,
+                    'estado' => $items->first()->estado,
+                    'cantidad' => $items->count()
+                ];
+            });
+
+            $fila->productos_agrupados = $agrupados;
+        }
+
+        $data = [
+            'title' => 'Reporte de Estante - ' . $estante->nombre,
+            'estante' => $estante,
+            'filas' => $filas,
+            'fecha' => $fechaActual
+        ];
+
+        $pdf = Pdf::loadView('pdf.estante_pdf', $data);
+        return $pdf->stream('reporte_estante_' . $estante->nombre . '_' . $fechaActual . '.pdf');
     }
     public function seriesByProductPdf($idProducto, $idAlmacen = null)
     {

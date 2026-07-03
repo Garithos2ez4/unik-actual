@@ -21,7 +21,9 @@
             <small class="text-secondary">Configuracion de almacen relacionado al inventario .</small>
         </div>
         <div class="col-3 col-md-4 border-bottom border-secondary text-end" data-bs-toggle="modal" data-bs-target="#almacenModal">
+            @if(isset($hasEditAccess) && $hasEditAccess)
             <button class="btn btn-success"><i class="bi bi-house-add-fill"></i></button>
+            @endif
         </div>
         <div class="col-md-12 pt-4 pb-3 bg-list">
             <div class="row px-2">
@@ -54,14 +56,16 @@
                             <!-- Cabecera del Almacén -->
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
                                 <h4 class="text-primary mb-0"><i class="bi bi-house-door"></i> {{$almacen->descripcion}}</h4>
+                                @if(isset($hasEditAccess) && $hasEditAccess)
                                 <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#rackModal{{$almacen->idAlmacen}}" title="Agregar Rack/Estante">
                                     <i class="bi bi-plus-circle me-1"></i> Nuevo Rack
                                 </button>
+                                @endif
                             </div>
 
                             <!-- Listado de Estantes usando el componente -->
                             <div class="row">
-                                <x-lista_estantes :almacen="$almacen" />
+                                <x-lista_estantes :almacen="$almacen" :hasEditAccess="isset($hasEditAccess) ? $hasEditAccess : true" />
                             </div>
                         </div>
 
@@ -118,7 +122,9 @@
             <small class="text-secondary">Configuracion de proveedores para los ingresos y seguimiento de stock.</small>
         </div>
         <div class="col-3 col-md-4 border-bottom border-secondary text-end">
+            @if(isset($hasEditAccess) && $hasEditAccess)
             <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#proveedorModal"><i class="bi bi-plus-lg"></i> <i class="bi bi-truck"></i></button>
+            @endif
         </div>
         <div class="col-md-12 pt-2 pb-2 bg-list">
             <div class="row">

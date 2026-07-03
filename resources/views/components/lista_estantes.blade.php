@@ -1,3 +1,4 @@
+@props(['almacen', 'hasEditAccess' => true])
 <div class="mt-3">
     <h6 class="text-primary border-bottom pb-2 mb-2 d-flex justify-content-between align-items-center">
         <span><i class="bi bi-bookshelf"></i> Estantes / Racks:</span>
@@ -35,19 +36,27 @@
                         @foreach($filasActuales as $fila)
                             <span class="badge bg-info text-dark mb-1" style="font-size: 0.7rem;">
                                 Fila {{ $fila->fila_estante }} 
+                                @if($hasEditAccess)
                                 <a href="{{ route('deletefila', $fila->idUbicacionExacta) }}" class="text-danger ms-1 text-decoration-none" title="Eliminar fila" onclick="return confirm('¿Estás seguro de eliminar esta fila?')"><i class="bi bi-x-circle-fill"></i></a>
+                                @endif
                             </span>
                         @endforeach
+                        @if($hasEditAccess)
                         <form action="{{ route('addfila') }}" method="POST" class="d-inline-block ms-1">
                             @csrf
                             <input type="hidden" name="idAlmacen" value="{{ $almacen->idAlmacen }}">
                             <input type="hidden" name="nombre_rack" value="{{ $ubicacion->nombre }}">
                             <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1 mb-1" style="font-size: 0.7rem;" title="Agregar nueva fila a este estante"><i class="bi bi-plus"></i></button>
                         </form>
+                        @endif
                     </div>
                 </div>
 
                 <div class="d-flex gap-1 flex-shrink-0">
+                    <a href="{{ route('reporteestante', $ubicacion->idUbicacion) }}" target="_blank" class="btn btn-sm btn-outline-danger" title="Reporte PDF">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+                    @if($hasEditAccess)
                     <button type="button" class="btn btn-sm btn-outline-warning" title="Editar" data-bs-toggle="modal" data-bs-target="#editRackModal{{$ubicacion->idUbicacion}}">
                         <i class="bi bi-pencil"></i>
                     </button>
@@ -57,6 +66,7 @@
                             <i class="bi bi-trash"></i>
                         </button>
                     </form>
+                    @endif
                 </div>
 
                 <!-- Modal para Editar Rack -->

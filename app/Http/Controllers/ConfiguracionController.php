@@ -85,6 +85,8 @@ class ConfiguracionController extends Controller
     {
         $userModel = $this->headerService->getModelUser();
 
+        $hasEditAccess = $userModel->Accesos->contains('idVista', 10);
+
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 // Eager load ubicaciones for the view
@@ -95,7 +97,8 @@ class ConfiguracionController extends Controller
                     'user' => $userModel,
                     'pagina' => 'inventario',
                     'almacenes' => $almacenes,
-                    'proveedores' => $proveedores
+                    'proveedores' => $proveedores,
+                    'hasEditAccess' => $hasEditAccess
                 ]);
             }
         }

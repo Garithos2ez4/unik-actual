@@ -328,6 +328,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/pdf/serialbyproduct/{idProducto}/{idAlmacen?}', [PdfController::class, 'seriesByProductPdf'])->name('seriesXProducto');
     Route::get('/pdf/producto-series/{idProducto}/{idAlmacen}', [PdfController::class, 'productoSeriesPdf'])->name('pdf.producto.series');
     Route::get('/reporte/stock/{idAlmacen}', [PdfController::class, 'reportStockPdf'])->name('reportealmacen');
+    Route::get('/reporte/estante/{idUbicacion}', [PdfController::class, 'reportEstantePdf'])->name('reporteestante');
     Route::get('/pdf/garantia/{idGarantia}', [PdfController::class, 'garantiaPdf'])->name('garantiaPdf');
     Route::post('/tipos-licencia', [LicenciaController::class, 'storeTipoLicencia'])->name('tiposLicencia.store');
     Route::post(

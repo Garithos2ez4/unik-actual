@@ -118,22 +118,51 @@ function createItemList(id, serial, idProducto) {
     selectEstado.value = 'NUEVO';
     divColEstado.appendChild(selectEstado);
 
-    let divColRack = createDiv(['d-none', 'd-md-block', 'col-md-2', 'col-lg-2'], null);
+    let divColRack = createDiv(['d-none', 'd-md-block', 'col-md-3', 'col-lg-2', 'd-flex', 'gap-1'], null);
+    
     let selectRack = document.createElement('select');
-    selectRack.classList.add('form-select', 'form-select-sm', 'select-ubicacion-item');
-    selectRack.name = 'detalle[' + id + '][ingreso][' + cont + '][idUbicacion]';
-    let optionsHtml = '<option value="">Estante...</option>';
+    selectRack.classList.add('form-select', 'form-select-sm', 'select-rack-item');
+    let optionsRackHtml = '<option value="">Rack...</option>';
+    
+    let selectFila = document.createElement('select');
+    selectFila.classList.add('form-select', 'form-select-sm', 'select-ubicacion-item');
+    selectFila.name = 'detalle[' + id + '][ingreso][' + cont + '][idUbicacion]';
+    selectFila.innerHTML = '<option value="">Fila...</option>';
+    selectFila.addEventListener('change', function() {
+        updateBtnAdd();
+    });
+
     let currentAlmacenId = document.getElementById('select-almacen').value;
     if(window.APP_DATA && window.APP_DATA.almacenes) {
         let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == currentAlmacenId);
         if(almacen && almacen.ubicaciones) {
             almacen.ubicaciones.forEach(ubi => {
-                optionsHtml += `<option value="${ubi.idUbicacion}">${ubi.nombre}</option>`;
+                optionsRackHtml += `<option value="${ubi.nombre}">${ubi.nombre}</option>`;
             });
         }
     }
-    selectRack.innerHTML = optionsHtml;
+    selectRack.innerHTML = optionsRackHtml;
+
+    selectRack.addEventListener('change', function() {
+        let selectedRackName = this.value;
+        let optionsFilaHtml = '<option value="">Fila...</option>';
+        if (selectedRackName && window.APP_DATA && window.APP_DATA.almacenes) {
+            let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == document.getElementById('select-almacen').value);
+            if (almacen && almacen.filas) {
+                let rackFilas = almacen.filas.filter(f => f.nombre_rack == selectedRackName);
+                if (rackFilas.length > 0) {
+                    rackFilas.forEach(f => {
+                        optionsFilaHtml += `<option value="${f.idUbicacionExacta}">Fila ${f.fila_estante}</option>`;
+                    });
+                }
+            }
+        }
+        selectFila.innerHTML = optionsFilaHtml;
+        updateBtnAdd();
+    });
+
     divColRack.appendChild(selectRack);
+    divColRack.appendChild(selectFila);
 
     let divColObservacion = createDiv(['d-none', 'd-md-block', 'col-md-3', 'col-lg-4'], null);
     let inputObservacion = createInput(['form-control', 'form-control-sm'], null, 'text', null, 'detalle[' + id + '][ingreso][' + cont + '][observacion]');
@@ -154,13 +183,7 @@ function createItemList(id, serial, idProducto) {
     liItem.appendChild(divRow);
     headerLi.after(liItem);
     
-    if (typeof TomSelect !== 'undefined') {
-        selectRack.tomselect = new TomSelect(selectRack, {
-            create: false,
-            placeholder: "Estante...",
-            allowEmptyOption: true,
-        });
-    }
+    // (Removido TomSelect para selectRack para evitar bug visual)
     
     updateBtnAdd();
 }
@@ -190,13 +213,22 @@ function validateRegistro() {
     let disabledBtn = false;
 
     inputsForm.forEach(function (x) {
-        if (x.value == '') {
+        if (x.value == '' && !x.classList.contains('input-not-required')) {
             disabledBtn = true;
         }
     });
 
     selectsForm.forEach(function (x) {
-        if (x.value == '') {
+        if (x.value == '' && !x.classList.contains('select-ubicacion-item') && !x.classList.contains('select-rack-item')) {
+            disabledBtn = true;
+        }
+    });
+    
+    // Validar que si seleccionó un Rack, DEBE seleccionar una Fila
+    let racks = document.querySelectorAll('.select-rack-item');
+    let filas = document.querySelectorAll('.select-ubicacion-item');
+    racks.forEach((rack, index) => {
+        if (rack.value !== '' && filas[index] && filas[index].value === '') {
             disabledBtn = true;
         }
     });
@@ -308,12 +340,12 @@ function toggleAllSerials(id, isChecked) {
     });
 }
 
-document.getElementById('btnIngreso').addEventListener('click', createProductList);
-document.getElementById('btnIngreso').addEventListener('click', updateBtnAdd);
-document.getElementById('modal-input-price').addEventListener('input', validateDisabledRegistro);
-document.getElementById('modal-input-product').addEventListener('input', validateDisabledRegistro);
-document.getElementById('modal-select-medida').addEventListener('change', validateDisabledRegistro);
-document.getElementById('importe-descuento-comprobante').addEventListener('blur', updateTotalProductos);;
+document.getElementById('btnIngreso')?.addEventListener('click', createProductList);
+document.getElementById('btnIngreso')?.addEventListener('click', updateBtnAdd);
+document.getElementById('modal-input-price')?.addEventListener('input', validateDisabledRegistro);
+document.getElementById('modal-input-product')?.addEventListener('input', validateDisabledRegistro);
+document.getElementById('modal-select-medida')?.addEventListener('change', validateDisabledRegistro);
+document.getElementById('importe-descuento-comprobante')?.addEventListener('blur', updateTotalProductos);
 
 document.addEventListener('DOMContentLoaded', function () {
     validateDisabledRegistro();
@@ -616,30 +648,21 @@ function adjustGenericSeries(id, targetCount, idProducto) {
 
 document.getElementById('select-almacen')?.addEventListener('change', function() {
     let currentAlmacenId = this.value;
-    let newOptions = [{value: '', text: 'Estante...'}];
-    let optionsHtml = '<option value="">Estante...</option>';
+    let optionsRackHtml = '<option value="">Rack...</option>';
     if(window.APP_DATA && window.APP_DATA.almacenes) {
         let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == currentAlmacenId);
         if(almacen && almacen.ubicaciones) {
             almacen.ubicaciones.forEach(ubi => {
-                newOptions.push({value: ubi.idUbicacion, text: ubi.nombre});
-                optionsHtml += `<option value="${ubi.idUbicacion}">${ubi.nombre}</option>`;
+                optionsRackHtml += `<option value="${ubi.nombre}">${ubi.nombre}</option>`;
             });
         }
     }
+    
+    document.querySelectorAll('.select-rack-item').forEach(s => {
+        s.innerHTML = optionsRackHtml;
+    });
+    
     document.querySelectorAll('.select-ubicacion-item').forEach(s => {
-        if (s.tomselect) {
-            let prevVal = s.tomselect.getValue();
-            s.tomselect.clearOptions();
-            newOptions.forEach(opt => s.tomselect.addOption(opt));
-            s.tomselect.refreshOptions(false);
-            if(newOptions.some(o => o.value == prevVal)) {
-                s.tomselect.setValue(prevVal);
-            }
-        } else {
-            let prevVal = s.value;
-            s.innerHTML = optionsHtml;
-            if([...s.options].some(o => o.value == prevVal)) s.value = prevVal;
-        }
+        s.innerHTML = '<option value="">Fila...</option>';
     });
 });
