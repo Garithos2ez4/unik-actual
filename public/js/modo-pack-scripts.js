@@ -79,7 +79,7 @@
                     tbody.innerHTML += `
                         <tr>
                             <td><i class="bi bi-box"></i> ${comp.nombreProducto}</td>
-                            <td class="text-center text-primary fw-bold">${comp.porcentaje_costo}%</td>
+                            <td class="text-center text-primary fw-bold">${parseFloat(comp.porcentaje_costo).toFixed(2)}%</td>
                             <td class="text-center"><span class="badge bg-secondary">x${comp.cantidad}</span></td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackComponent(${comp.idProductoHijo})"><i class="bi bi-trash"></i></button>
@@ -88,11 +88,11 @@
                     `;
                 });
 
-                if (totalPorcentaje > 0 && totalPorcentaje !== 100) {
+                if (totalPorcentaje > 0 && Math.abs(totalPorcentaje - 100) > 0.01) {
                     tbody.innerHTML += `
                         <tr>
                             <td colspan="4" class="text-center text-warning bg-light">
-                                <i class="bi bi-exclamation-triangle"></i> La suma de los porcentajes es ${totalPorcentaje}%. Se recomienda que sea exactamente 100%.
+                                <i class="bi bi-exclamation-triangle"></i> La suma de los porcentajes es ${totalPorcentaje.toFixed(2)}%. Se recomienda que sea exactamente 100%.
                             </td>
                         </tr>
                     `;

@@ -61,7 +61,7 @@
         suggestionsEl.innerHTML = productos.map(p => {
             const imgSrc = p.imagenProducto1 ? window.assetUrl + '/' + p.imagenProducto1 : '';
             return `
-                    <li class="list-group-item list-group-item-action d-flex align-items-center" style="cursor:pointer" data-id="${p.idProducto}" data-nombre="${escapeHtml(p.nombreProducto)}" data-marca="${escapeHtml(p.nombreMarca || '')}" data-modelo="${escapeHtml(p.modelo || '')}" data-codigo="${escapeHtml(p.codigoProducto || '')}" data-img="${escapeHtml(imgSrc)}" data-precio="${p.precioDolar || 0}" data-precioweb="${p.precioWebSoles || 0}">
+                    <li class="list-group-item list-group-item-action d-flex align-items-center" style="cursor:pointer" data-id="${p.idProducto}" data-nombre="${escapeHtml(p.nombreProducto)}" data-marca="${escapeHtml(p.nombreMarca || '')}" data-modelo="${escapeHtml(p.modelo || '')}" data-codigo="${escapeHtml(p.codigoProducto || '')}" data-img="${escapeHtml(imgSrc)}" data-precio="${p.precioDolar || 0}" data-precioweb="${p.precioWebSoles || 0}" data-preciotienda="${p.precioTiendaSoles || ''}">
                         ${imgSrc ? `<img src="${imgSrc}" style="width:35px;height:35px;object-fit:contain;margin-right:8px;border-radius:4px;background:#f1f1f1">` : ''}
                         <div>
                             <strong>${escapeHtml(p.nombreProducto)}</strong><br>
@@ -81,7 +81,8 @@
                     codigoProducto: this.dataset.codigo,
                     imagenProducto1: this.dataset.img,
                     precioDolar: this.dataset.precio,
-                    precioWebSoles: this.dataset.precioweb
+                    precioWebSoles: this.dataset.precioweb,
+                    precioTiendaSoles: this.dataset.preciotienda
                 });
             });
         });
@@ -197,6 +198,7 @@
                         idPublicacion: item.idPublicacion,
                         sku: item.sku,
                         precioVenta: 0.10,
+                        precioTiendaSoles: item.precioTiendaSoles,
                         series: [serieRegalo]
                     };
                     // Insertamos el nuevo item en el carrito después de la fila actual
@@ -450,6 +452,7 @@
             idPublicacion: checkSku.checked ? 'NULO' : pubId,
             sku: checkSku.checked ? 'No aplica' : skuVal,
             precioVenta: precioVenta,
+            precioTiendaSoles: productoSeleccionado.precioTiendaSoles,
             series: listadoSeries
         };
 
@@ -501,6 +504,7 @@
                     <td>
                         <strong>${escapeHtml(item.nombreProducto)}</strong><br>
                         <small class="text-muted">Modelo: ${escapeHtml(item.modelo)}</small>
+                        ${item.precioTiendaSoles ? `<br><span class="badge bg-success mt-1" style="font-size:0.7em" title="Precio en tienda física">Tienda: S/ ${parseFloat(item.precioTiendaSoles).toFixed(2)}</span>` : ''}
                     </td>
                     <td class="text-center">
                         <span class="badge ${item.sku === 'No aplica' ? 'bg-warning text-dark' : 'bg-success'} fs-7">

@@ -150,6 +150,36 @@
                     </div>
                     <!-- 👆 FIN DEL NUEVO CONTENEDOR 👆 -->
 
+                    <!-- 👇 PRECIO TIENDA 👇 -->
+                    <div class="mb-2">
+                        <label for="precio-tienda" class="form-label fw-bold text-success">
+                            <i class="bi bi-shop"></i> Precio Tienda (S/.)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">S/.</span>
+                            <input type="number"
+                                name="precioTienda"
+                                id="precio-tienda"
+                                value="{{ number_format(optional($producto->PrecioTienda)->precioTienda ?? 0, 2, '.', '') }}"
+                                class="form-control input-edit"
+                                step="0.01"
+                                min="0"
+                                disabled>
+                            <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                title="Ver historial de precios de tienda"
+                                onclick="verHistorialPrecioTienda({{ $producto->idProducto }})">
+                                <i class="bi bi-clock-history"></i>
+                            </button>
+                        </div>
+                        @if($producto->PrecioTienda && $producto->PrecioTienda->updated_at)
+                        <small class="text-muted">
+                            Últ. actualización: {{ \Carbon\Carbon::parse($producto->PrecioTienda->updated_at)->format('d/m/Y H:i') }}
+                        </small>
+                        @endif
+                    </div>
+                    <!-- 👆 FIN PRECIO TIENDA 👆 -->
+
                 </div>
             </div>
             <div class="mb-3 col-md-6 col-lg-6">
@@ -253,14 +283,14 @@
                     Ubicación {{ $almacen->descripcion }}:
                 </label>
                 @php
-                    $ubicacionesExactas = \App\Models\UbicacionEstante::where('idAlmacen', $almacen->idAlmacen)
-                        ->where('estado', 1)
-                        ->orderBy('nombre_rack')
-                        ->orderBy('fila_estante')
-                        ->get()
-                        ->groupBy('nombre_rack');
-                        
-                    $currentRackName = ($inventario && $inventario->UbicacionExacta) ? $inventario->UbicacionExacta->nombre_rack : '';
+                $ubicacionesExactas = \App\Models\UbicacionEstante::where('idAlmacen', $almacen->idAlmacen)
+                ->where('estado', 1)
+                ->orderBy('nombre_rack')
+                ->orderBy('fila_estante')
+                ->get()
+                ->groupBy('nombre_rack');
+
+                $currentRackName = ($inventario && $inventario->UbicacionExacta) ? $inventario->UbicacionExacta->nombre_rack : '';
                 @endphp
                 <div class="d-flex gap-2">
                     <select class="form-select input-edit rack-selector" data-target="fila-select-{{$almacen->idAlmacen}}" disabled onchange="updateFilas(this)">
@@ -275,13 +305,13 @@
                     <select name="idUbicacionExacta[{{ $almacen->idAlmacen }}]" id="fila-select-{{$almacen->idAlmacen}}" class="form-select input-edit fila-selector" disabled>
                         <option value="">— Fila —</option>
                         @foreach($ubicacionesExactas as $rackName => $filas)
-                            @foreach($filas as $ue)
-                            <option value="{{ $ue->idUbicacionExacta }}" data-rack="{{ $rackName }}" 
-                                {{ ($inventario && $inventario->idUbicacionExacta == $ue->idUbicacionExacta) ? 'selected' : '' }}
-                                class="{{ $currentRackName != $rackName ? 'd-none' : '' }}">
-                                Fila {{ $ue->fila_estante }}
-                            </option>
-                            @endforeach
+                        @foreach($filas as $ue)
+                        <option value="{{ $ue->idUbicacionExacta }}" data-rack="{{ $rackName }}"
+                            {{ ($inventario && $inventario->idUbicacionExacta == $ue->idUbicacionExacta) ? 'selected' : '' }}
+                            class="{{ $currentRackName != $rackName ? 'd-none' : '' }}">
+                            Fila {{ $ue->fila_estante }}
+                        </option>
+                        @endforeach
                         @endforeach
                     </select>
                 </div>
@@ -482,30 +512,32 @@
 @include('productos.modals.ubicacion')
 
 <script>
-function updateFilas(rackSelect) {
-    let targetId = rackSelect.getAttribute('data-target');
-    let filaSelect = document.getElementById(targetId);
-    let selectedRack = rackSelect.value;
-    
-    let hasValidOption = false;
-    Array.from(filaSelect.options).forEach(function(opt) {
-        if (opt.value === "") return;
-        if (opt.getAttribute('data-rack') === selectedRack) {
-            opt.classList.remove('d-none');
-            if(!hasValidOption) {
-                opt.selected = true; // Selecciona la primera fila válida
-                hasValidOption = true;
+    function updateFilas(rackSelect) {
+        let targetId = rackSelect.getAttribute('data-target');
+        let filaSelect = document.getElementById(targetId);
+        let selectedRack = rackSelect.value;
+
+        let hasValidOption = false;
+        Array.from(filaSelect.options).forEach(function(opt) {
+            if (opt.value === "") return;
+            if (opt.getAttribute('data-rack') === selectedRack) {
+                opt.classList.remove('d-none');
+                if (!hasValidOption) {
+                    opt.selected = true; // Selecciona la primera fila válida
+                    hasValidOption = true;
+                }
+            } else {
+                opt.classList.add('d-none');
+                opt.selected = false;
             }
-        } else {
-            opt.classList.add('d-none');
-            opt.selected = false;
+        });
+
+        if (!selectedRack) {
+            filaSelect.value = "";
         }
-    });
-    
-    if(!selectedRack) {
-        filaSelect.value = "";
     }
-}
 </script>
+
+@include('productos.partials.modal_historial_precio_tienda')
 
 @endsection

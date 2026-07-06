@@ -105,6 +105,17 @@ class Producto extends Model
     {
         return $this->hasMany(Inventario::class, 'idProducto', 'idProducto');
     }
+
+    public function PrecioTienda()
+    {
+        return $this->hasOne(PrecioTienda::class, 'idProducto', 'idProducto');
+    }
+
+    public function HistorialPrecioTienda()
+    {
+        return $this->hasMany(HistorialPrecioTienda::class, 'idProducto', 'idProducto')
+                     ->orderByDesc('created_at');
+    }
     
     public function Inventario_Proveedor()
     {

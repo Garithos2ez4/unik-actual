@@ -78,15 +78,20 @@
                                 @endforeach
 
                             </div>
-                            <div class="row mt-2 text-center">
-                                <div class="col-6">
-                                    <button type="button" class="btn btn-sm btn-outline-info btn-ver-ubicacion" style="font-size: 0.75rem;" data-id="{{ $pro->idProducto }}">
-                                        <i class="bi bi-geo-alt"></i> Ubicación
+                            <div class="row mt-2 text-center gx-1">
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-sm btn-outline-info btn-ver-ubicacion w-100" style="font-size: 0.70rem; padding: 0.25rem 0.1rem;" data-id="{{ $pro->idProducto }}" title="Ver Ubicación">
+                                        <i class="bi bi-geo-alt"></i> Ubic.
                                     </button>
                                 </div>
-                                <div class="col-6">
-                                    <button type="button" class="btn btn-sm btn-outline-warning btn-ver-historial-precios" style="font-size: 0.75rem;" data-id="{{ $pro->idProducto }}">
-                                        <i class="bi bi-graph-up-arrow"></i> Historial
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-ver-historial-precios w-100" style="font-size: 0.70rem; padding: 0.25rem 0.1rem;" data-id="{{ $pro->idProducto }}" title="Historial de Compra">
+                                        <i class="bi bi-graph-up-arrow"></i> Comp.
+                                    </button>
+                                </div>
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-sm btn-outline-success w-100" style="font-size: 0.70rem; padding: 0.25rem 0.1rem;" onclick="verHistorialPrecioTienda({{ $pro->idProducto }})" title="Historial Precio Tienda">
+                                        <i class="bi bi-shop"></i> Tiend.
                                     </button>
                                 </div>
                             </div>

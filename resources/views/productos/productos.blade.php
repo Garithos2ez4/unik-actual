@@ -86,6 +86,7 @@
     
     @include('productos.partials.modal_ubicacion_base')
     @include('productos.partials.modal_historial_precios_base')
+    @include('productos.partials.modal_historial_precio_tienda')
 
 
     <script src="{{asset('js/filtro_componente.js')}}"></script>

@@ -456,6 +456,29 @@ class ProductoController extends Controller
         }
     }
 
+    public function obtenerHistorialPrecioTienda($id)
+    {
+        try {
+            $historial = \App\Models\HistorialPrecioTienda::with('Usuario')
+                ->where('idProducto', $id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'fecha' => \Carbon\Carbon::parse($item->created_at)->format('d/m/Y H:i'),
+                        'precioAnterior' => $item->precioAnterior,
+                        'precioNuevo' => $item->precioNuevo,
+                        'usuario' => $item->Usuario ? $item->Usuario->user : null
+                    ];
+                });
+
+            return response()->json($historial);
+        } catch (\Exception $e) {
+            \Log::error('Error en obtenerHistorialPrecioTienda: ' . $e->getMessage());
+            return response()->json(['error' => 'Error interno del servidor.'], 500);
+        }
+    }
+
     public function updateProduct($idProducto,Request $request){
         $userModel = $this->headerService->getModelUser();
         foreach($userModel->Accesos as $acceso){
@@ -579,6 +602,45 @@ class ProductoController extends Controller
                     }
 
                     $this->productoService->validateState(decrypt($idProducto));
+
+                    // ── Precio de Tienda ──
+                    if ($request->has('precioTienda')) {
+                        $nuevoPrecio = floatval($request->input('precioTienda'));
+                        $realId = decrypt($idProducto);
+                        $precioActual = \App\Models\PrecioTienda::where('idProducto', $realId)->first();
+
+                        if ($precioActual) {
+                            $precioAnterior = $precioActual->precioTienda;
+                            if (abs($precioAnterior - $nuevoPrecio) > 0.001) {
+                                // Registrar historial
+                                \App\Models\HistorialPrecioTienda::create([
+                                    'idProducto'     => $realId,
+                                    'precioAnterior'  => $precioAnterior,
+                                    'precioNuevo'     => $nuevoPrecio,
+                                    'idUser'          => $userModel->idUser,
+                                ]);
+                                $precioActual->update([
+                                    'precioTienda' => $nuevoPrecio,
+                                    'updated_at'   => now(),
+                                ]);
+                            }
+                        } else {
+                            \App\Models\PrecioTienda::create([
+                                'idProducto'   => $realId,
+                                'precioTienda' => $nuevoPrecio,
+                                'updated_at'   => now(),
+                            ]);
+                            // Primer registro: historial 0 → nuevo
+                            if ($nuevoPrecio > 0) {
+                                \App\Models\HistorialPrecioTienda::create([
+                                    'idProducto'     => $realId,
+                                    'precioAnterior'  => 0,
+                                    'precioNuevo'     => $nuevoPrecio,
+                                    'idUser'          => $userModel->idUser,
+                                ]);
+                            }
+                        }
+                    }
 
                     return redirect()->back();
 

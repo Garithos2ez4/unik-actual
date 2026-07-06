@@ -522,6 +522,7 @@ class EgresoController extends Controller
         $tipo = $request->input('tipo');
 
         $queryBuilder = \App\Models\Producto::query()
+            ->with('PrecioTienda')
             ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
             ->select(
                 'Producto.idProducto', 
@@ -599,6 +600,7 @@ class EgresoController extends Controller
             $totalSoles = $precioCalculado * (1 + ($comisionEmpresa / 100)) + $gananciaSoles;
             
             $p->precioWebSoles = round($totalSoles, 1);
+            $p->precioTiendaSoles = $p->PrecioTienda ? $p->PrecioTienda->precioTienda : null;
         }
 
         return response()->json($productos);

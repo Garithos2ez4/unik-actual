@@ -124,7 +124,33 @@ null,
 [() => promptMassiveSeries(inputHiddenProduct.value, productInput.dataset.id)]
 );
 
+let buttonCopyLocation = createButton(['btn','btn-info','me-2','btn-sm','text-light'],
+null,
+'<i class="bi bi-copy"></i>',
+'button',
+[() => {
+    let items = document.querySelectorAll('.item-list-product-' + inputHiddenProduct.value);
+    if(items.length === 0) return;
+    let firstRack = items[0].querySelector('.select-rack-item').value;
+    let firstFila = items[0].querySelector('.select-ubicacion-item').value;
+    if(!firstRack || !firstFila) {
+        Swal.fire('Atención', 'Por favor, selecciona el Estante y Fila en la primera serie.', 'warning');
+        return;
+    }
+    for(let i = 1; i < items.length; i++) {
+        let rSelect = items[i].querySelector('.select-rack-item');
+        let fSelect = items[i].querySelector('.select-ubicacion-item');
+        rSelect.value = firstRack;
+        rSelect.dispatchEvent(new Event('change'));
+        fSelect.value = firstFila;
+    }
+    if (typeof updateBtnAdd === 'function') updateBtnAdd();
+}]
+);
+buttonCopyLocation.title = "Copiar primer estante a todos";
+
 divColButtons.appendChild(buttonOption);
+divColButtons.appendChild(buttonCopyLocation);
 divColButtons.appendChild(buttonAddMassive);
 divColButtons.appendChild(buttonAdd);
 
