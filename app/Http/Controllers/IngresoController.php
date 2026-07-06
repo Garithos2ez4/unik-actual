@@ -428,7 +428,7 @@ class IngresoController extends Controller
         if (empty($query)) return response()->json([]);
 
         // IDs de grupos permitidos: Cabezales, Tintas, Cartuchos...
-        $gruposPermitidos = [124, 155, 156, 157, 158, 159, 44, 79];
+        $gruposPermitidos = [124, 155, 156, 157, 158, 159, 44, 78, 79];
 
         $productos = \App\Models\Producto::whereIn('idGrupo', $gruposPermitidos)
             ->where(function ($q) use ($query) {

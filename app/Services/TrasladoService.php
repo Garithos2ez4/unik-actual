@@ -34,12 +34,16 @@ class TrasladoService implements TrasladoServiceInterface
     public function updateRegistros(array $array){
         foreach($array as $idRegistro => $idAlmacen){
             if(isset($idAlmacen)){
-                $data = ['idAlmacen' => $idAlmacen];
-                $this->updateStock($idRegistro,$idAlmacen);
-                $this->registroRepository->update($idRegistro,$data);
-                
+                $registro = $this->registroRepository->getOne('idRegistro', $idRegistro);
+                if ($registro && $registro->idAlmacen != $idAlmacen) {
+                    $data = [
+                        'idAlmacen' => $idAlmacen,
+                        'ubicacion_especifica' => null
+                    ];
+                    $this->updateStock($idRegistro, $idAlmacen);
+                    $this->registroRepository->update($idRegistro, $data);
+                }
             }
-            
         }
     }
 

@@ -46,8 +46,8 @@
 
             if($seriesAlmacen->count() > 0) {
             foreach($seriesAlmacen as $serie) {
-            // Si la serie tiene una ubicación específica, usamos esa, sino usamos la general del inventario
-            $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : $rackGeneralNombre;
+            // Si la serie tiene una ubicación específica, usamos esa, sino forzamos a 'Sin asignar'
+            $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : 'Sin asignar';
             $fotoRack = null;
 
             if(!isset($distribucion[$nombreRack])) {

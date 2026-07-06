@@ -10,6 +10,11 @@ class UbicacionAlmacenRepository implements UbicacionAlmacenRepositoryInterface
         return UbicacionAlmacen::all();
     }
 
+    public function getOne($id)
+    {
+        return UbicacionAlmacen::find($id);
+    }
+
     public function getByAlmacen($idAlmacen)
     {
         return UbicacionAlmacen::where('idAlmacen', $idAlmacen)->get();

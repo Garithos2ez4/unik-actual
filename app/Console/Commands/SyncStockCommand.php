@@ -55,10 +55,10 @@ class SyncStockCommand extends Command
             $detalles = DetalleComprobante::where('idProducto', $p->idProducto)->pluck('idDetalleComprobante');
 
             foreach ($almacenes as $alm) {
-                // Contar las series en estado NUEVO o ABIERTO
+                // Contar las series en estado NUEVO, ABIERTO o DEVOLUCION
                 $count = RegistroProducto::whereIn('idDetalleComprobante', $detalles)
                     ->where('idAlmacen', $alm->idAlmacen)
-                    ->whereIn('estado', ['NUEVO', 'ABIERTO'])
+                    ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
                     ->count();
 
                 $inv = Inventario::where('idProducto', $p->idProducto)->where('idAlmacen', $alm->idAlmacen)->first();

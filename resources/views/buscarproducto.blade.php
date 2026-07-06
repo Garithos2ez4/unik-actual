@@ -13,18 +13,18 @@
         <div class="col-lg-12">
             <h2><a href="javascript:void(0)" onclick="window.history.back()" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> Productos encontrados:</h2>
         </div>
-        
+
     </div>
     <div class="row pt-2 pb-2">
         <x-filtro_productos :marcas="$filtros['marcas']" :estados="$filtros['estados']" :almacenes="$almacenes" />
     </div>
     <br>
     <div id="container-buscar-producto">
-        <x-lista_producto :productos="$productos" :container="'container-buscar-producto'" :tc="$tc"/>
+        <x-lista_producto :productos="$productos" :container="'container-buscar-producto'" :tc="$tc" />
     </div>
     @else
     <div class="row d-flex justify-content-between align-items-center" style="height: 80vh;">
-        <x-aviso_no_encontrado :mensaje="''"/>
+        <x-aviso_no_encontrado :mensaje="''" />
     </div>
     @endif
 </div>
