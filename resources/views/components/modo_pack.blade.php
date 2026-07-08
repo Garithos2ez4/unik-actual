@@ -7,7 +7,7 @@
     </div>
     <div class="col-12">
         <p class="text-muted">Si este producto se vende o divide como un "Pack", agrega sus componentes aqu&iacute;. Cuando ingreses este producto en el futuro, podr&aacute;s dividirlo seg&uacute;n esta configuraci&oacute;n.</p>
-        
+
         <div class="row align-items-end mb-3">
             <div class="col-md-5 position-relative">
                 <label class="form-label">Buscar producto componente:</label>

@@ -20,13 +20,14 @@ class IngresoController extends Controller
     protected $divisionPackService;
     protected $unionPackService;
 
-    public function __construct(HeaderServiceInterface $headerService,
-                                UsuarioServiceInterface $userService,
-                                IngresoProductoServiceInterface $ingresoService,
-                                ComprobanteServiceInterface $comprobanteService,
-                                DivisionPackServiceInterface $divisionPackService,
-                                UnionPackServiceInterface $unionPackService)
-    {
+    public function __construct(
+        HeaderServiceInterface $headerService,
+        UsuarioServiceInterface $userService,
+        IngresoProductoServiceInterface $ingresoService,
+        ComprobanteServiceInterface $comprobanteService,
+        DivisionPackServiceInterface $divisionPackService,
+        UnionPackServiceInterface $unionPackService
+    ) {
         $this->userService = $userService;
         $this->ingresoService = $ingresoService;
         $this->comprobanteService = $comprobanteService;
@@ -34,120 +35,130 @@ class IngresoController extends Controller
         $this->divisionPackService = $divisionPackService;
         $this->unionPackService = $unionPackService;
     }
-    
-    public function index($month,Request $request){
-        $userModel = $this->headerService->getModelUser();
-        
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
-                Carbon::setLocale('es');
-                $fechacompleta = $month. '-01';
-                $carbonMonth = Carbon::createFromFormat('Y-m-d', $fechacompleta);
-                
-                $registros = $this->ingresoService->getByMonth($month,250,$request->query('filtro'))->appends($request->all());
 
-                if($request->query('page') || $request->query('filtro')){
-                    $view = view('components.lista_ingresos', ['registros' => $registros,'container' => $request->query('container')])->render();
+    public function index($month, Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
+                Carbon::setLocale('es');
+                $fechacompleta = $month . '-01';
+                $carbonMonth = Carbon::createFromFormat('Y-m-d', $fechacompleta);
+
+                $registros = $this->ingresoService->getByMonth($month, 250, $request->query('filtro'))->appends($request->all());
+
+                if ($request->query('page') || $request->query('filtro')) {
+                    $view = view('components.lista_ingresos', ['registros' => $registros, 'container' => $request->query('container')])->render();
                     return response()->json(['html' => $view]);
                 }
-                
+
                 $proveedores = $this->ingresoService->getAllLabelProveedor();
-                
+
                 $documentos = $this->ingresoService->getAllTipoComprobante();
 
                 $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
 
-                $estados = [['value' => 'NUEVO', 'name' => 'Nuevo'],
+                $estados = [
+                    ['value' => 'NUEVO', 'name' => 'Nuevo'],
                     ['value' => 'ABIERTO', 'name' => 'Abierto'],
                     ['value' => 'DEFECTUOSO', 'name' => 'Defectuoso'],
                     ['value' => 'DEVOLUCION', 'name' => 'Devolución'],
                     ['value' => 'ENTREGADO', 'name' => 'Entregado'],
                     ['value' => 'GARANTIA', 'name' => 'Garantía']
-                    ];
-                
-                $filtros = ['users' => $this->ingresoService->filtroUsuario($month),
-                            'proveedores' => $this->ingresoService->filtroProveedor($month),
-                            'almacenes' => $this->ingresoService->filtroAlmacen($month),
-                            'estados' => $this->ingresoService->filtroEstado($month)];
+                ];
 
-                
-                return view('ingresos.ingresos',['user' => $userModel,
-                                        'registros' => $registros,
-                                        'documentos' => $documentos,
-                                        'proveedores' => $proveedores,
-                                        'fecha' => $carbonMonth,
-                                        'almacenes' => $almacenes,
-                                        'estados' => $estados,
-                                        'filtros' => $filtros
-                                        ]);
+                $filtros = [
+                    'users' => $this->ingresoService->filtroUsuario($month),
+                    'proveedores' => $this->ingresoService->filtroProveedor($month),
+                    'almacenes' => $this->ingresoService->filtroAlmacen($month),
+                    'estados' => $this->ingresoService->filtroEstado($month)
+                ];
+
+
+                return view('ingresos.ingresos', [
+                    'user' => $userModel,
+                    'registros' => $registros,
+                    'documentos' => $documentos,
+                    'proveedores' => $proveedores,
+                    'fecha' => $carbonMonth,
+                    'almacenes' => $almacenes,
+                    'estados' => $estados,
+                    'filtros' => $filtros
+                ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return back();
     }
-    
-    public function insertIngreso(Request $request,$comprobante){
+
+    public function insertIngreso(Request $request, $comprobante)
+    {
         $userModel = $this->headerService->getModelUser();
         $datacomprobante = $request->input('comprobante');
         $detalle = $request->input('detalle');
 
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 8){
-                if($datacomprobante){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
+                if ($datacomprobante) {
 
-                    $this->comprobanteService->updateComprobante(decrypt($comprobante),$datacomprobante,$detalle);
-                    
-                    return redirect(route('documentos',[now()->format('Y-m')]));
-                }else{
-                    
-                    $this->headerService->sendFlashAlerts('Datos Faltantes','Revisa los campos','info','btn-warning');
+                    $this->comprobanteService->updateComprobante(decrypt($comprobante), $datacomprobante, $detalle);
+
+                    return redirect(route('documentos', [now()->format('Y-m')]));
+                } else {
+
+                    $this->headerService->sendFlashAlerts('Datos Faltantes', 'Revisa los campos', 'info', 'btn-warning');
                     return back();
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
-    
-    public function searchIngreso(Request $request){
+
+    public function searchIngreso(Request $request)
+    {
         $query = $request->input('query');
-    
+
         $results = $this->ingresoService->searchAjaxIngreso($query);
-    
+
         return response()->json($results);
     }
 
-    public function getOneIngreso(Request $request){
+    public function getOneIngreso(Request $request)
+    {
         $query = $request->input('query');
-    
+
         $results = $this->ingresoService->getOneIngreso($query);
-    
+
         return response()->json($results);
     }
-    
-    public function deleteIngreso(Request $request){
+
+    public function deleteIngreso(Request $request)
+    {
         $userModel = $this->headerService->getModelUser();
         $idIngreso = $request->input('idingreso');
         $userModel = $this->headerService->getModelUser();
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 8){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
                 $this->ingresoService->deleteIngreso($idIngreso);
                 return back();
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta accion','warning','btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta accion', 'warning', 'btn-danger');
         return back();
     }
 
-    public function insertComprobante(Request $request){
+    public function insertComprobante(Request $request)
+    {
         $userModel = $this->headerService->getModelUser();
         $proveedor = $request->input('proveedor');
         $tipoComprobante = $request->input('tipocomprobante');
         $numeroComprobante = $request->input('numerocomprobante');
-        
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 8){
-                if($proveedor && $tipoComprobante && $numeroComprobante){
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8) {
+                if ($proveedor && $tipoComprobante && $numeroComprobante) {
                     $array = array();
                     $array['idProveedor'] = $proveedor;
                     $array['idTipoComprobante'] = $tipoComprobante;
@@ -157,40 +168,41 @@ class IngresoController extends Controller
                     $array['totalCompra'] = 0;
                     $array['fechaRegistro'] = now();
                     $array['estado'] = 'PENDIENTE';
-                    
+
                     $operation = $this->comprobanteService->insertComprobante($array);
-                    if($operation){
-                        return redirect()->route('documento',[encrypt($operation),true]);
-                    }else{
-                        $this->headerService->sendFlashAlerts('Operacion Fallida','Ocurrio un error en la transaccion','error','btn-danger');
+                    if ($operation) {
+                        return redirect()->route('documento', [encrypt($operation), true]);
+                    } else {
+                        $this->headerService->sendFlashAlerts('Operacion Fallida', 'Ocurrio un error en la transaccion', 'error', 'btn-danger');
                         return back()->withInput();
                     }
-                }else{
-                    $this->headerService->sendFlashAlerts('Datos Repetidos','Ya se encuentran en la base de datos','info','btn-danger');
+                } else {
+                    $this->headerService->sendFlashAlerts('Datos Repetidos', 'Ya se encuentran en la base de datos', 'info', 'btn-danger');
                     return back()->withInput();
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
-    
-    public function updateRegistro(Request $request){
+
+    public function updateRegistro(Request $request)
+    {
         $userModel = $this->headerService->getModelUser();
         $idRegistro =  $request->input('idregistro');
         $estado =  $request->input('estado');
         $observacion =  $request->input('observacion');
         $ubicacion_especifica = $request->input('ubicacion_especifica');
 
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
-                if(isset($idRegistro)){
-                    $this->ingresoService->updateRegistro($idRegistro,$estado,$observacion,$ubicacion_especifica);
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
+                if (isset($idRegistro)) {
+                    $this->ingresoService->updateRegistro($idRegistro, $estado, $observacion, $ubicacion_especifica);
                 }
                 return back();
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para realizar esta accion','warning','btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta accion', 'warning', 'btn-danger');
         return back();
     }
 
@@ -215,7 +227,7 @@ class IngresoController extends Controller
                 try {
                     $idRegistro = $request->input('idRegistro');
                     $result = $this->divisionPackService->dividirPack($idRegistro);
-                    
+
                     $this->headerService->sendFlashAlerts(
                         'Pack Dividido',
                         $result['message'],
@@ -250,7 +262,7 @@ class IngresoController extends Controller
                     $idProductoPack = $request->input('idProductoPack');
                     $idRegistrosHijos = $request->input('idRegistrosHijos', []);
                     $result = $this->unionPackService->reunirPack($idProductoPack, $idRegistrosHijos);
-                    
+
                     $this->headerService->sendFlashAlerts(
                         'Pack Reunido',
                         $result['message'],
@@ -349,7 +361,7 @@ class IngresoController extends Controller
     public function buscarPackPorSerie(Request $request)
     {
         $serie = $request->input('serie');
-        
+
         $registro = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
             ->where('numeroSerie', $serie)
             ->first();
@@ -433,9 +445,9 @@ class IngresoController extends Controller
         $productos = \App\Models\Producto::whereIn('idGrupo', $gruposPermitidos)
             ->where(function ($q) use ($query) {
                 $q->where('modelo', 'like', "%$query%")
-                  ->orWhere('nombreProducto', 'like', "%$query%")
-                  ->orWhere('codigoProducto', 'like', "%$query%")
-                  ->orWhere('partNumber', 'like', "%$query%");
+                    ->orWhere('nombreProducto', 'like', "%$query%")
+                    ->orWhere('codigoProducto', 'like', "%$query%")
+                    ->orWhere('partNumber', 'like', "%$query%");
             })
             ->select('idProducto', 'nombreProducto', 'modelo', 'codigoProducto', 'partNumber')
             ->take(15)

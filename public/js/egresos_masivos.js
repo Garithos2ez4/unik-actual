@@ -22,11 +22,11 @@
         const checkSkuMasivo = document.getElementById('check-sku-masivo');
         const checkOrdenNoAplica = document.getElementById('check-orden-no-aplica');
         if (checkSkuMasivo) {
-            checkSkuMasivo.checked = true; // Activo por defecto en masivo por preferencia del usuario
+            checkSkuMasivo.checked = false; 
             const inputSkuMasivo = document.getElementById('input-sku-masivo');
             if (inputSkuMasivo) {
-                inputSkuMasivo.disabled = true;
-                inputSkuMasivo.value = 'No aplica';
+                inputSkuMasivo.disabled = false;
+                inputSkuMasivo.value = '';
             }
             const skuValidateMasivo = document.getElementById('sku-validate-masivo');
             if (skuValidateMasivo) {
@@ -105,9 +105,9 @@
         // Limpiar inputs de SKU específicos del producto y activar "No aplica" por defecto
         const checkSkuMasivo = document.getElementById('check-sku-masivo');
         const inputSkuMasivo = document.getElementById('input-sku-masivo');
-        checkSkuMasivo.checked = true; // True por defecto
-        inputSkuMasivo.disabled = true; // Deshabilitado por defecto
-        inputSkuMasivo.value = 'No aplica'; // "No aplica" por defecto
+        checkSkuMasivo.checked = false; // False por defecto a petición del usuario
+        inputSkuMasivo.disabled = false; // Habilitado por defecto
+        inputSkuMasivo.value = ''; // "No aplica" por defecto
         document.getElementById('hidden-publicacion-id-masivo').value = '';
         document.getElementById('hidden-publicacion-precio-masivo').value = '';
         document.getElementById('suggestions-sku-masivo').innerHTML = '';
@@ -388,9 +388,9 @@
                     return;
                 }
                 sugList.innerHTML = data.map(p => `
-                        <li class="list-group-item list-group-item-action" style="cursor:pointer" onclick="selectPublicacionMasivo(${p.idPublicacion}, '${escapeHtml(p.sku)}', ${p.precioPublicacion || 0})">
-                            <strong>${escapeHtml(p.sku)}</strong> - S/ ${(p.precioPublicacion || 0).toFixed(2)}
-                            <br><small class="text-muted">${escapeHtml(p.tituloPublicacion || '')}</small>
+                        <li class="list-group-item list-group-item-action" style="cursor:pointer" onclick="selectPublicacionMasivo(${p.idPublicacion}, '${escapeHtml(p.sku)}', ${p.precio || p.precioPublicacion || 0})">
+                            <strong>${escapeHtml(p.sku)}</strong> - S/ ${(p.precio || p.precioPublicacion || 0).toFixed(2)}
+                            <br><small class="text-muted">${escapeHtml(p.titulo || p.tituloPublicacion || '')}</small>
                         </li>
                     `).join('');
             });
@@ -430,6 +430,14 @@
             return;
         }
 
+        const checkOrden = document.getElementById('check-orden-no-aplica');
+        const ordenVal = document.getElementById('input-numero-orden-masivo').value.trim();
+
+        if (!checkOrden.checked && ordenVal === '') {
+            Swal.fire({ icon: 'warning', title: 'Número de Orden Requerido', text: 'Por favor ingresa un número de orden o marca la casilla "No aplica".' });
+            return;
+        }
+
         const precioVentaInput = document.getElementById('input-precio-unitario-masivo').value.trim();
         if (precioVentaInput === '') {
             Swal.fire({ icon: 'warning', title: 'Precio requerido', text: 'Por favor ingresa un precio de venta para este producto.' });
@@ -451,6 +459,7 @@
             imagenProducto1: productoSeleccionado.imagenProducto1,
             idPublicacion: checkSku.checked ? 'NULO' : pubId,
             sku: checkSku.checked ? 'No aplica' : skuVal,
+            numeroOrden: checkOrden.checked ? 'No aplica' : ordenVal,
             precioVenta: precioVenta,
             precioTiendaSoles: productoSeleccionado.precioTiendaSoles,
             series: listadoSeries
@@ -505,6 +514,11 @@
                         <strong>${escapeHtml(item.nombreProducto)}</strong><br>
                         <small class="text-muted">Modelo: ${escapeHtml(item.modelo)}</small>
                         ${item.precioTiendaSoles ? `<br><span class="badge bg-success mt-1" style="font-size:0.7em" title="Precio en tienda física">Tienda: S/ ${parseFloat(item.precioTiendaSoles).toFixed(2)}</span>` : ''}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-secondary fs-7">
+                            ${escapeHtml(item.numeroOrden)}
+                        </span>
                     </td>
                     <td class="text-center">
                         <span class="badge ${item.sku === 'No aplica' ? 'bg-warning text-dark' : 'bg-success'} fs-7">
@@ -587,16 +601,7 @@
             texto.textContent = 'Añade productos al carrito para continuar';
             validate = false;
         } else {
-            // Validar pagos si se agregaron
-            if (pagosAgregados.length > 0) {
-                let totalPagado = 0;
-                pagosAgregados.forEach(p => totalPagado += p.monto);
-                if (totalVentaLote > 0 && Math.abs(totalVentaLote - totalPagado) > 0.01) {
-                    validate = false;
-                    errorMsg = ` <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> El monto total pagado (S/ ${totalPagado.toFixed(2)}) no coincide con el total del lote (S/ ${totalVentaLote.toFixed(2)}).</span>`;
-                }
-            }
-
+            // Pagos masivos desactivados temporalmente porque ahora los números de orden son por ítem
             if (validate) {
                 texto.innerHTML = `Se procesará el egreso masivo de un lote con <strong>${total} serie(s)</strong> en total a través de <strong>${productosEnCarrito.length} producto(s)</strong> diferentes. Total Venta: <strong>S/ ${totalVentaLote.toFixed(2)}</strong>.`;
             } else {
@@ -619,6 +624,7 @@
                         <input type="hidden" name="items[${index}][idregistro]" value="${serie.idRegistro}">
                         <input type="hidden" name="items[${index}][idpublicacion]" value="${item.idPublicacion || 'NULO'}">
                         <input type="hidden" name="items[${index}][precioVenta]" value="${item.precioVenta}">
+                        <input type="hidden" name="items[${index}][numeroorden]" value="${item.numeroOrden}">
                     `;
                 index++;
             });

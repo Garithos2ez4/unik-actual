@@ -28,7 +28,30 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
-                <h5><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
+                <div class="btn-group me-2">
+                    <a href="{{ route('producto.falabella.template', $producto->idProducto) }}"
+                       class="btn btn-success" title="Descargar plantilla Falabella completa">
+                        <i class="bi bi-file-earmark-excel-fill"></i>
+                        <span class="d-none d-lg-inline"> Falabella</span>
+                    </a>
+                    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
+                                <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('producto.falabella.template.express', $producto->idProducto) }}">
+                                <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <h5 class="d-inline"><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
             </div>
         </div>
         <br>
@@ -178,7 +201,34 @@
                         </small>
                         @endif
                     </div>
-                    <!-- 👆 FIN PRECIO TIENDA 👆 -->
+                    <!-- 👉 DETALLE PRODUCTO (WEB & PASE) 👈 -->
+                    <div class="row mt-3 mb-2 border-top pt-3">
+                        <div class="col-6">
+                            <label for="precio-pase" class="form-label fw-bold text-primary">
+                                <i class="bi bi-tag"></i> Precio Pase (S/.)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">S/.</span>
+                                <input type="number"
+                                    name="precio_pase"
+                                    id="precio-pase"
+                                    value="{{ number_format(optional($producto->DetalleProducto)->precio_pase ?? 0, 2, '.', '') }}"
+                                    class="form-control input-edit"
+                                    step="0.01"
+                                    min="0"
+                                    disabled>
+                            </div>
+                            <small class="text-muted">Precio para otras tiendas.</small>
+                        </div>
+                        <div class="col-6 d-flex align-items-center">
+                            <div class="form-check form-switch fs-5">
+                                <input type="hidden" name="mostrarPrecioWeb" value="0" class="input-edit" disabled>
+                                <input class="form-check-input input-edit" type="checkbox" name="mostrarPrecioWeb" id="mostrarPrecioWeb" value="1" {{ optional($producto->DetalleProducto)->mostrarPrecioWeb ?? true ? 'checked' : '' }} disabled>
+                                <label class="form-check-label fs-6 fw-bold" for="mostrarPrecioWeb">Mostrar Precio en Web</label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 👉 FIN DETALLE PRODUCTO 👈 -->
 
                 </div>
             </div>
@@ -507,7 +557,7 @@
 <script src="{{ asset('js/update-product-scripts.js') }}?v=1.00"></script>
 @include('productos.logic.producto_scripts')
 
-<script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.00"></script>
+<script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.01"></script>
 
 @include('productos.modals.ubicacion')
 

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
 use App\Services\PreciosService;
+use App\Services\FalabellaTemplateService;
 
 use App\Services\ProductoServiceInterface;
 use Exception;
@@ -45,6 +46,10 @@ class ProductoController extends Controller
                         'almacenes' => $almacenes,
                         'tc' => $this->calculadoraService->getTasaCambio()
                     ])->render();
+                    
+                    // Limpiar posibles caracteres UTF-8 mal formados de la base de datos
+                    $view = mb_convert_encoding($view, 'UTF-8', 'UTF-8');
+                    
                     return response()->json(['html' => $view]);
                 }
 
@@ -212,6 +217,8 @@ class ProductoController extends Controller
                                                                 'almacenes' => $almacenes,
                                                                 'marcas' => $marcasFiltradas,
                                                                 'tc' => $this->calculadoraService->getTasaCambio()])->render();
+                    
+                    $view = mb_convert_encoding($view, 'UTF-8', 'UTF-8');
                     return response()->json(['html' => $view]);
                 }
                 $filtros = [
@@ -415,6 +422,7 @@ class ProductoController extends Controller
                 ->get();
 
             $html = view('productos.partials.modal_ubicacion_body', compact('producto', 'almacenes', 'seriesDisponibles'))->render();
+            $html = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
 
             return response()->json(['html' => $html]);
         } catch (\Exception $e) {
@@ -448,6 +456,7 @@ class ProductoController extends Controller
             ", [$id]);
 
             $html = view('productos.partials.modal_historial_precios_body', compact('producto', 'historial'))->render();
+            $html = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
 
             return response()->json(['html' => $html]);
         } catch (\Exception $e) {
@@ -642,9 +651,26 @@ class ProductoController extends Controller
                         }
                     }
 
+                    // 👉 Detalle Producto (Web & Pase) 👈
+                    if ($request->has('mostrarPrecioWeb') || $request->has('precio_pase')) {
+                        $realId = decrypt($idProducto);
+                        $mostrarWeb = $request->input('mostrarPrecioWeb') == '1' ? true : false;
+                        $precioPase = $request->input('precio_pase') ? floatval($request->input('precio_pase')) : null;
+
+                        \App\Models\DetalleProducto::updateOrCreate(
+                            ['idProducto' => $realId],
+                            [
+                                'mostrarPrecioWeb' => $mostrarWeb,
+                                'precio_pase' => $precioPase
+                            ]
+                        );
+                    }
+
+                    \DB::commit();
                     return redirect()->back();
 
                 }catch(Exception $e){
+                    \DB::rollBack();
                     \Log::error('Error en updateProduct: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
                     $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error valida peus hijo ','error','btn-danger');
                     return redirect()->back();
@@ -893,6 +919,50 @@ class ProductoController extends Controller
             return response()->json(['success' => true, 'message' => 'Estado de herramienta actualizado correctamente.']);
         } catch (Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al actualizar serie: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Descarga el template de Falabella pre-llenado con los datos del producto.
+     */
+    public function descargarTemplateFalabella($idProducto)
+    {
+        try {
+            $producto = Producto::with(['MarcaProducto', 'GrupoProducto', 'Caracteristicas_Producto.Caracteristicas'])
+                ->findOrFail($idProducto);
+
+            $service  = new FalabellaTemplateService();
+            $filePath = $service->generarTemplate($producto);
+
+            $fileName = basename($filePath);
+
+            return response()->download($filePath, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return back()->with('error', 'No se pudo generar el template: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descarga el template Express de Falabella pre-llenado con los datos del producto.
+     */
+    public function descargarTemplateFalabellaExpress($idProducto)
+    {
+        try {
+            $producto = Producto::with(['MarcaProducto', 'GrupoProducto', 'Caracteristicas_Producto.Caracteristicas'])
+                ->findOrFail($idProducto);
+
+            $service  = new FalabellaTemplateService();
+            $filePath = $service->generarTemplateExpress($producto);
+
+            $fileName = basename($filePath);
+
+            return response()->download($filePath, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return back()->with('error', 'No se pudo generar el template Express: ' . $e->getMessage());
         }
     }
 }

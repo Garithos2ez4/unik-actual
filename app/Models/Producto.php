@@ -111,6 +111,11 @@ class Producto extends Model
         return $this->hasOne(PrecioTienda::class, 'idProducto', 'idProducto');
     }
 
+    public function DetalleProducto()
+    {
+        return $this->hasOne(DetalleProducto::class, 'idProducto', 'idProducto');
+    }
+
     public function HistorialPrecioTienda()
     {
         return $this->hasMany(HistorialPrecioTienda::class, 'idProducto', 'idProducto')

@@ -9,6 +9,9 @@ $gradientParts[] = ($colors[$key] ?? '#ccc') . " " . round($startRange, 2) . "% 
 $startRange = $endRange;
 }
 $gradientString = implode(', ', $gradientParts);
+
+// Fallback for variables passed as attributes without props
+$productos_old_stock = $productos_old_stock ?? $attributes->get('productos_old_stock') ?? $attributes->get('productosOldStock') ?? collect();
 @endphp
 
 <div class="container">
@@ -411,6 +414,42 @@ $gradientString = implode(', ', $gradientParts);
                                 </li>
                                 @endforeach
                             </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                    <div class="row border shadow rounded-3 pt-2 pb-2">
+                        <div class="col-md-12">
+                            <h4 class="mb-0">Top Remates</h4>
+                            <small class="text-secondary">Stock antiguo (> 1 año sin ventas)</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            @if(isset($productos_old_stock) && count($productos_old_stock) > 0)
+                                <ul class="list-group list-group-flush">
+                                    @foreach ($productos_old_stock as $index => $oldStock)
+                                    <li class="list-group-item px-1">
+                                        <div class="row align-items-center">
+                                            <div class="col-2 text-center">
+                                                <span class="badge rounded-pill bg-dark" style="font-size: 0.8rem;">
+                                                    #{{ $index + 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="col-7 px-0">
+                                                <strong class="d-block text-truncate" style="font-size: 0.85rem;" title="{{ $oldStock->nombreProducto }}">{{ $oldStock->nombreProducto }}</strong>
+                                                <small class="text-secondary d-block" style="font-size: 0.75rem;">Desde: {{ \Carbon\Carbon::parse($oldStock->fecha_mas_antigua)->format('d/m/Y') }}</small>
+                                            </div>
+                                            <div class="col-3 text-end">
+                                                <span class="text-danger fw-bold">{{ $oldStock->stock_estancado }}</span>
+                                                <small class="d-block text-secondary" style="font-size: 0.7rem;">uds.</small>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                <div class="alert alert-success py-1 mt-2 mb-0 text-center" style="font-size: 0.85rem;">
+                                    ¡Sin stock estancado!
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>

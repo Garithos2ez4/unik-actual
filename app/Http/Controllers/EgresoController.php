@@ -104,60 +104,70 @@ class EgresoController extends Controller
                         $this->headerService->sendFlashAlerts('Error de validación', 'La fecha de pedido no puede ser posterior a la fecha de despacho', 'error', 'btn-danger');
                         return back();
                     }
-                    $arrayEgreso = [
-                        'numeroOrden' => $numeroorden == 'No aplica' ? null : $numeroorden,
-                        'fechaCompra' => $fechapedido,
-                        'fechaDespacho' => $fechadespacho
-                    ];
 
                     \Illuminate\Support\Facades\DB::beginTransaction();
                     try {
-                        // 1. Crear el egreso (stock)
-                        $createResult = $this->egresoService->createEgreso($arrayEgreso, $items);
-                        $productos = $createResult['productos'];
-                        $egresosGenerados = $createResult['egresos'];
-
-                        // Determinar el canal dinámicamente basado en la primera publicación válida encontrada
-                        $plataformaTienda = \App\Models\Plataforma::find(7);
-                        $canal = $plataformaTienda ? strtoupper(substr($plataformaTienda->nombrePlataforma, 0, 20)) : 'TIENDA';
+                        // Agrupar los items por número de orden
+                        $itemsByOrden = [];
                         foreach ($items as $item) {
-                            if (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') {
-                                $publicacion = \App\Models\Publicacion::with('CuentasPlataforma.Plataforma')->find($item['idpublicacion']);
-                                if ($publicacion && $publicacion->CuentasPlataforma && $publicacion->CuentasPlataforma->Plataforma) {
-                                    // Limitar a 20 caracteres por la bbdd
-                                    $canalStr = $publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
-                                    $canal = substr(strtoupper($canalStr), 0, 20);
-                                    break;
+                            $ordenStr = isset($item['numeroorden']) && $item['numeroorden'] !== '' ? $item['numeroorden'] : 'No aplica';
+                            $itemsByOrden[$ordenStr][] = $item;
+                        }
+
+                        foreach ($itemsByOrden as $numeroordenGrupo => $grupoItems) {
+                            $arrayEgreso = [
+                                'numeroOrden' => $numeroordenGrupo === 'No aplica' ? null : $numeroordenGrupo,
+                                'fechaCompra' => $fechapedido,
+                                'fechaDespacho' => $fechadespacho
+                            ];
+
+                            // 1. Crear el egreso (stock)
+                            $createResult = $this->egresoService->createEgreso($arrayEgreso, $grupoItems);
+                            $productos = $createResult['productos'];
+                            $egresosGenerados = $createResult['egresos'];
+
+                            // Determinar el canal dinámicamente basado en la primera publicación válida encontrada
+                            $plataformaTienda = \App\Models\Plataforma::find(7);
+                            $canal = $plataformaTienda ? strtoupper(substr($plataformaTienda->nombrePlataforma, 0, 20)) : 'TIENDA';
+                            foreach ($grupoItems as $item) {
+                                if (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') {
+                                    $publicacion = \App\Models\Publicacion::with('CuentasPlataforma.Plataforma')->find($item['idpublicacion']);
+                                    if ($publicacion && $publicacion->CuentasPlataforma && $publicacion->CuentasPlataforma->Plataforma) {
+                                        // Limitar a 20 caracteres por la bbdd
+                                        $canalStr = $publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
+                                        $canal = substr(strtoupper($canalStr), 0, 20);
+                                        break;
+                                    }
                                 }
                             }
-                        }
 
-                        // 2. Preparar los datos para la Venta
-                        $ventaData = [
-                            'idCliente' => $request->input('idCliente'), // puede ser null
-                            'numeroOrden' => $numeroorden == 'No aplica' ? null : $numeroorden,
-                            'fechaVenta' => $fechadespacho,
-                            'canal' => $canal
-                        ];
-
-                        $detallesVenta = [];
-                        foreach ($items as $item) {
-                            $detallesVenta[] = [
-                                'idRegistro' => $item['idregistro'],
-                                'idEgreso' => $egresosGenerados[$item['idregistro']] ?? null,
-                                'idPublicacion' => (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') ? $item['idpublicacion'] : null,
-                                // Obtener idProducto usando el idRegistro a través del DetalleComprobante
-                                'idProducto' => \App\Models\RegistroProducto::with('DetalleComprobante')->find($item['idregistro'])->DetalleComprobante->idProducto ?? null,
-                                'precioVenta' => $item['precioVenta'] ?? '', // '' hace que herede auto en el service, '0' se respeta como regalo
-                                'cantidad' => 1
+                            // 2. Preparar los datos para la Venta
+                            $ventaData = [
+                                'idCliente' => $request->input('idCliente'), // puede ser null
+                                'numeroOrden' => $numeroordenGrupo === 'No aplica' ? null : $numeroordenGrupo,
+                                'fechaVenta' => $fechadespacho,
+                                'canal' => $canal
                             ];
+
+                            $detallesVenta = [];
+                            foreach ($grupoItems as $item) {
+                                $detallesVenta[] = [
+                                    'idRegistro' => $item['idregistro'],
+                                    'idEgreso' => $egresosGenerados[$item['idregistro']] ?? null,
+                                    'idPublicacion' => (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') ? $item['idpublicacion'] : null,
+                                    // Obtener idProducto usando el idRegistro a través del DetalleComprobante
+                                    'idProducto' => \App\Models\RegistroProducto::with('DetalleComprobante')->find($item['idregistro'])->DetalleComprobante->idProducto ?? null,
+                                    'precioVenta' => $item['precioVenta'] ?? '', // '' hace que herede auto en el service, '0' se respeta como regalo
+                                    'cantidad' => 1
+                                ];
+                            }
+
+                            // 3. Pagos no se usan en este modo agrupado masivo
+                            $pagos = [];
+
+                            // 4. Crear la Venta
+                            $this->ventaService->createVenta($ventaData, $detallesVenta, $pagos);
                         }
-
-                        // 3. Obtener pagos (si existen)
-                        $pagos = $request->input('pagos', []);
-
-                        // 4. Crear la Venta
-                        $this->ventaService->createVenta($ventaData, $detallesVenta, $pagos);
 
                         \Illuminate\Support\Facades\DB::commit();
                         $this->headerService->sendFlashAlerts('Egreso y Venta registrados', 'Operacion exitosa', 'success', 'btn-success');

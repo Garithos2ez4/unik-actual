@@ -140,6 +140,10 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::post('/producto/creargrupo-rapido', [ProductoController::class, 'quickCreateGrupo'])->name('quickcreategrupo');
 
+    // Template Falabella pre-llenado
+    Route::get('/producto/{idProducto}/falabella-template', [ProductoController::class, 'descargarTemplateFalabella'])->name('producto.falabella.template');
+    Route::get('/producto/{idProducto}/falabella-template-express', [ProductoController::class, 'descargarTemplateFalabellaExpress'])->name('producto.falabella.template.express');
+
 
     Route::get('/traslado', [TrasladoController::class, 'index'])->name('traslados');
     Route::post('/traslado/updateregistroalmacen', [TrasladoController::class, 'updateRegistroAlmacen'])->name('updateregistroalmacen');

@@ -84,7 +84,16 @@
                             <ul class="list-group shadow" id="suggestions-sku-masivo" style="position:absolute;z-index:1050;top:100%;left:0;width:100%;max-height:200px;overflow-y:auto"></ul>
                         </div>
                     </div>
-
+                    <div class="mt-3">
+                        <label class="form-label fw-bold mb-1"><small>Número de Orden</small></label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" placeholder="Nro de Orden" id="input-numero-orden-masivo" class="form-control">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="checkbox" id="check-orden-no-aplica" style="cursor:pointer">
+                                <label class="form-check-label ms-1" for="check-orden-no-aplica" style="font-size: 11px; cursor:pointer"><small>No aplica</small></label>
+                            </div>
+                        </div>
+                    </div>
                     {{-- Precio de Venta --}}
                     <div class="mt-3">
                         <label class="form-label fw-bold mb-0"><small>Precio de Venta (Unitario - S/)</small></label>
@@ -135,6 +144,7 @@
                                 <tr class="text-center text-secondary">
                                     <th style="width:70px">Imagen</th>
                                     <th>Producto</th>
+                                    <th>Nro Orden</th>
                                     <th>SKU / Publicación</th>
                                     <th style="width:130px">P. Unitario</th>
                                     <th style="width:80px">Cant.</th>
@@ -168,21 +178,11 @@
                     </div>
                     <div class="card-body py-3">
                         <div class="row">
-                            <div class="col-12 col-md-4 mb-3">
-                                <label class="form-label fw-bold mb-1"><small>Número de Orden</small></label>
-                                <div class="input-group">
-                                    <input type="text" placeholder="Nro de Orden" id="input-numero-orden-masivo" name="numeroorden" class="form-control" required>
-                                    <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="checkbox" id="check-orden-no-aplica" style="cursor:pointer">
-                                        <label class="form-check-label ms-1" for="check-orden-no-aplica" style="font-size: 11px; cursor:pointer"><small>No aplica</small></label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-4 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label fw-bold mb-1"><small>Fecha de pedido</small></label>
                                 <input type="date" name="fechapedido" id="fechapedido-masivo" class="form-control" min="2024-01-01" max="{{ date('Y-m-d') }}" required>
                             </div>
-                            <div class="col-12 col-md-4 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label class="form-label fw-bold mb-1"><small>Fecha de despacho / venta</small></label>
                                 <input type="date" name="fechadespacho" id="fechadespacho-masivo" class="form-control" required>
                             </div>
@@ -197,8 +197,8 @@
             </div>
         </div>
 
-        {{-- SECCIÓN DE PAGOS --}}
-        <div class="row mt-3" id="seccion-pagos-masivo">
+        {{-- SECCIÓN DE PAGOS (Oculta en modo multi-orden) --}}
+        <div class="row mt-3 d-none" id="seccion-pagos-masivo">
             <div class="col-12">
                 <div class="card border-primary shadow-sm">
                     <div class="card-header bg-primary text-white py-1">

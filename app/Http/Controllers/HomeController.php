@@ -213,6 +213,21 @@ class HomeController extends Controller
                 ])->render(),
             ]);
         }
+        // Productos con stock antiguo (más de 1 año estancado) para remate
+        $productosOldStock = \App\Models\Producto::select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
+            ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+            ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+            ->join('IngresoProducto', 'IngresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+            ->where('RegistroProducto.estado', 'NUEVO')
+            ->where('IngresoProducto.fechaIngreso', '<=', now()->subYear())
+            ->selectRaw('COUNT(RegistroProducto.idRegistro) as stock_estancado')
+            ->selectRaw('MIN(IngresoProducto.fechaIngreso) as fecha_mas_antigua')
+            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
+            ->havingRaw('COUNT(RegistroProducto.idRegistro) > 0')
+            ->orderBy('fecha_mas_antigua', 'asc')
+            ->take(10)
+            ->get();
+        \Log::info("Count de productosOldStock: " . $productosOldStock->count());
 
         return view('dashboard', [
             'user' => $userModel,
@@ -228,6 +243,7 @@ class HomeController extends Controller
             'publicacionesMostSold' => $publicacionesMostSold,
             'reclamosUrgentes' => $reclamosUrgentes,
             'productosMostStock' => $productosMostStock,
+            'productosOldStock' => $productosOldStock,
             'publicacionesTopMonto' => $publicacionesTopMonto,
             'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
             'productosConFallas' => $productosConFallas,
