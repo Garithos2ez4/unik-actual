@@ -415,7 +415,7 @@ class ProductoController extends Controller
             $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
             
             $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
-                ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
+                ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION', 'DEFECTUOSO'])
                 ->whereHas('DetalleComprobante', function ($q) use ($id) {
                     $q->where('idProducto', $id);
                 })

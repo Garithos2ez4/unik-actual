@@ -28,6 +28,7 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
+                @if(optional($producto->GrupoProducto)->idCategoria == 3)
                 <div class="btn-group me-2">
                     <a href="{{ route('producto.falabella.template', $producto->idProducto) }}"
                        class="btn btn-success" title="Descargar plantilla Falabella completa">
@@ -51,6 +52,7 @@
                         </li>
                     </ul>
                 </div>
+                @endif
                 <h5 class="d-inline"><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
             </div>
         </div>

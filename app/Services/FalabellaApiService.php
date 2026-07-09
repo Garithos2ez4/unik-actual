@@ -226,9 +226,28 @@ class FalabellaApiService
             $product['price'] ?? null,
             $businessUnit['Price'] ?? null,
             $businessUnit['price'] ?? null,
-            $businessUnit['SalePrice'] ?? null,
-            $businessUnit['sale_price'] ?? null,
         ]);
+
+        $salePrice = $this->firstFilled([
+            $product['SpecialPrice'] ?? null,
+            $product['special_price'] ?? null,
+            $businessUnit['SpecialPrice'] ?? null,
+            $businessUnit['special_price'] ?? null,
+        ]);
+
+        $creationDateRaw = $this->firstFilled([
+            $product['SpecialFromDate'] ?? null,
+            $businessUnit['SpecialFromDate'] ?? null,
+        ]);
+        
+        $creationDate = '-';
+        if ($creationDateRaw) {
+            try {
+                $creationDate = \Carbon\Carbon::parse($creationDateRaw)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $creationDate = '-';
+            }
+        }
 
         $product['_normalized'] = [
             'seller_sku' => $this->firstFilled([
@@ -250,6 +269,8 @@ class FalabellaApiService
             'status' => $status ?? '-',
             'stock' => $stock ?? '-',
             'price' => $price ?? '-',
+            'sale_price' => $salePrice ?? '-',
+            'creation_date' => $creationDate,
         ];
 
         return $product;

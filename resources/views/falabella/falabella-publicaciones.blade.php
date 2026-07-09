@@ -51,7 +51,9 @@
                             <th>Producto</th>
                             <th>Estado</th>
                             <th>Stock</th>
+                            <th>Creación</th>
                             <th>Precio</th>
+                            <th>Precio oferta</th>
                             <th class="pe-4 text-end">Acciones</th>
                         </tr>
                     </thead>
@@ -90,13 +92,24 @@
                                     {{ $norm['stock'] }}
                                 </div>
                             </td>
+                            <td>
+                                {{ $norm['creation_date'] !== '-' ? \Carbon\Carbon::parse($norm['creation_date'])->format('d/m/Y') : '-' }}
+                            </td>
                             <td>S/ {{ number_format((float)$norm['price'], 2) }}</td>
+                            <td>
+                                @if(isset($norm['sale_price']) && is_numeric($norm['sale_price']) && (float)$norm['sale_price'] > 0)
+                                    S/ {{ number_format((float)$norm['sale_price'], 2) }}
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
                             <td class="pe-4 text-end">
                                 @php
                                     $createParams = [
                                         'titulo' => $norm['name'],
                                         'sku' => $norm['falabella_sku'],
-                                        'precio' => $norm['price']
+                                        'precio' => (isset($norm['sale_price']) && is_numeric($norm['sale_price']) && (float)$norm['sale_price'] > 0) ? $norm['sale_price'] : $norm['price'],
+                                        'fecha' => $norm['creation_date'] !== '-' ? $norm['creation_date'] : date('Y-m-d')
                                     ];
                                     if ($localProd) {
                                         $createParams['producto'] = $localProd->modeloProducto;

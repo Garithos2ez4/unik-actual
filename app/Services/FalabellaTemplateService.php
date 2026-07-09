@@ -89,12 +89,24 @@ class FalabellaTemplateService
         $largo = $caractMap['Largo'] ?? '';
         $dim   = ($alto || $ancho || $largo) ? trim("$alto x $ancho x $largo") : '';
 
-        return compact('marca','caractMap','precioFmt','garantiaFbk','hzFbk','resolFbk','alto','ancho','largo','dim');
+        $upc = preg_replace('/[^0-9]/', '', $producto->UPC ?? '');
+        if (empty($upc) || $upc == '0') {
+            $upc = sprintf('7%012d', $producto->idProducto);
+        }
+        $upcFbk = substr($upc, 0, 18);
+
+        return compact('marca','caractMap','precioFmt','garantiaFbk','hzFbk','resolFbk','alto','ancho','largo','dim','upcFbk');
     }
 
     private function guardarYRetornar($spreadsheet, string $fileName): string
     {
         $tempPath = storage_path("app/public/temp/{$fileName}");
+        
+        $dir = dirname($tempPath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
         $writer->save($tempPath);
         return $tempPath;
@@ -102,7 +114,7 @@ class FalabellaTemplateService
 
     public function generarTemplate(Producto $producto): string
     {
-        $spreadsheet = IOFactory::load(storage_path('falabella_template_base.xlsx'));
+        $spreadsheet = IOFactory::load(storage_path('falabella/falabella_template_base.xlsx'));
         $sheet = $spreadsheet->getSheetByName('Subir plantilla');
         $row = 4;
         $d = $this->calcularDatos($producto);
@@ -111,7 +123,7 @@ class FalabellaTemplateService
             'A' => $producto->nombreProducto, 'B' => $d['marca'],
             'C' => $producto->modelo, 'D' => $producto->descripcionProducto,
             'E' => self::CATEGORIA_MONITORES,
-            'G' => $producto->codigoProducto, 'H' => $producto->UPC,
+            'G' => $producto->codigoProducto, 'H' => $d['upcFbk'],
             'K' => $d['precioFmt'], 'P' => $d['resolFbk'],
             'R' => $d['alto'], 'S' => $d['ancho'], 'T' => $d['largo'],
             'V' => $d['caractMap']['Panel'] ?? '',
@@ -134,7 +146,7 @@ class FalabellaTemplateService
 
     public function generarTemplateExpress(Producto $producto): string
     {
-        $spreadsheet = IOFactory::load(storage_path('falabella_template_express_base.xlsx'));
+        $spreadsheet = IOFactory::load(storage_path('falabella/falabella_template_express_base.xlsx'));
         $sheet = $spreadsheet->getSheetByName('Subir plantilla');
         $row = 5;
         $d = $this->calcularDatos($producto);
@@ -143,8 +155,9 @@ class FalabellaTemplateService
             'A' => $producto->nombreProducto, 'B' => $d['marca'],
             'C' => $producto->descripcionProducto,
             'D' => self::CATEGORIA_MONITORES,
-            'E' => $producto->codigoProducto, 'F' => $producto->UPC,
+            'E' => $producto->codigoProducto, 'F' => $d['upcFbk'],
             'I' => $d['precioFmt'],
+            'M' => '2026',
             'N' => $d['resolFbk'],
             'Q' => $d['caractMap']['Panel'] ?? '',
             'S' => $d['dim'],

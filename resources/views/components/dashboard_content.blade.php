@@ -11,7 +11,7 @@ $startRange = $endRange;
 $gradientString = implode(', ', $gradientParts);
 
 // Fallback for variables passed as attributes without props
-$productos_old_stock = $productos_old_stock ?? $attributes->get('productos_old_stock') ?? $attributes->get('productosOldStock') ?? collect();
+$productos_old_stock = $productos_old_stock ?? (isset($attributes) ? ($attributes->get('productos_old_stock') ?? $attributes->get('productosOldStock')) : null) ?? collect();
 @endphp
 
 <div class="container">
