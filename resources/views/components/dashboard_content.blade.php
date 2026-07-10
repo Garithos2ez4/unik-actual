@@ -10,8 +10,7 @@ $startRange = $endRange;
 }
 $gradientString = implode(', ', $gradientParts);
 
-// Fallback for variables passed as attributes without props
-$productos_old_stock = $productos_old_stock ?? (isset($attributes) ? ($attributes->get('productos_old_stock') ?? $attributes->get('productosOldStock')) : null) ?? collect();
+// Variable is now injected natively as $productosOldStock
 @endphp
 
 <div class="container">
@@ -416,16 +415,17 @@ $productos_old_stock = $productos_old_stock ?? (isset($attributes) ? ($attribute
                             </ul>
                         </div>
                     </div>
-                    <div class="col-md-12 mt-3">
+                </div>
+                <div class="col-md-12 mt-3">
                     <div class="row border shadow rounded-3 pt-2 pb-2">
                         <div class="col-md-12">
                             <h4 class="mb-0">Top Remates</h4>
                             <small class="text-secondary">Stock antiguo (> 1 año sin ventas)</small>
                         </div>
                         <div class="col-md-12 mt-2">
-                            @if(isset($productos_old_stock) && count($productos_old_stock) > 0)
+                            @if(isset($productosOldStock) && count($productosOldStock) > 0)
                                 <ul class="list-group list-group-flush">
-                                    @foreach ($productos_old_stock as $index => $oldStock)
+                                    @foreach ($productosOldStock as $index => $oldStock)
                                     <li class="list-group-item px-1">
                                         <div class="row align-items-center">
                                             <div class="col-2 text-center">

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class FalabellaOrderSyncService
 {
-    private const DEFAULT_LOOKBACK_DAYS = 3;
+    private const DEFAULT_LOOKBACK_DAYS = 1;
 
     public const RETURN_STATUSES = [
         'canceled',
@@ -171,6 +171,9 @@ class FalabellaOrderSyncService
 
     public function syncDispatchQueue(string $date, ?string $status = null, int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS): array
     {
+        // TEMPORALMENTE DESACTIVADO (Por error 401 Vercel Protected Deployment)
+        return ['count' => 0, 'order_ids' => [], 'lookback_days' => 0];
+
         $lookbackDays = max(0, config('services.falabella.sync_lookback_days', $lookbackDays));
         $targetDate = Carbon::parse($date);
         $orderIds = [];
@@ -311,6 +314,9 @@ class FalabellaOrderSyncService
      */
     public function syncReturnsByDateRange(string $dateFrom, string $dateTo): array
     {
+        // TEMPORALMENTE DESACTIVADO (Por error 401 Vercel Protected Deployment)
+        return ['count' => 0, 'order_ids' => []];
+
         $createdAfter  = Carbon::parse($dateFrom)->startOfDay()->toIso8601String();
         $createdBefore = Carbon::parse($dateTo)->endOfDay()->toIso8601String();
         $synced        = [];

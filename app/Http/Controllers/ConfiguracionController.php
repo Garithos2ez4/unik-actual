@@ -731,7 +731,12 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 if (isset($nombre) && isset($img)) {
-                    $this->configuracionService->createMarcaProducto($nombre, $img);
+                    try {
+                        $this->configuracionService->createMarcaProducto($nombre, $img);
+                        $this->headerService->sendFlashAlerts('Éxito', 'Marca creada correctamente', 'success', 'btn-success');
+                    } catch (\Exception $e) {
+                        $this->headerService->sendFlashAlerts('Error', 'La marca ya existe o hubo un problema: ' . $e->getMessage(), 'warning', 'btn-danger');
+                    }
                 }
                 return back();
             }

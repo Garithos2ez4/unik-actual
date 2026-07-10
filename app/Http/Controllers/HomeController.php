@@ -29,118 +29,145 @@ class HomeController extends Controller
         $userModel = $this->headerService->getModelUser();
 
         //variables del controlador
-        $productosStockMin = $this->dashboardService->getStockMinProducts()->total();
-        $totalProductos = $this->dashboardService->getTotalProducts();
-        $productosMostSold = $this->dashboardService->getMostSoldProducts();
-        $publicacionesMostSold = $this->dashboardService->getMostSoldPublicaciones();
+        $productosStockMin = \Illuminate\Support\Facades\Cache::remember('dash_stock_min', 60, function () {
+            return $this->dashboardService->getStockMinProducts()->total();
+        });
+        
+        $totalProductos = \Illuminate\Support\Facades\Cache::remember('dash_total_prod', 60, function () {
+            return $this->dashboardService->getTotalProducts();
+        });
+        
+        $productosMostSold = \Illuminate\Support\Facades\Cache::remember('dash_most_sold_prod', 60, function () {
+            return $this->dashboardService->getMostSoldProducts();
+        });
+        
+        $publicacionesMostSold = \Illuminate\Support\Facades\Cache::remember('dash_most_sold_pub', 60, function () {
+            return $this->dashboardService->getMostSoldPublicaciones();
+        });
 
         // Nueva lógica para productos top del mes (Solo ventas que NO han sido devueltas)
-        $productosMostSoldMonth = \App\Models\Producto::query()
-            ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-            ->join('EgresoProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-            ->select('Producto.*', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->whereNotExists(function ($query) {
-                $query->select(\DB::raw(1))
-                    ->from('devoluciones')
-                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
-            })
-            ->groupBy('Producto.idProducto')
-            ->orderBy('total_ventas', 'desc')
-            ->take(3)
-            ->get();
+        $productosMostSoldMonth = \Illuminate\Support\Facades\Cache::remember('dash_prod_most_sold_month', 60, function () {
+            return \App\Models\Producto::query()
+                ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+                ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                ->join('EgresoProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+                ->select('Producto.*', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+                ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+                ->whereYear('EgresoProducto.fechaCompra', now()->year)
+                ->whereNotExists(function ($query) {
+                    $query->select(\DB::raw(1))
+                        ->from('devoluciones')
+                        ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+                })
+                ->groupBy('Producto.idProducto')
+                ->orderBy('total_ventas', 'desc')
+                ->take(3)
+                ->get();
+        });
 
-        $reclamosUrgentes = \App\Models\ReclamoPlataforma::where('estadoGeneral', 'ABIERTO')
-            ->where('fechaMaxRespuesta', '<=', now()->addDays(3))
-            ->count();
+        $reclamosUrgentes = \Illuminate\Support\Facades\Cache::remember('dash_reclamos_urg', 60, function () {
+            return \App\Models\ReclamoPlataforma::where('estadoGeneral', 'ABIERTO')
+                ->where('fechaMaxRespuesta', '<=', now()->addDays(3))
+                ->count();
+        });
 
         // Ranking de 5 productos con más stock (Suma de todos los almacenes)
-        $productosMostStock = \App\Models\Producto::query()
-            ->join('Inventario', 'Inventario.idProducto', '=', 'Producto.idProducto')
-            ->select('Producto.*', \DB::raw('SUM(Inventario.stock) as total_stock'))
-            ->groupBy('Producto.idProducto')
-            ->orderBy('total_stock', 'desc')
-            ->take(5)
-            ->get();
+        $productosMostStock = \Illuminate\Support\Facades\Cache::remember('dash_prod_most_stock', 60, function () {
+            return \App\Models\Producto::query()
+                ->join('Inventario', 'Inventario.idProducto', '=', 'Producto.idProducto')
+                ->select('Producto.*', \DB::raw('SUM(Inventario.stock) as total_stock'))
+                ->groupBy('Producto.idProducto')
+                ->orderBy('total_stock', 'desc')
+                ->take(5)
+                ->get();
+        });
 
         // Top 5 publicaciones con mayor monto vendido (Mes actual)
-        $publicacionesTopMonto = \App\Models\Publicacion::query()
-            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->whereNotExists(function ($query) {
-                $query->select(\DB::raw(1))
-                    ->from('devoluciones')
-                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
-            })
-            ->groupBy('Publicacion.idPublicacion')
-            ->orderBy('total_monto', 'desc')
-            ->take(5)
-            ->get();
+        $publicacionesTopMonto = \Illuminate\Support\Facades\Cache::remember('dash_pub_top_monto', 60, function () {
+            return \App\Models\Publicacion::query()
+                ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+                ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
+                ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+                ->whereYear('EgresoProducto.fechaCompra', now()->year)
+                ->whereNotExists(function ($query) {
+                    $query->select(\DB::raw(1))
+                        ->from('devoluciones')
+                        ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+                })
+                ->groupBy('Publicacion.idPublicacion')
+                ->orderBy('total_monto', 'desc')
+                ->take(5)
+                ->get();
+        });
 
         // Top 5 publicaciones con mayor monto vendido (Histórico)
-        $publicacionesTopMontoHist = \App\Models\Publicacion::query()
-            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
-            ->whereNotExists(function ($query) {
-                $query->select(\DB::raw(1))
-                    ->from('devoluciones')
-                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
-            })
-            ->groupBy('Publicacion.idPublicacion')
-            ->orderBy('total_monto', 'desc')
-            ->take(5)
-            ->get();
+        $publicacionesTopMontoHist = \Illuminate\Support\Facades\Cache::remember('dash_pub_top_monto_hist', 720, function () {
+            return \App\Models\Publicacion::query()
+                ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+                ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
+                ->whereNotExists(function ($query) {
+                    $query->select(\DB::raw(1))
+                        ->from('devoluciones')
+                        ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+                })
+                ->groupBy('Publicacion.idPublicacion')
+                ->orderBy('total_monto', 'desc')
+                ->take(5)
+                ->get();
+        });
 
         // Top 3 SKUs con más ventas (Mes actual)
-        $skusMostSoldMonth = \App\Models\Publicacion::query()
-            ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
-            ->select('Publicacion.sku', 'Publicacion.titulo', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
-            ->whereMonth('EgresoProducto.fechaCompra', now()->month)
-            ->whereYear('EgresoProducto.fechaCompra', now()->year)
-            ->whereNotExists(function ($query) {
-                $query->select(\DB::raw(1))
-                    ->from('devoluciones')
-                    ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
-            })
-            ->groupBy('Publicacion.sku', 'Publicacion.titulo')
-            ->orderBy('total_ventas', 'desc')
-            ->take(3)
-            ->get();
+        $skusMostSoldMonth = \Illuminate\Support\Facades\Cache::remember('dash_sku_most_sold', 60, function () {
+            return \App\Models\Publicacion::query()
+                ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
+                ->select('Publicacion.sku', 'Publicacion.titulo', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
+                ->whereMonth('EgresoProducto.fechaCompra', now()->month)
+                ->whereYear('EgresoProducto.fechaCompra', now()->year)
+                ->whereNotExists(function ($query) {
+                    $query->select(\DB::raw(1))
+                        ->from('devoluciones')
+                        ->whereRaw('devoluciones.idEgreso = EgresoProducto.idEgreso');
+                })
+                ->groupBy('Publicacion.sku', 'Publicacion.titulo')
+                ->orderBy('total_ventas', 'desc')
+                ->take(3)
+                ->get();
+        });
 
         // Top 5 productos con más fallas (Devoluciones o Defectuosos con observación)
-        $productosConFallas = \App\Models\Producto::query()
-            ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
-            ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
-            ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
-            ->select('Producto.nombreProducto', 'Producto.modelo', \DB::raw('COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas'))
-            ->where(function($q) {
-                $q->where(function($q2) {
-                    $q2->whereIn('RegistroProducto.estado', ['DEFECTUOSO', 'GARANTIA'])
-                       ->whereNotNull('RegistroProducto.observacion')
-                       ->where('RegistroProducto.observacion', '!=', '');
+        $productosConFallas = \Illuminate\Support\Facades\Cache::remember('dash_prod_fallas', 60, function () {
+            return \App\Models\Producto::query()
+                ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
+                ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
+                ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
+                ->select('Producto.nombreProducto', 'Producto.modelo', \DB::raw('COUNT(DISTINCT RegistroProducto.idRegistro) as total_fallas'))
+                ->where(function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->whereIn('RegistroProducto.estado', ['DEFECTUOSO', 'GARANTIA'])
+                            ->whereNotNull('RegistroProducto.observacion')
+                            ->where('RegistroProducto.observacion', '!=', '');
+                    })
+                        ->orWhere(function ($q2) {
+                            $q2->whereNotNull('devoluciones.idDevolucion')
+                                ->whereNotNull('devoluciones.motivo')
+                                ->where('devoluciones.motivo', '!=', '');
+                        });
                 })
-                ->orWhere(function($q2) {
-                    $q2->whereNotNull('devoluciones.idDevolucion')
-                       ->whereNotNull('devoluciones.motivo')
-                       ->where('devoluciones.motivo', '!=', '');
-                });
-            })
-            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
-            ->orderBy('total_fallas', 'desc')
-            ->take(5)
-            ->get();
+                ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
+                ->orderBy('total_fallas', 'desc')
+                ->take(5)
+                ->get();
+        });
 
         // Ventas de los últimos 7 días
-        $ventas7DiasRaw = \App\Models\EgresoProducto::query()
-            ->select(\DB::raw('DATE(fechaCompra) as fecha'), \DB::raw('COUNT(*) as total'))
-            ->where('fechaCompra', '>=', now()->subDays(6)->startOfDay())
-            ->groupBy(\DB::raw('DATE(fechaCompra)'))
-            ->orderBy('fecha', 'asc')
-            ->get();
+        $ventas7DiasRaw = \Illuminate\Support\Facades\Cache::remember('dash_ventas_7_dias', 60, function () {
+            return \App\Models\EgresoProducto::query()
+                ->select(\DB::raw('DATE(fechaCompra) as fecha'), \DB::raw('COUNT(*) as total'))
+                ->where('fechaCompra', '>=', now()->subDays(6)->startOfDay())
+                ->groupBy(\DB::raw('DATE(fechaCompra)'))
+                ->orderBy('fecha', 'asc')
+                ->get();
+        });
 
         // Rellenar días sin ventas
         $ventas7Dias = [];
@@ -154,15 +181,29 @@ class HomeController extends Controller
         }
 
 
-        $registros = $this->dashboardService->getRegistrosXEstados();
-        $inventario = $this->dashboardService->getAllInventory()->sum('stock');
-        $almacenes = $this->dashboardService->getAllInventory()->unique('idAlmacen')->pluck('Almacen');
-        $colors = ['#ff5733', '#33c6ff', '#75e93c', '#f4d84d'];
-        $stock = array();
+        $registros = \Illuminate\Support\Facades\Cache::remember('dash_registros', 60, function () {
+            return $this->dashboardService->getRegistrosXEstados();
+        });
 
-        foreach ($almacenes as $almacen) {
-            $stock[] = ['almacen' => $almacen, 'cantidad' => $this->dashboardService->getInventoryByAlmacen($almacen->idAlmacen)->sum('stock')];
-        }
+        $inventarioInfo = \Illuminate\Support\Facades\Cache::remember('dash_inventario_stock', 60, function () {
+            $allInventory = $this->dashboardService->getAllInventory();
+            $inventarioTotal = $allInventory->sum('stock');
+            $almacenesList = $allInventory->unique('idAlmacen')->pluck('Almacen');
+            
+            $stockArray = [];
+            foreach ($almacenesList as $almacen) {
+                $stockArray[] = ['almacen' => $almacen, 'cantidad' => $this->dashboardService->getInventoryByAlmacen($almacen->idAlmacen)->sum('stock')];
+            }
+            
+            return [
+                'inventario' => $inventarioTotal,
+                'stock' => $stockArray
+            ];
+        });
+
+        $inventario = $inventarioInfo['inventario'];
+        $stock = $inventarioInfo['stock'];
+        $colors = ['#ff5733', '#33c6ff', '#75e93c', '#f4d84d'];
 
         // Devoluciones de hoy (Falabella) para Resumen Gerencial
         $devolucionesHoy = collect();
@@ -175,7 +216,8 @@ class HomeController extends Controller
         }
 
         if ($tieneAccesoAnalitica) {
-            // Sincronizar automáticamente 1 vez por hora para no saturar la API ni ralentizar el Dashboard
+            // TEMPORALMENTE DESACTIVADO: La API de Vercel (Falabella) está devolviendo 401 Protected Deployment
+            /*
             $cacheKey = 'falabella_returns_sync_' . now()->toDateString();
             if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
                 try {
@@ -185,9 +227,27 @@ class HomeController extends Controller
                     \Illuminate\Support\Facades\Log::warning('Error auto-sync devoluciones en dashboard: ' . $e->getMessage());
                 }
             }
-
             $devolucionesHoy = $this->falabellaOrderSyncService->getReturns(now()->toDateString(), now()->toDateString(), null);
+            */
+            $devolucionesHoy = collect(); // Evita que la vista de error por variable indefinida
         }
+
+        $productosOldStock = \Illuminate\Support\Facades\Cache::remember('dashboard_old_stock', now()->addMinutes(720), function () {
+            return \App\Models\Producto::select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
+                ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
+                ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                ->join('IngresoProducto', 'IngresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+                ->where('RegistroProducto.estado', 'NUEVO')
+                ->where('IngresoProducto.fechaIngreso', '<=', now()->subYear())
+                ->selectRaw('COUNT(RegistroProducto.idRegistro) as stock_estancado')
+                ->selectRaw('MIN(IngresoProducto.fechaIngreso) as fecha_mas_antigua')
+                ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
+                ->havingRaw('COUNT(RegistroProducto.idRegistro) > 0')
+                ->orderBy('fecha_mas_antigua', 'asc')
+                ->take(10)
+                ->get();
+        });
+        \Log::info("Count de productosOldStock: " . $productosOldStock->count());
 
         if ($request->query('query')) {
             return response()->json([
@@ -205,6 +265,7 @@ class HomeController extends Controller
                     'publicacionesMostSold' => $publicacionesMostSold,
                     'reclamosUrgentes' => $reclamosUrgentes,
                     'productosMostStock' => $productosMostStock,
+                    'productosOldStock' => $productosOldStock,
                     'publicacionesTopMonto' => $publicacionesTopMonto,
                     'publicacionesTopMontoHist' => $publicacionesTopMontoHist,
                     'productosConFallas' => $productosConFallas,
@@ -213,21 +274,6 @@ class HomeController extends Controller
                 ])->render(),
             ]);
         }
-        // Productos con stock antiguo (más de 1 año estancado) para remate
-        $productosOldStock = \App\Models\Producto::select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
-            ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
-            ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-            ->join('IngresoProducto', 'IngresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-            ->where('RegistroProducto.estado', 'NUEVO')
-            ->where('IngresoProducto.fechaIngreso', '<=', now()->subYear())
-            ->selectRaw('COUNT(RegistroProducto.idRegistro) as stock_estancado')
-            ->selectRaw('MIN(IngresoProducto.fechaIngreso) as fecha_mas_antigua')
-            ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
-            ->havingRaw('COUNT(RegistroProducto.idRegistro) > 0')
-            ->orderBy('fecha_mas_antigua', 'asc')
-            ->take(10)
-            ->get();
-        \Log::info("Count de productosOldStock: " . $productosOldStock->count());
 
         return view('dashboard', [
             'user' => $userModel,

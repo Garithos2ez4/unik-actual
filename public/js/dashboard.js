@@ -19,5 +19,5 @@ function loadProducts() {
 
 window.onload = function() {
     loadProducts();
-    setInterval(loadProducts, 60000);
+    setInterval(loadProducts, 600000); // 10 minutos (600,000 ms) en lugar de 60 segundos para no saturar el servidor
 }
