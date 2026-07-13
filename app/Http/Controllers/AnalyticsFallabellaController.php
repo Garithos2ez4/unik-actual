@@ -52,6 +52,21 @@ class AnalyticsFallabellaController extends Controller
         return [$fechaInicio, $fechaFin, $anio, $mes];
     }
 
+    public function scraperFalabella(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        // Podrías validar acceso aquí si es necesario, usar 13 como analitica falabella
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard');
+        }
+
+        return view('analytics.scraper_falabella', [
+            'user' => $userModel
+        ]);
+    }
+
     public function falabella(Request $request)
     {
         $userModel = $this->headerService->getModelUser();

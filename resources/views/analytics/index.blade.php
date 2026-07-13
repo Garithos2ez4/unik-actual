@@ -51,6 +51,7 @@
     </div>
 
     @include('analytics.partials.margins')
+    @include('analytics.partials.margins_unitaria')
 
     <div class="row mt-2">
         <div class="col-lg-6">
@@ -69,6 +70,8 @@
             @include('analytics.partials.best_months')
         </div>
     </div>
+
+    @include('analytics.partials.top_provincias_envios')
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

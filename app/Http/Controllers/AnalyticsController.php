@@ -319,7 +319,8 @@ class AnalyticsController extends Controller
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, 
                          (DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos, 
-                         ((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) + ($costosComponentesSub) as costos")
+                         ((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) + ($costosComponentesSub) as costos,
+                         DetalleVenta.cantidad as cantidad_vendida")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
@@ -347,7 +348,8 @@ class AnalyticsController extends Controller
                                 (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $subqueryTipoCambioEgresoCosto ELSE DetalleComprobante.precioUnitario END) 
                             ELSE NULL END, NULL),
                             CASE WHEN RegistroProducto.es_herramienta = 1 THEN 0 ELSE COALESCE(Producto.precioDolar, 0) * $tc * 1.18 END
-                         ) + ($comisionFalabellaEgreso)) as costos")
+                         ) + ($comisionFalabellaEgreso)) as costos,
+                         1 as cantidad_vendida")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
             ->whereRaw("($precioPubExpr) > 0.10")
@@ -355,17 +357,20 @@ class AnalyticsController extends Controller
 
         $margenesProductos = DB::query()
             ->fromSub($qVentas8->unionAll($qEgresos8), 'unioned')
-            ->selectRaw('idProducto, nombreProducto, modelo, SUM(ingresos) as total_ingresos, SUM(costos) as total_costos, (SUM(ingresos) - SUM(costos)) as ganancia_neta')
+            ->selectRaw('idProducto, nombreProducto, modelo, SUM(ingresos) as total_ingresos, SUM(costos) as total_costos, (SUM(ingresos) - SUM(costos)) as ganancia_neta, SUM(cantidad_vendida) as total_cantidad')
             ->groupBy('idProducto', 'nombreProducto', 'modelo')
             ->having('total_ingresos', '>', 0)
             ->get()
             ->map(function ($item) {
                 $item->margen_porcentaje = $item->total_ingresos > 0 ? ($item->ganancia_neta / $item->total_ingresos) * 100 : 0;
+                $item->ganancia_neta_unitaria = $item->total_cantidad > 0 ? ($item->ganancia_neta / $item->total_cantidad) : 0;
+                $item->margen_porcentaje_unitario = $item->total_cantidad > 0 && ($item->total_ingresos / $item->total_cantidad) > 0 ? ($item->ganancia_neta_unitaria / ($item->total_ingresos / $item->total_cantidad)) * 100 : 0;
                 return $item;
             });
 
         $productosMasGanancia = $margenesProductos->sortByDesc('ganancia_neta')->take(5)->values();
         $productosMenosGanancia = $margenesProductos->sortBy('ganancia_neta')->take(5)->values();
+        $productosMasGananciaUnitaria = $margenesProductos->sortByDesc('ganancia_neta_unitaria')->take(5)->values();
 
         // ── 9. Top 5 Productos Más Enviados ───────────────────
         $topEnviados = \App\Models\EnvioProvinciaProducto::query()
@@ -375,6 +380,31 @@ class AnalyticsController extends Controller
             ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
             ->groupBy('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo')
             ->orderByDesc('total_enviado')
+            ->limit(5)
+            ->get();
+
+        // ── 10. Top 5 Provincias Más Solicitadas ───────────────────
+        $topProvincias = \App\Models\EnvioProvincia::query()
+            ->join('destinos', 'envio_provincias.idDestino', '=', 'destinos.idDestino')
+            ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
+            ->selectRaw('provincias.nombre as nombre_provincia, COUNT(envio_provincias.idEnvioProvincia) as total_envios')
+            ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
+            ->groupBy('provincias.idProvincia', 'provincias.nombre')
+            ->orderByDesc('total_envios')
+            ->limit(5)
+            ->get();
+
+        // ── 11. Top 5 Envíos por Monto ───────────────────
+        $topEnviosPorMonto = \App\Models\EnvioProvincia::query()
+            ->join('Venta', function($join) {
+                $join->on('envio_provincias.idCliente', '=', 'Venta.idCliente')
+                     ->on(DB::raw('DATE(envio_provincias.fecha_envio)'), '=', DB::raw('DATE(Venta.fechaVenta)'));
+            })
+            ->join('Cliente', 'envio_provincias.idCliente', '=', 'Cliente.idCliente')
+            ->selectRaw('envio_provincias.idEnvioProvincia, envio_provincias.fecha_envio, Cliente.numeroDocumento, Cliente.nombre, Cliente.apellidoPaterno, SUM(Venta.totalVenta) as monto_total')
+            ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
+            ->groupBy('envio_provincias.idEnvioProvincia', 'envio_provincias.fecha_envio', 'Cliente.numeroDocumento', 'Cliente.nombre', 'Cliente.apellidoPaterno')
+            ->orderByDesc('monto_total')
             ->limit(5)
             ->get();
 
@@ -388,8 +418,11 @@ class AnalyticsController extends Controller
             'productosMostSoldMonth' => $productosMostSoldMonth,
             'productosMasGanancia' => $productosMasGanancia,
             'productosMenosGanancia' => $productosMenosGanancia,
+            'productosMasGananciaUnitaria' => $productosMasGananciaUnitaria,
             'topBestMonths' => $topBestMonths,
             'topEnviados' => $topEnviados,
+            'topProvincias' => $topProvincias,
+            'topEnviosPorMonto' => $topEnviosPorMonto,
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
