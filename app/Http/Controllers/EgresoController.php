@@ -162,8 +162,8 @@ class EgresoController extends Controller
                                 ];
                             }
 
-                            // 3. Pagos no se usan en este modo agrupado masivo
-                            $pagos = [];
+                            // 3. Pagos (si es venta tienda masiva o createegreso)
+                            $pagos = $request->input('pagos') ?? [];
 
                             // 4. Crear la Venta
                             $this->ventaService->createVenta($ventaData, $detallesVenta, $pagos);

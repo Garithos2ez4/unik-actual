@@ -31,12 +31,12 @@
                 @if(optional($producto->GrupoProducto)->idCategoria == 3)
                 <div class="btn-group me-2">
                     <a href="{{ route('producto.falabella.template', $producto->idProducto) }}"
-                       class="btn btn-success" title="Descargar plantilla Falabella completa">
+                        class="btn btn-success" title="Descargar plantilla Falabella completa">
                         <i class="bi bi-file-earmark-excel-fill"></i>
                         <span class="d-none d-lg-inline"> Falabella</span>
                     </a>
                     <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split"
-                            data-bs-toggle="dropdown" aria-expanded="false">
+                        data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="visually-hidden">Toggle</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
@@ -255,7 +255,7 @@
                 <div class="mt-2">
                     <label class="form-label">Tasa de Cambio Personalizada (Opcional):</label>
                     <input type="number" name="tc_fijo" step="0.01" class="form-control input-edit" id="tc_fijo_personalizado" value="{{$producto->tc_fijo}}" placeholder="Ej: 3.80" disabled>
-                    <small class="text-muted">Si se llena, esta tasa sobreescribir芍 a la tasa fija global cuando se use TC Fijo.</small>
+                    <small class="text-muted">Si se llena, esta tasa sobreescribira a la tasa fija global cuando se use TC Fijo.</small>
                 </div>
             </div>
         </div>

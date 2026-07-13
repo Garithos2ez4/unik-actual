@@ -216,8 +216,6 @@ class HomeController extends Controller
         }
 
         if ($tieneAccesoAnalitica) {
-            // TEMPORALMENTE DESACTIVADO: La API de Vercel (Falabella) está devolviendo 401 Protected Deployment
-            /*
             $cacheKey = 'falabella_returns_sync_' . now()->toDateString();
             if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
                 try {
@@ -228,8 +226,6 @@ class HomeController extends Controller
                 }
             }
             $devolucionesHoy = $this->falabellaOrderSyncService->getReturns(now()->toDateString(), now()->toDateString(), null);
-            */
-            $devolucionesHoy = collect(); // Evita que la vista de error por variable indefinida
         }
 
         $productosOldStock = \Illuminate\Support\Facades\Cache::remember('dashboard_old_stock', now()->addMinutes(720), function () {

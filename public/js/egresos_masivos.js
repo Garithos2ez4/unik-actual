@@ -586,10 +586,27 @@
     function actualizarResumen() {
         let total = 0;
         let totalVentaLote = 0;
+        let esVentaTienda = true;
+
         productosEnCarrito.forEach(item => {
             total += item.series.length;
             totalVentaLote += item.precioVenta * item.series.length;
+            if (item.sku !== 'No aplica' || item.numeroOrden !== 'No aplica') {
+                esVentaTienda = false;
+            }
         });
+
+        const divCliente = document.getElementById('div-cliente-egreso-masivo');
+        const seccionPagos = document.getElementById('seccion-pagos-masivo');
+        
+        if (productosEnCarrito.length > 0 && esVentaTienda) {
+            if (divCliente) divCliente.style.display = 'flex';
+            if (seccionPagos) seccionPagos.classList.remove('d-none');
+        } else {
+            if (divCliente) divCliente.style.display = 'none';
+            if (seccionPagos) seccionPagos.classList.add('d-none');
+            if (typeof clearClienteMasivo === 'function') clearClienteMasivo();
+        }
 
         const texto = document.getElementById('resumen-texto');
         const btnSubmit = document.getElementById('btn-registrar-masivo');
@@ -828,6 +845,67 @@
         return div.innerHTML;
     }
 
+    // ==================== BÚSQUEDA DE CLIENTE MASIVO ====================
+    window.searchClienteMasivo = function (inputElement) {
+        let query = inputElement.value;
+        const suggestions = document.getElementById('suggestions-cliente-masivo');
+        const hiddenId = document.getElementById('hidden-id-cliente-masivo');
+        const btnClear = document.getElementById('btn-clear-cliente-masivo');
+
+        if (query.length > 2) {
+            hiddenId.value = "";
+            btnClear.style.display = 'none';
+
+            fetch(`/cliente/searchcliente?query=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    suggestions.innerHTML = '';
+                    inputElement.style.zIndex = '1000';
+
+                    data.forEach(item => {
+                        let li = document.createElement('li');
+                        li.classList.add('list-group-item', 'pe-0', 'hover-sistema-uno', 'text-truncate');
+                        li.style.cursor = "pointer";
+
+                        let nombreCompleto = item.nombre + (item.apePaterno ? ' ' + item.apePaterno : '');
+                        li.innerHTML = `<strong>${escapeHtml(item.numeroDocumento)}</strong> - ${escapeHtml(nombreCompleto)}`;
+
+                        li.addEventListener('click', function () {
+                            inputElement.value = nombreCompleto;
+                            hiddenId.value = item.idCliente;
+                            btnClear.style.display = 'block';
+
+                            suggestions.innerHTML = '';
+                            inputElement.style.zIndex = '1';
+                            inputElement.readOnly = true;
+                        });
+
+                        suggestions.appendChild(li);
+                    });
+                })
+                .catch(err => console.error('Error buscando cliente:', err));
+        } else {
+            suggestions.innerHTML = '';
+            hiddenId.value = "";
+            btnClear.style.display = 'none';
+            inputElement.style.zIndex = '1';
+        }
+    };
+
+    window.clearClienteMasivo = function () {
+        let inputElement = document.getElementById('input-cliente-egreso-masivo');
+        if (inputElement) {
+            inputElement.value = '';
+            inputElement.readOnly = false;
+        }
+        const hiddenId = document.getElementById('hidden-id-cliente-masivo');
+        if (hiddenId) hiddenId.value = '';
+        const btnClear = document.getElementById('btn-clear-cliente-masivo');
+        if (btnClear) btnClear.style.display = 'none';
+        const suggestions = document.getElementById('suggestions-cliente-masivo');
+        if (suggestions) suggestions.innerHTML = '';
+    };
+
     // Click fuera cierra sugerencias
     document.addEventListener('click', function (e) {
         if (!e.target.closest('#input-buscar-producto') && !e.target.closest('#suggestions-producto')) {
@@ -836,6 +914,10 @@
         if (!e.target.closest('#input-sku-masivo') && !e.target.closest('#suggestions-sku-masivo')) {
             const sug = document.getElementById('suggestions-sku-masivo');
             if (sug) sug.innerHTML = '';
+        }
+        if (!e.target.closest('#input-cliente-egreso-masivo') && !e.target.closest('#suggestions-cliente-masivo')) {
+            const sugC = document.getElementById('suggestions-cliente-masivo');
+            if (sugC) sugC.innerHTML = '';
         }
     });
 

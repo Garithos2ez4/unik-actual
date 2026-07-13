@@ -188,6 +188,23 @@
                             </div>
                         </div>
 
+                        <div class="row" id="div-cliente-egreso-masivo" style="display:none;">
+                            <div class="col-12 col-md-8 mb-3">
+                                <label class="form-label fw-bold mb-1"><small>Cliente (Opcional)</small></label>
+                                <div class="input-group" style="position:relative">
+                                    <input type="text" oninput="searchClienteMasivo(this)" id="input-cliente-egreso-masivo" class="form-control" placeholder="Nombre o Documento" autocomplete="off">
+                                    <div class="input-group-text" id="btn-clear-cliente-masivo" style="cursor:pointer; display:none;" onclick="clearClienteMasivo()">
+                                        <i class="bi bi-x"></i>
+                                    </div>
+                                    <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" class="input-group-text bg-primary text-white" title="Añadir Cliente" style="text-decoration: none;">
+                                        <i class="bi bi-person-fill-add"></i>
+                                    </a>
+                                    <input type="hidden" name="idCliente" id="hidden-id-cliente-masivo" value="">
+                                    <ul class="list-group shadow" id="suggestions-cliente-masivo" style="position:absolute;z-index:1000;top:100%;left:0;width:100%;max-height:200px;overflow-y:auto"></ul>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- Resumen general del lote --}}
                         <div class="alert alert-info py-2 mb-2" id="resumen-egreso">
                             <strong><i class="bi bi-info-circle"></i> Resumen de Lote:</strong> <span id="resumen-texto">Añade productos al carrito para continuar</span>

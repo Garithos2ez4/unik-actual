@@ -73,8 +73,9 @@ class IngresoProductoService implements IngresoProductoServiceInterface
     
     public function deleteIngreso($id){
         if($id){
-            $ingreso = $this->ingresoRepository->getOne('idIngreso',$id);
-            $dataRegistro = ['estado' => 'INVALIDO',
+            $ingreso = $this->ingresoRepository->getOne('idRegistro',$id);
+            if ($ingreso) {
+                $dataRegistro = ['estado' => 'INVALIDO',
                             'fechaMovimiento' => now()];
             $dataIngreso = ['idUser' => $this->headerService->getModelUser()->idUser];
 
@@ -89,6 +90,7 @@ class IngresoProductoService implements IngresoProductoServiceInterface
             $this->inventarioRepository->removeStock($registro->DetalleComprobante->idProducto,$registro->idAlmacen);
             $this->detalleComprobanteRepository->update($detalle->idDetalleComprobante,$dataDetalle);
             $this->comprobanteRepository->update($comprobante->idComprobante,$dataComprobante);
+            }
         }
     }
 
