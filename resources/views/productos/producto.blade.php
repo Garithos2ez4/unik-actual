@@ -28,10 +28,11 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
-                @if(optional($producto->GrupoProducto)->idCategoria == 3)
+                @if(in_array(optional($producto->GrupoProducto)->idCategoria, [1, 3]))
+                @php $isLaptopFbk = optional($producto->GrupoProducto)->idCategoria == 1; @endphp
                 <div class="btn-group me-2">
-                    <a href="{{ route('producto.falabella.template', $producto->idProducto) }}"
-                        class="btn btn-success" title="Descargar plantilla Falabella completa">
+                    <a href="{{ route('producto.falabella.template.express', $producto->idProducto) }}"
+                        class="btn btn-success" title="Descargar plantilla Falabella">
                         <i class="bi bi-file-earmark-excel-fill"></i>
                         <span class="d-none d-lg-inline"> Falabella</span>
                     </a>
@@ -40,11 +41,13 @@
                         <span class="visually-hidden">Toggle</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        @if(!$isLaptopFbk)
                         <li>
                             <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
                                 <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo
                             </a>
                         </li>
+                        @endif
                         <li>
                             <a class="dropdown-item" href="{{ route('producto.falabella.template.express', $producto->idProducto) }}">
                                 <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express

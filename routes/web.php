@@ -58,6 +58,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
+    Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
     Route::get('/dashboard/analitica/mercadolibre', [\App\Http\Controllers\AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
     Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
@@ -132,6 +133,7 @@ Route::middleware(['validate.session'])->group(function () {
     // Rutas para configuración de packs
     Route::get('/producto/{idproducto}/pack-components', [ProductoController::class, 'getPackComponents'])->name('producto.pack.components');
     Route::post('/producto/{idproducto}/pack-components', [ProductoController::class, 'addPackComponent'])->name('producto.pack.add');
+    Route::put('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'updatePackComponent'])->name('producto.pack.update');
     Route::delete('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'removePackComponent'])->name('producto.pack.remove');
 
     // Rutas para Herramientas de Servicio (Reseteadores)

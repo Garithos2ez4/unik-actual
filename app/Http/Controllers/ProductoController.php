@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
@@ -854,6 +855,35 @@ class ProductoController extends Controller
         }
     }
 
+    public function updatePackComponent(Request $request, $idProducto, $idHijo)
+    {
+        try {
+            $idPadre  = decrypt($idProducto);
+            $cantidad  = $request->input('cantidad', 1);
+            $porcentajeCosto = $request->input('porcentaje_costo', 0);
+
+            if ($cantidad < 1 || $porcentajeCosto < 0) {
+                return response()->json(['success' => false, 'message' => 'Datos inválidos.']);
+            }
+
+            $comp = \App\Models\ProductoPack::where('idProductoPack', $idPadre)
+                ->where('idProductoHijo', $idHijo)
+                ->first();
+
+            if (!$comp) {
+                return response()->json(['success' => false, 'message' => 'Componente no encontrado.']);
+            }
+
+            $comp->cantidad         = $cantidad;
+            $comp->porcentaje_costo = $porcentajeCosto;
+            $comp->save();
+
+            return response()->json(['success' => true, 'message' => 'Componente actualizado correctamente.']);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()]);
+        }
+    }
+
     public function removePackComponent($idProducto, $idHijo)
     {
         try {
@@ -932,7 +962,8 @@ class ProductoController extends Controller
                 ->findOrFail($idProducto);
 
             $service  = new FalabellaTemplateService();
-            $filePath = $service->generarTemplate($producto);
+            $usuario  = Usuario::select('idUser', 'user')->find(session('idUser'));
+            $filePath = $service->generarTemplate($producto, $usuario);
 
             $fileName = basename($filePath);
 
@@ -954,7 +985,8 @@ class ProductoController extends Controller
                 ->findOrFail($idProducto);
 
             $service  = new FalabellaTemplateService();
-            $filePath = $service->generarTemplateExpress($producto);
+            $usuario  = Usuario::select('idUser', 'user')->find(session('idUser'));
+            $filePath = $service->generarTemplateExpress($producto, $usuario);
 
             $fileName = basename($filePath);
 

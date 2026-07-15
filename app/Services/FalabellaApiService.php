@@ -423,7 +423,14 @@ class FalabellaApiService
 
         $response = Http::baseUrl(rtrim(config('services.falabella.base_url'), '/'))
             ->acceptJson()
-            ->timeout((int) config('services.falabella.timeout', 30))
+            ->timeout((int) config('services.falabella.timeout', 60))
+            ->connectTimeout((int) config('services.falabella.connect_timeout', 10))
+            ->retry(
+                times: 3,
+                sleepMilliseconds: 1000,
+                when: fn(\Throwable $e) => $e instanceof \Illuminate\Http\Client\ConnectionException,
+                throw: true
+            )
             ->withHeaders([
                 'User-Agent' => 'LogunkApp/1.0 (+https://log.unikstoreperu.com)'
             ])
