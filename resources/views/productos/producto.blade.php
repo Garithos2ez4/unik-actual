@@ -28,11 +28,11 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
-                @if(in_array(optional($producto->GrupoProducto)->idCategoria, [1, 3]))
-                @php $isLaptopFbk = optional($producto->GrupoProducto)->idCategoria == 1; @endphp
+                @if(in_array(optional($producto->GrupoProducto)->idCategoria, [1, 3, 6]))
+                @php $idCatFbk = (int) optional($producto->GrupoProducto)->idCategoria; @endphp
                 <div class="btn-group me-2">
-                    <a href="{{ route('producto.falabella.template.express', $producto->idProducto) }}"
-                        class="btn btn-success" title="Descargar plantilla Falabella">
+                    <a href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}); return false;"
+                        class="btn btn-success" title="Descargar plantilla Falabella Express">
                         <i class="bi bi-file-earmark-excel-fill"></i>
                         <span class="d-none d-lg-inline"> Falabella</span>
                     </a>
@@ -41,7 +41,7 @@
                         <span class="visually-hidden">Toggle</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        @if(!$isLaptopFbk)
+                        @if($idCatFbk === 3) {{-- Template Completo solo para monitores --}}
                         <li>
                             <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
                                 <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo
@@ -49,7 +49,7 @@
                         </li>
                         @endif
                         <li>
-                            <a class="dropdown-item" href="{{ route('producto.falabella.template.express', $producto->idProducto) }}">
+                            <a class="dropdown-item" href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}); return false;">
                                 <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express
                             </a>
                         </li>
@@ -594,5 +594,7 @@
 </script>
 
 @include('productos.partials.modal_historial_precio_tienda')
+
+@include('productos.partials.modal_titulos_falabella')
 
 @endsection

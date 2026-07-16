@@ -236,5 +236,110 @@
             tcFijoPersonalizado.addEventListener('input', toggleTipoCambio);
         }
     });
+
+    let _fbkProductoId = null;
+
+    function abrirModalTitulosFbk(idProducto) {
+        _fbkProductoId = idProducto;
+        // Limpiar estado
+        document.getElementById('fbk-titulos-error').classList.add('d-none');
+        document.getElementById('fbk-titulo1').value = '';
+        document.getElementById('fbk-titulo2').value = '';
+        document.getElementById('fbk-titulo3').value = '';
+
+        // Abrir modal y cargar sugerencias automáticamente
+        const modal = new bootstrap.Modal(document.getElementById('modalTitulosFbk'));
+        modal.show();
+        generarSugerenciasFbk();
+    }
+
+    function generarSugerenciasFbk() {
+        if (!_fbkProductoId) return;
+
+        const loading = document.getElementById('fbk-titulos-loading');
+        const form    = document.getElementById('fbk-titulos-form');
+        const btnSug  = document.getElementById('fbk-btn-sugerir');
+        const errBox  = document.getElementById('fbk-titulos-error');
+
+        loading.style.display = 'block';
+        form.style.display    = 'none';
+        btnSug.disabled       = true;
+        errBox.classList.add('d-none');
+
+        fetch(`/producto/${_fbkProductoId}/falabella-titulos-sugeridos`)
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                form.style.display    = 'block';
+                btnSug.disabled       = false;
+
+                if (data.success) {
+                    document.getElementById('fbk-titulo1').value = data.titulos.titulo1 || '';
+                    document.getElementById('fbk-titulo2').value = data.titulos.titulo2 || '';
+                    document.getElementById('fbk-titulo3').value = data.titulos.titulo3 || '';
+                } else {
+                    errBox.textContent = 'No se pudieron cargar las sugerencias: ' + (data.message || '');
+                    errBox.classList.remove('d-none');
+                }
+            })
+            .catch(() => {
+                loading.style.display = 'none';
+                form.style.display    = 'block';
+                btnSug.disabled       = false;
+                errBox.textContent    = 'Error de conexión al obtener sugerencias.';
+                errBox.classList.remove('d-none');
+            });
+    }
+
+    function descargarTemplateExpressFbk() {
+        if (!_fbkProductoId) return;
+
+        const t1 = document.getElementById('fbk-titulo1').value.trim();
+        const t2 = document.getElementById('fbk-titulo2').value.trim();
+        const t3 = document.getElementById('fbk-titulo3').value.trim();
+        const errBox = document.getElementById('fbk-titulos-error');
+
+        if (!t1) {
+            errBox.textContent = 'El Título 1 no puede estar vacío.';
+            errBox.classList.remove('d-none');
+            return;
+        }
+
+        errBox.classList.add('d-none');
+        const btn = document.getElementById('fbk-btn-descargar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generando...';
+
+        // POST con form invisible para forzar descarga del archivo
+        const form  = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/producto/${_fbkProductoId}/falabella-template-express`;
+        form.style.display = 'none';
+
+        const addField = (name, value) => {
+            const input = document.createElement('input');
+            input.type  = 'hidden';
+            input.name  = name;
+            input.value = value;
+            form.appendChild(input);
+        };
+
+        addField('_token', document.querySelector('meta[name="csrf-token"]')?.content
+            || document.querySelector('input[name="_token"]')?.value || '');
+        addField('titulo1', t1);
+        addField('titulo2', t2);
+        addField('titulo3', t3);
+
+        document.body.appendChild(form);
+        form.submit();
+
+        // Restaurar botón después de 3 segundos
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-download me-1"></i> Descargar Excel';
+            document.body.removeChild(form);
+            bootstrap.Modal.getInstance(document.getElementById('modalTitulosFbk'))?.hide();
+        }, 3000);
+    }
 </script>
 

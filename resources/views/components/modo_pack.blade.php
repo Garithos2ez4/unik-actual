@@ -26,6 +26,9 @@
             <div class="col-md-2 text-end">
                 <input type="hidden" id="selected-component-id">
                 <button type="button" class="btn btn-success w-100" id="btn-add-component" onclick="addPackComponent()" disabled>Agregar <i class="bi bi-plus-circle"></i></button>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-1 d-none" id="btn-cancel-edit" onclick="cancelEdit()">
+                    <i class="bi bi-x-circle"></i> Cancelar edición
+                </button>
             </div>
         </div>
 
