@@ -99,9 +99,9 @@ class LaptopMapper implements FalabellaCategoryMapper
         $t3 = $titulos['titulo3'] ?? ($producto->nombreProducto . ' Oficina');
 
         return [
-            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1)],
-            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2)],
-            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3)],
+            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1],
+            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2), 'variacion' => 2],
+            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3), 'variacion' => 3],
         ];
     }
 
@@ -113,7 +113,8 @@ class LaptopMapper implements FalabellaCategoryMapper
             'C' => $producto->descripcionProducto,
             'D' => self::CATEGORIA,
             'E' => $var['sku'],
-            'F' => $d['upcFbk'],
+            'F' => substr($d['upcFbk'], 0, 13) . ($var['variacion'] ?? 1),
+            'G' => '...',
             'H' => $context['stockTotal'],
             'I' => $d['precioNormalFmt'],
             'J' => $d['precioFmt'],
@@ -124,13 +125,13 @@ class LaptopMapper implements FalabellaCategoryMapper
             'O' => $d['nucleosFbk'],
             'P' => $d['pulgadasCm'],
             'Q' => $d['caractMap']['Procesador'] ?? '',
-            'R' => $d['caractMap']['Sistema Operativo'] ?? '',
+            'R' => $this->resolveSistemaOperativo($d['caractMap']['Sistema Operativo'] ?? ''),
             'S' => $d['almacenamientoFbk'],
             'T' => $d['resolFbk'],
             'U' => 'Nuevo',
-            'V' => $d['anchoCm'],
-            'W' => $d['largoCm'],
-            'X' => $d['altoCm'],
+            'V' => max(5, (float)$d['anchoCm']),
+            'W' => max(5, (float)$d['largoCm']),
+            'X' => max(5, (float)$d['altoCm']),
             'Y' => $d['pesoCm'],
         ];
     }
@@ -150,5 +151,32 @@ class LaptopMapper implements FalabellaCategoryMapper
             return '2 en 1';
         }
         return 'Laptop';
+    }
+
+    private function resolveSistemaOperativo(string $os): string
+    {
+        if (!$os) return '';
+        $osLower = strtolower($os);
+
+        if (stripos($osLower, 'windows 11') !== false || stripos($osLower, 'win 11') !== false) {
+            return 'Windows 11';
+        }
+        if (stripos($osLower, 'windows 10') !== false || stripos($osLower, 'win 10') !== false) {
+            return 'Windows 10';
+        }
+        if (stripos($osLower, 'mac') !== false) {
+            return 'Mac OS'; // Ajustar si en el Excel es distinto
+        }
+        if (stripos($osLower, 'chrome') !== false) {
+            return 'Chrome OS';
+        }
+        if (stripos($osLower, 'linux') !== false || stripos($osLower, 'ubuntu') !== false) {
+            return 'Linux';
+        }
+        if (stripos($osLower, 'free') !== false || stripos($osLower, 'dos') !== false || stripos($osLower, 'no os') !== false) {
+            return 'Free DOS';
+        }
+
+        return $os;
     }
 }

@@ -43,17 +43,59 @@ class FalabellaTemplateService
         '120' => '120Hz',
         '144' => '144Hz',
         '165' => '165Hz',
-        '240' => '240Hz',
     ];
 
     const RESOLUCION_MAP = [
         '1920 x 1080' => 'FHD',
         '1920x1080'   => 'FHD',
+        'FHD+'        => 'FHD+',
         'FHD'         => 'FHD',
         '2560 x 1440' => 'WQHD',
         '3840 x 2160' => '3840 x 2160',
         '1280 x 720'  => '1280 x 720',
         '1366 x 768'  => '1366 x 768',
+        '2712 x 1220' => '2712 x 1220 (1.5K)',
+        '360 x 360'   => '360 x 360',
+        '390 x 390'   => '390 x 390',
+        '2944 x 1840' => '3K (2944 x 1840)',
+        '3K'          => '3K (2944 x 1840)',
+        '450 x 450'   => '450 x 450',
+        '480 x 320'   => '480 x 320',
+        '480 x 480'   => '480 x 480',
+        '4K UHD'      => '4K UHD',
+        '4K HDR'      => '4K HDR',
+        '5k'          => '5k',
+        'Retina 5K'   => 'Retina 5K',
+        '6K'          => '6K',
+        'HD+'         => 'HD+',
+        '800 x 480'   => '800 x 480',
+        'HD 1.080p'   => 'HD 1.080p',
+        'HD'          => 'HD',
+        'HXGA'        => 'HXGA',
+        'qHD'         => 'qHD',
+        'WQHD'        => 'WQHD',
+        'VGA'         => 'VGA',
+        'Super Retina HD'  => 'Super Retina HD',
+        'Super Retina XDR' => 'Super Retina XDR',
+        'SD'          => 'SD',
+        'SVGA'        => 'SVGA',
+        'SXGA+'       => 'SXGA+',
+        'SXGA'        => 'SXGA',
+        '8K UHD'      => '8K UHD',
+        'UXGA'        => 'UXGA',
+        'WQUXGA'      => 'WQUXGA',
+        'WQXGA'       => 'WQXGA',
+        'WSVGA'       => 'WSVGA',
+        'WSXGA'       => 'WSXGA',
+        'WUXGA'       => 'WUXGA',
+        'WXGA+'       => 'WXGA+',
+        'WXGA'        => 'WXGA',
+        'XGA+'        => 'XGA+',
+        'XGA'         => 'XGA',
+    ];
+
+    const ALMACENAMIENTO_LIST = [
+        '256 MB', '512 MB', '1GB', '2GB', '3GB', '4GB', '8GB', '16GB', '24GB', '30GB', '32GB', '32 GB eMMC', '50GB', '64GB', '64 GB eMMC', '80GB', '96GB', '120GB', '120GB SSD', '128GB', '128 GB eMMC', '160GB', '240GB', '250GB', '250GB SSD', '256 GB', '256 GB eMMC', '256GB SSD', '320GB', '480GB', '500GB', '500GB SSD', '512 GB', '750GB', '825GB', '960GB', '1TB', '1.5 TB', '2TB', '3TB', '4TB', '6TB', '7 TB', '8TB', '10TB', '20TB', '30TB', '32TB', '40TB', '48TB', '64TB', 'No aplica'
     ];
 
     const CORES_MAP = [
@@ -71,7 +113,6 @@ class FalabellaTemplateService
         '24' => '24 core',
     ];
 
-    // ── Helpers internos ────────────────────────────────────────────────────
 
     private function extractNumber(string $value): string
     {
@@ -89,22 +130,20 @@ class FalabellaTemplateService
     private function buildSku(string $codigo, string $modelo, ?object $user, int $variacion): string
     {
         $sanitize = fn(string $s) => strtoupper(
-            preg_replace('/[^A-Za-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s))
+            preg_replace('/[^A-Za-z0-9\-]/', '', iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s))
         );
 
-        $modeloClean  = substr($sanitize($modelo), 0, 10);
+        $modeloClean  = $sanitize($modelo);
         $usuarioClean = $user ? substr($sanitize($user->user ?? ''), 0, 8) : 'USR';
         $sufijo       = 'V' . $variacion;
 
-        $sku = implode('-', array_filter([$codigo, $modeloClean, $usuarioClean, $sufijo]));
+        $sku = implode('-', array_filter([$modeloClean, $usuarioClean, $sufijo]));
 
+        // Limitar a 50 caracteres máximo por regla de Falabella
         return substr($sku, 0, 50);
     }
 
-    /**
-     * Carga y calcula todos los datos del producto necesarios para los mappers.
-     * Los mappers acceden a estos datos vía el array $d.
-     */
+
     private function calcularDatos(Producto $producto): array
     {
         $producto->loadMissing(['MarcaProducto', 'GrupoProducto', 'Caracteristicas_Producto.Caracteristicas']);
@@ -123,12 +162,42 @@ class FalabellaTemplateService
         $idCat = $grupo ? (int)$grupo->idCategoria : 0;
         $idGrp = $grupo ? (int)$grupo->idGrupoProducto : 0;
         $flete = (in_array($idCat, [1, 3]) || in_array($idGrp, [10, 40, 41, 42, 43])) ? 10.90 : 3.90;
-        $comis = ($idGrp === 10) ? 0.08 : 0.10;
-        $costo = (float)($producto->precioDolar ?? 0) * $tc * 1.18;
-        $gan   = (float)($producto->gananciaExtra ?? 0);
-        $precio = ($costo > 0) ? round(($costo + $gan + $flete) / (1 - $comis), 2) : 0;
+        if ($idGrp === 10) {
+            $comis = 0.08;
+        } elseif (in_array($idGrp, [155, 156, 157, 158, 159, 160, 169])) {
+            $comis = 0.15;
+        } else {
+            $comis = 0.10;
+        }
+
+        $precio = 0;
+        if ((float)($producto->precioDolar ?? 0) > 0 && $idGrp > 0) {
+            $preciosService = new \App\Services\PreciosService();
+            // Obtenemos el promedio base del sistema central EN SOLES
+            $precioSoles = (float)$producto->precioDolar * $tc;
+            $promedioBase = $preciosService->getPromedio($precioSoles, $idGrp, 'SOL');
+
+            // Sumamos ganancia extra manual si la hay
+            $gananciaManual = (float)($producto->gananciaExtra ?? 0);
+            $promedioBase += $gananciaManual;
+
+            if ($promedioBase > 0) {
+                // Factor de facturación (normalmente 1.01) desde la base de datos
+                $facturacionFactor = (\App\Models\Calculadora::first()->facturacion / 100) + 1;
+
+                // Replicando la fórmula exacta de public/js/calculator-scripts.js
+                $monto      = $promedioBase * ($comis + 1);
+                $costo_calc = $promedioBase + ($monto * $comis);
+                $tsfact     = $costo_calc;
+                $tfact      = $tsfact * $facturacionFactor;
+                $promed     = (($tfact + $tsfact) / 2) + $flete;
+
+                $precio = round($promed, 2);
+            }
+        }
+
         $precioFmt = $precio > 0 ? number_format($precio, 2, ',', '.') : '';
-        $precioNormal = ($costo > 0) ? round($precio * 1.20, 2) : 0;
+        $precioNormal = ($precio > 0) ? round($precio * 1.20) : 0;
         $precioNormalFmt = $precioNormal > 0 ? number_format($precioNormal, 2, ',', '.') : '';
 
         $garantiaFbk = '';
@@ -164,8 +233,15 @@ class FalabellaTemplateService
         $nucleosFbk = self::CORES_MAP[$nucleosNum] ?? $nucleosRaw;
 
         $almacenamientoFbk = $caractMap['Almacenamiento'] ?? '';
-        if (strtoupper(str_replace(' ', '', $almacenamientoFbk)) === '512GB') {
-            $almacenamientoFbk = '512 GB';
+        if ($almacenamientoFbk) {
+            $normalizedInput = strtolower(str_replace(' ', '', $almacenamientoFbk));
+            foreach (self::ALMACENAMIENTO_LIST as $validOption) {
+                $normalizedOption = strtolower(str_replace(' ', '', $validOption));
+                if ($normalizedInput === $normalizedOption) {
+                    $almacenamientoFbk = $validOption;
+                    break;
+                }
+            }
         }
 
         $upc = preg_replace('/[^0-9]/', '', $producto->UPC ?? '');
@@ -245,7 +321,7 @@ class FalabellaTemplateService
                 'D'  => $producto->descripcionProducto,
                 'E'  => self::CATEGORIA_MONITORES,
                 'G'  => $var['sku'],
-                'H'  => $d['upcFbk'],
+                'H'  => substr($d['upcFbk'], 0, 13) . ($index + 1),
                 'J'  => $stockTotal,
                 'K'  => $d['precioNormalFmt'],
                 'L'  => $d['precioFmt'],
@@ -278,10 +354,7 @@ class FalabellaTemplateService
         $ts = Carbon::now()->format('Y-m-d_His');
         return $this->guardarYRetornar($spreadsheet, "ProductCreationTemplate_{$ts}.xlsx");
     }
-    /**
-     * Devuelve las sugerencias de títulos para el modal del frontend.
-     * Usado por el endpoint AJAX GET /producto/{id}/falabella-titulos-sugeridos
-     */
+
     public function sugerirTitulos(Producto $producto): array
     {
         $producto->loadMissing(['MarcaProducto', 'GrupoProducto', 'Caracteristicas_Producto.Caracteristicas']);

@@ -166,9 +166,9 @@ class ImpresoraMapper implements FalabellaCategoryMapper
         $t3 = $titulos['titulo3'] ?? ($producto->nombreProducto . ' Multifunción');
 
         return [
-            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1)],
-            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2)],
-            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3)],
+            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1],
+            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2), 'variacion' => 2],
+            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3), 'variacion' => 3],
         ];
     }
     /**
@@ -217,7 +217,8 @@ class ImpresoraMapper implements FalabellaCategoryMapper
             'C' => $producto->descripcionProducto,
             'D' => self::CATEGORIA,
             'E' => $var['sku'],
-            'F' => $d['upcFbk'],
+            'F' => substr($d['upcFbk'], 0, 13) . ($var['variacion'] ?? 1),
+            'G' => '...',
             'H' => $context['stockTotal'],
             'I' => $d['precioNormalFmt'],
             'J' => $d['precioFmt'],
@@ -230,9 +231,9 @@ class ImpresoraMapper implements FalabellaCategoryMapper
             'S' => $d['dim'],
             'T' => $d['caractMap']['Tipo de conexión'] ?? 'USB',
             'U' => 'Nuevo',
-            'V' => $d['anchoCm'],
-            'W' => $d['largoCm'],
-            'X' => $d['altoCm'],
+            'V' => max(5, (float)$d['anchoCm']),
+            'W' => max(5, (float)$d['largoCm']),
+            'X' => max(5, (float)$d['altoCm']),
             'Y' => $d['pesoCm'],
         ];
     }

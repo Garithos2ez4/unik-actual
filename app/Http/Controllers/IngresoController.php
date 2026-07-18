@@ -443,6 +443,9 @@ class IngresoController extends Controller
         $gruposPermitidos = [124, 155, 156, 157, 158, 159, 44, 78, 79];
 
         $productos = \App\Models\Producto::whereIn('idGrupo', $gruposPermitidos)
+            ->whereIn('idProducto', function ($q) {
+                $q->select('idProductoPack')->from('ProductoPack');
+            })
             ->where(function ($q) use ($query) {
                 $q->where('modelo', 'like', "%$query%")
                     ->orWhere('nombreProducto', 'like', "%$query%")

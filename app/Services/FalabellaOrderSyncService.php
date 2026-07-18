@@ -200,10 +200,10 @@ class FalabellaOrderSyncService
 
     public function getOrdersByDate(string $date, ?string $status = null)
     {
-        $limitDate = Carbon::parse($date)->endOfDay();
+        $targetDate = Carbon::parse($date)->toDateString();
         $query = FalabellaOrder::with('items')
             ->whereNotNull('promised_shipping_time')
-            ->where('promised_shipping_time', '<=', $limitDate);
+            ->whereDate('promised_shipping_time', '=', $targetDate);
 
         if (filled($status) && $status === 'pending') {
             // "Pendientes" agrupa todo lo que falta despachar (igual que Falabella)

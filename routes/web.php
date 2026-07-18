@@ -145,6 +145,9 @@ Route::middleware(['validate.session'])->group(function () {
     // Template Falabella pre-llenado
     Route::get('/producto/{idProducto}/falabella-template', [ProductoController::class, 'descargarTemplateFalabella'])->name('producto.falabella.template');
     Route::get('/producto/{idProducto}/falabella-template-express', [ProductoController::class, 'descargarTemplateFalabellaExpress'])->name('producto.falabella.template.express');
+    // Sugerencias de títulos (AJAX) y descarga con títulos personalizados (POST)
+    Route::get('/producto/{idProducto}/falabella-titulos-sugeridos', [ProductoController::class, 'sugerirTitulosFalabella'])->name('producto.falabella.titulos');
+    Route::post('/producto/{idProducto}/falabella-template-express', [ProductoController::class, 'descargarTemplateFalabellaExpressPost'])->name('producto.falabella.template.express.post');
 
 
     Route::get('/traslado', [TrasladoController::class, 'index'])->name('traslados');

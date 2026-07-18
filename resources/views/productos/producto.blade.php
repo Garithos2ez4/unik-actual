@@ -28,8 +28,13 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
-                @if(in_array(optional($producto->GrupoProducto)->idCategoria, [1, 3, 6]))
-                @php $idCatFbk = (int) optional($producto->GrupoProducto)->idCategoria; @endphp
+                @php 
+                    $idGrp = (int) optional($producto->GrupoProducto)->idGrupoProducto;
+                    $idCat = (int) optional($producto->GrupoProducto)->idCategoria;
+                    $hasFalabella = in_array($idCat, [1, 3, 6]) || in_array($idGrp, [24, 49, 117, 155, 156, 157, 158, 159, 160, 169]);
+                @endphp
+                @if($hasFalabella)
+                @php $idCatFbk = $idCat; @endphp
                 <div class="btn-group me-2">
                     <a href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}); return false;"
                         class="btn btn-success" title="Descargar plantilla Falabella Express">

@@ -25,6 +25,19 @@ class FalabellaCategoryResolverService
     {
         $grupo = $producto->GrupoProducto;
         $idCat = $grupo ? (int) $grupo->idCategoria : 0;
+        $idGrp = $grupo ? (int) $grupo->idGrupoProducto : 0;
+
+        if (in_array($idGrp, [155, 156, 157, 158, 159, 160, 169])) {
+            return new \App\Services\Falabella\Mappers\SuministrosMapper();
+        }
+
+        if (in_array($idGrp, [49])) {
+            return new \App\Services\Falabella\Mappers\ProcesadorMapper();
+        }
+
+        if (in_array($idGrp, [24, 117])) {
+            return new \App\Services\Falabella\Mappers\TecladoMapper();
+        }
 
         return match ($idCat) {
             self::CATEGORIA_LAPTOP    => new LaptopMapper(),

@@ -118,9 +118,9 @@ class MonitorMapper implements FalabellaCategoryMapper
         $t3 = $titulos['titulo3'] ?? ($producto->nombreProducto . ' Oficina');
 
         return [
-            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1)],
-            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2)],
-            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3)],
+            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1],
+            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2), 'variacion' => 2],
+            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3), 'variacion' => 3],
         ];
     }
     private function ajustarLongitudFalabella(string $titulo, int $minimo = 30): string
@@ -157,7 +157,8 @@ class MonitorMapper implements FalabellaCategoryMapper
             'C' => $producto->descripcionProducto,
             'D' => self::CATEGORIA,
             'E' => $var['sku'],
-            'F' => $d['upcFbk'],
+            'F' => substr($d['upcFbk'], 0, 13) . ($var['variacion'] ?? 1),
+            'G' => '...',
             'H' => $context['stockTotal'],
             'I' => $d['precioNormalFmt'],
             'J' => $d['precioFmt'],
@@ -165,12 +166,14 @@ class MonitorMapper implements FalabellaCategoryMapper
             'L' => $context['saleEnd'],
             'M' => '2026',
             'N' => $d['resolFbk'],
+            'O' => $d['pulgadasCm'] ?: (preg_match('/(\d+[\.,]?\d*)\s*(?:"|pulgadas|inch)/i', $var['titulo'], $m) ? str_replace(',', '.', $m[1]) : '24'),
+            'P' => '1',
             'Q' => $d['caractMap']['Panel'] ?? '',
             'S' => $d['dim'],
             'U' => 'Nuevo',
-            'V' => $d['anchoCm'],
-            'W' => $d['largoCm'],
-            'X' => $d['altoCm'],
+            'V' => max(5, (float)$d['anchoCm']),
+            'W' => max(5, (float)$d['largoCm']),
+            'X' => max(5, (float)$d['altoCm']),
             'Y' => $d['pesoCm'],
         ];
     }

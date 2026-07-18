@@ -94,7 +94,7 @@ class AnalyticsFallabellaController extends Controller
 
         $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
+                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 WHEN GrupoProducto.idGrupoProducto IN (155, 156, 157, 158, 159, 160, 169) THEN 0.15 ELSE 0.10 END)
             ELSE 0 END";
 
         $costosComponentesSub = "COALESCE((SELECT SUM(
