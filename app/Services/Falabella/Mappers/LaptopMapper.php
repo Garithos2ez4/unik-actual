@@ -94,15 +94,20 @@ class LaptopMapper implements FalabellaCategoryMapper
     }
     public function getVariaciones(Producto $producto, callable $buildSku, ?object $user, array $titulos = []): array
     {
-        $t1 = $titulos['titulo1'] ?? $producto->nombreProducto;
-        $t2 = $titulos['titulo2'] ?? ($producto->nombreProducto . ' Gamer');
-        $t3 = $titulos['titulo3'] ?? ($producto->nombreProducto . ' Oficina');
+        $variaciones = [];
+        
+        $t1 = !empty($titulos['titulo1']) ? $titulos['titulo1'] : $producto->nombreProducto;
+        $variaciones[] = ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1];
 
-        return [
-            ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1],
-            ['titulo' => $t2, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2), 'variacion' => 2],
-            ['titulo' => $t3, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3), 'variacion' => 3],
-        ];
+        if (!empty($titulos['titulo2'])) {
+            $variaciones[] = ['titulo' => $titulos['titulo2'], 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 2), 'variacion' => 2];
+        }
+
+        if (!empty($titulos['titulo3'])) {
+            $variaciones[] = ['titulo' => $titulos['titulo3'], 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 3), 'variacion' => 3];
+        }
+
+        return $variaciones;
     }
 
     public function buildColumnData(array $var, array $d, Producto $producto, array $context): array

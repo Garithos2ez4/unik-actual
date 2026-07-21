@@ -19,38 +19,40 @@ class ProductoController extends Controller
     protected $calculadoraService;
     protected $productoService;
 
-    public function __construct(HeaderServiceInterface $headerService,
-                                CalculadoraServiceInterface $calculadoraService,
-                                ProductoServiceInterface $productoService)
-    {
+    public function __construct(
+        HeaderServiceInterface $headerService,
+        CalculadoraServiceInterface $calculadoraService,
+        ProductoServiceInterface $productoService
+    ) {
         $this->headerService = $headerService;
         $this->calculadoraService = $calculadoraService;
         $this->productoService = $productoService;
     }
 
-    public function index($idCategory,$idGrupo,Request $request){
+    public function index($idCategory, $idGrupo, Request $request)
+    {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
 
         //variables del controlador
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
                 // Obtener datos comunes
-                $productos = $this->productoService->getAllProductsByColumn('idGrupo',decrypt($idGrupo),15,$request->query('filtro'))->appends($request->all());
+                $productos = $this->productoService->getAllProductsByColumn('idGrupo', decrypt($idGrupo), 15, $request->query('filtro'))->appends($request->all());
                 $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
 
                 // Si es petición AJAX (paginación o filtro)
-                if($request->query('page') || $request->query('filtro')){
+                if ($request->query('page') || $request->query('filtro')) {
                     $view = view('components.lista_producto', [
                         'productos' => $productos,
                         'container' => $request->query('container'),
                         'almacenes' => $almacenes,
                         'tc' => $this->calculadoraService->getTasaCambio()
                     ])->render();
-                    
+
                     // Limpiar posibles caracteres UTF-8 mal formados de la base de datos
                     $view = mb_convert_encoding($view, 'UTF-8', 'UTF-8');
-                    
+
                     return response()->json(['html' => $view]);
                 }
 
@@ -61,11 +63,11 @@ class ProductoController extends Controller
                 $categorias = $this->productoService->getAllLabelCategory();
 
                 $filtros = [
-                    'marcas' => $this->productoService->filtroMarcas('idGrupo',decrypt($idGrupo)),
-                    'estados' => $this->productoService->filtroEstados('idGrupo',decrypt($idGrupo))
+                    'marcas' => $this->productoService->filtroMarcas('idGrupo', decrypt($idGrupo)),
+                    'estados' => $this->productoService->filtroEstados('idGrupo', decrypt($idGrupo))
                 ];
 
-                return view('productos.productos',[
+                return view('productos.productos', [
                     'user' => $userModel,
                     'grupos' => $grupos,
                     'categorias' => $categorias,
@@ -78,36 +80,38 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
-    public function update($idProducto){
+    public function update($idProducto)
+    {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
 
         //variables del controlador
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
-                $producto = $this->productoService->getOneProductByColumn('idProducto',decrypt($idProducto));
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
+                $producto = $this->productoService->getOneProductByColumn('idProducto', decrypt($idProducto));
                 $marcas = $this->productoService->getAllLabelMarca();
                 $proveedor = $this->productoService->getAllLabelProveedor();
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
 
-                return view('productos.producto',['user' => $userModel,
-                                        'producto' => $producto,
-                                        'marcas' => $marcas,
-                                        'proveedor' => $proveedor,
-                                        'grupos' => $grupos,
-                                        'almacenes' => $almacenes,
-                                        'tc' => $this->calculadoraService->getTasaCambio(),
-                                        'igv' => $this->calculadoraService->getIgv(),
-                                        'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio
+                return view('productos.producto', [
+                    'user' => $userModel,
+                    'producto' => $producto,
+                    'marcas' => $marcas,
+                    'proveedor' => $proveedor,
+                    'grupos' => $grupos,
+                    'almacenes' => $almacenes,
+                    'tc' => $this->calculadoraService->getTasaCambio(),
+                    'igv' => $this->calculadoraService->getIgv(),
+                    'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
     public function create(Request $request)
@@ -149,76 +153,111 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function details($idProducto){
+    public function toggleStatus(Request $request)
+    {
+        $request->validate([
+            'idProducto' => 'required|integer',
+            'status' => 'required|boolean'
+        ]);
+
+        $producto = \App\Models\Producto::find($request->idProducto);
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
+        }
+
+        $nuevoEstado = $request->status ? 'DISPONIBLE' : 'AGOTADO';
+        $producto->estadoProductoWeb = $nuevoEstado;
+        $producto->save();
+
+        if ($nuevoEstado === 'DISPONIBLE' && $producto->Inventario_Proveedor && $producto->Inventario_Proveedor->stock == 0) {
+            $producto->Inventario_Proveedor->stock = 1;
+            $producto->Inventario_Proveedor->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'estado' => $nuevoEstado,
+            'stock_proveedor' => $producto->Inventario_Proveedor ? $producto->Inventario_Proveedor->stock : null,
+            'message' => 'El estado se ha actualizado a ' . $nuevoEstado
+        ]);
+    }
+
+    public function details($idProducto)
+    {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
 
         //variables del controlador
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
-                $producto = $this->productoService->getOneProductByColumn('idProducto',$idProducto);
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
+                $producto = $this->productoService->getOneProductByColumn('idProducto', $idProducto);
                 $grupo = $this->productoService->getOneLabelGrupo($producto->idGrupo);
                 $carGrupos = collect($producto->GrupoProducto->Caracteristicas_Grupo);
                 $carProductos = collect($producto->Caracteristicas_Producto);
                 $options = $carGrupos->filter(function ($carGrupo) use ($carProductos) {
                     return !$carProductos->contains(function ($carProducto) use ($carGrupo) {
                         return $carGrupo->idCaracteristica == $carProducto->idCaracteristica;
-                        });
                     });
-                return view('createdetails',['user' => $userModel,
-                                            'producto'=>$producto,
-                                            'grupo'=>$grupo,
-                                            'options' => $options
-                            ]);
+                });
+                return view('createdetails', [
+                    'user' => $userModel,
+                    'producto' => $producto,
+                    'grupo' => $grupo,
+                    'options' => $options
+                ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function searchModelProduct(Request $request){
+    public function searchModelProduct(Request $request)
+    {
         $query = $request->input('query');
 
-        $results = $this->productoService->searchAjaxProducts('modelo',$query);
+        $results = $this->productoService->searchAjaxProducts('modelo', $query);
 
         return response()->json($results);
     }
 
-    public function searchProduct(Request $request){
+    public function searchProduct(Request $request)
+    {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
                 //variables del controlador
                 $input = $request->input('search');
                 $productos = $this->productoService->searchProducts($input, 25, $request->query('filtro'));
                 $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
-                
+
                 // Obtener marcas filtradas por búsqueda si hay término de búsqueda
-                if($input) {
+                if ($input) {
                     $marcasFiltradas = $this->productoService->getMarcasBySearch($input);
                 } else {
                     $marcasFiltradas = $this->productoService->getAllLabelMarca();
                 }
 
-                if($request->query('page') || $request->query('filtro')){
+                if ($request->query('page') || $request->query('filtro')) {
                     // Obtener marcas filtradas también para la paginación AJAX
-                    if($input) {
+                    if ($input) {
                         $marcasFiltradas = $this->productoService->getMarcasBySearch($input);
                     } else {
                         $marcasFiltradas = $this->productoService->getAllLabelMarca();
                     }
-                    
-                    $view = view('components.lista_producto', ['productos' => $productos,
-                                                                'container' => $request->query('container'),
-                                                                'almacenes' => $almacenes,
-                                                                'marcas' => $marcasFiltradas,
-                                                                'tc' => $this->calculadoraService->getTasaCambio()])->render();
-                    
+
+                    $view = view('components.lista_producto', [
+                        'productos' => $productos,
+                        'container' => $request->query('container'),
+                        'almacenes' => $almacenes,
+                        'marcas' => $marcasFiltradas,
+                        'tc' => $this->calculadoraService->getTasaCambio()
+                    ])->render();
+
                     $view = mb_convert_encoding($view, 'UTF-8', 'UTF-8');
                     return response()->json(['html' => $view]);
                 }
@@ -227,21 +266,24 @@ class ProductoController extends Controller
                     'estados' => Producto::select('estadoProductoWeb')->whereNotNull('estadoProductoWeb')->distinct()->get()
                 ];
 
-                return view('buscarproducto',['user' => $userModel,
-                                                'productos' => $productos,
-                                                'tc' => $this->calculadoraService->getTasaCambio(),
-                                                'filtros' => $filtros,
-                                                'almacenes' => $almacenes]);
+                return view('buscarproducto', [
+                    'user' => $userModel,
+                    'productos' => $productos,
+                    'tc' => $this->calculadoraService->getTasaCambio(),
+                    'filtros' => $filtros,
+                    'almacenes' => $almacenes
+                ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function createDetails(Request $request){
+    public function createDetails(Request $request)
+    {
         $userModel = $this->headerService->getModelUser();
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
                 $arrayProduct = array();
                 $arrayProveedor = array();
 
@@ -263,77 +305,76 @@ class ProductoController extends Controller
                 $video2 = $request->input('video2');
                 $tc_fijo = $request->input('tc_fijo');
 
-                 // Obtener ID de videos
+                // Obtener ID de videos
                 $videoId1 = $this->productoService->getYoutubeVideoId($video1);
                 $videoId2 = $this->productoService->getYoutubeVideoId($video2);
 
-                
-                if(!empty($tipoprecio)){
+
+                if (!empty($tipoprecio)) {
                     $inputPrecio = $request->input('precio') ?? 0;
                     $inputGanancia = $request->input('ganancia') ?? 0;
 
-                    if($tipoprecio == 'SOL'){
+                    if ($tipoprecio == 'SOL') {
                         $precio = $inputPrecio / $this->calculadoraService->getTasaCambio();
                         $ganancia = $inputGanancia / $this->calculadoraService->getTasaCambio();
-
-                    }else{
+                    } else {
                         $precio = $inputPrecio;
                         $ganancia = $inputGanancia;
                     }
-                }else{
+                } else {
                     $precio = 0;
                     $ganancia = 0;
                 }
 
-                if(isset($nombre, $upc, $modelo, $partnumber)){
-                    $validateNombre = $this->productoService->getOneProductByColumn('nombreProducto',$nombre);
-                    $validateUpc = $this->productoService->getOneProductByColumn('UPC',$upc);
+                if (isset($nombre, $upc, $modelo, $partnumber)) {
+                    $validateNombre = $this->productoService->getOneProductByColumn('nombreProducto', $nombre);
+                    $validateUpc = $this->productoService->getOneProductByColumn('UPC', $upc);
                     $validateModelo = $this->productoService->existsByModelo($modelo);
-                    $validatePartNumber = $this->productoService->getOneProductByColumn('partNumber',$partnumber);
-                }else{
-                    $this->headerService->sendFlashAlerts('Error en los datos','Revisa los campos enviados','error','btn-danger');
-                        return back()->withInput();
+                    $validatePartNumber = $this->productoService->getOneProductByColumn('partNumber', $partnumber);
+                } else {
+                    $this->headerService->sendFlashAlerts('Error en los datos', 'Revisa los campos enviados', 'error', 'btn-danger');
+                    return back()->withInput();
                 }
 
                 $switchupc = false;
 
-                if($upc == 0){
+                if ($upc == 0) {
                     $switchupc = true;
-                }else{
-                    if(empty($validateUpc)){
+                } else {
+                    if (empty($validateUpc)) {
                         $switchupc = true;
-                    }else{
+                    } else {
                         $switchupc = false;
                     }
                 }
 
-                if($partnumber == 0){
+                if ($partnumber == 0) {
                     $switchPartNumber = true;
-                }else{
-                    if(empty($validatePartNumber)){
+                } else {
+                    if (empty($validatePartNumber)) {
                         $switchPartNumber = true;
-                    }else{
+                    } else {
                         $switchPartNumber = false;
                     }
                 }
 
-                if(!empty($codigo)){
-                    if(!empty($validateNombre)){
-                        $this->headerService->sendFlashAlerts('Titulo existente','Ya se encuentra registrado','info','btn-warning');
+                if (!empty($codigo)) {
+                    if (!empty($validateNombre)) {
+                        $this->headerService->sendFlashAlerts('Titulo existente', 'Ya se encuentra registrado', 'info', 'btn-warning');
                         return back()->withInput();
-                    }else if(!$switchupc){
-                        $this->headerService->sendFlashAlerts('UPC existente','Ya se encuentra registrado','info','btn-warning');
+                    } else if (!$switchupc) {
+                        $this->headerService->sendFlashAlerts('UPC existente', 'Ya se encuentra registrado', 'info', 'btn-warning');
                         return back()->withInput();
-                    }else if(!empty($validateModelo)){
-                        $this->headerService->sendFlashAlerts('Modelo existente','Ya se encuentra registrado','info','btn-warning');
+                    } else if (!empty($validateModelo)) {
+                        $this->headerService->sendFlashAlerts('Modelo existente', 'Ya se encuentra registrado', 'info', 'btn-warning');
                         return back()->withInput();
-                    }else if(!$switchPartNumber){
-                        $this->headerService->sendFlashAlerts('Part number existente','Ya se encuentra registrado','info','btn-warning');
+                    } else if (!$switchPartNumber) {
+                        $this->headerService->sendFlashAlerts('Part number existente', 'Ya se encuentra registrado', 'info', 'btn-warning');
                         return back()->withInput();
-                    }else{
+                    } else {
                         $idProducto = 0;
-                        try{
-                            try{
+                        try {
+                            try {
                                 $img1 = null;
                                 $img2 = null;
                                 $img3 = null;
@@ -375,46 +416,44 @@ class ProductoController extends Controller
                                 //Videos
                                 $arrayProduct['video1_url'] = $videoId1;
                                 $arrayProduct['video2_url'] = $videoId2;
-                                
+
 
 
                                 $arrayProveedor['stock'] = $stockproveedor;
                                 $arrayProveedor['idProveedor'] = $proveedor;
 
-                                $success = $this->productoService->insertProduct($arrayProduct,$arrayProveedor,$img1,$img2,$img3,$img4);
+                                $success = $this->productoService->insertProduct($arrayProduct, $arrayProveedor, $img1, $img2, $img3, $img4);
                                 $idProducto = $success;
 
                                 $this->productoService->validateState($idProducto);
-
-                            }catch(Exception $e){
+                            } catch (Exception $e) {
                                 \Log::error('Error en insert/validate: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
-                                $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error en la transaccion','error','btn-danger');
+                                $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error en la transaccion', 'error', 'btn-danger');
                                 return back()->withInput();
                             }
 
-                            return redirect()->route('details',['idProducto' => $idProducto]);
-
-                        }catch(Exception $e){
+                            return redirect()->route('details', ['idProducto' => $idProducto]);
+                        } catch (Exception $e) {
                             \Log::error('Error general createDetails: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
-                            $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error en la transaccion','error','btn-danger');
+                            $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error en la transaccion', 'error', 'btn-danger');
                             return back()->withInput();
                         }
                     }
-                }else{
-                    $this->headerService->sendFlashAlerts('Generacion Fallida','Hubo un error en la generacion del codigo','error','btn-danger');
+                } else {
+                    $this->headerService->sendFlashAlerts('Generacion Fallida', 'Hubo un error en la generacion del codigo', 'error', 'btn-danger');
                     return back()->withInput();
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
     public function obtenerUbicacionHtml($id)
     {
         try {
             $producto = Producto::with(['Inventario', 'Inventario_Proveedor.Preveedor'])->findOrFail($id);
             $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
-            
+
             $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
                 ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION', 'DEFECTUOSO'])
                 ->whereHas('DetalleComprobante', function ($q) use ($id) {
@@ -489,10 +528,11 @@ class ProductoController extends Controller
         }
     }
 
-    public function updateProduct($idProducto,Request $request){
+    public function updateProduct($idProducto, Request $request)
+    {
         $userModel = $this->headerService->getModelUser();
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
                 $arrayProduct = array();
                 $titulo = $request->input('titulo');
                 $marca = $request->input('marca');
@@ -512,70 +552,70 @@ class ProductoController extends Controller
                 $video1 = $request->input('videoUrl1');
                 $video2 = $request->input('videoUrl2');
 
-                try{
+                try {
                     // Solo actualizar si el campo fue enviado (no está disabled)
-                    if($request->has('titulo')){
+                    if ($request->has('titulo')) {
                         $arrayProduct['nombreProducto'] = $titulo;
                     }
-                    if($request->has('tipoprecio') && !empty($tipoprecio)){
-                        if($tipoprecio == 'SOL'){
+                    if ($request->has('tipoprecio') && !empty($tipoprecio)) {
+                        if ($tipoprecio == 'SOL') {
                             $precio = $request->input('precio') / $this->calculadoraService->getTasaCambio();
-                            $ganancia = $request->input('ganancia')/ $this->calculadoraService->getTasaCambio();
-                        }else{
+                            $ganancia = $request->input('ganancia') / $this->calculadoraService->getTasaCambio();
+                        } else {
                             $precio = $request->input('precio');
                             $ganancia = $request->input('ganancia');
                         }
-                    }else{
+                    } else {
                         $precio = null;
                     }
 
                     if ($request->has('ganancia') && !is_null($ganancia)) {
-                        $arrayProduct['gananciaExtra']= $ganancia;
+                        $arrayProduct['gananciaExtra'] = $ganancia;
                     }
 
                     if ($request->has('precio') && !is_null($precio)) {
                         $arrayProduct['precioDolar'] = $precio;
                     }
 
-                    if($request->has('garantia')){
+                    if ($request->has('garantia')) {
                         $arrayProduct['garantia'] = $garantia;
                     }
 
-                    if($request->has('upc')){
+                    if ($request->has('upc')) {
                         $arrayProduct['UPC'] = $upc;
                     }
 
-                    if($request->has('modelo')){
-                        if(!empty($modelo) && $this->productoService->existsByModelo($modelo, decrypt($idProducto))){
-                            $this->headerService->sendFlashAlerts('Modelo existente','Ya se encuentra registrado con otro producto','info','btn-warning');
+                    if ($request->has('modelo')) {
+                        if (!empty($modelo) && $this->productoService->existsByModelo($modelo, decrypt($idProducto))) {
+                            $this->headerService->sendFlashAlerts('Modelo existente', 'Ya se encuentra registrado con otro producto', 'info', 'btn-warning');
                             return redirect()->back();
                         }
                         $arrayProduct['modelo'] = $modelo;
                     }
 
-                    if($request->has('partnumber')){
+                    if ($request->has('partnumber')) {
                         $arrayProduct['partNumber'] = $partnumber;
                     }
 
-                    if($request->has('descripcion')){
+                    if ($request->has('descripcion')) {
                         $arrayProduct['descripcionProducto'] = $descripcion;
                     }
 
-                    if($request->has('estado')){
+                    if ($request->has('estado')) {
                         $arrayProduct['estadoProductoWeb'] = $estado;
                     }
 
-                    if($request->has('marca')){
+                    if ($request->has('marca')) {
                         $arrayProduct['idMarca'] = $marca;
                     }
 
-                    if($request->has('stockminimo')){
+                    if ($request->has('stockminimo')) {
                         $arrayProduct['stockMin'] = $stockminimo;
                     }
-                    
-                    $arrayProduct['usar_tc_fijo'] = $request->boolean('usar_tc_fijo');   
-                    
-                    if($request->has('tc_fijo')){
+
+                    $arrayProduct['usar_tc_fijo'] = $request->boolean('usar_tc_fijo');
+
+                    if ($request->has('tc_fijo')) {
                         $arrayProduct['tc_fijo'] = $request->input('tc_fijo');
                     }
 
@@ -592,10 +632,10 @@ class ProductoController extends Controller
                         $arrayProduct['videoUrl2'] = $videoId2 ?: null;
                     }
 
-                    $this->productoService->updateProduct(decrypt($idProducto),$arrayProduct,$request->file('imgone'),$request->file('imgtwo'),$request->file('imgtree'),$request->file('imgfour'));
+                    $this->productoService->updateProduct(decrypt($idProducto), $arrayProduct, $request->file('imgone'), $request->file('imgtwo'), $request->file('imgtree'), $request->file('imgfour'));
 
-                    if (!is_null($stock)){
-                        $this->productoService->updateInventory(decrypt($idProducto),$stock);
+                    if (!is_null($stock)) {
+                        $this->productoService->updateInventory(decrypt($idProducto), $stock);
                     }
 
                     $ubicacion = $request->input('idUbicacionExacta');
@@ -608,7 +648,7 @@ class ProductoController extends Controller
                         $arraySeguimiento['idProveedor'] = $proveedor;
                         $arraySeguimiento['stock'] = $stockproveedor;
 
-                        $this->productoService->updateSeguimiento(decrypt($idProducto),$arraySeguimiento);
+                        $this->productoService->updateSeguimiento(decrypt($idProducto), $arraySeguimiento);
                     }
 
                     $this->productoService->validateState(decrypt($idProducto));
@@ -669,56 +709,59 @@ class ProductoController extends Controller
 
                     \DB::commit();
                     return redirect()->back();
-
-                }catch(Exception $e){
+                } catch (Exception $e) {
                     \DB::rollBack();
                     \Log::error('Error en updateProduct: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
-                    $this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error valida peus hijo ','error','btn-danger');
+                    $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error valida peus hijo ', 'error', 'btn-danger');
                     return redirect()->back();
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function insertOrUpdateDetails(Request $request){
+    public function insertOrUpdateDetails(Request $request)
+    {
         $userModel = $this->headerService->getModelUser();
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
                 $idProducto = $request->input('idproducto');
                 $updateCaracteristicas = $request->input('updatecaracteristicas', []);
                 $insertCaracteristicas = $request->input('insertcaracteristicas', []);
                 $proba = false;
-                try{
-                    $this->productoService->insertOrUpdateCaracteristicas($idProducto,$insertCaracteristicas,$updateCaracteristicas);
+                try {
+                    $this->productoService->insertOrUpdateCaracteristicas($idProducto, $insertCaracteristicas, $updateCaracteristicas);
                     $proba = true;
-                }catch(Exception $e){
+                } catch (Exception $e) {
                     $proba = false;
                 }
 
-                if(!$proba){$this->headerService->sendFlashAlerts('Error en la operacion','Hubo un error en la transaccion','error','btn-danger');}
+                if (!$proba) {
+                    $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error en la transaccion', 'error', 'btn-danger');
+                }
 
                 return redirect()->back();
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function deleteDetail($idProducto,Request $request){
+    public function deleteDetail($idProducto, Request $request)
+    {
         $idCaracteristica = $request->input('idcaracteristica');
         $userModel = $this->headerService->getModelUser();
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 2){
-                if(isset($idCaracteristica)){
-                    $this->productoService->deleteCaracteristicaXProduct(decrypt($idProducto),$idCaracteristica);
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 2) {
+                if (isset($idCaracteristica)) {
+                    $this->productoService->deleteCaracteristicaXProduct(decrypt($idProducto), $idCaracteristica);
                     return back();
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
-        return redirect()->route('dashboard',['user' => $userModel]);
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
     public function calculate(Request $request)
@@ -731,8 +774,8 @@ class ProductoController extends Controller
 
         $servicePrecio = new PreciosService;
         $precios = array();
-        $precios[] = ['calculado' => $servicePrecio->getPrecioCalculado($precio,$grupo,$moneda,$estado)];
-        $precios[] = ['total' => $servicePrecio->getPrecioTotal($precio,$grupo,$moneda,$estado,$ganancia)];
+        $precios[] = ['calculado' => $servicePrecio->getPrecioCalculado($precio, $grupo, $moneda, $estado)];
+        $precios[] = ['total' => $servicePrecio->getPrecioTotal($precio, $grupo, $moneda, $estado, $ganancia)];
         $results = $precios;
 
         return response()->json($results);
@@ -778,7 +821,6 @@ class ProductoController extends Controller
                         'success' => false,
                         'message' => 'No se pudo obtener el grupo recién creado.'
                     ], 500);
-
                 } catch (Exception $e) {
                     \Log::error('Error in quickCreateGrupo: ' . $e->getMessage());
                     return response()->json([
@@ -803,8 +845,8 @@ class ProductoController extends Controller
         $components = \App\Models\ProductoPack::with('ProductoHijo')
             ->where('idProductoPack', $idPadre)
             ->get();
-            
-        $formatted = $components->map(function($comp) {
+
+        $formatted = $components->map(function ($comp) {
             return [
                 'idProductoHijo' => $comp->idProductoHijo,
                 'nombreProducto' => $comp->ProductoHijo->nombreProducto ?? 'Producto Desconocido',
@@ -905,13 +947,13 @@ class ProductoController extends Controller
         try {
             // El ID enviado desde openServiciosModal({{ $producto->idProducto }}) viene sin encriptar.
             $idProd = $idProducto;
-            
+
             // Buscar todas las series (RegistroProducto) asociadas a este producto, excluyendo las entregadas
-            $series = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($idProd) {
+            $series = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function ($q) use ($idProd) {
                 $q->where('idProducto', $idProd);
             })->where('estado', '!=', 'ENTREGADO')->with(['Almacen'])->get();
 
-            $formatted = $series->map(function($serie) {
+            $formatted = $series->map(function ($serie) {
                 return [
                     'idRegistro' => $serie->idRegistro,
                     'numeroSerie' => $serie->numeroSerie,
@@ -938,7 +980,7 @@ class ProductoController extends Controller
             }
 
             $registro = \App\Models\RegistroProducto::find($idRegistro);
-            
+
             if (!$registro) {
                 return response()->json(['success' => false, 'message' => 'Serie no encontrada.']);
             }

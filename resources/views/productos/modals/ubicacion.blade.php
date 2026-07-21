@@ -35,7 +35,7 @@
                             $rackGeneralFoto = null;
                             if($inventario->idUbicacionExacta) {
                             $ubiExacta = $inventario->UbicacionExacta;
-                            if($ubiExacta) {
+                            if($ubiExacta && $ubiExacta->idAlmacen == $almacen->idAlmacen) {
                             $rackGeneralNombre = $ubiExacta->nombre_completo;
                             }
                             }
@@ -55,8 +55,8 @@
 
                             if($seriesAlmacen->count() > 0) {
                             foreach($seriesAlmacen as $serie) {
-                            // Si la serie tiene una ubicación específica, usamos esa, sino usamos la general del inventario
-                            $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : $rackGeneralNombre;
+                            // Si la serie tiene una ubicación específica en este mismo almacén, usamos esa, sino usamos la general
+                            $nombreRack = ($serie->UbicacionExacta && $serie->UbicacionExacta->idAlmacen == $almacen->idAlmacen) ? $serie->UbicacionExacta->nombre_completo : $rackGeneralNombre;
                             $fotoRack = null;
 
                             if(!isset($distribucion[$nombreRack])) {

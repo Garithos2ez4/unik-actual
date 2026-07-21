@@ -28,15 +28,15 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
-                @php 
-                    $idGrp = (int) optional($producto->GrupoProducto)->idGrupoProducto;
-                    $idCat = (int) optional($producto->GrupoProducto)->idCategoria;
-                    $hasFalabella = in_array($idCat, [1, 3, 6]) || in_array($idGrp, [24, 49, 117, 155, 156, 157, 158, 159, 160, 169]);
+                @php
+                $idGrp = (int) optional($producto->GrupoProducto)->idGrupoProducto;
+                $idCat = (int) optional($producto->GrupoProducto)->idCategoria;
+                $hasFalabella = in_array($idCat, [1, 3, 6,10]) || in_array($idGrp, [24, 49, 117, 155, 156, 157, 158, 159, 160, 169, 68, 71,72,73,74]);
                 @endphp
                 @if($hasFalabella)
                 @php $idCatFbk = $idCat; @endphp
                 <div class="btn-group me-2">
-                    <a href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}); return false;"
+                    <a href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;"
                         class="btn btn-success" title="Descargar plantilla Falabella Express">
                         <i class="bi bi-file-earmark-excel-fill"></i>
                         <span class="d-none d-lg-inline"> Falabella</span>
@@ -54,7 +54,7 @@
                         </li>
                         @endif
                         <li>
-                            <a class="dropdown-item" href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}); return false;">
+                            <a class="dropdown-item" href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;">
                                 <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express
                             </a>
                         </li>
@@ -338,7 +338,7 @@
                     class="form-control {{ $ingresoEdit }}"
                     disabled>
             </div>
-            <div class="col-6 col-md-3 col-lg-3">
+            <div class="col-12 col-md-4 col-lg-4">
                 <label class="form-label" title="Ubicación exacta en {{ $almacen->descripcion }}">
                     Ubicación {{ $almacen->descripcion }}:
                 </label>
@@ -350,10 +350,10 @@
                 ->get()
                 ->groupBy('nombre_rack');
 
-                $currentRackName = ($inventario && $inventario->UbicacionExacta) ? $inventario->UbicacionExacta->nombre_rack : '';
+                $currentRackName = ($inventario && $inventario->UbicacionExacta && $inventario->UbicacionExacta->idAlmacen == $almacen->idAlmacen) ? $inventario->UbicacionExacta->nombre_rack : '';
                 @endphp
                 <div class="d-flex gap-2">
-                    <select class="form-select input-edit rack-selector" data-target="fila-select-{{$almacen->idAlmacen}}" disabled onchange="updateFilas(this)">
+                    <select class="form-select input-edit rack-selector" style="min-width:0;flex:1" data-target="fila-select-{{$almacen->idAlmacen}}" disabled onchange="updateFilas(this)">
                         <option value="">— Estante —</option>
                         @foreach($ubicacionesExactas as $rackName => $filas)
                         <option value="{{ $rackName }}" {{ $currentRackName == $rackName ? 'selected' : '' }}>
@@ -362,7 +362,7 @@
                         @endforeach
                     </select>
 
-                    <select name="idUbicacionExacta[{{ $almacen->idAlmacen }}]" id="fila-select-{{$almacen->idAlmacen}}" class="form-select input-edit fila-selector" disabled>
+                    <select name="idUbicacionExacta[{{ $almacen->idAlmacen }}]" id="fila-select-{{$almacen->idAlmacen}}" class="form-select input-edit fila-selector" style="min-width:0;flex:1" disabled>
                         <option value="">— Fila —</option>
                         @foreach($ubicacionesExactas as $rackName => $filas)
                         @foreach($filas as $ue)
@@ -383,6 +383,9 @@
                 ->where('idAlmacen', $almacen->idAlmacen)
                 ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
                 ->whereNotNull('ubicacion_especifica')
+                ->whereHas('UbicacionExacta', function($q) use ($almacen) {
+                $q->where('idAlmacen', $almacen->idAlmacen);
+                })
                 ->with('UbicacionExacta')
                 ->get()
                 ->pluck('UbicacionExacta.nombre_completo')

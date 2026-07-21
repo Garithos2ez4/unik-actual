@@ -24,13 +24,15 @@
                         <label class="form-label fw-semibold">Título 1 <span class="text-muted small">(principal)</span></label>
                         <input type="text" class="form-control" id="fbk-titulo1" maxlength="255" placeholder="Nombre del producto">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Título 2</label>
-                        <input type="text" class="form-control" id="fbk-titulo2" maxlength="255" placeholder="Variación con specs destacadas">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Título 3</label>
-                        <input type="text" class="form-control" id="fbk-titulo3" maxlength="255" placeholder="Otra variación">
+                    <div id="fbk-titulos-extra" style="display:none;">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Título 2</label>
+                            <input type="text" class="form-control" id="fbk-titulo2" maxlength="255" placeholder="Variación con specs destacadas">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Título 3</label>
+                            <input type="text" class="form-control" id="fbk-titulo3" maxlength="255" placeholder="Otra variación">
+                        </div>
                     </div>
                 </div>
 

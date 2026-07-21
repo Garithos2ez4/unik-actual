@@ -7,6 +7,7 @@ use App\Services\Falabella\Contracts\FalabellaCategoryMapper;
 use App\Services\Falabella\Mappers\LaptopMapper;
 use App\Services\Falabella\Mappers\MonitorMapper;
 use App\Services\Falabella\Mappers\ImpresoraMapper;
+use App\Services\Falabella\Mappers\CableMapper;
 
 /**
  * Resuelve qué FalabellaCategoryMapper corresponde a un producto
@@ -37,6 +38,10 @@ class FalabellaCategoryResolverService
 
         if (in_array($idGrp, [24, 117])) {
             return new \App\Services\Falabella\Mappers\TecladoMapper();
+        }
+
+        if (in_array($idGrp, [68, 71, 72, 73, 74])) {
+            return new \App\Services\Falabella\Mappers\CableMapper();
         }
 
         return match ($idCat) {

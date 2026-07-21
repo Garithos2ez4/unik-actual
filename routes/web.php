@@ -116,6 +116,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/usuario/getbandeja', [UsuarioController::class, 'getBandejaColaborador'])->name('getbandeja');
 
     Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
+    Route::post('/productos/toggle-status', [ProductoController::class, 'toggleStatus'])->name('producto.toggleStatus');
     Route::get('/productos/searchmodelproduct', [ProductoController::class, 'searchModelProduct'])->name('searchmodelproduct');
     Route::get('/producto/calculate', [ProductoController::class, 'calculate'])->name('calculateproducto');
     Route::get('/productos/historial-precio-tienda/{id}', [ProductoController::class, 'obtenerHistorialPrecioTienda']);

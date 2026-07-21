@@ -5,45 +5,18 @@ namespace App\Services\Falabella\Mappers;
 use App\Models\Producto;
 use App\Services\Falabella\Contracts\FalabellaCategoryMapper;
 
-/**
- * Mapper para Suministros (Tintas, Resets) (idCategoria = 155, 156, 157, 158, 159, 160, 169)
- *
- * Columnas del template SuministrosTemplate-Express_2026-07.xlsx:
- *   A  = Nombre
- *   B  = Marca
- *   C  = Descripción
- *   D  = Categoría primaria
- *   E  = SKU del vendedor
- *   F  = Código de barras
- *   G  = Variación
- *   H  = QuantityFalabella (Stock)
- *   I  = PriceFalabella (Precio Normal)
- *   J  = SalePriceFalabella (Precio Venta)
- *   K  = SaleStartDateFalabella
- *   L  = SaleEndDateFalabella
- *   M  = AnoFabricacion
- *   N  = CompatibleCon
- *   O  = TipoDeConsumible
- *   P  = Dimensiones
- *   Q  = Rendimiento
- *   R  = Condición del Producto
- *   S  = Ancho del paquete
- *   T  = Largo del paquete
- *   U  = Alto del paquete
- *   V  = Peso del paquete
- */
-class SuministrosMapper implements FalabellaCategoryMapper
+class CableMapper implements FalabellaCategoryMapper
 {
-    const CATEGORIA = '418 - Electrónica / Computación / Impresoras y Escáneres / Suministros de Impresión';
+    const CATEGORIA = '44 - Electrónica / Telefonía / Dispositivos|servicios de comunicación móvil / Accesorios para teléfonos móviles|smartphone';
 
     public function getTemplateFile(): string
     {
-        return 'falabella/SuministrosTemplate-Express_2026-07.xlsx';
+        return 'falabella/CablesTemplate-Express_2026-07-21_132548.xlsx';
     }
 
     public function getFilePrefix(): string
     {
-        return 'SuministrosTemplate-Express_';
+        return 'CablesTemplate-Express_';
     }
 
     public function getStartRow(): int
@@ -56,12 +29,6 @@ class SuministrosMapper implements FalabellaCategoryMapper
         $base     = $producto->nombreProducto;
         $marca    = $d['marca'] ?? '';
         $modelo   = $producto->modelo ?? '';
-        $caract   = $d['caractMap'];
-
-        // Compatibilidad y Tipo de consumible
-        $compatible = $caract['Compatible con'] ?? $caract['Compatibilidad'] ?? '';
-        $tipo = $this->resolveTipoConsumible($producto->nombreProducto, $caract['Tipo'] ?? '');
-        $rendimiento = $caract['Rendimiento'] ?? '';
 
         // Título 1: Original
         $titulo1 = $base;
@@ -69,17 +36,14 @@ class SuministrosMapper implements FalabellaCategoryMapper
             $titulo1 = $marca . ' ' . $titulo1;
         }
 
-        // Título 2: Con Compatibilidad
+        // Título 2: Con modelo
         $titulo2 = $titulo1;
-        if (!empty($compatible) && stripos($titulo2, 'Para') === false) {
-            $titulo2 .= ' Para ' . $compatible;
+        if (!empty($modelo) && stripos($titulo2, $modelo) === false) {
+            $titulo2 .= ' ' . $modelo;
         }
 
-        // Título 3: Con Rendimiento
-        $titulo3 = $titulo1;
-        if (!empty($rendimiento) && stripos($titulo3, $rendimiento) === false) {
-            $titulo3 .= ' ' . $rendimiento;
-        }
+        // Título 3: Alta Velocidad
+        $titulo3 = $titulo1 . ' Alta Velocidad';
 
         return [
             'titulo1' => $this->ajustarLongitudFalabella($titulo1),
@@ -91,7 +55,7 @@ class SuministrosMapper implements FalabellaCategoryMapper
     public function getVariaciones(Producto $producto, callable $buildSku, ?object $user, array $titulos = []): array
     {
         $variaciones = [];
-        
+
         $t1 = !empty($titulos['titulo1']) ? $titulos['titulo1'] : $producto->nombreProducto;
         $variaciones[] = ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1];
 
@@ -108,9 +72,8 @@ class SuministrosMapper implements FalabellaCategoryMapper
 
     public function buildColumnData(array $var, array $d, Producto $producto, array $context): array
     {
-        $compatible = $d['caractMap']['Compatible con'] ?? $d['caractMap']['Compatibilidad'] ?? 'Epson';
-        $tipo = $this->resolveTipoConsumible($var['titulo'], $d['caractMap']['Tipo'] ?? '');
-        $rendimiento = $d['caractMap']['Rendimiento'] ?? '';
+        $conectividadInput = $d['caractMap']['Conectividad'] ?? $d['caractMap']['Tipo de cable'] ?? $var['titulo'];
+        $conectividad = $this->resolveConectividad($conectividadInput);
 
         return [
             'A' => $var['titulo'],
@@ -126,10 +89,10 @@ class SuministrosMapper implements FalabellaCategoryMapper
             'K' => $context['saleStart'],
             'L' => $context['saleEnd'],
             'M' => '2026',
-            'N' => $compatible,
-            'O' => $tipo,
+            'N' => $conectividad,
+            'O' => $d['caractMap']['Tipo de accesorio'] ?? 'Cable',
             'P' => $d['dim'],
-            'Q' => $rendimiento,
+            'Q' => $d['caractMap']['Material'] ?? '',
             'R' => 'Nuevo',
             'S' => max(5, (float)$d['anchoCm']),
             'T' => max(5, (float)$d['largoCm']),
@@ -138,25 +101,79 @@ class SuministrosMapper implements FalabellaCategoryMapper
         ];
     }
 
-    private function resolveTipoConsumible(string $titulo, string $tipoBase): string
+    private function resolveConectividad(string $texto): string
     {
-        $texto = strtolower($titulo . ' ' . $tipoBase);
-        if (strpos($texto, 'reset') !== false) {
-            return 'Resin'; // Falabella no tiene "Reset", el usuario prefiere "Resin"
+        $opciones = [
+            '2G',
+            '3G',
+            '4G',
+            '5G',
+            'Alámbrico',
+            'Analógico UHF',
+            'Android auto',
+            'Auxiliar 3.5mm',
+            'Bluetooth',
+            'Cableado',
+            'Coaxial Digital',
+            'DVI',
+            'Ethernet',
+            'HDMI',
+            'Inalámbrico',
+            'Infrarrojo',
+            'Jack 6.35mm',
+            'Micro USB',
+            'NFC',
+            'No aplica',
+            'Óptico (Toslink)',
+            'Otro',
+            'Para auto',
+            'Pared',
+            'Pared/auto',
+            'Portable',
+            'PS/2',
+            'Radiofrecuencia (RF)',
+            'RCA',
+            'RJ-11',
+            'Solar',
+            'TDT',
+            'Thunderbolt',
+            'UHF digital',
+            'USB-C',
+            'USB',
+            'VGA',
+            'WF wireless',
+            'Wifi 6',
+            'Wifi',
+            'XLR'
+        ];
+
+        // Normalizaciones comunes
+        if (stripos($texto, 'tipo c') !== false || stripos($texto, 'type c') !== false || stripos($texto, 'usb c') !== false) {
+            return 'USB-C';
         }
-        if (strpos($texto, 'toner') !== false || strpos($texto, 'tóner') !== false) {
-            return 'Tóner';
+        if (stripos($texto, 'rj45') !== false || stripos($texto, 'red') !== false || stripos($texto, 'lan') !== false) {
+            return 'Ethernet';
         }
-        if (strpos($texto, 'cartucho') !== false) {
-            return 'Cartucho';
+        if (stripos($texto, 'v8') !== false || stripos($texto, 'micro-usb') !== false) {
+            return 'Micro USB';
         }
-        if (strpos($texto, 'cinta') !== false) {
-            return 'Cinta para Impresora';
+        if (stripos($texto, 'audio') !== false || stripos($texto, 'jack') !== false || stripos($texto, '3.5') !== false) {
+            return 'Auxiliar 3.5mm';
         }
-        if (strpos($texto, 'tambor') !== false) {
-            return 'Tambor de tinta';
+        if (stripos($texto, 'plug') !== false || stripos($texto, '6.3') !== false) {
+            return 'Jack 6.35mm';
         }
-        return 'Tinta';
+        if (stripos($texto, 'inalambrico') !== false || stripos($texto, 'wireless') !== false) {
+            return 'Inalámbrico';
+        }
+
+        foreach ($opciones as $opcion) {
+            if (stripos($texto, $opcion) !== false) {
+                return $opcion;
+            }
+        }
+
+        return 'Cableado';
     }
 
     private function ajustarLongitudFalabella(string $titulo, int $minimo = 30): string

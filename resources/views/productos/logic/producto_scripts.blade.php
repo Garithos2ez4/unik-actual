@@ -239,18 +239,20 @@
 
     let _fbkProductoId = null;
 
-    function abrirModalTitulosFbk(idProducto) {
+    function abrirModalTitulosFbk(idProducto, nombreProducto) {
         _fbkProductoId = idProducto;
         // Limpiar estado
         document.getElementById('fbk-titulos-error').classList.add('d-none');
-        document.getElementById('fbk-titulo1').value = '';
+        document.getElementById('fbk-titulo1').value = nombreProducto || '';
         document.getElementById('fbk-titulo2').value = '';
         document.getElementById('fbk-titulo3').value = '';
+        
+        // Ocultar variaciones 2 y 3 inicialmente
+        document.getElementById('fbk-titulos-extra').style.display = 'none';
 
-        // Abrir modal y cargar sugerencias automáticamente
+        // Abrir modal
         const modal = new bootstrap.Modal(document.getElementById('modalTitulosFbk'));
         modal.show();
-        generarSugerenciasFbk();
     }
 
     function generarSugerenciasFbk() {
@@ -272,6 +274,9 @@
                 loading.style.display = 'none';
                 form.style.display    = 'block';
                 btnSug.disabled       = false;
+                
+                // Mostrar los títulos 2 y 3
+                document.getElementById('fbk-titulos-extra').style.display = 'block';
 
                 if (data.success) {
                     document.getElementById('fbk-titulo1').value = data.titulos.titulo1 || '';

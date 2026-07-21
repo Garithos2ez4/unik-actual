@@ -17,7 +17,7 @@
                             <h6>Stock</h6>
                         </div>
                         <div class="d-none d-lg-block col-lg-1 text-center">
-                            <h6>Proveedor</h6>
+                            <h6>Estado</h6>
                         </div>
                     </div>
                 </li>
@@ -68,6 +68,8 @@
                                             ->first();
 
                                         $stock = $inventario ? $inventario->stock : 0;
+
+
                                     @endphp
 
                                     <div class="col-6 {{ $stock < $pro->stockMin ? 'text-danger' : '' }}">
@@ -96,10 +98,13 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="d-none d-lg-block col-md-1 text-center">
-                            <small>{{$pro->Inventario_Proveedor->Preveedor->nombreProveedor}}</small>
-                            <br>
-                            <small>{{$pro->Inventario_Proveedor->stock}}</small>
+                        <div class="d-none d-lg-block col-md-1 text-center d-flex justify-content-center align-items-center">
+                            <div class="form-check form-switch m-0 p-0 d-flex flex-column align-items-center">
+                                <input class="form-check-input toggle-status-btn m-0 mb-1" type="checkbox" role="switch" id="switch-status-{{$pro->idProducto}}" data-id="{{$pro->idProducto}}" {{ $pro->estadoProductoWeb !== 'AGOTADO' ? 'checked' : '' }} style="margin-left: 0 !important;">
+                                <label class="form-check-label toggle-status-label-{{$pro->idProducto}} small fw-bold" for="switch-status-{{$pro->idProducto}}" style="font-size: 0.70rem; cursor: pointer;">
+                                    {{ $pro->estadoProductoWeb !== 'AGOTADO' ? 'Disponible' : 'Agotado' }}
+                                </label>
+                            </div>
                         </div>
 
                     </div>
@@ -119,6 +124,8 @@
     <script>
         window.APP_DATA = window.APP_DATA || {};
         window.APP_DATA.tc = {{ $tc ?? '0' }};
+        window.APP_DATA.toggleStatusUrl = '{{ route("producto.toggleStatus") }}';
+        window.APP_DATA.csrfToken = '{{ csrf_token() }}';
     </script>
-    <script src="{{ asset('js/list-products-scripts.js') }}?v=1.00"></script>
+    <script src="{{ asset('js/list-products-scripts.js') }}?v=1.01"></script>
 </div>
