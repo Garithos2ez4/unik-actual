@@ -71,12 +71,12 @@ class TrasladoController extends Controller
             return response()->json([]);
         }
 
-        // Series disponibles para traslado (no entregadas ni invalidas)
+        // Series disponibles para traslado (solo las que cuentan como stock real)
         $series = \App\Models\RegistroProducto::with(['Almacen', 'DetalleComprobante.Producto', 'DetalleComprobante.Comprobante.Preveedor'])
             ->whereHas('DetalleComprobante', function($q) use ($idProducto) {
                 $q->where('idProducto', $idProducto);
             })
-            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
             ->get();
 
         return response()->json($series);
@@ -89,7 +89,7 @@ class TrasladoController extends Controller
 
         $series = \App\Models\RegistroProducto::with(['Almacen', 'DetalleComprobante.Producto', 'DetalleComprobante.Comprobante.Preveedor'])
             ->whereIn('numeroSerie', $seriesArr)
-            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
             ->get();
 
         return response()->json($series);

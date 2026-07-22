@@ -97,7 +97,7 @@ class LicenciaController extends Controller
             $request->validate([
             'voucher_code' => 'required|string|max:100|unique:licencias,voucher_code',
             'id_tipo'      => 'required|exists:tipo_licencia,id',
-            'idProveedor'  => 'required|exists:preveedor,idProveedor', // 👈 validar proveedor
+            'idProveedor'  => 'required|exists:Preveedor,idProveedor', // 👈 validar proveedor
             'orden_compra' => 'nullable|string|max:100',
             'cantidad_usos' => 'nullable|int'
         ], [
@@ -128,10 +128,17 @@ class LicenciaController extends Controller
     public function importarExcel(Request $request)
     {
         $user = $this->headerService->getModelUser();
+
         $request->validate([
-            'archivo' => 'required|file|mimes:xlsx,xls',
-            'id_tipo' => 'required',
-            'idProveedor' => 'required',
+            'archivo'     => 'required|file|mimes:xlsx,xls|max:5120',
+            'id_tipo'     => 'required|exists:tipo_licencia,id',
+            'idProveedor' => 'required|exists:Preveedor,idProveedor',
+        ], [
+            'archivo.required'     => 'Debes adjuntar un archivo Excel.',
+            'archivo.mimes'        => 'Solo se aceptan archivos .xlsx o .xls.',
+            'archivo.max'          => 'El archivo no debe superar 5MB.',
+            'id_tipo.required'     => 'Debes seleccionar el tipo de licencia.',
+            'idProveedor.required' => 'Debes seleccionar un proveedor.',
         ]);
 
         $datosFijos = $request->only([
@@ -142,48 +149,92 @@ class LicenciaController extends Controller
             'cantidad_usos',
         ]);
 
-        $import =new LicenciaImport();
-        Excel::import($import, $request->file('archivo'));
+        try {
+            $import = new LicenciaImport();
+            Excel::import($import, $request->file('archivo'));
 
-        $preview = $import->rows
-        ->map(function ($row) {
-            return [
-                'voucher_code' => $row['voucher_code'] ?? null,
-            ];
-        })
-        ->filter(fn($r) => !empty($r['voucher_code']))
-        ->values();
+            $preview = $import->rows
+                ->map(fn($row) => ['voucher_code' => trim($row['voucher_code'] ?? '')])
+                ->filter(fn($r) => !empty($r['voucher_code']))
+                ->values();
+
+            if ($preview->isEmpty()) {
+                return back()
+                    ->withInput()
+                    ->with('import_error', 'El archivo no contiene ningún voucher_code válido. Asegúrate de que la columna se llame exactamente "voucher_code".');
+            }
+
+            // Detectar duplicados en la BD
+            $existentes = \App\Models\Licencia::whereIn('voucher_code', $preview->pluck('voucher_code'))->pluck('voucher_code');
+            $duplicados = $existentes->count();
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            return back()->withInput()->with('import_error', 'Error en la validación del Excel: ' . collect($e->failures())->map(fn($f) => $f->errors()[0])->implode(', '));
+        } catch (\Exception $e) {
+            \Log::error('Error importando Excel de licencias: ' . $e->getMessage());
+            return back()->withInput()->with('import_error', 'No se pudo leer el archivo. Verifica que sea un Excel válido y que tenga la columna "voucher_code".');
+        }
 
         return view('licencias.importar', [
-            'user' => $user,
+            'user'             => $user,
             'previewLicencias' => $preview,
-            'datosFijos' => $datosFijos,
-            'tiposLicencia' => TipoLicencia::all(),
-            'proveedores' => Preveedor::all(),
-            'categorias' => CategoriaLicencia::all(),
+            'datosFijos'       => $datosFijos,
+            'duplicadosCount'  => $duplicados,
+            'tiposLicencia'    => TipoLicencia::all(),
+            'proveedores'      => Preveedor::all(),
+            'categorias'       => CategoriaLicencia::all(),
         ]);
-
     }
 
     public function confirmarImportacion(Request $request)
     {
         $licencias = json_decode(base64_decode($request->licencias), true);
 
-        foreach ($licencias as $licencia) {
-            Licencia::create([
-                'voucher_code' => $licencia['voucher_code'],
-                'id_tipo' => $request->id_tipo,
-                'idProveedor' => $request->idProveedor,
-                'id_categoria' => $request->id_categoria,
-                'orden_compra' => $request->orden_compra,
-                'cantidad_usos' => $request->cantidad_usos ?? 1,
-                'estado' => 'NUEVA',
-            ]);
+        if (empty($licencias)) {
+            return redirect()->route('licencias.importar.vista')
+                ->with('import_error', 'No se recibieron licencias para importar.');
         }
 
-        return redirect()
-            ->route('licencias.index')
-            ->with('success', 'Licencias importadas correctamente.');
+        $importadas = 0;
+        $omitidas   = 0;
+
+        \DB::beginTransaction();
+        try {
+            foreach ($licencias as $licencia) {
+                $code = trim($licencia['voucher_code'] ?? '');
+                if (empty($code)) { $omitidas++; continue; }
+
+                // Omitir duplicados sin explotar
+                if (\App\Models\Licencia::where('voucher_code', $code)->exists()) {
+                    $omitidas++;
+                    continue;
+                }
+
+                Licencia::create([
+                    'voucher_code'  => $code,
+                    'id_tipo'       => $request->id_tipo,
+                    'idProveedor'   => $request->idProveedor,
+                    'id_categoria'  => $request->id_categoria,
+                    'orden_compra'  => $request->orden_compra,
+                    'cantidad_usos' => $request->cantidad_usos ?? 1,
+                    'estado'        => 'NUEVA',
+                ]);
+                $importadas++;
+            }
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Error confirmando importación de licencias: ' . $e->getMessage());
+            return redirect()->route('licencias.importar.vista')
+                ->with('import_error', 'Ocurrió un error al guardar: ' . $e->getMessage());
+        }
+
+        $msg = "Se importaron {$importadas} licencia(s) correctamente.";
+        if ($omitidas > 0) {
+            $msg .= " Se omitieron {$omitidas} por estar duplicadas o vacías.";
+        }
+
+        return redirect()->route('licencias.index')->with('success', $msg);
     }
     public function showFormularioEstado($serial, $nuevoEstado)
     {
@@ -195,8 +246,6 @@ class LicenciaController extends Controller
 
     public function cambiarEstado(Request $request, $serial)
     {
-        //dd($request->hasFile('archivo'));
-        //dd($request->all());
         $request->validate([
             'nuevo_estado' => 'required|in:USADA,DEFECTUOSA,RECUPERADA',
         ]);
@@ -307,9 +356,17 @@ class LicenciaController extends Controller
             'nombre' => 'required|string|max:255|unique:tipo_licencia,nombre',
         ]);
 
-        \App\Models\TipoLicencia::create([
+        $tipo = \App\Models\TipoLicencia::create([
             'nombre' => $request->nombre,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'id'      => $tipo->id,
+                'nombre'  => $tipo->nombre,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Tipo de licencia agregado correctamente');
     }

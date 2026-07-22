@@ -54,7 +54,6 @@ Route::middleware(['validate.session'])->group(function () {
 
     // Agrega esta línea con las demás rutas
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
-    Route::get('/licencias', [LicenciaController::class, 'index'])->name('licencias.index');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
@@ -384,7 +383,7 @@ Route::post('/verificar-clave-duplicada', function (Request $request) {
         'clave' => $claveKey
     ]);
 })->name('verificar.clave.duplicada');
-Route::prefix('licencias')->name('licencias.')->group(function () {
+Route::middleware(['validate.session'])->prefix('licencias')->name('licencias.')->group(function () {
 
     // Mostrar listado
     Route::get('/', [LicenciaController::class, 'index'])->name('index');

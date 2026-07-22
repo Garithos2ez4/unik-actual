@@ -103,9 +103,18 @@
     </form>
 
     @if(isset($previewLicencias) && $previewLicencias->count())
+    @php $duplicadosCount = $duplicadosCount ?? 0; @endphp
     <div class="card mt-4 mb-5">
-        <div class="card-header">
-            Vista previa ({{ $previewLicencias->count() }} licencias encontradas)
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Vista previa ({{ $previewLicencias->count() }} licencias encontradas)</span>
+            @if($duplicadosCount > 0)
+                <span class="badge bg-warning text-dark">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    {{ $duplicadosCount }} ya existen en BD (se omitirán)
+                </span>
+            @else
+                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Sin duplicados</span>
+            @endif
         </div>
         <div class="card-body">
 
@@ -176,5 +185,54 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
+{{-- SweetAlert: error de importación --}}
+@if(session('import_error'))
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    Swal.fire({
+        icon: 'error',
+        title: '¡Error en la importación!',
+        html: `<p style="text-align:left;">{{ addslashes(session('import_error')) }}</p>`,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Entendido'
+    });
+});
+</script>
+@endif
+
+{{-- SweetAlert: errores de validación de Laravel --}}
+@if($errors->any())
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let msgs = '';
+    @foreach($errors->all() as $error)
+        msgs += '• {{ addslashes($error) }}\n';
+    @endforeach
+    Swal.fire({
+        icon: 'warning',
+        title: 'Revisa el formulario',
+        html: `<pre style="text-align:left; font-size:0.85rem;">${msgs}</pre>`,
+        confirmButtonColor: '#f0ad4e',
+        confirmButtonText: 'OK'
+    });
+});
+</script>
+@endif
+
+{{-- SweetAlert: advertencia si hay duplicados --}}
+@if(isset($duplicadosCount) && $duplicadosCount > 0)
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Duplicados detectados',
+        html: `<p><strong>{{ $duplicadosCount }}</strong> voucher(s) ya existen en la base de datos y serán <strong>omitidos</strong> al confirmar la importación.</p>`,
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#f0ad4e'
+    });
+});
+</script>
+@endif
 
 @endsection

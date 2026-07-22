@@ -75,27 +75,38 @@
                         Tipo de Licencia
                         <span class="required-indicator">*</span>
                     </label>
-                    <div class="select-container">
-                        <div class="select-icon">
-                            <i class="bi bi-collection"></i>
+                    <div class="d-flex gap-2 align-items-start">
+                        <div class="select-container flex-grow-1">
+                            <div class="select-icon">
+                                <i class="bi bi-collection"></i>
+                            </div>
+                            <select name="id_tipo"
+                                    id="id_tipo"
+                                    class="form-select @error('id_tipo') is-invalid @enderror">
+                                <option value="">-- Seleccione el tipo de licencia --</option>
+                                @foreach($tiposLicencia as $tipo)
+                                    <option value="{{ $tipo->id }}" {{ old('id_tipo') == $tipo->id ? 'selected' : '' }}>
+                                        {{ $tipo->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="select-arrow">
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                            <div class="input-border"></div>
                         </div>
-                        <select name="id_tipo"
-                                id="id_tipo"
-                                class="form-select @error('id_tipo') is-invalid @enderror">
-                            <option value="">-- Seleccione el tipo de licencia --</option>
-                            @foreach($tiposLicencia as $tipo)
-                                <option value="{{ $tipo->id }}" {{ old('id_tipo') == $tipo->id ? 'selected' : '' }}>
-                                    {{ $tipo->nombre }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <div class="select-arrow">
-                            <i class="bi bi-chevron-down"></i>
-                        </div>
-                        <div class="input-border"></div>
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm mt-1"
+                                title="Agregar nuevo tipo de licencia"
+                                onclick="abrirModalNuevoTipo()"
+                                style="height:42px; min-width:42px; border-radius:10px; font-size:1.3rem; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
                     </div>
                     <small class="input-help">Categoría de la licencia a registrar</small>
                 </div>
+
+                @include('licencias.modals.modal_nuevo_tipo')
                 <!-- proveedor -->
                 <div class="mb-3">
                     <label for="idProveedor" class="form-label">Proveedor</label>
@@ -193,7 +204,7 @@
     </div>
 </div>
 
-{{-- Mantener exactamente la misma funcionalidad de errores --}}
+{{-- Errores de validación de Laravel --}}
 @if ($errors->any())
 <script>
     let errorMessages = '';
@@ -209,6 +220,11 @@
     });
 </script>
 @endif
+
+{{-- Input hidden para pasar la URL del endpoint al JS externo --}}
+<input type="hidden" id="storeNuevoTipoUrl" value="{{ route('tiposLicencia.store') }}">
+
 <script src="{{ asset('js/Licencias/create-licencias.js') }}"></script>
+<script src="{{ asset('js/Licencias/create-licencias-tipo.js') }}"></script>
 
 @endsection

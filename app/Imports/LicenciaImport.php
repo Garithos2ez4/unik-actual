@@ -10,6 +10,12 @@ class LicenciaImport implements ToCollection, WithHeadingRow
 {
     public Collection $rows;
 
+    public function __construct()
+    {
+        // Inicializar como colección vacía para evitar errores si el Excel viene vacío
+        $this->rows = collect();
+    }
+
     public function collection(Collection $rows)
     {
         $this->rows = $rows;

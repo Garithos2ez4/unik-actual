@@ -32,12 +32,12 @@
             }
             }
 
-            // 2. Traer todas las series disponibles de este almacén
+            // 2. Traer solo las series que cuentan como stock real en este almacén
             $seriesAlmacen = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
             $q->where('idProducto', $producto->idProducto);
             })
             ->where('idAlmacen', $almacen->idAlmacen)
-            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
             ->with('UbicacionExacta')
             ->get();
 

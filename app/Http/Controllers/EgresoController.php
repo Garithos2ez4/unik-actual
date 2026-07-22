@@ -626,7 +626,7 @@ class EgresoController extends Controller
         $series = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('Almacen', 'RegistroProducto.idAlmacen', '=', 'Almacen.idAlmacen')
             ->where('DetalleComprobante.idProducto', $idProducto)
-            ->where('RegistroProducto.estado', 'NUEVO')
+            ->whereIn('RegistroProducto.estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
             ->select('RegistroProducto.idRegistro', 'RegistroProducto.numeroSerie', 'Almacen.descripcion as almacen')
             ->orderBy('RegistroProducto.idRegistro', 'desc')
             ->get();

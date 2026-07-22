@@ -169,7 +169,7 @@ class ProductoController extends Controller
             return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
         }
 
-        $nuevoEstado = $request->status ? 'DISPONIBLE' : 'AGOTADO';
+        $nuevoEstado = $request->status ? 'DISPONIBLE' : 'DESCONTINUADO';
         $producto->estadoProductoWeb = $nuevoEstado;
         $producto->save();
 

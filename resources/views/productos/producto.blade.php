@@ -150,6 +150,31 @@
                         <label for="precio-producto" class="form-label">Con IGV:</label>
                         <input type="number" value="{{number_format($producto->precioDolar * $igv, 2, '.', '')}}" id="precio-product-igv" class="form-control input-edit price-product" step="0.01" disabled>
                     </div>
+
+                    <div class="col-12 mt-4">
+                        <label class="form-label fw-bold">Tipo de Cambio:</label>
+
+                        <div class="form-check form-switch mt-2">
+                            <input type="hidden" name="usar_tc_fijo" value="0">
+                            <input class="form-check-input input-edit"
+                                type="checkbox"
+                                name="usar_tc_fijo"
+                                id="usar_tc_fijo"
+                                value="1"
+                                {{ old('usar_tc_fijo', $producto->usar_tc_fijo ?? 1) ? 'checked' : '' }}
+                                disabled>
+
+                            <label class="form-check-label" for="usar_tc_fijo">
+                                Usar Tipo de Cambio Fijo
+                            </label>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label text-primary" style="background-color: #2143de; color: white !important; padding: 2px 5px; border-radius: 3px;">Tasa de Cambio Personalizada (Opcional):</label>
+                            <input type="number" name="tc_fijo" step="0.01" class="form-control input-edit mt-1" id="tc_fijo_personalizado" value="{{$producto->tc_fijo}}" placeholder="Ej: 3.80" disabled>
+                            <small class="text-muted">Si se llena, esta tasa sobreescribira a la tasa fija global cuando se use TC Fijo.</small>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="col-6 col-md-6">
@@ -242,30 +267,7 @@
 
                 </div>
             </div>
-            <div class="mb-3 col-md-6 col-lg-6">
-                <label class="form-label">Tipo de Cambio:</label>
-
-                <div class="form-check form-switch">
-                    <input type="hidden" name="usar_tc_fijo" value="0">
-                    <input class="form-check-input input-edit"
-                        type="checkbox"
-                        name="usar_tc_fijo"
-                        id="usar_tc_fijo"
-                        value="1"
-                        {{ old('usar_tc_fijo', $producto->usar_tc_fijo ?? 1) ? 'checked' : '' }}
-                        disabled>
-
-                    <label class="form-check-label" for="usar_tc_fijo">
-                        Usar Tipo de Cambio Fijo
-                    </label>
-                </div>
-
-                <div class="mt-2">
-                    <label class="form-label">Tasa de Cambio Personalizada (Opcional):</label>
-                    <input type="number" name="tc_fijo" step="0.01" class="form-control input-edit" id="tc_fijo_personalizado" value="{{$producto->tc_fijo}}" placeholder="Ej: 3.80" disabled>
-                    <small class="text-muted">Si se llena, esta tasa sobreescribira a la tasa fija global cuando se use TC Fijo.</small>
-                </div>
-            </div>
+            <!-- El bloque de Tipo de Cambio fue movido a la columna izquierda -->
         </div>
 
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
