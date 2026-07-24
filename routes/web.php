@@ -341,6 +341,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/reporte/estante/{idUbicacion}', [PdfController::class, 'reportEstantePdf'])->name('reporteestante');
     Route::get('/pdf/garantia/{idGarantia}', [PdfController::class, 'garantiaPdf'])->name('garantiaPdf');
     Route::post('/tipos-licencia', [LicenciaController::class, 'storeTipoLicencia'])->name('tiposLicencia.store');
+    Route::get('/tipos-licencia/all', [LicenciaController::class, 'getAllTipos'])->name('tiposLicencia.all');
+    Route::post('/tipos-licencia/toggle', [LicenciaController::class, 'toggleTipoEstado'])->name('tiposLicencia.toggle');
     Route::post(
         '/licencias/confirmar-importacion',
         [LicenciaController::class, 'confirmarImportacion']

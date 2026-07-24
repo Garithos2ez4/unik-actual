@@ -48,6 +48,10 @@ h5Cantidad.addEventListener('change', function() {
     if(typeof adjustGenericSeries === 'function') {
         adjustGenericSeries(inputHiddenProduct.value, parseInt(this.value) || 0, productInput.dataset.id);
     }
+    if (typeof updateBtnAdd === 'function') updateBtnAdd();
+});
+h5Cantidad.addEventListener('input', function() {
+    if (typeof updateBtnAdd === 'function') updateBtnAdd();
 });
 // Checkbox para seleccionar todos los seriales de este producto
 let divCheckAll = createDiv(['form-check','d-flex','justify-content-center','mb-0'],null);

@@ -116,8 +116,8 @@
                                         <small>U.M.</small>
                                     </div>
                                     <div class="col-2 col-md-2">
-                                        <small class="d-none d-lg-inline">Precio Unitario</small>
-                                        <small class="d-lg-none">P.U</small>
+                                        <small class="d-none d-lg-inline">Precio Unitario (SIN IGV)</small>
+                                        <small class="d-lg-none">P.U (SIN IGV)</small>
                                     </div>
                                     <div class="col-2 col-md-2">
                                         <small class="d-none d-md-inline">Precio Total</small>
@@ -199,7 +199,7 @@
                                                                     <p class="mb-0">{{ $detalle->medida }}</p>
                                                                 </div>
                                                                 <div class="col-4 col-md-1">
-                                                                    <small>Precio Unitario:</small>
+                                                                    <small>Precio Unitario (SIN IGV):</small>
                                                                     <p class="mb-0">
                                                                         {{ number_format($detalle->precioUnitario, 2) }}
                                                                     </p>

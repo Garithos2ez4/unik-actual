@@ -23,7 +23,7 @@
                             <hr>
                             <div class="row align-items-center mb-2">
                                 <div class="col-8">
-                                    <h6 class="fw-bold mb-0">Detalle de Productos (Precio Unitario)</h6>
+                                    <h6 class="fw-bold mb-0">Detalle de Productos (Precio Unitario - SIN IGV)</h6>
                                     <p class="text-secondary small mb-0">Actualiza el precio unitario. El precio total se calculará automáticamente.</p>
                                 </div>
                                 <div class="col-4 text-end">

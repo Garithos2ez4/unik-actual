@@ -38,7 +38,7 @@ class LicenciaController extends Controller
 
     public function index(Request $request)
     {
-        $tiposLicencias = TipoLicencia::all();
+        $tiposLicencias = TipoLicencia::where('estado', 1)->get();
         $proveedores = Preveedor::all();
         $user = $this->headerService->getModelUser();
         $search = $request->input('search');
@@ -85,7 +85,7 @@ class LicenciaController extends Controller
     public function create()
     {
         $user = $this->headerService->getModelUser();
-        $tiposLicencia = TipoLicencia::all();
+        $tiposLicencia = TipoLicencia::where('estado', 1)->get();
         $categoria = CategoriaLicencia::all();
         $proveedores = Preveedor::all();
         return view('licencias.create', compact('user', 'tiposLicencia', 'proveedores','categoria'));
@@ -119,7 +119,7 @@ class LicenciaController extends Controller
 
         return view('licencias.importar', [
             'user' => $user,
-            'tiposLicencia' => TipoLicencia::all(),
+            'tiposLicencia' => TipoLicencia::where('estado', 1)->get(),
             'proveedores' => Preveedor::all(),
             'categorias' => CategoriaLicencia::all(),
         ]);
@@ -180,7 +180,7 @@ class LicenciaController extends Controller
             'previewLicencias' => $preview,
             'datosFijos'       => $datosFijos,
             'duplicadosCount'  => $duplicados,
-            'tiposLicencia'    => TipoLicencia::all(),
+            'tiposLicencia'    => TipoLicencia::where('estado', 1)->get(),
             'proveedores'      => Preveedor::all(),
             'categorias'       => CategoriaLicencia::all(),
         ]);
@@ -358,6 +358,7 @@ class LicenciaController extends Controller
 
         $tipo = \App\Models\TipoLicencia::create([
             'nombre' => $request->nombre,
+            'estado' => 1
         ]);
 
         if ($request->expectsJson()) {
@@ -369,6 +370,23 @@ class LicenciaController extends Controller
         }
 
         return redirect()->back()->with('success', 'Tipo de licencia agregado correctamente');
+    }
+
+    public function getAllTipos()
+    {
+        $tipos = \App\Models\TipoLicencia::orderBy('nombre')->get();
+        return response()->json($tipos);
+    }
+
+    public function toggleTipoEstado(Request $request)
+    {
+        $tipo = \App\Models\TipoLicencia::find($request->id);
+        if ($tipo) {
+            $tipo->estado = $request->estado ? 1 : 0;
+            $tipo->save();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false, 'message' => 'Tipo no encontrado']);
     }
     public function descargarLicencia($id)
     {

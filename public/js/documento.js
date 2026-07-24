@@ -233,6 +233,18 @@ function validateRegistro() {
         }
     });
 
+    // Validar que cada producto agregado tenga una cantidad mayor a 0
+    let cantidadInputs = divForm.querySelectorAll('[id^="header-cantidad-product-"]');
+    if (cantidadInputs.length < 1) {
+        disabledBtn = true;
+    }
+    cantidadInputs.forEach(function (cantInput) {
+        let val = parseInt(cantInput.value || cantInput.textContent || '0');
+        if (isNaN(val) || val <= 0) {
+            disabledBtn = true;
+        }
+    });
+
     if (inputsForm.length < 1) {
         disabledBtn = true;
     }
@@ -265,6 +277,7 @@ function updateValidate() {
     let divForm = document.getElementById('ul-ingreso');
     let inputsForm = divForm.querySelectorAll('.input-serial');
     let selectsForm = divForm.querySelectorAll('select');
+    let cantidadInputs = divForm.querySelectorAll('[id^="header-cantidad-product-"]');
     let selectAdquisicion = document.getElementById('select-adquisicion');
     let selectAlmacen = document.getElementById('select-almacen');
     let selectMoneda = document.getElementById('select-moneda');
@@ -273,6 +286,10 @@ function updateValidate() {
         x.addEventListener('input', validateRegistro);
     });
     selectsForm.forEach(function (x) {
+        x.addEventListener('change', validateRegistro);
+    });
+    cantidadInputs.forEach(function (x) {
+        x.addEventListener('input', validateRegistro);
         x.addEventListener('change', validateRegistro);
     });
     selectAdquisicion.addEventListener('change', validateRegistro);
@@ -424,6 +441,30 @@ function generatePlantilla() {
 
 
 function confirmForm() {
+    let divForm = document.getElementById('ul-ingreso');
+    let cantidadInputs = divForm.querySelectorAll('[id^="header-cantidad-product-"]');
+    let hasZeroQuantity = false;
+
+    cantidadInputs.forEach(function (cantInput) {
+        let val = parseInt(cantInput.value || cantInput.textContent || '0');
+        if (isNaN(val) || val <= 0) {
+            hasZeroQuantity = true;
+        }
+    });
+
+    if (hasZeroQuantity) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cantidad requerida',
+            text: 'Todos los productos seleccionados deben tener una cantidad mayor a 0 para registrar.',
+            confirmButtonText: 'Aceptar',
+            customClass: {
+                confirmButton: 'btn-warning'
+            }
+        });
+        return;
+    }
+
     Swal.fire({
         title: '!!No podras modificar el documento despues!!',
         text: '¿Estás seguro de que deseas continuar?',

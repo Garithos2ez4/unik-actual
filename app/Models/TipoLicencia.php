@@ -11,7 +11,8 @@ class TipoLicencia extends Model
     protected $guarded = ['id'];
     public $timestamps = false;
     protected $fillable = [
-        'nombre'
+        'nombre',
+        'estado'
     ];
     /**
      * Relacion con la tabla de licencias. 

@@ -95,18 +95,28 @@
                             </div>
                             <div class="input-border"></div>
                         </div>
-                        <button type="button"
-                                class="btn btn-outline-primary btn-sm mt-1"
-                                title="Agregar nuevo tipo de licencia"
-                                onclick="abrirModalNuevoTipo()"
-                                style="height:42px; min-width:42px; border-radius:10px; font-size:1.3rem; display:flex; align-items:center; justify-content:center;">
-                            <i class="bi bi-plus-lg"></i>
-                        </button>
+                        <div class="d-flex flex-column gap-1 mt-1">
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    title="Agregar nuevo tipo de licencia"
+                                    onclick="abrirModalNuevoTipo()"
+                                    style="height:42px; min-width:42px; border-radius:10px; font-size:1.3rem; display:flex; align-items:center; justify-content:center;">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    title="Gestionar tipos de licencia"
+                                    onclick="abrirModalGestionarTipos()"
+                                    style="height:42px; min-width:42px; border-radius:10px; font-size:1.2rem; display:flex; align-items:center; justify-content:center;">
+                                <i class="bi bi-gear"></i>
+                            </button>
+                        </div>
                     </div>
                     <small class="input-help">Categoría de la licencia a registrar</small>
                 </div>
 
                 @include('licencias.modals.modal_nuevo_tipo')
+                @include('licencias.modals.modal_gestionar_tipos')
                 <!-- proveedor -->
                 <div class="mb-3">
                     <label for="idProveedor" class="form-label">Proveedor</label>
@@ -221,10 +231,13 @@
 </script>
 @endif
 
-{{-- Input hidden para pasar la URL del endpoint al JS externo --}}
+{{-- Inputs hidden para pasar las URL de los endpoints a los JS externos --}}
 <input type="hidden" id="storeNuevoTipoUrl" value="{{ route('tiposLicencia.store') }}">
+<input type="hidden" id="getAllTiposUrl" value="{{ route('tiposLicencia.all') }}">
+<input type="hidden" id="toggleTipoUrl" value="{{ route('tiposLicencia.toggle') }}">
 
 <script src="{{ asset('js/Licencias/create-licencias.js') }}"></script>
 <script src="{{ asset('js/Licencias/create-licencias-tipo.js') }}"></script>
+<script src="{{ asset('js/Licencias/create-licencias-gestionar-tipos.js') }}"></script>
 
 @endsection

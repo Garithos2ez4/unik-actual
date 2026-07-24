@@ -107,10 +107,20 @@ class EgresoController extends Controller
 
                     \Illuminate\Support\Facades\DB::beginTransaction();
                     try {
-                        // Agrupar los items por número de orden
+
+                        $numeroordenGlobal = (!empty($numeroorden) && $numeroorden !== 'No aplica') ? $numeroorden : null;
+
                         $itemsByOrden = [];
                         foreach ($items as $item) {
-                            $ordenStr = isset($item['numeroorden']) && $item['numeroorden'] !== '' ? $item['numeroorden'] : 'No aplica';
+                            if ($numeroordenGlobal !== null) {
+                                // Modo createegreso: un único orden para todos
+                                $ordenStr = $numeroordenGlobal;
+                            } else {
+                                // Modo masivos: cada item trae su propio número de orden
+                                $ordenStr = isset($item['numeroorden']) && $item['numeroorden'] !== '' && $item['numeroorden'] !== 'No aplica'
+                                    ? $item['numeroorden']
+                                    : 'No aplica';
+                            }
                             $itemsByOrden[$ordenStr][] = $item;
                         }
 
@@ -263,7 +273,7 @@ class EgresoController extends Controller
                         'fechaCompra' => $egresoOriginal->fechaCompra,
                         'fechaDespacho' => $egresoOriginal->fechaDespacho
                     ];
-                    
+
                     $items = [
                         [
                             'idregistro' => $idRegistro,
@@ -312,7 +322,7 @@ class EgresoController extends Controller
                             $nuevoTotal = \App\Models\DetalleVenta::where('idVenta', $venta->idVenta)
                                 ->selectRaw('SUM(precioVenta * cantidad) as total')
                                 ->first()->total ?? 0;
-                            
+
                             $venta->totalVenta = floatval($nuevoTotal);
                             $venta->save();
                         }
@@ -325,7 +335,7 @@ class EgresoController extends Controller
                             'fechaVenta' => $egresoOriginal->fechaDespacho,
                             'canal' => $idPublicacion !== 'NULO' ? 'PLATAFORMA' : 'TIENDA'
                         ];
-                        
+
                         $detallesVenta = [[
                             'idRegistro' => $idRegistro,
                             'idEgreso' => $nuevoIdEgreso,
@@ -374,13 +384,13 @@ class EgresoController extends Controller
                     $fechaCarbon = \Carbon\Carbon::parse($fechaMes . '-01');
                     $query->whereHas('EnvioProvincia', function ($q) use ($fechaMes) {
                         $q->whereMonth('fecha_envio', date('m', strtotime($fechaMes)))
-                          ->whereYear('fecha_envio', date('Y', strtotime($fechaMes)));
+                            ->whereYear('fecha_envio', date('Y', strtotime($fechaMes)));
                     });
                 } else {
                     $fechaCarbon = \Carbon\Carbon::now();
                     $query->whereHas('EnvioProvincia', function ($q) {
                         $q->whereMonth('fecha_envio', date('m'))
-                          ->whereYear('fecha_envio', date('Y'));
+                            ->whereYear('fecha_envio', date('Y'));
                     });
                 }
 
@@ -535,12 +545,12 @@ class EgresoController extends Controller
             ->with('PrecioTienda')
             ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
             ->select(
-                'Producto.idProducto', 
-                'Producto.nombreProducto', 
-                'Producto.modelo', 
-                'Producto.codigoProducto', 
-                'Producto.imagenProducto1', 
-                'MarcaProducto.nombreMarca', 
+                'Producto.idProducto',
+                'Producto.nombreProducto',
+                'Producto.modelo',
+                'Producto.codigoProducto',
+                'Producto.imagenProducto1',
+                'MarcaProducto.nombreMarca',
                 'Producto.precioDolar',
                 'Producto.idGrupo',
                 'Producto.gananciaExtra',
@@ -553,23 +563,23 @@ class EgresoController extends Controller
         }
 
         $productos = $queryBuilder->where(function ($q) use ($words) {
-                foreach ($words as $word) {
-                    $q->where(function ($sq) use ($word) {
-                        $sq->where('Producto.nombreProducto', 'LIKE', '%' . $word . '%')
-                            ->orWhere('Producto.modelo', 'LIKE', '%' . $word . '%')
-                            ->orWhere('Producto.codigoProducto', 'LIKE', '%' . $word . '%')
-                            ->orWhere('Producto.partNumber', 'LIKE', '%' . $word . '%')
-                            ->orWhere('MarcaProducto.nombreMarca', 'LIKE', '%' . $word . '%');
-                    });
-                }
-            })
+            foreach ($words as $word) {
+                $q->where(function ($sq) use ($word) {
+                    $sq->where('Producto.nombreProducto', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.modelo', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.codigoProducto', 'LIKE', '%' . $word . '%')
+                        ->orWhere('Producto.partNumber', 'LIKE', '%' . $word . '%')
+                        ->orWhere('MarcaProducto.nombreMarca', 'LIKE', '%' . $word . '%');
+                });
+            }
+        })
             ->take(10)
             ->get();
-            
+
         // Calcular precio de venta sugerido igual que la Web
         $calculadora1 = \App\Models\Calculadora::find(1);
         $calculadora2 = \App\Models\Calculadora::find(2);
-        
+
         $tcSunat = $calculadora1 ? $calculadora1->tasaCambio : 3.42;
         $tcFijo = $calculadora2 ? $calculadora2->tasaCambio : 3.80;
         $igv = $calculadora1 ? $calculadora1->igv : 18;
@@ -584,7 +594,7 @@ class EgresoController extends Controller
             $tc = $p->usar_tc_fijo ? $tcFijo : $tcSunat;
             $precioSolesBase = $p->precioDolar * $tc;
             $gananciaSoles = $p->gananciaExtra * $tc;
-            
+
             // Rango de comisión
             $comisionRango = 0;
             if (!isset($comisionesPorGrupo[$p->idGrupo])) {
@@ -596,19 +606,19 @@ class EgresoController extends Controller
                     break;
                 }
             }
-            
+
             $precioIgv = $precioSolesBase * (1 + ($igv / 100));
             $precioSinFacturar = $precioIgv * (1 + ($comisionRango / 100));
             $precioFacturado = $precioSinFacturar * (1 + ($facturacion / 100));
-            
+
             if ($p->estadoProductoWeb == 'EXCLUSIVO' || $p->estadoProductoWeb == 'OFERTA') {
                 $precioCalculado = $precioIgv;
             } else {
                 $precioCalculado = ($precioSinFacturar + $precioFacturado) / 2;
             }
-            
+
             $totalSoles = $precioCalculado * (1 + ($comisionEmpresa / 100)) + $gananciaSoles;
-            
+
             $p->precioWebSoles = round($totalSoles, 1);
             $p->precioTiendaSoles = $p->PrecioTienda ? $p->PrecioTienda->precioTienda : null;
         }
