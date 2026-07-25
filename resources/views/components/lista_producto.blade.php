@@ -54,9 +54,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-1 d-none d-lg-block text-center">
+                        <div class="col-md-1 d-none d-lg-block text-center position-relative">
                             <small data-value="{{$pro->precioDolar}}"
                                 class="price-list-product">${{$pro->precioDolar}}</small>
+                            <button class="btn btn-sm btn-link text-success p-0 ms-1" onclick="abrirModalEditarUtilidad({{ $pro->idProducto }})" title="Editar Utilidad">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
                         </div>
                         <div class="d-none d-md-block col-md-4">
                             <div class="row text-center">

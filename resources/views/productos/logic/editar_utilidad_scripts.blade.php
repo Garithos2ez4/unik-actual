@@ -1,0 +1,102 @@
+<script>
+    let _utilidadData = {};
+
+    function abrirModalEditarUtilidad(idProducto) {
+        fetch('{{ route("producto.getUtilidad", "") }}/' + idProducto)
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    _utilidadData = data;
+                    document.getElementById('editUtilidadIdProducto').value = idProducto;
+                    document.getElementById('editUtilidadNombreProducto').textContent = data.nombreProducto;
+                    document.getElementById('editUtilidadNombreProducto').title = data.nombreProducto;
+                    document.getElementById('editUtilidadPrecioBase').value = parseFloat(data.precioDolar).toFixed(2);
+                    document.getElementById('editUtilidadPrecioIgv').value = parseFloat(data.precioConIgv).toFixed(2);
+                    document.getElementById('editUtilidadPrecioBaseSoles').value = parseFloat(data.precioBaseSoles).toFixed(2);
+                    document.getElementById('editUtilidadPrecioIgvSoles').value = parseFloat(data.precioIgvSoles).toFixed(2);
+                    document.getElementById('editUtilidadGanancia').value = parseFloat(data.gananciaExtra).toFixed(2);
+                    recalcularPreviewUtilidad();
+                    let modal = new bootstrap.Modal(document.getElementById('modalEditarUtilidad'));
+                    modal.show();
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error', 'Ocurrió un error al obtener la utilidad.', 'error');
+            });
+    }
+
+    function recalcularPreviewUtilidad() {
+        let ganancia = parseFloat(document.getElementById('editUtilidadGanancia').value) || 0;
+        let precioCalculado = parseFloat(_utilidadData.precioCalculado) || 0;
+        let tc = parseFloat(_utilidadData.tasaCambio) || 0;
+
+        let precioVentaUsd = precioCalculado + ganancia;
+        let precioVentaSoles = precioVentaUsd * tc;
+
+        document.getElementById('editUtilidadPrecioVentaUsd').textContent = '$' + precioVentaUsd.toFixed(2);
+        document.getElementById('editUtilidadTC').textContent = tc.toFixed(2) + (_utilidadData.tipoTcLabel ? ' (' + _utilidadData.tipoTcLabel + ')' : '');
+        document.getElementById('editUtilidadPrecioWeb').textContent = 'S/ ' + precioVentaSoles.toFixed(2);
+    }
+
+    function guardarUtilidad() {
+        let idProducto = document.getElementById('editUtilidadIdProducto').value;
+        let ganancia = document.getElementById('editUtilidadGanancia').value;
+
+        if(!idProducto || ganancia === '' || ganancia === null) {
+            Swal.fire('Advertencia', 'Por favor complete el campo de ganancia.', 'warning');
+            return;
+        }
+
+        let btn = document.getElementById('btnGuardarUtilidad');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+        fetch('{{ route("producto.updateUtilidad") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                idProducto: idProducto,
+                ganancia: ganancia
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save"></i> Guardar';
+            
+            if(data.success) {
+                let modalEl = document.getElementById('modalEditarUtilidad');
+                let modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+                Swal.fire({
+                    title: 'Éxito',
+                    text: data.message,
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    let btnSearch = document.getElementById('btn-search-product');
+                    if(btnSearch) {
+                        btnSearch.click();
+                    } else {
+                        location.reload();
+                    }
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save"></i> Guardar';
+            Swal.fire('Error', 'Ocurrió un error al guardar.', 'error');
+        });
+    }
+</script>

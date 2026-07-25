@@ -309,7 +309,17 @@ class ProductoRepository implements ProductoRepositoryInterface
         }
 
         if (isset($filtros['estado'])) {
-            $query->where('Producto.estadoProductoWeb', '=', $filtros['estado']);
+            if ($filtros['estado'] === 'ACTIVO') {
+                // Activos: productos con al menos 1 unidad en stock (cualquier almacén)
+                $query->whereHas('Inventario', function ($q) {
+                    $q->where('stock', '>', 0);
+                });
+            } elseif ($filtros['estado'] === 'INACTIVO') {
+                // Inactivos: agotados o descontinuados
+                $query->whereIn('Producto.estadoProductoWeb', ['AGOTADO', 'DESCONTINUADO']);
+            } else {
+                $query->where('Producto.estadoProductoWeb', '=', $filtros['estado']);
+            }
         }
 
         if (isset($filtros['almacen'])) {

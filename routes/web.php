@@ -116,6 +116,8 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
     Route::post('/productos/toggle-status', [ProductoController::class, 'toggleStatus'])->name('producto.toggleStatus');
+    Route::get('/productos/get-utilidad/{id}', [ProductoController::class, 'getUtilidad'])->name('producto.getUtilidad');
+    Route::post('/productos/update-utilidad', [ProductoController::class, 'updateUtilidad'])->name('producto.updateUtilidad');
     Route::get('/productos/searchmodelproduct', [ProductoController::class, 'searchModelProduct'])->name('searchmodelproduct');
     Route::get('/producto/calculate', [ProductoController::class, 'calculate'])->name('calculateproducto');
     Route::get('/productos/historial-precio-tienda/{id}', [ProductoController::class, 'obtenerHistorialPrecioTienda']);
@@ -300,6 +302,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/configuracion/updatecalculos', [ConfiguracionController::class, 'updateCalculos'])->name('updatecalculos');
     Route::post('/configuracion/updateCalculosTasaFija', [ConfiguracionController::class, 'updateCalculosTasaFija'])->name('updateCalculosTasaFija');
     Route::post('/configuracion/updatecomision', [ConfiguracionController::class, 'updateComision'])->name('updatecomision');
+    Route::post('/configuracion/aplicarcomisionuniforme', [ConfiguracionController::class, 'aplicarComisionUniforme'])->name('aplicarcomisionuniforme');
     Route::post('/configuracion/createcomisionplataforma', [ConfiguracionController::class, 'createComisionPlataforma'])->name('createcomisionplataforma');
     Route::post('/configuracion/deletecomisionplataforma', [ConfiguracionController::class, 'deleteComisionPlataforma'])->name('deletecomisionplataforma');
     Route::post('/configuracion/tipo-cambio', [ConfiguracionController::class, 'cambiarTipoCambio'])->name('configuracion.tipoCambio');

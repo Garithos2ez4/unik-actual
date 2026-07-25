@@ -145,8 +145,19 @@
         </div>
         @foreach($categorias as $categoria)
         <div class="col-md-12 divCategory-{{$categoria->idCategoria}}" style="display:none">
-            <div class="row pt-2 pb-2 text-center">
-                <h4>{{$categoria->nombreCategoria}} <i class="{{$categoria->iconCategoria}}"></i></h4>
+            <div class="row pt-2 pb-1 align-items-center">
+                <div class="col-8 col-md-9">
+                    <h4>{{$categoria->nombreCategoria}} <i class="{{$categoria->iconCategoria}}"></i></h4>
+                </div>
+                <div class="col-4 col-md-3 text-end">
+                    <button type="button"
+                        class="btn btn-sm btn-outline-warning fw-semibold"
+                        onclick="abrirModalPlantilla({{$categoria->idCategoria}}, '{{addslashes($categoria->nombreCategoria)}}')"
+                        data-bs-toggle="modal" data-bs-target="#modalPlantillaUniforme"
+                        title="Aplica los mismos % a todos los grupos de esta categoría">
+                        <i class="bi bi-lightning-charge-fill"></i> Aplicar plantilla uniforme
+                    </button>
+                </div>
             </div>
             <ul class="list-group">
                 <li class="list-group-item bg-sistema-uno text-light d-none d-sm-block">
@@ -188,6 +199,61 @@
             </ul>
         </div>
         @endforeach
+
+    {{-- Modal: Aplicar plantilla uniforme a toda la categoría --}}
+    <form action="{{route('aplicarcomisionuniforme')}}" method="POST" id="formPlantillaUniforme">
+        @csrf
+        <input type="hidden" name="idCategoria" id="plantilla-idCategoria" value="">
+        <div class="modal fade" id="modalPlantillaUniforme" tabindex="-1" aria-labelledby="modalPlantillaUniformeLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning bg-opacity-10">
+                        <div>
+                            <h5 class="modal-title fw-bold" id="modalPlantillaUniformeLabel">
+                                <i class="bi bi-lightning-charge-fill text-warning"></i> Aplicar plantilla uniforme
+                            </h5>
+                            <small class="text-secondary" id="plantilla-subtitle">Se sobreescribirán las comisiones de <strong>todos</strong> los grupos de esta categoría.</small>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body pb-0">
+                        <p class="text-secondary mb-3"><i class="bi bi-info-circle"></i> Edita los valores si lo necesitas antes de guardar. Los mismos % se aplicarán a <strong>todos</strong> los grupos.</p>
+                        <ul class="list-group list-group-flush">
+                            @foreach($rangos as $rango)
+                            @php
+                                $defaultsTemplate = [1=>20.00, 2=>13.00, 3=>10.00, 4=>8.00, 5=>7.30, 6=>6.70, 7=>6.30, 8=>5.80, 9=>5.00];
+                                $defaultVal = $defaultsTemplate[$rango->idRango] ?? 0.00;
+                            @endphp
+                            <li class="list-group-item {{$loop->iteration % 2 == 0 ? 'bg-list' : ''}}">
+                                <div class="row align-items-center">
+                                    <div class="col-6">
+                                        <h6 class="mb-0">{{$rango->descripcion}}</h6>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="input-group input-group-sm">
+                                            <input type="number"
+                                                name="comision[{{$rango->idRango}}]"
+                                                class="form-control plantilla-input"
+                                                step="0.01" min="0" max="100"
+                                                value="{{$defaultVal}}">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning fw-bold">
+                            <i class="bi bi-lightning-charge-fill"></i> Aplicar a todos los grupos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
     </div>
     <br>
     <div class="row border shadow rounded-3 pt-2 pb-2">
@@ -380,5 +446,11 @@
         });
 
     });
+
+    function abrirModalPlantilla(idCategoria, nombreCategoria) {
+        document.getElementById('plantilla-idCategoria').value = idCategoria;
+        document.getElementById('plantilla-subtitle').innerHTML =
+            'Se sobreescribirán las comisiones de <strong>todos</strong> los grupos de <strong>' + nombreCategoria + '</strong>.';
+    }
 </script>
 @endsection

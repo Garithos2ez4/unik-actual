@@ -316,6 +316,46 @@ class ConfiguracionController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
+    /**
+     * Aplica una plantilla de comisiones uniforme a todos los grupos de una categoría.
+     * Template basado en la estructura estándar (9 rangos ordenados).
+     */
+    public function aplicarComisionUniforme(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $idCategoria = $request->input('idCategoria');
+                $comisionesTemplate = $request->input('comision'); // array [idRango => valor]
+
+                if (empty($idCategoria) || empty($comisionesTemplate)) {
+                    $this->headerService->sendFlashAlerts('Error', 'Datos incompletos', 'error', 'btn-danger');
+                    return back();
+                }
+
+                $grupos = \App\Models\GrupoProducto::where('idCategoria', $idCategoria)->get();
+
+                foreach ($grupos as $grupo) {
+                    foreach ($comisionesTemplate as $idRango => $comision) {
+                        $this->configuracionService->updateComisionValue($grupo->idGrupoProducto, $idRango, $comision);
+                    }
+                }
+
+                $this->headerService->sendFlashAlerts(
+                    'Comisiones actualizadas',
+                    'Se aplicó la plantilla uniforme a todos los grupos de la categoría.',
+                    'success',
+                    'btn-success'
+                );
+                return back();
+            }
+        }
+
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
     public function updateComision(Request $request)
     {
         $userModel = $this->headerService->getModelUser();

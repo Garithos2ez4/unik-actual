@@ -24,10 +24,19 @@
         </div>
         <div class="col-4 col-lg-2">
             <small>Estado</small>
-            <select class="form-select form-select-sm filtro-componente" name="filtro[estado]">
+            <select class="form-select form-select-sm filtro-componente" name="filtro[estado]"
+                {{ request()->input('filtro.estado') ? 'data-selected="'.request()->input('filtro.estado').'"' : '' }}>
                 <option value="">Todos</option>
+                <option value="ACTIVO" {{ request()->input('filtro.estado') == 'ACTIVO' ? 'selected' : '' }}
+                    style="font-weight:bold;color:#198754;">✔ Activos (con stock)</option>
+                <option value="INACTIVO" {{ request()->input('filtro.estado') == 'INACTIVO' ? 'selected' : '' }}
+                    style="font-weight:bold;color:#dc3545;">✖ Inactivos (agotado/descont.)</option>
+                @if(count($estados) > 0)
+                <option disabled>── Estados específicos ──</option>
+                @endif
                 @foreach ($estados as $estado)
-                <option value="{{ data_get($estado, 'estadoProductoWeb') ?? data_get($estado, 'id') ?? '' }}">
+                <option value="{{ data_get($estado, 'estadoProductoWeb') ?? data_get($estado, 'id') ?? '' }}"
+                    {{ request()->input('filtro.estado') == (data_get($estado, 'estadoProductoWeb') ?? data_get($estado, 'id') ?? '') ? 'selected' : '' }}>
                     {{ data_get($estado, 'estadoProductoWeb') ?? data_get($estado, 'nombre') ?? '' }}
                 </option>
                 @endforeach

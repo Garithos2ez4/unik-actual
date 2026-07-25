@@ -371,6 +371,7 @@ class AnalyticsController extends Controller
         $productosMasGanancia = $margenesProductos->sortByDesc('ganancia_neta')->take(5)->values();
         $productosMenosGanancia = $margenesProductos->sortBy('ganancia_neta')->take(5)->values();
         $productosMasGananciaUnitaria = $margenesProductos->sortByDesc('ganancia_neta_unitaria')->take(5)->values();
+        $productosMenosGananciaUnitaria = $margenesProductos->sortBy('ganancia_neta_unitaria')->take(5)->values();
 
         // ── 9. Top 5 Productos Más Enviados ───────────────────
         $topEnviados = \App\Models\EnvioProvinciaProducto::query()
@@ -419,6 +420,7 @@ class AnalyticsController extends Controller
             'productosMasGanancia' => $productosMasGanancia,
             'productosMenosGanancia' => $productosMenosGanancia,
             'productosMasGananciaUnitaria' => $productosMasGananciaUnitaria,
+            'productosMenosGananciaUnitaria' => $productosMenosGananciaUnitaria,
             'topBestMonths' => $topBestMonths,
             'topEnviados' => $topEnviados,
             'topProvincias' => $topProvincias,

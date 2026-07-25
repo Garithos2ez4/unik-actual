@@ -18,11 +18,11 @@ class CalculadoraRepository implements CalculadoraRepositoryInterface
 
     public function get()
     {
-        return Calculadora::first();
+        return Calculadora::find(1);
     }
 
     public function update(array $data){
-        $calc = Calculadora::first();
+        $calc = Calculadora::find(1);
         $calc->update($data);
         return $calc;
     }

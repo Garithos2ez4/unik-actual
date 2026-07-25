@@ -47,4 +47,6 @@
             </div>
         </div>
     </div>
+
+    @include('analytics.partials.menor_margen_unitaria')
 </div>

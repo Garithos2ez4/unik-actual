@@ -186,6 +186,82 @@ class ProductoController extends Controller
         ]);
     }
 
+    public function getUtilidad($idProducto)
+    {
+        $producto = \App\Models\Producto::with('GrupoProducto')->find($idProducto);
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
+        }
+
+        $igv = 1.18;
+        $precioConIgv = round($producto->precioDolar * $igv, 2);
+
+        $preciosService = new \App\Services\PreciosService;
+        $precioCalculado = $preciosService->getPrecioCalculado(
+            $producto->precioDolar,
+            $producto->idGrupo,
+            'DOLAR',
+            $producto->estadoProductoWeb
+        );
+
+        $usarTcFijo = $producto->usar_tc_fijo ?? true;
+        if ($usarTcFijo) {
+            $tcUsar = (float)$this->calculadoraService->getTasaCambio();
+            $tipoTcLabel = 'SUNAT';
+        } else {
+            $tasaFijaGlobal = (float)$this->calculadoraService->getTasaFija()->tasaCambio;
+            if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
+                $tcUsar = (float)$producto->tc_fijo;
+                $tipoTcLabel = 'Fijo';
+            } else {
+                $tcUsar = $tasaFijaGlobal;
+                $tipoTcLabel = 'Fijo Global';
+            }
+        }
+
+        $precioVentaUsd = $precioCalculado + $producto->gananciaExtra;
+        $precioVentaSoles = round($precioVentaUsd * $tcUsar, 2);
+
+        $precioBaseSoles = round($producto->precioDolar * $tcUsar, 2);
+        $precioIgvSoles = round($precioConIgv * $tcUsar, 2);
+
+        return response()->json([
+            'success' => true,
+            'nombreProducto' => $producto->nombreProducto,
+            'precioDolar' => $producto->precioDolar,
+            'precioConIgv' => $precioConIgv,
+            'precioBaseSoles' => $precioBaseSoles,
+            'precioIgvSoles' => $precioIgvSoles,
+            'gananciaExtra' => $producto->gananciaExtra,
+            'precioCalculado' => round($precioCalculado, 2),
+            'precioVentaUsd' => round($precioVentaUsd, 2),
+            'precioVentaSoles' => $precioVentaSoles,
+            'tasaCambio' => $tcUsar,
+            'tipoTcLabel' => $tipoTcLabel,
+        ]);
+    }
+
+    public function updateUtilidad(Request $request)
+    {
+        $request->validate([
+            'idProducto' => 'required|integer',
+            'ganancia' => 'required|numeric'
+        ]);
+
+        $producto = \App\Models\Producto::find($request->idProducto);
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
+        }
+
+        $producto->gananciaExtra = $request->ganancia;
+        $producto->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Utilidad actualizada correctamente'
+        ]);
+    }
+
     public function details($idProducto)
     {
         //variables de la cabecera
@@ -492,6 +568,7 @@ class ProductoController extends Controller
                 LEFT JOIN Preveedor pv ON pv.idProveedor = c.idProveedor
                 LEFT JOIN historial_tipo_cambio htc ON htc.fecha = c.fechaRegistro
                 WHERE dc.idProducto = ?
+                AND c.estado != 'INVALIDO'
                 ORDER BY c.fechaRegistro DESC
             ", [$id]);
 
