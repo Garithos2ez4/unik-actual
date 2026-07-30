@@ -105,7 +105,19 @@
                             <div class="form-check form-switch m-0 p-0 d-flex flex-column align-items-center">
                                 <input class="form-check-input toggle-status-btn m-0 mb-1" type="checkbox" role="switch" id="switch-status-{{$pro->idProducto}}" data-id="{{$pro->idProducto}}" {{ $pro->estadoProductoWeb !== 'AGOTADO' ? 'checked' : '' }} style="margin-left: 0 !important;">
                                 <label class="form-check-label toggle-status-label-{{$pro->idProducto}} small fw-bold" for="switch-status-{{$pro->idProducto}}" style="font-size: 0.70rem; cursor: pointer;">
-                                    {{ $pro->estadoProductoWeb !== 'AGOTADO' ? 'Disponible' : 'Agotado' }}
+                                    @if($pro->estadoProductoWeb === 'AGOTADO')
+                                        Agotado
+                                    @elseif($pro->estadoProductoWeb === 'LIQUIDACION')
+                                        Liquidación
+                                    @elseif($pro->estadoProductoWeb === 'OFERTA')
+                                        Oferta
+                                    @elseif($pro->estadoProductoWeb === 'EXCLUSIVO')
+                                        Exclusivo
+                                    @elseif($pro->estadoProductoWeb === 'DESCONTINUADO')
+                                        Descontinuado
+                                    @else
+                                        Disponible
+                                    @endif
                                 </label>
                             </div>
                         </div>

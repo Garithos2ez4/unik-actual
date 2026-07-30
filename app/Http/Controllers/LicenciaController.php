@@ -63,7 +63,7 @@ class LicenciaController extends Controller
             ->get();
 
         if ($request->query('page') || $request->query('container')) {
-            $view = view('components.Licencias.lista_licencias', [
+            $view = view('components.licencias.lista_licencias', [
                 'licencias' => $licencias,
                 'container' => $request->query('container', 'container-list-licencias')
             ])->render();
@@ -88,16 +88,16 @@ class LicenciaController extends Controller
         $tiposLicencia = TipoLicencia::where('estado', 1)->get();
         $categoria = CategoriaLicencia::all();
         $proveedores = Preveedor::all();
-        return view('licencias.create', compact('user', 'tiposLicencia', 'proveedores','categoria'));
+        return view('licencias.create', compact('user', 'tiposLicencia', 'proveedores', 'categoria'));
     }
 
     public function store(Request $request)
     {
 
-            $request->validate([
+        $request->validate([
             'voucher_code' => 'required|string|max:100|unique:licencias,voucher_code',
             'id_tipo'      => 'required|exists:tipo_licencia,id',
-            'idProveedor'  => 'required|exists:Preveedor,idProveedor', // 👈 validar proveedor
+            'idProveedor'  => 'required|exists:Preveedor,idProveedor', // validar proveedor
             'orden_compra' => 'nullable|string|max:100',
             'cantidad_usos' => 'nullable|int'
         ], [
@@ -105,7 +105,7 @@ class LicenciaController extends Controller
             'voucher_code.unique'   => 'Este código ya existe.',
             'id_tipo.required'      => 'Debes seleccionar el tipo de licencia.',
             'idProveedor.required'  => 'Debes seleccionar un proveedor.',
-             'cantidad_usos'         => 'Test'
+            'cantidad_usos'         => 'Test'
         ]);
 
         $this->licenciaService->crearLicencia($request->all());
@@ -167,7 +167,6 @@ class LicenciaController extends Controller
             // Detectar duplicados en la BD
             $existentes = \App\Models\Licencia::whereIn('voucher_code', $preview->pluck('voucher_code'))->pluck('voucher_code');
             $duplicados = $existentes->count();
-
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             return back()->withInput()->with('import_error', 'Error en la validación del Excel: ' . collect($e->failures())->map(fn($f) => $f->errors()[0])->implode(', '));
         } catch (\Exception $e) {
@@ -202,7 +201,10 @@ class LicenciaController extends Controller
         try {
             foreach ($licencias as $licencia) {
                 $code = trim($licencia['voucher_code'] ?? '');
-                if (empty($code)) { $omitidas++; continue; }
+                if (empty($code)) {
+                    $omitidas++;
+                    continue;
+                }
 
                 // Omitir duplicados sin explotar
                 if (\App\Models\Licencia::where('voucher_code', $code)->exists()) {
@@ -252,9 +254,9 @@ class LicenciaController extends Controller
 
         if ($request->input('nuevo_estado') === 'USADA') {
             $request->validate([
-            'modo_uso' => 'nullable|in:PARCIAL,COMPLETO',
-        ]);
-    }
+                'modo_uso' => 'nullable|in:PARCIAL,COMPLETO',
+            ]);
+        }
 
 
         $datosForm = $request->except('nuevo_estado');
@@ -265,7 +267,7 @@ class LicenciaController extends Controller
 
         $this->licenciaService->cambiarEstadoConFormulario($serial, $nuevoEstado, $datosForm);
 
-        $mensaje = match($nuevoEstado) {
+        $mensaje = match ($nuevoEstado) {
             'USADA' => 'Licencia marcada como usada correctamente.',
             'DEFECTUOSA' => 'Licencia marcada como defectuosa correctamente.',
             'RECUPERADA' => 'Licencia marcada como recuperada correctamente.',
@@ -325,7 +327,7 @@ class LicenciaController extends Controller
     {
         $user = $this->headerService->getModelUser();
 
-        $licenciasDefectuosas = \App\Models\LicenciaDefectuosa::with('licencia.tipoLicencia','licencia.proveedor')
+        $licenciasDefectuosas = \App\Models\LicenciaDefectuosa::with('licencia.tipoLicencia', 'licencia.proveedor')
             ->where('estado', 'DEFECTUOSA')
             ->orderByDesc('id')
             ->paginate(10);
@@ -339,7 +341,7 @@ class LicenciaController extends Controller
     {
         $user = $this->headerService->getModelUser();
 
-        $licenciasRecuperadas = \App\Models\LicenciaRecuperada::with('licencia','licencia.proveedor')
+        $licenciasRecuperadas = \App\Models\LicenciaRecuperada::with('licencia', 'licencia.proveedor')
             ->where('estado', 'RECUPERADA')
             ->orderByDesc('id')
             ->paginate(10);
@@ -402,5 +404,4 @@ class LicenciaController extends Controller
 
         return back()->with('error', 'El archivo no existe físicamente.');
     }
-
 }

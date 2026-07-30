@@ -80,8 +80,12 @@ class InventarioRepository implements InventarioRepositoryInterface
                         $diff = $stock - $oldStock;
                         $detalle = \App\Models\DetalleComprobante::where('idProducto', $idProducto)->latest('idDetalleComprobante')->first();
                         if ($detalle) {
+                            $lastRegistro = \App\Models\RegistroProducto::orderBy('idRegistro', 'desc')->first();
+                            $nextIdRegistro = $lastRegistro ? $lastRegistro->idRegistro + 1 : 1;
+
                             for ($i = 0; $i < $diff; $i++) {
                                 \App\Models\RegistroProducto::create([
+                                    'idRegistro' => $nextIdRegistro++,
                                     'idDetalleComprobante' => $detalle->idDetalleComprobante,
                                     'idAlmacen' => $almacen,
                                     'numeroSerie' => 'nulo',

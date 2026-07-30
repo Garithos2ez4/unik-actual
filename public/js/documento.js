@@ -267,9 +267,13 @@ function validateRegistro() {
 function changeLabel(input, id) {
     let label = document.getElementById(id);
     if (input.value == '') {
-        label.style.color = 'red';
+        label.classList.add('text-danger');
+        label.classList.remove('text-dark');
+        input.classList.add('border-danger');
     } else {
-        label.style.color = 'black';
+        label.classList.remove('text-danger');
+        label.classList.add('text-dark');
+        input.classList.remove('border-danger');
     }
 }
 

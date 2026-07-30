@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\LiquidacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\EgresoController;
@@ -115,6 +116,11 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/usuario/getbandeja', [UsuarioController::class, 'getBandejaColaborador'])->name('getbandeja');
 
     Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
+    
+    // Liquidación
+    Route::get('/productos/liquidacion', [LiquidacionController::class, 'index'])->name('productos.liquidacion');
+    Route::post('/productos/liquidacion/agregar', [LiquidacionController::class, 'agregarLiquidacion'])->name('productos.liquidacion.agregar');
+    Route::post('/productos/liquidacion/quitar', [LiquidacionController::class, 'quitarLiquidacion'])->name('productos.liquidacion.quitar');
     Route::post('/productos/toggle-status', [ProductoController::class, 'toggleStatus'])->name('producto.toggleStatus');
     Route::get('/productos/get-utilidad/{id}', [ProductoController::class, 'getUtilidad'])->name('producto.getUtilidad');
     Route::post('/productos/update-utilidad', [ProductoController::class, 'updateUtilidad'])->name('producto.updateUtilidad');

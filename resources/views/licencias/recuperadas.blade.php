@@ -125,7 +125,7 @@
 {{-- intento de componente de modal usada--}}
 <x-licencias.recuperadas.modal_formulario_usada/>
 {{-- Intento de componente de modal defectuosa --}}
-<x-Licencias.Recuperadas.modal-formulario-defectuosa/>
+<x-licencias.recuperadas.modal-formulario-defectuosa/>
 
 {{-- Scripts --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

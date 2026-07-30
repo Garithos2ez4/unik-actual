@@ -15,7 +15,7 @@
                 <th><i class="bi bi-receipt"></i> Comprobante</th>
                 <th><i class="bi bi-shop"></i> Proveedor</th>
                 <th><i class="bi bi-currency-exchange"></i> Moneda</th>
-                <th><i class="bi bi-tag"></i> Precio Unit.</th>
+                <th><i class="bi bi-tag"></i> Precio con IGV</th>
                 <th><i class="bi bi-arrow-left-right"></i> TC del día</th>
                 <th><i class="bi bi-cash-coin"></i> Equiv. S/</th>
                 <th><i class="bi bi-bag-check"></i> Total Compra</th>

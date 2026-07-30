@@ -20,14 +20,14 @@
                         <label class="form-label text-muted small mb-1">Precio (Sin IGV)</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text">$</span>
-                            <input type="text" class="form-control" id="editUtilidadPrecioBase" disabled>
+                            <input type="number" step="0.01" class="form-control" id="editUtilidadPrecioBase" oninput="recalcularDesdeBase()">
                         </div>
                     </div>
                     <div class="col-6">
                         <label class="form-label text-muted small mb-1">Precio (Con IGV)</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text">$</span>
-                            <input type="text" class="form-control" id="editUtilidadPrecioIgv" disabled>
+                            <input type="number" step="0.01" class="form-control" id="editUtilidadPrecioIgv" oninput="recalcularDesdeIgv()">
                         </div>
                     </div>
                 </div>
@@ -76,9 +76,12 @@
                         </div>
                     </div>
                     <hr class="my-1">
-                    <div class="text-center">
-                        <span class="text-muted">Precio en Web (S/.):</span>
-                        <div class="fw-bold text-success fs-5" id="editUtilidadPrecioWeb">S/ 0.00</div>
+                    <div class="text-center mt-2">
+                        <label class="form-label fw-bold text-muted mb-1">Precio en Web (S/.):</label>
+                        <div class="input-group input-group-lg w-75 mx-auto">
+                            <span class="input-group-text bg-success text-white border-success">S/</span>
+                            <input type="number" class="form-control text-success fw-bold text-center border-success" id="editUtilidadPrecioWeb" step="0.01" oninput="recalcularDesdeWeb()">
+                        </div>
                     </div>
                 </div>
 

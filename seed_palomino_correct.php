@@ -1,0 +1,260 @@
+<?php
+require 'vendor/autoload.php';
+$app = require_once 'bootstrap/app.php';
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+$agenciaId = 34; // TURISMO PALOMINO
+
+$json = '{
+    "offices": [
+        {
+            "title": "Lima",
+            "subOffices": [
+                {
+                    "terminal": "La Victoria",
+                    "address": "Terminal Terrestre Av. Nicolás Arriola 906",
+                    "phone": "989263865"
+                },
+                {
+                    "terminal": "Fiori",
+                    "address": "Agencia Av. Miguel Ángel 126 - Urb. Fiori-SMP",
+                    "phone": "958256589"
+                },
+                {
+                    "terminal": "Plaza Norte",
+                    "address": "Terminal Terrestre Av. Gerardo Unger N° 6917 Int. LB-71 / LB-72",
+                    "phone": "989263861"
+                },
+                {
+                    "terminal": "San Juan",
+                    "address": "Terminal Terrestre Av. Los Héroes 793 - San Juan De Miraflores",
+                    "phone": "989263862 - 987746815"
+                },
+                {
+                    "terminal": "Atocongo",
+                    "address": "Expreso Internacional Palomino Ctra. Panamericana Sur Km 11.3, Lima 15063"
+                },
+                {
+                    "terminal": "Ate Vitarte",
+                    "address": "Terminal Barbadillo Fundo Barbadillo, Mz. B, Lte. 1, Módulo 2",
+                    "phone": "960554923"
+                }
+            ]
+        },
+        {
+            "title": "Apurímac",
+            "subOffices": [
+                {
+                    "terminal": "Ñanchero",
+                    "address": "Terminal Terrestre Av. Gerardo Unger N° 6917 Int. LB-71 / LB-72",
+                    "phone": "989263861"
+                },
+                {
+                    "terminal": "Terminal Terrestre de Abancay",
+                    "address": "Av. Pachacutec S/N Terminal Municipal",
+                    "phone": "987734955"
+                },
+                {
+                    "terminal": "Agencia Arenas",
+                    "address": "Agencia Av. Arenas N° 157",
+                    "phone": "987734955"
+                },
+                {
+                    "terminal": "Agencia Andahuaylas",
+                    "address": "Av. José María Arguedas N° 504.",
+                    "phone": "989263831"
+                },
+                {
+                    "terminal": "Agencia Chincheros",
+                    "address": "Av. Fernando Belaunde Terry Nº 528.",
+                    "phone": "953853598"
+                },
+                {
+                    "terminal": "Agencia Pampachiri",
+                    "address": "Av. Apurímac S/N, Distrito Pampachiri.",
+                    "phone": "987908246 / 983095502"
+                },
+                {
+                    "terminal": "Uripa",
+                    "address": "Av. Incas N° 779, Distrito Anco Huallo.",
+                    "phone": "989263879"
+                },
+                {
+                    "terminal": "Agencia Chalhuanca",
+                    "address": "Av. Panamericana S/N, Distrito Curahuasi.",
+                    "phone": "989263828"
+                },
+                {
+                    "terminal": "Agencia Talavera",
+                    "address": "Av. Sesquicentenario 100 - Dpto. Apurímac",
+                    "phone": "918951431"
+                },
+                {
+                    "terminal": "Agencia Chuquibambilla",
+                    "address": "Jr. Cusco N° 114 (por Plaza de Armas)",
+                    "phone": "920627624"
+                },
+                {
+                    "terminal": "Agencia Curahuasi",
+                    "address": "Av. Panamericana S/N - Dpto. Apurímac",
+                    "phone": "989263836"
+                }
+            ]
+        },
+        {
+            "title": "Cusco",
+            "subOffices": [
+                {
+                    "terminal": "Terrapuerto",
+                    "address": "Terminal Terrestre Av. Industrial 121 Urb. Res. Huancaro",
+                    "phone": "993585647"
+                },
+                {
+                    "terminal": "Terminal Terrestre",
+                    "address": "Av. Evitamiento N° 429 Int 117B, 118B, 121B.",
+                    "phone": "989263839"
+                },
+                {
+                    "terminal": "Quillabamba",
+                    "address": "Terminal Terrestre Av. Gerardo Unger N° 6917 Int. LB-71 / LB-72.",
+                    "phone": "989263861"
+                },
+                {
+                    "terminal": "Urubamba",
+                    "address": "Terminal Terrestre Av. Gerardo Unger N° 6917 Int. LB-71 / LB-72.",
+                    "phone": "989263861"
+                },
+                {
+                    "terminal": "Limatambo",
+                    "address": "Calle Panamericana S/N Car. Interoceánica Km 78.",
+                    "phone": "916359131"
+                },
+                {
+                    "terminal": "Izcuchaca",
+                    "address": "Mza. B1 Lte. 10 Urb. Nueva Anta.",
+                    "phone": "974565232"
+                }
+            ]
+        },
+        {
+            "title": "Ayacucho",
+            "subOffices": [
+                {
+                    "terminal": "Agencia Ayacucho",
+                    "address": "Jr. Manco Capac 216.",
+                    "phone": "993538807"
+                },
+                {
+                    "terminal": "Puquio",
+                    "address": "Av. Mariscal Castilla N° 450.",
+                    "phone": "989263853"
+                },
+                {
+                    "terminal": "Terminal Terrestre",
+                    "address": "Av. Los Artesanos S/N Int.11 (Terrapuerto Plaza Wari).",
+                    "phone": "993538807"
+                },
+                {
+                    "terminal": "Coracora",
+                    "address": "Jr. 2 de Mayo S/N",
+                    "phone": "989263834"
+                }
+            ]
+        },
+        {
+            "title": "Ica",
+            "subOffices": [
+                {
+                    "terminal": "Ovalo",
+                    "address": "Avenida Los Maestros 100",
+                    "phone": "919175931"
+                },
+                {
+                    "terminal": "Terminal Soyuz",
+                    "address": "Calle Lambayeque N° 180.",
+                    "phone": "941684289"
+                },
+                {
+                    "terminal": "Nazca",
+                    "address": "Calle Comercio S/N, Mz. P, Lote 15, Campamento Electro Perú.",
+                    "phone": "989263847"
+                },
+                {
+                    "terminal": "Marcona",
+                    "address": "Calle Comercio S/N, Mz. P, Lote 15, Campamento Electro Perú.",
+                    "phone": "989263847"
+                }
+            ]
+        },
+        {
+            "title": "Arequipa",
+            "subOffices": [
+                {
+                    "terminal": "Cercado",
+                    "address": "Ca. Tacna y Arica 212 Estación del tren.",
+                    "phone": "987240091"
+                },
+                {
+                    "terminal": "Terrapuerto",
+                    "address": "Av. Arturo Íbañez S/N Int 51 Jacobo Hunter.",
+                    "phone": "987240079"
+                },
+                {
+                    "terminal": "Alto Siguas II",
+                    "address": "Av. Panamericana Sur Km 921, Mz B Lte 2.",
+                    "phone": "920627624"
+                },
+                {
+                    "terminal": "Camana",
+                    "address": "Av. Lima N° 441.",
+                    "phone": "934293577"
+                }
+            ]
+        },
+        {
+            "title": "Puerto Maldonado",
+            "subOffices": [
+                {
+                    "terminal": "Terminal Terrestre",
+                    "address": "Av. Circunvalación Norte N° 2621",
+                    "phone": "989263834"
+                }
+            ]
+        }
+    ]
+}';
+
+$data = json_decode($json, true);
+
+// 1. Borrar todas las subagencias anteriores de Palomino
+\App\Models\SubAgencia::where('idAgencia', $agenciaId)->delete();
+
+$insertadas = 0;
+
+foreach ($data['offices'] as $region) {
+    $nombreRegion = strtoupper($region['title']);
+
+    // Buscar si existe un destino con el nombre de la región, o crear uno genérico
+    $destino = \App\Models\Destino::where('nombre', 'LIKE', '%' . $nombreRegion . '%')->first();
+    
+    if (!$destino) {
+        $destino = \App\Models\Destino::create([
+            'idProvincia' => 128, // Default Lima o genérico
+            'nombre' => $nombreRegion
+        ]);
+    }
+
+    foreach ($region['subOffices'] as $office) {
+        \App\Models\SubAgencia::create([
+            'idAgencia' => $agenciaId,
+            'idDestino' => $destino->idDestino,
+            'nombre_oficina' => $office['terminal'],
+            'direccion' => $office['address'] ?? '',
+            'telefono' => $office['phone'] ?? '',
+            'estado' => 1
+        ]);
+        $insertadas++;
+    }
+}
+
+echo "Proceso finalizado. Se eliminaron las sucursales anteriores y se agregaron $insertadas nuevas oficinas correctas de Turismo Palomino.\n";

@@ -105,6 +105,7 @@
                     <option value="DISPONIBLE" {{ $producto->estadoProductoWeb == 'DISPONIBLE' ? 'selected' : '' }}>DISPONIBLE</option>
                     <option value="AGOTADO" {{ $producto->estadoProductoWeb == 'AGOTADO' ? 'selected' : '' }}>AGOTADO</option>
                     <option value="OFERTA" {{ $producto->estadoProductoWeb == 'OFERTA' ? 'selected' : '' }}>OFERTA</option>
+                    <option value="LIQUIDACION" {{ $producto->estadoProductoWeb == 'LIQUIDACION' ? 'selected' : '' }}>LIQUIDACION</option>
                     <option value="EXCLUSIVO" {{ $producto->estadoProductoWeb == 'EXCLUSIVO' ? 'selected' : '' }}>EXCLUSIVO</option>
                     <option value="DESCONTINUADO" {{ $producto->estadoProductoWeb == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
                 </select>
@@ -201,14 +202,14 @@
                         <input type="number" id="precio-total-sunat" value="" class="form-control" disabled>
                     </div>
 
-                    <!-- 👇 NUEVO CONTENEDOR PARA EL TC FIJO 👇 -->
+                    <!--  NUEVO CONTENEDOR PARA EL TC FIJO  -->
                     <div id="div-precio-total-fijo" class="mb-2">
                         <label for="precio-total-fijo" class="form-label">Precio Total en Soles / Tasa Fija ({{$tasaFija}})</label>
                         <input type="number" id="precio-total-fijo" value="" class="form-control" disabled>
                     </div>
-                    <!-- 👆 FIN DEL NUEVO CONTENEDOR 👆 -->
+                    <!--  FIN DEL NUEVO CONTENEDOR -->
 
-                    <!-- 👇 PRECIO TIENDA 👇 -->
+                    <!--  PRECIO TIENDA -->
                     <div class="mb-2">
                         <label for="precio-tienda" class="form-label fw-bold text-success">
                             <i class="bi bi-shop"></i> Precio Tienda (S/.)
@@ -236,7 +237,7 @@
                         </small>
                         @endif
                     </div>
-                    <!-- 👉 DETALLE PRODUCTO (WEB & PASE) 👈 -->
+                    <!--  DETALLE PRODUCTO (WEB & PASE)  -->
                     <div class="row mt-3 mb-2 border-top pt-3">
                         <div class="col-6">
                             <label for="precio-pase" class="form-label fw-bold text-primary">
@@ -263,7 +264,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 👉 FIN DETALLE PRODUCTO 👈 -->
+                    <!--  FIN DETALLE PRODUCTO  -->
 
                 </div>
             </div>
@@ -327,7 +328,7 @@
             ->first();
             @endphp
 
-            @if($inventario && $inventario->stock > 0)
+            @if(($inventario && $inventario->stock > 0) || $ingresoEdit === "input-edit")
             <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label">
                     Stock {{ $almacen->descripcion }}:

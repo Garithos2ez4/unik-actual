@@ -16,8 +16,14 @@
                     document.getElementById('editUtilidadPrecioIgvSoles').value = parseFloat(data.precioIgvSoles).toFixed(2);
                     document.getElementById('editUtilidadGanancia').value = parseFloat(data.gananciaExtra).toFixed(2);
                     recalcularPreviewUtilidad();
-                    let modal = new bootstrap.Modal(document.getElementById('modalEditarUtilidad'));
-                    modal.show();
+                    recalcularPreviewUtilidad();
+                    
+                    let showModal = () => {
+                        let modal = new bootstrap.Modal(document.getElementById('modalEditarUtilidad'));
+                        modal.show();
+                    };
+                    
+                    showModal();
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }
@@ -38,7 +44,76 @@
 
         document.getElementById('editUtilidadPrecioVentaUsd').textContent = '$' + precioVentaUsd.toFixed(2);
         document.getElementById('editUtilidadTC').textContent = tc.toFixed(2) + (_utilidadData.tipoTcLabel ? ' (' + _utilidadData.tipoTcLabel + ')' : '');
-        document.getElementById('editUtilidadPrecioWeb').textContent = 'S/ ' + precioVentaSoles.toFixed(2);
+        document.getElementById('editUtilidadPrecioWeb').value = precioVentaSoles.toFixed(2);
+    }
+
+    function recalcularDesdeBase() {
+        let nuevoPrecioBase = parseFloat(document.getElementById('editUtilidadPrecioBase').value) || 0;
+        let oldPrecioBase = parseFloat(_utilidadData.precioDolar) || 1;
+        if (oldPrecioBase === 0) oldPrecioBase = 1; // prevent division by zero
+        
+        let ratio = nuevoPrecioBase / oldPrecioBase;
+        
+        // Update visual fields
+        let tc = parseFloat(_utilidadData.tasaCambio) || 0;
+        let precioConIgv = nuevoPrecioBase * 1.18;
+        
+        document.getElementById('editUtilidadPrecioIgv').value = precioConIgv.toFixed(2);
+        document.getElementById('editUtilidadPrecioBaseSoles').value = (nuevoPrecioBase * tc).toFixed(2);
+        document.getElementById('editUtilidadPrecioIgvSoles').value = (precioConIgv * tc).toFixed(2);
+        
+        // Approximate new precioCalculado based on the ratio
+        _utilidadData.precioCalculado = parseFloat(_utilidadData.originalPrecioCalculado || _utilidadData.precioCalculado) * ratio;
+        
+        // Save original to avoid compounding floating point errors on multiple keystrokes
+        if (!_utilidadData.originalPrecioCalculado) {
+            _utilidadData.originalPrecioCalculado = _utilidadData.precioCalculado / ratio;
+        }
+
+        recalcularPreviewUtilidad();
+    }
+
+    function recalcularDesdeIgv() {
+        let nuevoPrecioIgv = parseFloat(document.getElementById('editUtilidadPrecioIgv').value) || 0;
+        let nuevoPrecioBase = nuevoPrecioIgv / 1.18;
+        
+        document.getElementById('editUtilidadPrecioBase').value = nuevoPrecioBase.toFixed(2);
+        
+        let oldPrecioBase = parseFloat(_utilidadData.precioDolar) || 1;
+        if (oldPrecioBase === 0) oldPrecioBase = 1; // prevent division by zero
+        
+        let ratio = nuevoPrecioBase / oldPrecioBase;
+        let tc = parseFloat(_utilidadData.tasaCambio) || 0;
+        
+        document.getElementById('editUtilidadPrecioBaseSoles').value = (nuevoPrecioBase * tc).toFixed(2);
+        document.getElementById('editUtilidadPrecioIgvSoles').value = (nuevoPrecioIgv * tc).toFixed(2);
+        
+        // Approximate new precioCalculado based on the ratio
+        _utilidadData.precioCalculado = parseFloat(_utilidadData.originalPrecioCalculado || _utilidadData.precioCalculado) * ratio;
+        
+        // Save original to avoid compounding floating point errors on multiple keystrokes
+        if (!_utilidadData.originalPrecioCalculado) {
+            _utilidadData.originalPrecioCalculado = _utilidadData.precioCalculado / ratio;
+        }
+
+        recalcularPreviewUtilidad();
+    }
+
+    function recalcularDesdeWeb() {
+        let precioWeb = parseFloat(document.getElementById('editUtilidadPrecioWeb').value) || 0;
+        let tc = parseFloat(_utilidadData.tasaCambio) || 1;
+        let precioCalculado = parseFloat(_utilidadData.precioCalculado) || 0;
+        
+        // Calcular precio de venta USD
+        let precioVentaUsd = precioWeb / tc;
+        
+        // Calcular la ganancia
+        let ganancia = precioVentaUsd - precioCalculado;
+        
+        document.getElementById('editUtilidadGanancia').value = ganancia.toFixed(2);
+        
+        // Solo actualizar texto USD para no causar un loop infinito con el input
+        document.getElementById('editUtilidadPrecioVentaUsd').textContent = '$' + precioVentaUsd.toFixed(2);
     }
 
     function guardarUtilidad() {
@@ -62,7 +137,8 @@
             },
             body: JSON.stringify({
                 idProducto: idProducto,
-                ganancia: ganancia
+                ganancia: ganancia,
+                precioDolar: document.getElementById('editUtilidadPrecioBase').value
             })
         })
         .then(response => response.json())

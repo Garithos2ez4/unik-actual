@@ -225,6 +225,25 @@ class ProductoController extends Controller
         $precioBaseSoles = round($producto->precioDolar * $tcUsar, 2);
         $precioIgvSoles = round($precioConIgv * $tcUsar, 2);
 
+        // Fetch último costo desde compras
+        $ultimoDetalle = \App\Models\DetalleComprobante::with('Comprobante')
+            ->where('idProducto', $idProducto)
+            ->orderBy('idDetalleComprobante', 'desc')
+            ->first();
+
+        $ultimoCosto = null;
+        if ($ultimoDetalle && $ultimoDetalle->Comprobante) {
+            // precioUnitario incluye IGV, por lo tanto el precio sin IGV es precioUnitario / 1.18
+            $costoSinIgv = $ultimoDetalle->precioUnitario / 1.18;
+            
+            // Si el comprobante fue en SOLES, lo convertimos a DOLARES con el TC actual
+            if ($ultimoDetalle->Comprobante->moneda === 'SOL') {
+                $ultimoCosto = round($costoSinIgv / $tcUsar, 2);
+            } else {
+                $ultimoCosto = round($costoSinIgv, 2);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'nombreProducto' => $producto->nombreProducto,
@@ -238,6 +257,7 @@ class ProductoController extends Controller
             'precioVentaSoles' => $precioVentaSoles,
             'tasaCambio' => $tcUsar,
             'tipoTcLabel' => $tipoTcLabel,
+            'ultimoCosto' => $ultimoCosto
         ]);
     }
 
@@ -245,7 +265,8 @@ class ProductoController extends Controller
     {
         $request->validate([
             'idProducto' => 'required|integer',
-            'ganancia' => 'required|numeric'
+            'ganancia' => 'required|numeric',
+            'precioDolar' => 'nullable|numeric'
         ]);
 
         $producto = \App\Models\Producto::find($request->idProducto);
@@ -254,6 +275,9 @@ class ProductoController extends Controller
         }
 
         $producto->gananciaExtra = $request->ganancia;
+        if ($request->has('precioDolar') && $request->precioDolar !== null) {
+            $producto->precioDolar = $request->precioDolar;
+        }
         $producto->save();
 
         return response()->json([

@@ -13,6 +13,8 @@ class DetalleProducto extends Model
         'idProducto',
         'mostrarPrecioWeb',
         'precio_pase',
+        'en_liquidacion',
+        'precio_liquidacion',
     ];
 
     protected $casts = [
@@ -20,6 +22,8 @@ class DetalleProducto extends Model
         'idProducto' => 'int',
         'mostrarPrecioWeb' => 'boolean',
         'precio_pase' => 'float',
+        'en_liquidacion' => 'boolean',
+        'precio_liquidacion' => 'float',
     ];
 
     public function Producto()

@@ -96,6 +96,7 @@
                   <option value="DISPONIBLE" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'DISPONIBLE' ? 'selected' : '' }}>DISPONIBLE</option>
                   <option value="AGOTADO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'AGOTADO' ? 'selected' : '' }}>AGOTADO</option>
                   <option value="OFERTA" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'OFERTA' ? 'selected' : '' }}>OFERTA</option>
+                  <option value="LIQUIDACION" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'LIQUIDACION' ? 'selected' : '' }}>LIQUIDACION</option>
                   <option value="EXCLUSIVO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'EXCLUSIVO' ? 'selected' : '' }}>EXCLUSIVO</option>
                   <option value="DESCONTINUADO" {{ old('estado', optional($productoCopiar)->estadoProductoWeb ?? '') == 'DESCONTINUADO' ? 'selected' : '' }}>DESCONTINUADO</option>
                 </select>

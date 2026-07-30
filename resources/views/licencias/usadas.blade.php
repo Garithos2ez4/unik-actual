@@ -240,7 +240,7 @@
 
 </div>
 <br>
-<x-Licencias.Usadas.modal-descripcion/>
+<x-licencias.usadas.modal-descripcion/>
 <script src="{{ asset('js/Licencias/licencias-usadas.js') }}"></script>
 <style>
     .pagination + div {

@@ -163,6 +163,9 @@
                             href="{{ route('productos', [encrypt(1), encrypt(1)]) }}" class="btn text-light">Productos
                             <i class="bi bi-box-fill"></i></a></li>
                     <li class="list-group-item bg-sistema-uno menu-border"><a
+                            href="{{ route('productos.liquidacion') }}" class="btn text-light">Liquidación
+                            <i class="bi bi-tags-fill"></i></a></li>
+                    <li class="list-group-item bg-sistema-uno menu-border"><a
                             href="{{ route('documentos', [now()->format('Y-m')]) }}" class="btn text-light">Registros <i
                                 class="bi bi-folder-fill"></i></a></li>
                     @break
