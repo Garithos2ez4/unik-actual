@@ -33,6 +33,8 @@
     const inputClienteId = document.getElementById('input-cliente-id');
     const inputClienteNombre = document.getElementById('input-cliente-nombre');
     const inputClienteTelefono = document.getElementById('input-cliente-telefono');
+    
+    let tipoDocumentoClienteSeleccionado = null;
 
     window.onClienteCreado = function(cliente) {
         inputClienteId.value = cliente.idCliente;
@@ -40,12 +42,16 @@
         inputClienteTelefono.value = cliente.telefono || '';
         inputSearchCliente.value = cliente.numeroDocumento;
         suggestionCliente.innerHTML = '';
+        tipoDocumentoClienteSeleccionado = cliente.idTipoDocumento;
+        toggleSeccionReceptorInterno();
     };
 
     inputSearchCliente.addEventListener('input', function() {
         inputClienteId.value = '';
         inputClienteNombre.value = '';
         inputClienteTelefono.value = '';
+        tipoDocumentoClienteSeleccionado = null;
+        toggleSeccionReceptorInterno();
 
         if (this.value.length > 2) {
             fetch(`/cliente/searchcliente?query=${this.value}`)
@@ -67,6 +73,8 @@
                             inputClienteTelefono.value = cliente.telefono || '';
                             inputSearchCliente.value = cliente.numeroDocumento;
                             suggestionCliente.innerHTML = '';
+                            tipoDocumentoClienteSeleccionado = cliente.idTipoDocumento;
+                            toggleSeccionReceptorInterno();
                             
                             // Autocompletar último envío
                             fetch(`/envios-provincias/ultimo-envio-cliente/${cliente.idCliente}`)
@@ -107,7 +115,10 @@
 
         if (data.idAgencia) {
             const selectAgencia = document.querySelector('select[name="idAgencia"]');
-            if(selectAgencia) selectAgencia.value = data.idAgencia;
+            if(selectAgencia) {
+                selectAgencia.value = data.idAgencia;
+                toggleSeccionReceptorInterno();
+            }
             
             await cargarSubAgencias();
             
@@ -381,47 +392,225 @@
         }
     }
 
+    function verificarClaveYGuardar() {
+        let claveInput = document.getElementById('input-clave');
+        let clave = claveInput ? claveInput.value.trim() : '';
+        if (clave !== '') {
+            var myModal = new bootstrap.Modal(document.getElementById('confirmSaveModal'));
+            myModal.show();
+        } else {
+            document.getElementById('form-create-envio').submit();
+        }
+    }
+
+    const chkDomicilio = document.getElementById('entrega_domicilio');
+    if (chkDomicilio) {
+        chkDomicilio.addEventListener('change', function() {
+            const labelDir = document.getElementById('label-dir');
+            if (labelDir) {
+                if (this.checked) {
+                    labelDir.innerHTML = 'Dirección Exacta (Dir) <span class="text-muted">(Opcional)</span>';
+                } else {
+                    labelDir.innerHTML = 'Dirección (Dir) <span class="text-muted">(Opcional)</span>';
+                }
+            }
+        });
+    }
+
+    function aplicarMedidasCaja() {
+        const select = document.getElementById('tipo_caja_select');
+        if (!select) return;
+        const val = select.value;
+
+        if (val === 'custom') {
+            document.getElementById('input_largo').value = '';
+            document.getElementById('input_ancho').value = '';
+            document.getElementById('input_alto').value = '';
+            document.getElementById('input_peso').value = '';
+
+            const inputs = [
+                document.getElementById('input_peso'),
+                document.getElementById('input_largo'),
+                document.getElementById('input_ancho'),
+                document.getElementById('input_alto')
+            ];
+            inputs.forEach(input => {
+                if (input) {
+                    input.readOnly = false;
+                    input.classList.remove('bg-light');
+                }
+            });
+        } else {
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption) {
+                document.getElementById('input_largo').value = selectedOption.getAttribute('data-l') || '';
+                document.getElementById('input_ancho').value = selectedOption.getAttribute('data-w') || '';
+                document.getElementById('input_alto').value = selectedOption.getAttribute('data-h') || '';
+                document.getElementById('input_peso').value = selectedOption.getAttribute('data-wt') || '';
+
+                const inputs = [
+                    document.getElementById('input_peso'),
+                    document.getElementById('input_largo'),
+                    document.getElementById('input_ancho'),
+                    document.getElementById('input_alto')
+                ];
+                inputs.forEach(input => {
+                    if (input) {
+                        input.readOnly = true;
+                        input.classList.add('bg-light');
+                    }
+                });
+            }
+        }
+    }
+
     function cargarSubAgencias() {
         const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        const idAgencia = selectAgencia ? selectAgencia.value : '';
+        const selectedOption = selectAgencia && selectAgencia.selectedIndex >= 0 ? selectAgencia.options[selectAgencia.selectedIndex] : null;
+        const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
+
+        // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
+        const seccionMedidas = document.getElementById('seccion_medidas_caja');
+        if (seccionMedidas) {
+            if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
+                seccionMedidas.classList.remove('d-none');
+                ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.disabled = false;
+                });
+                
+                const selectCaja = document.getElementById('tipo_caja_select');
+                if (selectCaja) {
+                    const options = selectCaja.querySelectorAll('option[data-agencia]');
+                    options.forEach(opt => {
+                        if (opt.getAttribute('data-agencia') == idAgencia) {
+                            opt.style.display = '';
+                        } else {
+                            opt.style.display = 'none';
+                        }
+                    });
+                    
+                    if (selectCaja.value !== 'custom') {
+                        const selectedOpt = selectCaja.options[selectCaja.selectedIndex];
+                        if (selectedOpt && selectedOpt.getAttribute('data-agencia') != idAgencia) {
+                            selectCaja.value = 'custom';
+                            aplicarMedidasCaja();
+                        }
+                    }
+                }
+            } else {
+                seccionMedidas.classList.add('d-none');
+                ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.disabled = true;
+                });
+                const selectCaja = document.getElementById('tipo_caja_select');
+                if (selectCaja) {
+                    selectCaja.value = 'custom';
+                    aplicarMedidasCaja();
+                }
+            }
+        }
+
         const selectDestino = document.getElementById('select-destino');
         const selectSubAgencia = document.getElementById('select-subagencia');
-        
-        const idAgencia = selectAgencia ? selectAgencia.value : '';
         const idDestino = selectDestino ? selectDestino.value : '';
-        
-        if (idAgencia && idDestino) {
-            selectSubAgencia.innerHTML = '<option value="">Cargando oficinas...</option>';
-            selectSubAgencia.disabled = true;
 
-            return fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
-                .then(response => response.json())
-                .then(data => {
-                    const containerSub = document.getElementById('container-subagencia');
-                    if (data.length > 0) {
-                        if (containerSub) containerSub.style.display = 'block';
-                        data.sort((a, b) => a.nombre_oficina.localeCompare(b.nombre_oficina));
-
-                        selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
-                        data.forEach(sub => {
-                            const partes = sub.nombre_oficina.split(' / ');
-                            const nombreTerminal = partes[partes.length - 1];
-                            selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${nombreTerminal} (${sub.direccion})</option>`;
-                        });
-                        selectSubAgencia.disabled = false;
-                    } else {
-                        if (containerSub) containerSub.style.display = 'none';
-                        selectSubAgencia.innerHTML = '<option value="">Sin oficinas registradas...</option>';
-                        selectSubAgencia.disabled = true;
-                    }
-                })
-                .catch(error => {
-                    console.error("Error cargando oficinas:", error);
-                    selectSubAgencia.innerHTML = '<option value="">Error al cargar oficinas</option>';
-                });
-        } else {
-            selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
-            selectSubAgencia.disabled = true;
+        if (!idAgencia || !idDestino) {
+            if (selectSubAgencia) {
+                selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
+                selectSubAgencia.disabled = true;
+            }
             return Promise.resolve();
         }
+
+        return fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
+            .then(response => response.json())
+            .then(data => {
+                const containerSub = document.getElementById('container-subagencia');
+                if (data.length > 0) {
+                    if (containerSub) containerSub.style.display = 'block';
+                    data.sort((a, b) => a.nombre_oficina.localeCompare(b.nombre_oficina));
+
+                    selectSubAgencia.innerHTML = '<option value="">Seleccione oficina...</option>';
+                    data.forEach(sub => {
+                        const partes = sub.nombre_oficina.split(' / ');
+                        const nombreTerminal = partes[partes.length - 1];
+                        selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${nombreTerminal} (${sub.direccion})</option>`;
+                    });
+                    selectSubAgencia.disabled = false;
+                } else {
+                    if (containerSub) containerSub.style.display = 'none';
+                    selectSubAgencia.innerHTML = '<option value="">Sin oficinas registradas...</option>';
+                    selectSubAgencia.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error("Error cargando oficinas:", error);
+                selectSubAgencia.innerHTML = '<option value="">Error al cargar oficinas</option>';
+            });
+    }
+
+    function sincronizarAgencia() {
+        Swal.fire({
+            title: 'Sincronización Masiva',
+            text: 'Descargando y mapeando sucursales oficiales de TODAS las agencias (Olva, Shalom, Marvisur, Emtrafesa, Espinoza, Flores). Esto puede tardar unos minutos...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch("{{ url('/envios-provincias/sync-all') }}")
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sincronización Exitosa',
+                        text: data.message
+                    });
+                    if (typeof cargarSubAgencias === 'function') {
+                        cargarSubAgencias();
+                    }
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Error', 'Hubo un problema de red al intentar sincronizar.', 'error');
+            });
+    }
+
+    // ─── Lógica para Persona que Recibe (Shalom + RUC) ───
+    function toggleSeccionReceptorInterno() {
+        const seccionReceptor = document.getElementById('seccion-receptor-interno');
+        if (!seccionReceptor) return;
+
+        const selectAgencia = document.querySelector('select[name="idAgencia"]');
+        const esShalom = selectAgencia && selectAgencia.value === '1';
+        
+        // Asumiendo que 3 es el ID de RUC
+        const esRuc = tipoDocumentoClienteSeleccionado == 3;
+
+        if (esShalom && esRuc) {
+            seccionReceptor.classList.remove('d-none');
+            document.getElementById('receptor_nombre').setAttribute('required', 'required');
+            document.getElementById('receptor_dni').setAttribute('required', 'required');
+        } else {
+            seccionReceptor.classList.add('d-none');
+            document.getElementById('receptor_nombre').removeAttribute('required');
+            document.getElementById('receptor_dni').removeAttribute('required');
+            document.getElementById('receptor_nombre').value = '';
+            document.getElementById('receptor_dni').value = '';
+            document.getElementById('receptor_telefono').value = '';
+        }
+    }
+
+    // Escuchar cambio de agencia
+    const selAgencia = document.querySelector('select[name="idAgencia"]');
+    if(selAgencia) {
+        selAgencia.addEventListener('change', toggleSeccionReceptorInterno);
     }
 </script>

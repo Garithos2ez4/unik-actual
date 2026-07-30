@@ -103,7 +103,7 @@
                         </div>
                         <div class="d-none d-lg-block col-md-1 text-center d-flex justify-content-center align-items-center">
                             <div class="form-check form-switch m-0 p-0 d-flex flex-column align-items-center">
-                                <input class="form-check-input toggle-status-btn m-0 mb-1" type="checkbox" role="switch" id="switch-status-{{$pro->idProducto}}" data-id="{{$pro->idProducto}}" {{ $pro->estadoProductoWeb !== 'AGOTADO' ? 'checked' : '' }} style="margin-left: 0 !important;">
+                                <input class="form-check-input toggle-status-btn m-0 mb-1" type="checkbox" role="switch" id="switch-status-{{$pro->idProducto}}" data-id="{{$pro->idProducto}}" {{ !in_array($pro->estadoProductoWeb, ['AGOTADO', 'DESCONTINUADO']) ? 'checked' : '' }} style="margin-left: 0 !important;">
                                 <label class="form-check-label toggle-status-label-{{$pro->idProducto}} small fw-bold" for="switch-status-{{$pro->idProducto}}" style="font-size: 0.70rem; cursor: pointer;">
                                     @if($pro->estadoProductoWeb === 'AGOTADO')
                                         Agotado

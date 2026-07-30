@@ -97,7 +97,8 @@ class FormularioPublicoController extends Controller
             'idTipoDocumento' => 'required|integer',
             'numeroDocumento' => 'required|string|max:20',
             'nombre'          => 'required|string|max:100',
-            'apellidoPaterno' => 'required|string|max:100',
+            'apellidoPaterno' => 'required_unless:idTipoDocumento,3|nullable|string|max:100',
+            'apellidoMaterno' => 'nullable|string|max:100',
             'telefono'        => 'required|string|max:20',
             'idDestino'       => 'required|integer',
             'idAgencia'       => 'required|integer',
@@ -144,13 +145,23 @@ class FormularioPublicoController extends Controller
         ]);
 
         // Guardar dirección y referencia en detalle
-        EnvioProvinciaDetalle::create([
+        $detalle = EnvioProvinciaDetalle::create([
             'idEnvioProvincia' => $envio->idEnvioProvincia,
             'entrega_domicilio' => $request->has('entrega_domicilio') ? 1 : 0,
             'dir'    => $request->dir ?? '',
             'ref'    => $request->ref ?? '',
             'origen' => 'FORMULARIO_PUBLICO',
         ]);
+
+        // Guardar datos del receptor si se proporcionaron (Shalom + RUC)
+        if ($request->has('receptor') && !empty($request->input('receptor.nombre')) && !empty($request->input('receptor.dni'))) {
+            \App\Models\EnvioProvinciaReceptor::create([
+                'id_envio_provincia_detalle' => $detalle->idEnvioProvinciaDetalle,
+                'nombre'   => $request->input('receptor.nombre'),
+                'dni'      => $request->input('receptor.dni'),
+                'telefono' => $request->input('receptor.telefono'),
+            ]);
+        }
 
         // Marcar solicitud como procesada
         $solicitud->update(['estado' => 'PROCESADO']);

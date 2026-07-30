@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ProductoPackController;
+use App\Http\Controllers\ProductoFalabellaController;
+use App\Http\Controllers\ProductoPrecioController;
+use App\Http\Controllers\ProductoHerramientaController;
 use App\Http\Controllers\LiquidacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\IngresoController;
@@ -122,16 +126,16 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/productos/liquidacion/agregar', [LiquidacionController::class, 'agregarLiquidacion'])->name('productos.liquidacion.agregar');
     Route::post('/productos/liquidacion/quitar', [LiquidacionController::class, 'quitarLiquidacion'])->name('productos.liquidacion.quitar');
     Route::post('/productos/toggle-status', [ProductoController::class, 'toggleStatus'])->name('producto.toggleStatus');
-    Route::get('/productos/get-utilidad/{id}', [ProductoController::class, 'getUtilidad'])->name('producto.getUtilidad');
-    Route::post('/productos/update-utilidad', [ProductoController::class, 'updateUtilidad'])->name('producto.updateUtilidad');
+    Route::get('/productos/get-utilidad/{id}', [ProductoPrecioController::class, 'getUtilidad'])->name('producto.getUtilidad');
+    Route::post('/productos/update-utilidad', [ProductoPrecioController::class, 'updateUtilidad'])->name('producto.updateUtilidad');
     Route::get('/productos/searchmodelproduct', [ProductoController::class, 'searchModelProduct'])->name('searchmodelproduct');
-    Route::get('/producto/calculate', [ProductoController::class, 'calculate'])->name('calculateproducto');
-    Route::get('/productos/historial-precio-tienda/{id}', [ProductoController::class, 'obtenerHistorialPrecioTienda']);
+    Route::get('/producto/calculate', [ProductoPrecioController::class, 'calculate'])->name('calculateproducto');
+    Route::get('/productos/historial-precio-tienda/{id}', [ProductoPrecioController::class, 'obtenerHistorialPrecioTienda']);
     Route::get('/productos/{cat}/{grup}', [ProductoController::class, 'index'])->name('productos');
     Route::get('/producto/nuevoproducto', [ProductoController::class, 'create'])->name('createproducto');
     Route::get('/producto/especificaciones/{idProducto}', [ProductoController::class, 'details'])->name('details');
     Route::get('/producto/{id}/ubicacion-html', [ProductoController::class, 'obtenerUbicacionHtml']);
-    Route::get('/producto/{id}/historial-precios-html', [ProductoController::class, 'obtenerHistorialPreciosHtml']);
+    Route::get('/producto/{id}/historial-precios-html', [ProductoPrecioController::class, 'obtenerHistorialPreciosHtml']);
     Route::get('/producto/{idproducto}', [ProductoController::class, 'update'])->name('producto');
     Route::post('/producto/createdetails', [ProductoController::class, 'createDetails'])->name('createdetails');
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
@@ -139,23 +143,23 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/producto/deletedetail/{idProducto}', [ProductoController::class, 'deleteDetail'])->name('deletedetail');
 
     // Rutas para configuración de packs
-    Route::get('/producto/{idproducto}/pack-components', [ProductoController::class, 'getPackComponents'])->name('producto.pack.components');
-    Route::post('/producto/{idproducto}/pack-components', [ProductoController::class, 'addPackComponent'])->name('producto.pack.add');
-    Route::put('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'updatePackComponent'])->name('producto.pack.update');
-    Route::delete('/producto/{idproducto}/pack-components/{idHijo}', [ProductoController::class, 'removePackComponent'])->name('producto.pack.remove');
+    Route::get('/producto/{idproducto}/pack-components', [ProductoPackController::class, 'getPackComponents'])->name('producto.pack.components');
+    Route::post('/producto/{idproducto}/pack-components', [ProductoPackController::class, 'addPackComponent'])->name('producto.pack.add');
+    Route::put('/producto/{idproducto}/pack-components/{idHijo}', [ProductoPackController::class, 'updatePackComponent'])->name('producto.pack.update');
+    Route::delete('/producto/{idproducto}/pack-components/{idHijo}', [ProductoPackController::class, 'removePackComponent'])->name('producto.pack.remove');
 
     // Rutas para Herramientas de Servicio (Reseteadores)
-    Route::get('/producto/{idproducto}/series-herramienta', [ProductoController::class, 'getSeriesHerramienta'])->name('producto.series.herramienta');
-    Route::post('/producto/toggle-herramienta', [ProductoController::class, 'toggleHerramienta'])->name('producto.toggle.herramienta');
+    Route::get('/producto/{idproducto}/series-herramienta', [ProductoHerramientaController::class, 'getSeriesHerramienta'])->name('producto.series.herramienta');
+    Route::post('/producto/toggle-herramienta', [ProductoHerramientaController::class, 'toggleHerramienta'])->name('producto.toggle.herramienta');
 
     Route::post('/producto/creargrupo-rapido', [ProductoController::class, 'quickCreateGrupo'])->name('quickcreategrupo');
 
     // Template Falabella pre-llenado
-    Route::get('/producto/{idProducto}/falabella-template', [ProductoController::class, 'descargarTemplateFalabella'])->name('producto.falabella.template');
-    Route::get('/producto/{idProducto}/falabella-template-express', [ProductoController::class, 'descargarTemplateFalabellaExpress'])->name('producto.falabella.template.express');
+    Route::get('/producto/{idProducto}/falabella-template', [ProductoFalabellaController::class, 'descargarTemplateFalabella'])->name('producto.falabella.template');
+    Route::get('/producto/{idProducto}/falabella-template-express', [ProductoFalabellaController::class, 'descargarTemplateFalabellaExpress'])->name('producto.falabella.template.express');
     // Sugerencias de títulos (AJAX) y descarga con títulos personalizados (POST)
-    Route::get('/producto/{idProducto}/falabella-titulos-sugeridos', [ProductoController::class, 'sugerirTitulosFalabella'])->name('producto.falabella.titulos');
-    Route::post('/producto/{idProducto}/falabella-template-express', [ProductoController::class, 'descargarTemplateFalabellaExpressPost'])->name('producto.falabella.template.express.post');
+    Route::get('/producto/{idProducto}/falabella-titulos-sugeridos', [ProductoFalabellaController::class, 'sugerirTitulosFalabella'])->name('producto.falabella.titulos');
+    Route::post('/producto/{idProducto}/falabella-template-express', [ProductoFalabellaController::class, 'descargarTemplateFalabellaExpressPost'])->name('producto.falabella.template.express.post');
 
 
     Route::get('/traslado', [TrasladoController::class, 'index'])->name('traslados');

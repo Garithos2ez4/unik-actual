@@ -141,6 +141,52 @@
             });
     }
 
+    // ─── Mostrar/Ocultar sección Persona que Recibe ───────────
+    function toggleSeccionReceptor() {
+        const seccion = document.getElementById('seccion-receptor');
+        const selectAgencia = document.getElementById('select-agencia');
+        const selectDoc = document.getElementById('idTipoDocumento');
+        
+        // Shalom = idAgencia 1, RUC = idTipoDocumento 3
+        const esShalom = selectAgencia && selectAgencia.value === '1';
+        const esRuc = selectDoc && selectDoc.value === '3';
+        
+        // 1. Mostrar/Ocultar sección receptor (Shalom + RUC)
+        if (esShalom && esRuc) {
+            seccion.style.display = 'block';
+        } else {
+            seccion.style.display = 'none';
+            // Limpiar campos al ocultar
+            document.getElementById('receptor_nombre').value = '';
+            document.getElementById('receptor_dni').value = '';
+            document.getElementById('receptor_telefono').value = '';
+        }
+
+        // 2. Mostrar/Ocultar Apellidos y cambiar label Nombres
+        const divPaterno = document.getElementById('div-apellido-paterno');
+        const divMaterno = document.getElementById('div-apellido-materno');
+        const labelNombre = document.getElementById('label-nombre');
+        
+        if (esRuc) {
+            if (divPaterno) divPaterno.style.display = 'none';
+            if (divMaterno) divMaterno.style.display = 'none';
+            if (labelNombre) labelNombre.innerHTML = 'Razón Social <span class="required-star">*</span>';
+            // Opcionalmente limpiar apellidos
+            document.getElementById('apellidoPaterno').value = '';
+            document.getElementById('apellidoPaterno').removeAttribute('required');
+            document.getElementById('apellidoMaterno').value = '';
+        } else {
+            if (divPaterno) divPaterno.style.display = 'block';
+            if (divMaterno) divMaterno.style.display = 'block';
+            if (labelNombre) labelNombre.innerHTML = 'Nombres <span class="required-star">*</span>';
+            document.getElementById('apellidoPaterno').setAttribute('required', 'required');
+        }
+    }
+
+    // Escuchar cambios en agencia y tipo de documento
+    document.getElementById('select-agencia').addEventListener('change', toggleSeccionReceptor);
+    document.getElementById('idTipoDocumento').addEventListener('change', toggleSeccionReceptor);
+
     // ─── Autocompletar Cliente por Documento ───────────────────
     document.getElementById('numeroDocumento').addEventListener('input', function(e) {
         let val = e.target.value.trim();
@@ -327,6 +373,29 @@
                 confirmButtonColor: '#00b1b9'
             });
             return;
+        }
+
+        // Validar campos de receptor si la sección está visible
+        const seccionReceptor = document.getElementById('seccion-receptor');
+        if (seccionReceptor && seccionReceptor.style.display !== 'none') {
+            const receptorNombre = document.getElementById('receptor_nombre').value.trim();
+            const receptorDni = document.getElementById('receptor_dni').value.trim();
+            let faltantesReceptor = [];
+            if (!receptorNombre || receptorNombre.length < 3) faltantesReceptor.push('Nombre del receptor (mín. 3 letras)');
+            if (!receptorDni || receptorDni.length !== 8) faltantesReceptor.push('DNI del receptor (8 dígitos)');
+            
+            if (faltantesReceptor.length > 0) {
+                e.preventDefault();
+                if (!receptorNombre || receptorNombre.length < 3) document.getElementById('receptor_nombre').style.borderColor = '#ef4444';
+                if (!receptorDni || receptorDni.length !== 8) document.getElementById('receptor_dni').style.borderColor = '#ef4444';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Datos del receptor incompletos',
+                    html: 'Shalom requiere los datos de quien recibirá el paquete:<br><b>' + faltantesReceptor.join(', ') + '</b>',
+                    confirmButtonColor: '#00b1b9'
+                });
+                return;
+            }
         }
 
         const telefonoVal = document.getElementById('telefono').value.trim();

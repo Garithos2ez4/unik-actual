@@ -143,4 +143,35 @@ class CalculadoraService implements CalculadoraServiceInterface
         $calculadora = $this->calcRepository->findById();
         return $calculadora ? $calculadora->tasaCambio : null;
     }
+    public function getGruposCostoExcepcion(): string
+    {
+        return "46, 48, 120, 129, 130, 160, 161";
+    }
+
+    public function getCostoVentaExpr(string $tcInner, string $tcOuter = null, string $aliasDetalleVenta = 'DetalleVenta', string $aliasProducto = 'Producto'): string
+    {
+        $tcOuter = $tcOuter ?? $tcInner;
+        $gruposExcepcion = $this->getGruposCostoExcepcion();
+
+        return "COALESCE(
+            (SELECT CASE 
+                    WHEN rp_inner.es_herramienta = 1 THEN 0
+                    WHEN dc_inner.precioUnitario <= 0 THEN NULL
+                    WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * {$tcInner} 
+                    ELSE dc_inner.precioUnitario 
+                END
+             FROM EgresoProducto ep_inner
+             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
+             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
+             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
+             WHERE ep_inner.idEgreso = {$aliasDetalleVenta}.idEgreso 
+               AND (
+                   dc_inner.precioUnitario > 1 
+                   OR rp_inner.es_herramienta = 1 
+                   OR (SELECT idGrupo FROM Producto p WHERE p.idProducto = dc_inner.idProducto) IN ({$gruposExcepcion})
+               )
+             LIMIT 1),
+            COALESCE({$aliasProducto}.precioDolar, 0) * {$tcOuter} * 1.18
+        )";
+    }
 }

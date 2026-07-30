@@ -191,6 +191,31 @@
                                 <input type="text" name="ref" class="form-control" maxlength="100" placeholder="Referencia del lugar">
                             </div>
 
+                            {{-- Persona que Recibe (Shalom + RUC) --}}
+                            <div class="col-md-12 d-none" id="seccion-receptor-interno">
+                                <div class="card border-info shadow-sm mt-2">
+                                    <div class="card-header bg-info text-white py-2">
+                                        <h6 class="mb-0"><i class="bi bi-person-check-fill"></i> Persona que Recibe <small>(Requerido por Shalom para clientes con RUC)</small></h6>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <label class="form-label mb-0 fw-bold" style="font-size: 0.85rem">Nombre completo del receptor</label>
+                                                <input type="text" name="receptor[nombre]" id="receptor_nombre" class="form-control form-control-sm" placeholder="Ej: Juan Pérez García" maxlength="150" minlength="3">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label mb-0 fw-bold" style="font-size: 0.85rem">DNI del receptor</label>
+                                                <input type="text" name="receptor[dni]" id="receptor_dni" class="form-control form-control-sm" placeholder="72345678" maxlength="8" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label mb-0 text-muted" style="font-size: 0.85rem">Teléfono receptor</label>
+                                                <input type="tel" name="receptor[telefono]" id="receptor_telefono" class="form-control form-control-sm" placeholder="987654321" maxlength="9" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <hr class="my-4">
                             <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-file-earmark-text-fill"></i> 2. Información de la Guía</h6>
 
@@ -289,173 +314,6 @@
         </div>
     </div>
 </div>
-
-<script>
-    function verificarClaveYGuardar() {
-        let clave = document.getElementById('input-clave').value.trim();
-        if (clave !== '') {
-            // Si hay clave, mostramos el modal de advertencia
-            var myModal = new bootstrap.Modal(document.getElementById('confirmSaveModal'));
-            myModal.show();
-        } else {
-            // Si no hay clave, guardamos directamente
-            document.getElementById('form-create-envio').submit();
-        }
-    }
-
-    document.getElementById('entrega_domicilio').addEventListener('change', function() {
-        const labelDir = document.getElementById('label-dir');
-        if (this.checked) {
-            labelDir.innerHTML = 'Dirección Exacta (Dir) <span class="text-muted">(Opcional)</span>';
-        } else {
-            labelDir.innerHTML = 'Dirección (Dir) <span class="text-muted">(Opcional)</span>';
-        }
-    });
-
-    function aplicarMedidasCaja() {
-        const select = document.getElementById('tipo_caja_select');
-        const val = select.value;
-
-        if (val === 'custom') {
-            document.getElementById('input_largo').value = '';
-            document.getElementById('input_ancho').value = '';
-            document.getElementById('input_alto').value = '';
-            document.getElementById('input_peso').value = '';
-
-            const inputs = [
-                document.getElementById('input_peso'),
-                document.getElementById('input_largo'),
-                document.getElementById('input_ancho'),
-                document.getElementById('input_alto')
-            ];
-            inputs.forEach(input => {
-                input.readOnly = false;
-                input.classList.remove('bg-light');
-            });
-        } else {
-            const selectedOption = select.options[select.selectedIndex];
-            document.getElementById('input_largo').value = selectedOption.getAttribute('data-l');
-            document.getElementById('input_ancho').value = selectedOption.getAttribute('data-w');
-            document.getElementById('input_alto').value = selectedOption.getAttribute('data-h');
-            document.getElementById('input_peso').value = selectedOption.getAttribute('data-wt');
-
-            const inputs = [
-                document.getElementById('input_peso'),
-                document.getElementById('input_largo'),
-                document.getElementById('input_ancho'),
-                document.getElementById('input_alto')
-            ];
-            inputs.forEach(input => {
-                input.readOnly = true;
-                input.classList.add('bg-light');
-            });
-        }
-    }
-
-    function cargarSubAgencias() {
-        const selectAgencia = document.querySelector('select[name="idAgencia"]');
-        const idAgencia = selectAgencia.value;
-        const selectedOption = selectAgencia.options[selectAgencia.selectedIndex];
-        const nombreAgencia = selectedOption ? selectedOption.text.trim().toUpperCase() : '';
-
-        // Mostrar/Ocultar seccion de medidas si es Shalom u Olva
-        if (nombreAgencia === 'SHALOM' || nombreAgencia === 'OLVA') {
-            document.getElementById('seccion_medidas_caja').classList.remove('d-none');
-            // Rehabilitar los inputs al mostrar la sección
-            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.disabled = false;
-            });
-            
-            // Filtrar opciones del select por idAgencia
-            const selectCaja = document.getElementById('tipo_caja_select');
-            const options = selectCaja.querySelectorAll('option[data-agencia]');
-            
-            options.forEach(opt => {
-                if (opt.getAttribute('data-agencia') == idAgencia) {
-                    opt.style.display = ''; // Mostrar
-                } else {
-                    opt.style.display = 'none'; // Ocultar
-                }
-            });
-            
-            // Si la opción seleccionada no pertenece a la agencia actual y no es 'custom', resetear a custom
-            if (selectCaja.value !== 'custom') {
-                const selectedOpt = selectCaja.options[selectCaja.selectedIndex];
-                if (selectedOpt && selectedOpt.getAttribute('data-agencia') != idAgencia) {
-                    selectCaja.value = 'custom';
-                    aplicarMedidasCaja();
-                }
-            }
-        } else {
-            document.getElementById('seccion_medidas_caja').classList.add('d-none');
-            // Deshabilitar los inputs para que no bloqueen la validación del formulario
-            ['input_largo', 'input_ancho', 'input_alto', 'input_peso'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.disabled = true;
-            });
-            // Limpiar valores
-            document.getElementById('tipo_caja_select').value = 'custom';
-            aplicarMedidasCaja();
-        }
-
-        const idDestino = document.querySelector('select[name="idDestino"]').value;
-        const selectSubAgencia = document.getElementById('select-subagencia');
-
-        if (!idAgencia || !idDestino) {
-            selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
-            selectSubAgencia.disabled = true;
-            return;
-        }
-
-        fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
-            .then(response => response.json())
-            .then(data => {
-                let html = '<option value="">Seleccione oficina...</option>';
-                data.forEach(sub => {
-                    const partes = sub.nombre_oficina.split(' / ');
-                    const nombreTerminal = partes[partes.length - 1];
-                    html += `<option value="${sub.idSubAgencia}">${nombreTerminal} - ${sub.direccion}</option>`;
-                });
-                selectSubAgencia.innerHTML = html;
-                selectSubAgencia.disabled = false;
-            })
-            .catch(error => {
-                console.error("Error al cargar subagencias: ", error);
-            });
-    }
-
-    function sincronizarAgencia() {
-        Swal.fire({
-            title: 'Sincronización Masiva',
-            text: 'Descargando y mapeando sucursales oficiales de TODAS las agencias (Olva, Shalom, Marvisur, Emtrafesa, Espinoza, Flores). Esto puede tardar unos minutos...',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-
-        fetch("{{ url('/envios-provincias/sync-all') }}")
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Sincronización Exitosa',
-                        text: data.message
-                    });
-                    if (typeof cargarSubAgencias === 'function') {
-                        cargarSubAgencias(); // Recargar el select automáticamente
-                    }
-                } else {
-                    Swal.fire('Error', data.message, 'error');
-                }
-            })
-            .catch(err => {
-                Swal.fire('Error', 'Hubo un problema de red al intentar sincronizar.', 'error');
-            });
-    }
-</script>
 
 @include('envios.logic.cotizador-shalom')
 @include('envios.logic.restricciones-shalom')

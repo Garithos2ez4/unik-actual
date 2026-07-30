@@ -53,16 +53,16 @@
                 </div>
 
                 <div class="col-12 col-sm-6">
-                    <label class="form-label">Nombres <span class="required-star">*</span></label>
+                    <label class="form-label" id="label-nombre">Nombres <span class="required-star">*</span></label>
                     <input type="text" name="nombre" id="nombre" class="form-control" placeholder="Tus nombres" required maxlength="100">
                 </div>
 
-                <div class="col-12 col-sm-6">
+                <div class="col-12 col-sm-6" id="div-apellido-paterno">
                     <label class="form-label">Apellido Paterno <span class="required-star">*</span></label>
                     <input type="text" name="apellidoPaterno" id="apellidoPaterno" class="form-control" placeholder="Apellido paterno" required maxlength="100">
                 </div>
 
-                <div class="col-12 col-sm-6">
+                <div class="col-12 col-sm-6" id="div-apellido-materno">
                     <label class="form-label">Apellido Materno</label>
                     <input type="text" name="apellidoMaterno" id="apellidoMaterno" class="form-control" placeholder="Apellido materno" maxlength="100">
                 </div>
@@ -146,6 +146,31 @@
                 <div class="col-12">
                     <label class="form-label">Referencia</label>
                     <input type="text" name="ref" class="form-control" placeholder="Ej: Cerca al parque central" maxlength="100">
+                </div>
+            </div>
+
+            {{-- ═══════ SECCIÓN 4: PERSONA QUE RECIBE (Shalom + RUC) ═══════ --}}
+            <div id="seccion-receptor" style="display: none;">
+                <div class="section-title mt-4">
+                    <i class="bi bi-person-check-fill"></i> Persona que Recibe
+                    <small class="d-block text-muted mt-1" style="font-size: 0.82rem;">Shalom requiere datos de una persona natural con DNI para retirar el paquete</small>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Nombre completo del receptor <span class="required-star">*</span></label>
+                        <input type="text" name="receptor[nombre]" id="receptor_nombre" class="form-control" placeholder="Ej: Juan Pérez García" maxlength="150" minlength="3">
+                    </div>
+
+                    <div class="col-12 col-sm-3">
+                        <label class="form-label">DNI del receptor <span class="required-star">*</span></label>
+                        <input type="text" name="receptor[dni]" id="receptor_dni" class="form-control" placeholder="Ej: 72345678" maxlength="8" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+                    </div>
+
+                    <div class="col-12 col-sm-3">
+                        <label class="form-label">Teléfono <span class="text-muted">(Opcional)</span></label>
+                        <input type="tel" name="receptor[telefono]" id="receptor_telefono" class="form-control" placeholder="987654321" maxlength="9" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
+                    </div>
                 </div>
             </div>
 

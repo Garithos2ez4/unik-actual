@@ -78,36 +78,20 @@ class AnalyticsFallabellaController extends Controller
 
         $tc = $this->calculadoraService->getTasaCambio();
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
+        $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
         $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
 
-        $costoVentaExpr = "COALESCE(
-            (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
-             FROM EgresoProducto ep_inner
-             INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
-             INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
-             INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-             WHERE ep_inner.idEgreso = DetalleVenta.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
-             LIMIT 1),
-            COALESCE(Producto.precioDolar, 0) * $tc * 1.18
-        )";
+        $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
         $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 WHEN GrupoProducto.idGrupoProducto IN (155, 156, 157, 158, 159, 160, 169) THEN 0.15 ELSE 0.10 END)
             ELSE 0 END";
 
+        $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
         $costosComponentesSub = "COALESCE((SELECT SUM(
-            COALESCE(
-                (SELECT CASE WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * $subqueryTipoCambioCosto ELSE dc_inner.precioUnitario END
-                 FROM EgresoProducto ep_inner
-                 INNER JOIN RegistroProducto rp_inner ON rp_inner.idRegistro = ep_inner.idRegistro
-                 INNER JOIN DetalleComprobante dc_inner ON dc_inner.idDetalleComprobante = rp_inner.idDetalleComprobante
-                 INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
-                 WHERE ep_inner.idEgreso = dv_comp.idEgreso AND (dc_inner.precioUnitario > 1 OR rp_inner.es_herramienta = 1)
-                 LIMIT 1),
-                COALESCE(p_comp.precioDolar, 0) * $tc * 1.18
-            ) * dv_comp.cantidad
+            ({$costosComponentesSubInner}) * dv_comp.cantidad
         )
         FROM DetalleVenta dv_comp
         LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto

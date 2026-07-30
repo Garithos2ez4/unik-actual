@@ -10,18 +10,6 @@
                 </div>
                 <div class="modal-body">
                     <div class="row text-start">
-                        <div class="col-12">
-                            <label class="form-label client-name">Nombres:</label>
-                            <input type="text" name="nombre" placeholder="Persona o Empresa" maxlength="50" class="form-control" required>
-                        </div>
-                        <div class="col-6 client-apel-patern">
-                            <label class="form-label">Apellido Paterno:</label>
-                            <input type="text" name="apepaterno" placeholder="Garcia" maxlength="50" class="form-control">
-                        </div>
-                        <div class="col-6 client-apel-matern">
-                            <label class="form-label">Apellido Materno:</label>
-                            <input type="text" name="apematerno" placeholder="Tello" maxlength="50" class="form-control">
-                        </div>
                         <div class="col-6">
                             <label class="form-label">Documento:</label>
                             <select name="tipodoc" class="form-select" onchange="changeTipeDoc(this)" required>
@@ -33,6 +21,18 @@
                         <div class="col-6">
                             <label class="form-label client-document">DNI:</label>
                             <input type="text" name="numerodoc" placeholder="88888888" maxlength="11" class="form-control" required pattern="\d+" title="solo numeros permitidos" oninput="validateNumericInput(this)" >
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label client-name">Nombres:</label>
+                            <input type="text" name="nombre" placeholder="Persona o Empresa" maxlength="50" class="form-control" required>
+                        </div>
+                        <div class="col-6 client-apel-patern">
+                            <label class="form-label">Apellido Paterno:</label>
+                            <input type="text" name="apepaterno" placeholder="Garcia" maxlength="50" class="form-control">
+                        </div>
+                        <div class="col-6 client-apel-matern">
+                            <label class="form-label">Apellido Materno:</label>
+                            <input type="text" name="apematerno" placeholder="Tello" maxlength="50" class="form-control">
                         </div>
                         <div class="col-6">
                             <label class="form-label">Telefono:</label>
@@ -54,3 +54,16 @@
     </div>
 </form>
 @include('envios.logic.modal_new_cliente')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('nuevoClienteModal');
+        if (modalEl) {
+            modalEl.addEventListener('show.bs.modal', function (event) {
+                const selectDoc = modalEl.querySelector('select[name="tipodoc"]');
+                if (selectDoc) {
+                    changeTipeDoc(selectDoc);
+                }
+            });
+        }
+    });
+</script>

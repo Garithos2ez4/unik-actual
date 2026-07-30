@@ -21,4 +21,9 @@ class EnvioProvinciaDetalle extends Model
     {
         return $this->belongsTo(EnvioProvincia::class, 'idEnvioProvincia', 'idEnvioProvincia');
     }
+
+    public function Receptor()
+    {
+        return $this->hasOne(EnvioProvinciaReceptor::class, 'id_envio_provincia_detalle', 'idEnvioProvinciaDetalle');
+    }
 }

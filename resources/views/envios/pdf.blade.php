@@ -610,8 +610,17 @@ return $iniciales . '.' . $ultima;
                     <div class="destinatario">
                         <div class="dest-title">Destinatario:</div>
 
+                        @php
+                            $receptor = optional($envio->Detalle)->Receptor;
+                            $hasReceptor = !empty($receptor);
+                        @endphp
+
                         <div class="d-line-group">
-                            <div class="d-value" style="font-size: 22px;">{{ $envio->Cliente->nombre ?? '' }} {{ $envio->Cliente->apellidoPaterno ?? '' }} {{ $envio->Cliente->apellidoMaterno ?? '' }}</div>
+                            @if($hasReceptor)
+                                <div class="d-value" style="font-size: 22px;">{{ $receptor->nombre }}</div>
+                            @else
+                                <div class="d-value" style="font-size: 22px;">{{ $envio->Cliente->nombre ?? '' }} {{ $envio->Cliente->apellidoPaterno ?? '' }} {{ $envio->Cliente->apellidoMaterno ?? '' }}</div>
+                            @endif
                         </div>
 
                         <div class="d-line-group">
@@ -641,9 +650,17 @@ return $iniciales . '.' . $ultima;
 
                         <div class="d-line-group">
                             <div class="d-label">Cel.:</div>
-                            <div class="d-value" style="flex: 1;">{{ $envio->Cliente->telefono ?? '' }}</div>
+                            @if($hasReceptor && !empty($receptor->telefono))
+                                <div class="d-value" style="flex: 1;">{{ $receptor->telefono }}</div>
+                            @else
+                                <div class="d-value" style="flex: 1;">{{ $envio->Cliente->telefono ?? '' }}</div>
+                            @endif
                             <div class="d-label" style="margin-left: 10px;">DNI/RUC:</div>
-                            <div class="d-value" style="flex: 1;">{{ $envio->Cliente->numeroDocumento ?? '' }}</div>
+                            @if($hasReceptor)
+                                <div class="d-value" style="flex: 1;">{{ $receptor->dni }}</div>
+                            @else
+                                <div class="d-value" style="flex: 1;">{{ $envio->Cliente->numeroDocumento ?? '' }}</div>
+                            @endif
                         </div>
                     </div>
 
