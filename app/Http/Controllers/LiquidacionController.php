@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Producto;
 use App\Models\DetalleProducto;
+use App\Models\Liquidacion;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 
@@ -31,13 +32,10 @@ class LiquidacionController extends Controller
             ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
             ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
             ->join('IngresoProducto', 'IngresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-            ->leftJoin('DetalleProducto', 'DetalleProducto.idProducto', '=', 'Producto.idProducto')
+            ->leftJoin('Liquidacion', 'Liquidacion.idProducto', '=', 'Producto.idProducto')
             ->where('RegistroProducto.estado', 'NUEVO')
             ->where('IngresoProducto.fechaIngreso', '<=', now()->subYear())
-            ->where(function ($q) {
-                $q->where('DetalleProducto.en_liquidacion', false)
-                  ->orWhereNull('DetalleProducto.en_liquidacion');
-            })
+            ->whereNull('Liquidacion.idLiquidacion')
             ->selectRaw('(SELECT SUM(stock) FROM Inventario WHERE Inventario.idProducto = Producto.idProducto) as stock_estancado')
             ->selectRaw('MIN(IngresoProducto.fechaIngreso) as fecha_mas_antigua')
             ->groupBy(
@@ -58,10 +56,9 @@ class LiquidacionController extends Controller
                 'Producto.imagenProducto1',
                 'Producto.precioDolar',
                 'Producto.gananciaExtra',
-                'DetalleProducto.precio_liquidacion'
+                'Liquidacion.precio_liquidacion'
             )
-            ->join('DetalleProducto', 'DetalleProducto.idProducto', '=', 'Producto.idProducto')
-            ->where('DetalleProducto.en_liquidacion', true)
+            ->join('Liquidacion', 'Liquidacion.idProducto', '=', 'Producto.idProducto')
             ->get();
 
         // Inject current global TC for calculations
@@ -84,9 +81,10 @@ class LiquidacionController extends Controller
             ['mostrarPrecioWeb' => true] // Defaults
         );
 
-        $detalle->en_liquidacion = true;
-        $detalle->precio_liquidacion = $request->precio_liquidacion;
-        $detalle->save();
+        Liquidacion::updateOrCreate(
+            ['idProducto' => $request->idProducto],
+            ['precio_liquidacion' => $request->precio_liquidacion]
+        );
 
         $producto = Producto::find($request->idProducto);
         if ($producto) {
@@ -103,12 +101,7 @@ class LiquidacionController extends Controller
             'idProducto' => 'required|integer'
         ]);
 
-        $detalle = DetalleProducto::where('idProducto', $request->idProducto)->first();
-        if ($detalle) {
-            $detalle->en_liquidacion = false;
-            $detalle->precio_liquidacion = null;
-            $detalle->save();
-        }
+        Liquidacion::where('idProducto', $request->idProducto)->delete();
 
         $producto = Producto::find($request->idProducto);
         if ($producto && $producto->estadoProductoWeb === 'LIQUIDACION') {
@@ -117,5 +110,34 @@ class LiquidacionController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Producto retirado de liquidación.']);
+    }
+
+    public function buscarProductoAjax(Request $request)
+    {
+        $term = $request->input('q');
+        if (!$term) {
+            return response()->json([]);
+        }
+
+        $productos = Producto::where('estadoProductoWeb', '<>', 'DESCONTINUADO')
+            ->where(function($query) use ($term) {
+                $query->where('nombreProducto', 'LIKE', '%' . $term . '%')
+                      ->orWhere('modelo', 'LIKE', '%' . $term . '%')
+                      ->orWhere('partNumber', 'LIKE', '%' . $term . '%');
+            })
+            ->limit(20)
+            ->get();
+
+        $results = [];
+        foreach ($productos as $p) {
+            $results[] = [
+                'id' => $p->idProducto,
+                'nombre' => $p->nombreProducto,
+                'text' => $p->nombreProducto . ' (Modelo: ' . $p->modelo . ')',
+                'costoUsd' => $p->precioDolar
+            ];
+        }
+
+        return response()->json(['results' => $results]);
     }
 }

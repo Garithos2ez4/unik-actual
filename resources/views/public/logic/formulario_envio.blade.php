@@ -375,6 +375,36 @@
             return;
         }
 
+        // Validar formato del documento
+        const selectDoc = document.getElementById('idTipoDocumento');
+        const inputNumDoc = document.getElementById('numeroDocumento');
+        const tipoDocVal = selectDoc ? selectDoc.value : '';
+        const numDocVal = inputNumDoc ? inputNumDoc.value.trim() : '';
+
+        if (tipoDocVal === '1' && !/^[0-9]{8}$/.test(numDocVal)) {
+            e.preventDefault();
+            inputNumDoc.style.borderColor = '#ef4444';
+            Swal.fire({
+                icon: 'error',
+                title: 'DNI Inválido',
+                text: 'El DNI debe tener exactamente 8 dígitos numéricos.',
+                confirmButtonColor: '#00b1b9'
+            });
+            return;
+        }
+
+        if (tipoDocVal === '3' && !/^(10|15|17|20)[0-9]{9}$/.test(numDocVal)) {
+            e.preventDefault();
+            inputNumDoc.style.borderColor = '#ef4444';
+            Swal.fire({
+                icon: 'error',
+                title: 'RUC Inválido',
+                text: 'El RUC debe tener 11 dígitos numéricos y comenzar con 10, 15, 17 o 20.',
+                confirmButtonColor: '#00b1b9'
+            });
+            return;
+        }
+
         // Validar campos de receptor si la sección está visible
         const seccionReceptor = document.getElementById('seccion-receptor');
         if (seccionReceptor && seccionReceptor.style.display !== 'none') {

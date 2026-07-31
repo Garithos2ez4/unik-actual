@@ -4,22 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DetalleProducto extends Model
+class Liquidacion extends Model
 {
-    protected $table = 'DetalleProducto';
-    protected $primaryKey = 'idDetalleProducto';
+    protected $table = 'Liquidacion';
+    protected $primaryKey = 'idLiquidacion';
 
     protected $fillable = [
         'idProducto',
-        'mostrarPrecioWeb',
-        'precio_pase',
+        'precio_liquidacion',
     ];
 
     protected $casts = [
-        'idDetalleProducto' => 'int',
+        'idLiquidacion' => 'int',
         'idProducto' => 'int',
-        'mostrarPrecioWeb' => 'boolean',
-        'precio_pase' => 'float',
+        'precio_liquidacion' => 'float',
     ];
 
     public function Producto()

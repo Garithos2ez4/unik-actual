@@ -187,4 +187,9 @@ class Producto extends Model
             return "";
         }
     }
+
+    public function liquidacion()
+    {
+        return $this->hasOne(Liquidacion::class, 'idProducto', 'idProducto');
+    }
 }

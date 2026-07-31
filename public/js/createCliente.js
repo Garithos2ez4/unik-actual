@@ -19,8 +19,10 @@ function changeTipeDoc(input) {
             apeMaterno.style.display = 'block';
             documento.textContent = 'DNI:';
             nombre.textContent = 'Nombres:';
+            inputDocumento.setAttribute('maxlength', '8');
+            inputDocumento.setAttribute('placeholder', '72345678');
             inputDocumento.setAttribute('pattern', '\\d+');
-            inputDocumento.setAttribute('title', 'solo números permitidos');
+            inputDocumento.setAttribute('title', 'DNI de 8 dígitos');
             inputDocumento.setAttribute('oninput', 'validateNumericInput(this)');  
             break;
         case '2':
@@ -28,17 +30,20 @@ function changeTipeDoc(input) {
             apeMaterno.style.display = 'block';
             documento.textContent = 'Carné:';
             nombre.textContent = 'Nombres:';
-            inputDocumento.setAttribute('pattern', '\\d+');
-            inputDocumento.setAttribute('title', 'solo números permitidos');
-            inputDocumento.setAttribute('oninput', 'validateNumericInput(this)');  
+            inputDocumento.setAttribute('maxlength', '12');
+            inputDocumento.setAttribute('placeholder', '001234567');
+            inputDocumento.removeAttribute('pattern');
+            inputDocumento.removeAttribute('oninput');
             break;
         case '3':
             apePaterno.style.display = 'none';
             apeMaterno.style.display = 'none';
             documento.textContent = 'RUC:';
             nombre.textContent = 'Razon Social:';
+            inputDocumento.setAttribute('maxlength', '11');
+            inputDocumento.setAttribute('placeholder', '20601234567');
             inputDocumento.setAttribute('pattern', '\\d+');
-            inputDocumento.setAttribute('title', 'solo números permitidos');
+            inputDocumento.setAttribute('title', 'RUC de 11 dígitos');
             inputDocumento.setAttribute('oninput', 'validateNumericInput(this)');  
             break;
         default:
@@ -46,13 +51,27 @@ function changeTipeDoc(input) {
             apeMaterno.style.display = 'block';
             documento.textContent = 'Nro Documento:';
             nombre.textContent = 'Nombres:';
-            inputDocumento.setAttribute('pattern', '\\d+');
-            inputDocumento.setAttribute('title', 'Solo números permitidos');
-            inputDocumento.setAttribute('oninput', 'validateNumericInput(this)');  
+            inputDocumento.setAttribute('maxlength', '15');
+            inputDocumento.setAttribute('placeholder', 'Número de documento');
+            inputDocumento.removeAttribute('pattern');
+            inputDocumento.removeAttribute('oninput');
     }
 }
 
 function sendFormNewCliente() {
+    const tipodoc = formNewCliente.querySelector('select[name="tipodoc"]').value;
+    const numerodoc = formNewCliente.querySelector('input[name="numerodoc"]').value.trim();
+
+    if (tipodoc === '1' && !/^[0-9]{8}$/.test(numerodoc)) {
+        alert('El DNI debe tener exactamente 8 dígitos numéricos.');
+        return;
+    }
+
+    if (tipodoc === '3' && !/^(10|15|17|20)[0-9]{9}$/.test(numerodoc)) {
+        alert('El RUC debe tener 11 dígitos numéricos y comenzar con 10, 15, 17 o 20.');
+        return;
+    }
+
     let responseConfirm = confirm('¿Estas seguro?');
 
     if (responseConfirm == false) {

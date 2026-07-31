@@ -123,6 +123,7 @@ Route::middleware(['validate.session'])->group(function () {
     
     // Liquidación
     Route::get('/productos/liquidacion', [LiquidacionController::class, 'index'])->name('productos.liquidacion');
+    Route::get('/productos/liquidacion/buscar-ajax', [LiquidacionController::class, 'buscarProductoAjax'])->name('productos.liquidacion.buscar-ajax');
     Route::post('/productos/liquidacion/agregar', [LiquidacionController::class, 'agregarLiquidacion'])->name('productos.liquidacion.agregar');
     Route::post('/productos/liquidacion/quitar', [LiquidacionController::class, 'quitarLiquidacion'])->name('productos.liquidacion.quitar');
     Route::post('/productos/toggle-status', [ProductoController::class, 'toggleStatus'])->name('producto.toggleStatus');

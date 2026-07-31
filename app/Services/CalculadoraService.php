@@ -166,7 +166,7 @@ class CalculadoraService implements CalculadoraServiceInterface
              INNER JOIN Comprobante c_inner ON c_inner.idComprobante = dc_inner.idComprobante
              WHERE ep_inner.idEgreso = {$aliasDetalleVenta}.idEgreso 
                AND (
-                   dc_inner.precioUnitario > 1 
+                   dc_inner.precioUnitario > 0 
                    OR rp_inner.es_herramienta = 1 
                    OR (SELECT idGrupo FROM Producto p WHERE p.idProducto = dc_inner.idProducto) IN ({$gruposExcepcion})
                )

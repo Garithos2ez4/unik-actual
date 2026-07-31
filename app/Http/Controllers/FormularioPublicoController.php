@@ -104,6 +104,16 @@ class FormularioPublicoController extends Controller
             'idAgencia'       => 'required|integer',
         ]);
 
+        $tipoDoc = (int)$request->idTipoDocumento;
+        $numDoc  = trim($request->numeroDocumento);
+
+        if ($tipoDoc === 1 && !preg_match('/^[0-9]{8}$/', $numDoc)) {
+            return back()->withErrors(['numeroDocumento' => 'El DNI debe tener 8 dígitos numéricos.'])->withInput();
+        }
+        if ($tipoDoc === 3 && !preg_match('/^(10|15|17|20)[0-9]{9}$/', $numDoc)) {
+            return back()->withErrors(['numeroDocumento' => 'El RUC debe tener 11 dígitos numéricos y comenzar con 10, 15, 17 o 20.'])->withInput();
+        }
+
         // Buscar o crear cliente
         $cliente = Cliente::where('numeroDocumento', $request->numeroDocumento)->first();
 
