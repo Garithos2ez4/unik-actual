@@ -21,7 +21,7 @@
                     </div>
                     <div class="col-12 col-md-4">
                         <label for="mi_tienda" class="form-label fw-bold small text-secondary">Nombre de mi tienda (Opcional)</label>
-                        <input type="text" class="form-control form-control-lg shadow-sm" id="mi_tienda" placeholder="Ej. GAMING POWER PERU" autocomplete="off">
+                        <input type="text" class="form-control form-control-lg shadow-sm" id="mi_tienda" value="GAMING POWER PERU" placeholder="Ej. GAMING POWER PERU" autocomplete="off">
                     </div>
                     <div class="col-12 col-md-3">
                         <button type="submit" class="btn btn-primary btn-lg w-100 shadow fw-bold" id="btn-buscar">

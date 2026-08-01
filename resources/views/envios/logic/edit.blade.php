@@ -468,6 +468,7 @@
         if (idAgencia && idDestino) {
             selectSubAgencia.innerHTML = '<option value="">Cargando oficinas...</option>';
             selectSubAgencia.disabled = true;
+            selectSubAgencia.required = false;
 
             fetch(`/envios-provincias/subagencias-por-agencia-y-destino/${idAgencia}/${idDestino}`)
                 .then(response => response.json())
@@ -482,19 +483,23 @@
                             selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${nombreTerminal} (${sub.direccion})</option>`;
                         });
                         selectSubAgencia.disabled = false;
+                        selectSubAgencia.required = true;
                     } else {
                         if (containerSub) containerSub.style.display = 'none';
                         selectSubAgencia.innerHTML = '<option value="">Sin oficinas registradas...</option>';
                         selectSubAgencia.disabled = true;
+                        selectSubAgencia.required = false;
                     }
                 })
                 .catch(error => {
                     console.error("Error cargando oficinas:", error);
                     selectSubAgencia.innerHTML = '<option value="">Error al cargar oficinas</option>';
+                    selectSubAgencia.required = false;
                 });
         } else {
             selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
             selectSubAgencia.disabled = true;
+            selectSubAgencia.required = false;
             return Promise.resolve();
         }
     }

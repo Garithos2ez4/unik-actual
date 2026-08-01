@@ -393,13 +393,19 @@
     }
 
     function verificarClaveYGuardar() {
+        const form = document.getElementById('form-create-envio');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
         let claveInput = document.getElementById('input-clave');
         let clave = claveInput ? claveInput.value.trim() : '';
         if (clave !== '') {
             var myModal = new bootstrap.Modal(document.getElementById('confirmSaveModal'));
             myModal.show();
         } else {
-            document.getElementById('form-create-envio').submit();
+            form.submit();
         }
     }
 
@@ -521,6 +527,7 @@
             if (selectSubAgencia) {
                 selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
                 selectSubAgencia.disabled = true;
+                selectSubAgencia.required = false;
             }
             return Promise.resolve();
         }
@@ -540,10 +547,12 @@
                         selectSubAgencia.innerHTML += `<option value="${sub.idSubAgencia}">${nombreTerminal} (${sub.direccion})</option>`;
                     });
                     selectSubAgencia.disabled = false;
+                    selectSubAgencia.required = true;
                 } else {
                     if (containerSub) containerSub.style.display = 'none';
                     selectSubAgencia.innerHTML = '<option value="">Sin oficinas registradas...</option>';
                     selectSubAgencia.disabled = true;
+                    selectSubAgencia.required = false;
                 }
             })
             .catch(error => {

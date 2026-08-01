@@ -153,14 +153,12 @@ class FalabellaOrderSyncService
         $orders = $this->falabellaApiService->extractOrders($response);
         $syncedOrders = [];
 
-        DB::transaction(function () use ($orders, $date, &$syncedOrders) {
-            foreach ($orders as $orderPayload) {
-                $order = $this->syncSingleOrder($orderPayload, $date);
-                if ($order) {
-                    $syncedOrders[] = $order->order_id;
-                }
+        foreach ($orders as $orderPayload) {
+            $order = $this->syncSingleOrder($orderPayload, $date);
+            if ($order) {
+                $syncedOrders[] = $order->order_id;
             }
-        });
+        }
 
         return [
             'count' => count(array_unique($syncedOrders)),
@@ -329,14 +327,12 @@ class FalabellaOrderSyncService
 
                 $apiOrders = $this->falabellaApiService->extractOrders($response);
 
-                DB::transaction(function () use ($apiOrders, $dateFrom, &$synced) {
-                    foreach ($apiOrders as $orderPayload) {
-                        $order = $this->syncSingleOrder($orderPayload, $dateFrom);
-                        if ($order) {
-                            $synced[] = $order->order_id;
-                        }
+                foreach ($apiOrders as $orderPayload) {
+                    $order = $this->syncSingleOrder($orderPayload, $dateFrom);
+                    if ($order) {
+                        $synced[] = $order->order_id;
                     }
-                });
+                }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning(
                     "Error sincronizando devoluciones [{$returnStatus}]: " . $e->getMessage()

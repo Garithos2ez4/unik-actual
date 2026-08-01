@@ -107,12 +107,14 @@
         if (!idAgencia || !idDestino) {
             selectSubAgencia.innerHTML = '<option value="">Primero elija Agencia y Distrito...</option>';
             selectSubAgencia.disabled = true;
+            selectSubAgencia.required = false;
             if (containerSub) containerSub.style.display = 'none';
             return;
         }
 
         selectSubAgencia.innerHTML = '<option value="">Cargando oficinas...</option>';
         selectSubAgencia.disabled = true;
+        selectSubAgencia.required = false;
 
         fetch(`/formulario-envio/api/subagencias/${idAgencia}/${idDestino}`)
             .then(r => r.json())
@@ -122,6 +124,7 @@
                         containerSub.style.display = 'none';
                         selectSubAgencia.innerHTML = '<option value="">Sin oficinas disponibles</option>';
                         selectSubAgencia.value = '';
+                        selectSubAgencia.required = false;
                     } else {
                         containerSub.style.display = 'block';
                         let html = '<option value="">Seleccione oficina...</option>';
@@ -132,12 +135,14 @@
                         });
                         selectSubAgencia.innerHTML = html;
                         selectSubAgencia.disabled = false;
+                        selectSubAgencia.required = true;
                     }
                 }
             })
             .catch(error => {
                 console.error("Error al cargar subagencias: ", error);
                 selectSubAgencia.innerHTML = '<option value="">Error al cargar</option>';
+                selectSubAgencia.required = false;
             });
     }
 
@@ -298,11 +303,13 @@
                                                  selSub.innerHTML += `<option value="${s.idSubAgencia}">${nombreTerminal} - ${s.direccion}</option>`;
                                             });
                                             selSub.disabled = false;
+                                            selSub.required = true;
                                             if (env.idSubAgencia) selSub.value = env.idSubAgencia;
                                         } else {
                                             if (containerSub) containerSub.style.display = 'none';
                                             selSub.innerHTML = '<option value="">Sin oficinas disponibles</option>';
                                             selSub.value = '';
+                                            selSub.required = false;
                                         }
                                     })
                                     .catch(err => console.log('Error loading ubigeo cascade:', err));
@@ -358,11 +365,19 @@
             const el = document.getElementById(c.id);
             if (!el || !el.value || el.value === '') {
                 faltantes.push(c.label);
-                el.style.borderColor = '#ef4444';
+                if(el) el.style.borderColor = '#ef4444';
             } else {
-                el.style.borderColor = '';
+                if(el) el.style.borderColor = '';
             }
         });
+
+        const selectSub = document.getElementById('select-subagencia');
+        if (selectSub && selectSub.required && (!selectSub.value || selectSub.value === '')) {
+            faltantes.push('Oficina / Sucursal');
+            selectSub.style.borderColor = '#ef4444';
+        } else if (selectSub) {
+            selectSub.style.borderColor = '';
+        }
 
         if (faltantes.length > 0) {
             e.preventDefault();
