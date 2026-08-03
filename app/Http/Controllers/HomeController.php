@@ -216,16 +216,29 @@ class HomeController extends Controller
         }
 
         if ($tieneAccesoAnalitica) {
-            $cacheKey = 'falabella_returns_sync_' . now()->toDateString();
-            if (!\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+            // Auto-sync devoluciones Falabella
+            $cacheKeyDevoluciones = 'falabella_returns_sync_' . now()->toDateString();
+            if (!\Illuminate\Support\Facades\Cache::has($cacheKeyDevoluciones)) {
                 try {
                     $this->falabellaOrderSyncService->syncReturnsByDateRange(now()->toDateString(), now()->toDateString());
-                    \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addMinutes(60));
+                    \Illuminate\Support\Facades\Cache::put($cacheKeyDevoluciones, true, now()->addMinutes(60));
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('Error auto-sync devoluciones en dashboard: ' . $e->getMessage());
                 }
             }
             $devolucionesHoy = $this->falabellaOrderSyncService->getReturns(now()->toDateString(), now()->toDateString(), null);
+
+            // Auto-sync bot de precios Falabella (1 vez al día en segundo plano)
+            $cacheKeyBot = 'falabella_bot_run_' . now()->toDateString();
+            if (!\Illuminate\Support\Facades\Cache::has($cacheKeyBot)) {
+                try {
+                    // Ejecutar de forma asíncrona en Windows (para no congelar el inicio de sesión durante 5+ minutos)
+                    pclose(popen('start /B php ' . base_path('artisan') . ' bot:falabella-prices', 'r'));
+                    \Illuminate\Support\Facades\Cache::put($cacheKeyBot, true, now()->endOfDay());
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Error auto-run bot falabella: ' . $e->getMessage());
+                }
+            }
         }
 
         $productosOldStock = \Illuminate\Support\Facades\Cache::remember('dashboard_old_stock', now()->addMinutes(720), function () {
@@ -271,6 +284,10 @@ class HomeController extends Controller
             ]);
         }
 
+        $alertasPrecio = collect();
+        if ($tieneAccesoAnalitica) {
+            $alertasPrecio = \App\Models\AlertaPrecio::where('estado', 'pendiente')->get();
+        }
         return view('dashboard', [
             'user' => $userModel,
             'registros' => $registros,
@@ -291,6 +308,7 @@ class HomeController extends Controller
             'productosConFallas' => $productosConFallas,
             'ventas7Dias' => $ventas7Dias,
             'devolucionesHoy' => $devolucionesHoy,
+            'alertasPrecio' => $alertasPrecio,
         ]);
     }
 
@@ -360,5 +378,14 @@ class HomeController extends Controller
         }
 
         return $response = [$registros, $data];
+    }
+    public function ignorarAlerta($id)
+    {
+        $alerta = \App\Models\AlertaPrecio::find($id);
+        if ($alerta) {
+            $alerta->update(['estado' => 'procesada']);
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false], 404);
     }
 }

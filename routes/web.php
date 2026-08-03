@@ -60,6 +60,7 @@ Route::middleware(['validate.session'])->group(function () {
     // Agrega esta línea con las demás rutas
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/alertas/{id}/ignorar', [HomeController::class, 'ignorarAlerta'])->name('alertas.ignorar');
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');

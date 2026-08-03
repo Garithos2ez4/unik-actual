@@ -13,4 +13,8 @@
     @include('components.modal_devoluciones_hoy', ['devoluciones' => $devolucionesHoy])
 @endif
 
+@if(isset($alertasPrecio) && $alertasPrecio->count() > 0)
+    @include('components.modal_alertas_precio', ['alertas' => $alertasPrecio])
+@endif
+
 @endsection
