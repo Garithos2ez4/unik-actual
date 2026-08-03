@@ -4,9 +4,9 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use App\Models\Agencia;
-use App\Models\Destino;
-use App\Models\SubAgencia;
+use App\Models\Envios\Agencia;
+use App\Models\Envios\Destino;
+use App\Models\Envios\SubAgencia;
 
 class SyncOlvaCommand extends Command
 {

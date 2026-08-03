@@ -33,7 +33,7 @@
             }
 
             // 2. Traer solo las series que cuentan como stock real en este almacén
-            $seriesAlmacen = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
+            $seriesAlmacen = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
             $q->where('idProducto', $producto->idProducto);
             })
             ->where('idAlmacen', $almacen->idAlmacen)

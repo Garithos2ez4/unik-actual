@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
-use App\Models\Usuario;
+use App\Models\Catalogo\Producto;
+use App\Models\Usuarios\Usuario;
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
@@ -39,7 +39,7 @@ class ProductoController extends Controller
             if ($acceso->idVista == 2) {
                 // Obtener datos comunes
                 $productos = $this->productoService->getAllProductsByColumn('idGrupo', decrypt($idGrupo), 15, $request->query('filtro'))->appends($request->all());
-                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+                $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
                 // Si es petición AJAX (paginación o filtro)
                 if ($request->query('page') || $request->query('filtro')) {
@@ -95,7 +95,7 @@ class ProductoController extends Controller
                 $marcas = $this->productoService->getAllLabelMarca();
                 $proveedor = $this->productoService->getAllLabelProveedor();
                 $grupos = $this->productoService->getAllLabelGrupo();
-                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+                $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
                 return view('productos.producto', [
                     'user' => $userModel,
@@ -126,7 +126,7 @@ class ProductoController extends Controller
                 $marcas = $this->productoService->getAllLabelMarca();
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $proveedor = $this->productoService->getAllLabelProveedor();
-                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+                $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
                 $categorias = $this->productoService->getAllLabelCategory();
                 $tipos = app(\App\Services\ConfiguracionServiceInterface::class)->getAllTipoProductos();
 
@@ -164,7 +164,7 @@ class ProductoController extends Controller
             'status' => 'required|boolean'
         ]);
 
-        $producto = \App\Models\Producto::find($request->idProducto);
+        $producto = \App\Models\Catalogo\Producto::find($request->idProducto);
         if (!$producto) {
             return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
         }
@@ -235,7 +235,7 @@ class ProductoController extends Controller
                 //variables del controlador
                 $input = $request->input('search');
                 $productos = $this->productoService->searchProducts($input, 25, $request->query('filtro'));
-                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+                $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
                 // Obtener marcas filtradas por búsqueda si hay término de búsqueda
                 if ($input) {
@@ -454,9 +454,9 @@ class ProductoController extends Controller
     {
         try {
             $producto = Producto::with(['Inventario', 'Inventario_Proveedor.Preveedor'])->findOrFail($id);
-            $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+            $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
-            $seriesDisponibles = \App\Models\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
+            $seriesDisponibles = \App\Models\Inventario\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
                 ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION', 'DEFECTUOSO'])
                 ->whereHas('DetalleComprobante', function ($q) use ($id) {
                     $q->where('idProducto', $id);
@@ -604,13 +604,13 @@ class ProductoController extends Controller
                     if ($request->has('precioTienda')) {
                         $nuevoPrecio = floatval($request->input('precioTienda'));
                         $realId = decrypt($idProducto);
-                        $precioActual = \App\Models\PrecioTienda::where('idProducto', $realId)->first();
+                        $precioActual = \App\Models\Precios\PrecioTienda::where('idProducto', $realId)->first();
 
                         if ($precioActual) {
                             $precioAnterior = $precioActual->precioTienda;
                             if (abs($precioAnterior - $nuevoPrecio) > 0.001) {
                                 // Registrar historial
-                                \App\Models\HistorialPrecioTienda::create([
+                                \App\Models\Precios\HistorialPrecioTienda::create([
                                     'idProducto'     => $realId,
                                     'precioAnterior'  => $precioAnterior,
                                     'precioNuevo'     => $nuevoPrecio,
@@ -622,14 +622,14 @@ class ProductoController extends Controller
                                 ]);
                             }
                         } else {
-                            \App\Models\PrecioTienda::create([
+                            \App\Models\Precios\PrecioTienda::create([
                                 'idProducto'   => $realId,
                                 'precioTienda' => $nuevoPrecio,
                                 'updated_at'   => now(),
                             ]);
                             // Primer registro: historial 0 → nuevo
                             if ($nuevoPrecio > 0) {
-                                \App\Models\HistorialPrecioTienda::create([
+                                \App\Models\Precios\HistorialPrecioTienda::create([
                                     'idProducto'     => $realId,
                                     'precioAnterior'  => 0,
                                     'precioNuevo'     => $nuevoPrecio,
@@ -645,7 +645,7 @@ class ProductoController extends Controller
                         $mostrarWeb = $request->input('mostrarPrecioWeb') == '1' ? true : false;
                         $precioPase = $request->input('precio_pase') ? floatval($request->input('precio_pase')) : null;
 
-                        \App\Models\DetalleProducto::updateOrCreate(
+                        \App\Models\Catalogo\DetalleProducto::updateOrCreate(
                             ['idProducto' => $realId],
                             [
                                 'mostrarPrecioWeb' => $mostrarWeb,
@@ -734,7 +734,7 @@ class ProductoController extends Controller
                     $configService = app(\App\Services\ConfiguracionServiceInterface::class);
                     $configService->createGrupoProducto($categoria, $grupo, $tipo, $img);
 
-                    $newGrupo = \App\Models\GrupoProducto::orderBy('idGrupoProducto', 'desc')->first();
+                    $newGrupo = \App\Models\Catalogo\GrupoProducto::orderBy('idGrupoProducto', 'desc')->first();
 
                     if ($newGrupo) {
                         return response()->json([

@@ -19,11 +19,11 @@ class BotFalabellaPrices extends Command
         $this->info("Iniciando Bot de Precios Falabella...");
 
         // 1. Obtener productos manuales
-        $manuales = \App\Models\ProductoVigiladoFalabella::where('activo', true)->pluck('modelo')->toArray();
+        $manuales = \App\Models\Falabella\ProductoVigiladoFalabella::where('activo', true)->pluck('modelo')->toArray();
         // Convertimos $manuales a formato detallado
         $modelosAEvaluar = [];
         foreach($manuales as $m) {
-            $prod = \App\Models\Producto::with(['GrupoProducto', 'MarcaProducto'])->where('modelo', $m)->first();
+            $prod = \App\Models\Catalogo\Producto::with(['GrupoProducto', 'MarcaProducto'])->where('modelo', $m)->first();
             $modelosAEvaluar[$m] = [
                 'nombre' => $prod ? $prod->nombreProducto : '',
                 'categoria' => ($prod && $prod->GrupoProducto) ? $prod->GrupoProducto->nombreGrupo : '',
@@ -32,7 +32,7 @@ class BotFalabellaPrices extends Command
         }
 
         // 2. Obtener top productos más vendidos de los últimos 30 días (con modelo)
-        $topVendidos = \App\Models\Producto::query()
+        $topVendidos = \App\Models\Catalogo\Producto::query()
             ->with(['GrupoProducto', 'MarcaProducto'])
             ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
             ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
@@ -106,7 +106,7 @@ class BotFalabellaPrices extends Command
                     } else {
                         $this->line("   -> PRECIO OK.");
                         // Limpiar alertas previas si ahora está OK
-                        \App\Models\AlertaPrecio::where('modelo', $modelo)->where('estado', 'pendiente')->update(['estado' => 'procesada']);
+                        \App\Models\Falabella\AlertaPrecio::where('modelo', $modelo)->where('estado', 'pendiente')->update(['estado' => 'procesada']);
                     }
                 } else {
                     $this->line("   -> No se encontró 'Mi Precio' o 'Precio Competidor' en Falabella.");
@@ -130,7 +130,7 @@ class BotFalabellaPrices extends Command
     private function guardarAlerta($modelo, $miPrecio, $precioCompetidor, $competidor, $porcentaje, $sugerencia)
     {
         // Buscar si ya hay una alerta pendiente para no duplicar
-        $alerta = \App\Models\AlertaPrecio::where('modelo', $modelo)
+        $alerta = \App\Models\Falabella\AlertaPrecio::where('modelo', $modelo)
             ->where('estado', 'pendiente')
             ->first();
 
@@ -143,7 +143,7 @@ class BotFalabellaPrices extends Command
                 'sugerencia' => $sugerencia,
             ]);
         } else {
-            \App\Models\AlertaPrecio::create([
+            \App\Models\Falabella\AlertaPrecio::create([
                 'modelo' => $modelo,
                 'mi_precio' => $miPrecio,
                 'precio_competidor' => $precioCompetidor,

@@ -1,6 +1,6 @@
 <?php
 namespace App\Repositories;
-use App\Models\Licencia;
+use App\Models\Licencias\Licencia;
 use App\Repositories\LicenciaRepositoryInterface;
 
 class LicenciaRepository implements LicenciaRepositoryInterface

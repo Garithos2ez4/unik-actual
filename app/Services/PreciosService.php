@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Calculadora;
-use App\Models\Comision;
-use App\Models\Empresa;
+use App\Models\Precios\Calculadora;
+use App\Models\Precios\Comision;
+use App\Models\Empresa\Empresa;
 
 class PreciosService
 {

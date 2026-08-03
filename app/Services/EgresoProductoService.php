@@ -46,8 +46,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
     public function searchAjaxRegistro($serial, $excludeArray = [])
     {
-        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
-        $tasaFijaGlobal = \App\Models\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
+        $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 1;
+        $tasaFijaGlobal = \App\Models\Precios\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
         $preciosService = new \App\Services\PreciosService();
 
         $egresos = $this->registroRepository->searchByEgreso($serial, 7, $excludeArray);
@@ -96,8 +96,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
     public function getOneAjaxRegistro($serial)
     {
-        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
-        $tasaFijaGlobal = \App\Models\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
+        $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 1;
+        $tasaFijaGlobal = \App\Models\Precios\Calculadora::where('idCalculadora', 2)->first()->tasaCambio ?? $tasaCambio;
         $preciosService = new \App\Services\PreciosService();
 
         $egreso = $this->registroRepository->getByEgreso($serial);
@@ -179,7 +179,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 // Si es venta directa, buscamos la plataforma "Tienda" (ID 7)
                 // y la cuenta vinculada al usuario que hizo la venta
                 $idPlataforma = 7;
-                $cuentaUsuario = \App\Models\CuentasPlataforma::where('idPlataforma', 7)
+                $cuentaUsuario = \App\Models\Empresa\CuentasPlataforma::where('idPlataforma', 7)
                     ->where('nombreCuenta', $details->Usuario->user)
                     ->first();
                 if ($cuentaUsuario) {
@@ -200,7 +200,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             } else {
                 $producto = $details->RegistroProducto->DetalleComprobante->Producto ?? null;
                 if ($producto && isset($producto->precioDolar) && $producto->precioDolar > 0) {
-                    $tasaCambio = \App\Models\Calculadora::first()?->tasaCambio ?? 1;
+                    $tasaCambio = \App\Models\Precios\Calculadora::first()?->tasaCambio ?? 1;
                     $fallbackPrecio = $producto->precioDolar * $tasaCambio;
                 }
             }
@@ -262,10 +262,10 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 // Si se especifica un costo personalizado (por ejemplo, para componentes), actualizar el DetalleComprobante
                 if (isset($item['costo']) && $item['costo'] !== '') {
                     $customCostoSoles = floatval($item['costo']);
-                    $dc = \App\Models\DetalleComprobante::with('Comprobante')->find($registro->idDetalleComprobante);
+                    $dc = \App\Models\Ventas\DetalleComprobante::with('Comprobante')->find($registro->idDetalleComprobante);
                     if ($dc && $dc->Comprobante) {
                         $moneda = $dc->Comprobante->moneda ?? 'SOLES';
-                        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+                        $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
                         
                         if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
                             $newPrecioUnitario = $tasaCambio > 0 ? $customCostoSoles / $tasaCambio : $customCostoSoles;
@@ -274,11 +274,11 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         }
                         
                         $newPrecioUnitario = round($newPrecioUnitario, 4);
-                        $sharedCount = \App\Models\RegistroProducto::where('idDetalleComprobante', $registro->idDetalleComprobante)->count();
+                        $sharedCount = \App\Models\Inventario\RegistroProducto::where('idDetalleComprobante', $registro->idDetalleComprobante)->count();
                         
                         if ($sharedCount > 1) {
                             $newDc = $dc->replicate();
-                            $lastDc = \App\Models\DetalleComprobante::orderBy('idDetalleComprobante', 'desc')->first();
+                            $lastDc = \App\Models\Ventas\DetalleComprobante::orderBy('idDetalleComprobante', 'desc')->first();
                             $nextId = $lastDc ? $lastDc->idDetalleComprobante + 1 : 1;
                             
                             $newDc->idDetalleComprobante = $nextId;
@@ -302,7 +302,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
                 // Determinar si el producto es un Reseteador (herramienta de servicio) usando la columna es_herramienta
                 $esReseteador = (bool)$registro->es_herramienta;
-                $productoAsociado = \App\Models\Producto::with('GrupoProducto')->find($registro->DetalleComprobante->idProducto ?? null);
+                $productoAsociado = \App\Models\Catalogo\Producto::with('GrupoProducto')->find($registro->DetalleComprobante->idProducto ?? null);
 
                 // Validamos que el producto est en un estado vendible (NUEVO), a menos que sea un Reseteador
                 if (!$esReseteador && $registro->estado !== 'NUEVO') {
@@ -310,7 +310,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
 
                 // REGLA DE NEGOCIO: Validar historial de Devoluciones/Garantías
-                $ultimaDevolucion = \App\Models\Devolucion::where('idRegistro', $idRegistro)
+                $ultimaDevolucion = \App\Models\Ventas\Devolucion::where('idRegistro', $idRegistro)
                     ->latest('created_at')
                     ->first();
 
@@ -407,14 +407,14 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     $nuevoPrecio = 0.1;
                 }
 
-                $detalleVenta = \App\Models\DetalleVenta::withoutGlobalScope('completado')->where('idEgreso', $idEgreso)->first();
+                $detalleVenta = \App\Models\Ventas\DetalleVenta::withoutGlobalScope('completado')->where('idEgreso', $idEgreso)->first();
                 if ($detalleVenta) {
                     $detalleVenta->precioVenta = $nuevoPrecio;
                     $detalleVenta->save();
 
                     $venta = $detalleVenta->Venta;
                     if ($venta) {
-                        $nuevoTotal = \App\Models\DetalleVenta::where('idVenta', $venta->idVenta)
+                        $nuevoTotal = \App\Models\Ventas\DetalleVenta::where('idVenta', $venta->idVenta)
                             ->selectRaw('SUM(precioVenta * cantidad) as total')
                             ->first()
                             ->total ?? 0;
@@ -425,7 +425,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         // Actualizar PagoVenta para reflejar el nuevo precio
                         // Si solo hay un pago, le asignamos todo el total. Si hay varios, se ajusta el primero proporcionalmente o se deja una alerta,
                         // pero la regla general es tener un solo pago para el total.
-                        $pagos = \App\Models\PagoVenta::where('idVenta', $venta->idVenta)->get();
+                        $pagos = \App\Models\Ventas\PagoVenta::where('idVenta', $venta->idVenta)->get();
                         if ($pagos->count() === 1) {
                             $pagoUnico = $pagos->first();
                             $pagoUnico->monto = floatval($nuevoTotal);
@@ -449,7 +449,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     $canal = $modelEgreso->idPublicacion ? 'PLATAFORMA' : 'TIENDA';
                     
                     // 3. Crear cabecera Venta
-                    $venta = \App\Models\Venta::create([
+                    $venta = \App\Models\Ventas\Venta::create([
                         'idUser'      => $idUser,
                         'canal'       => $canal,
                         'numeroOrden' => $modelEgreso->numeroOrden,
@@ -459,7 +459,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     ]);
                     
                     // 4. Crear DetalleVenta
-                    \App\Models\DetalleVenta::create([
+                    \App\Models\Ventas\DetalleVenta::create([
                         'idVenta'       => $venta->idVenta,
                         'idEgreso'      => $idEgreso,
                         'idProducto'    => $registro->DetalleComprobante->idProducto,
@@ -486,7 +486,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $observacionFinal = $observacion . " - " . $fechaFormateada;
 
             // 1. Creamos el registro en la nueva tabla de devoluciones
-            \App\Models\Devolucion::create([
+            \App\Models\Ventas\Devolucion::create([
                 'idEgreso'   => $idEgreso,
                 'idRegistro' => $registro->idRegistro,
                 'idUser'     => $this->headerService->getModelUser()->idUser,
@@ -520,14 +520,14 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             }
 
             // 4. Actualizar estado financiero de DetalleVenta y Venta
-            $detalleVentaDevuelto = \App\Models\DetalleVenta::withoutGlobalScope('completado')->where('idEgreso', $idEgreso)->first();
+            $detalleVentaDevuelto = \App\Models\Ventas\DetalleVenta::withoutGlobalScope('completado')->where('idEgreso', $idEgreso)->first();
             if ($detalleVentaDevuelto) {
                 $detalleVentaDevuelto->estado = 'DEVUELTO';
                 $detalleVentaDevuelto->save();
 
                 $ventaDevuelta = $detalleVentaDevuelto->Venta;
                 if ($ventaDevuelta) {
-                    $nuevoTotalDevuelto = \App\Models\DetalleVenta::where('idVenta', $ventaDevuelta->idVenta)
+                    $nuevoTotalDevuelto = \App\Models\Ventas\DetalleVenta::where('idVenta', $ventaDevuelta->idVenta)
                         ->selectRaw('SUM(precioVenta * cantidad) as total')
                         ->first()
                         ->total ?? 0;
@@ -535,7 +535,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     $ventaDevuelta->totalVenta = floatval($nuevoTotalDevuelto);
                     $ventaDevuelta->save();
 
-                    $pagosDevuelto = \App\Models\PagoVenta::where('idVenta', $ventaDevuelta->idVenta)->get();
+                    $pagosDevuelto = \App\Models\Ventas\PagoVenta::where('idVenta', $ventaDevuelta->idVenta)->get();
                     if ($pagosDevuelto->count() === 1) {
                         $pagoUnico = $pagosDevuelto->first();
                         $pagoUnico->monto = floatval($nuevoTotalDevuelto);

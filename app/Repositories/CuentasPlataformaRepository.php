@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\CuentasPlataforma;
+use App\Models\Empresa\CuentasPlataforma;
 
 class CuentasPlataformaRepository implements CuentasPlataformaRepositoryInterface
 {

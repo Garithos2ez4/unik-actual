@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Review;
+use App\Models\Catalogo\Review;
 use App\Services\HeaderServiceInterface;
 
 class ReviewController extends Controller

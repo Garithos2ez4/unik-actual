@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Caracteristicas_Sugerencias;
+use App\Models\Catalogo\Caracteristicas_Sugerencias;
 
 class CaracteristicasSugerenciasRepository implements CaracteristicasSugerenciasRepositoryInterface
 {

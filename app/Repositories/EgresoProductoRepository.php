@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\EgresoProducto;
+use App\Models\Inventario\EgresoProducto;
 
 class EgresoProductoRepository implements EgresoProductoRepositoryInterface
 {

@@ -73,12 +73,12 @@ class VentaService implements VentaServiceInterface
                 if (!$precioProvisto) {
                     $precio = 0; // Default en caso falle
                     if ($detalle['origenPrecio'] === 'PUBLICACION' && !empty($detalle['idPublicacion'])) {
-                        $publicacion = \App\Models\Publicacion::find($detalle['idPublicacion']);
+                        $publicacion = \App\Models\Catalogo\Publicacion::find($detalle['idPublicacion']);
                         if ($publicacion) {
                             $precio = $publicacion->precioPublicacion;
                         }
                     } else if (!empty($detalle['idProducto'])) {
-                        $producto = \App\Models\Producto::find($detalle['idProducto']);
+                        $producto = \App\Models\Catalogo\Producto::find($detalle['idProducto']);
                         if ($producto) {
                             $tasaCambio = $this->calculadoraService->obtenerCambioDolar() ?? 1;
                             $precio = $producto->precioDolar * $tasaCambio;
@@ -100,7 +100,7 @@ class VentaService implements VentaServiceInterface
             // 5. Registrar Pagos
             if (!empty($pagos)) {
                 foreach ($pagos as $pago) {
-                    \App\Models\PagoVenta::create([
+                    \App\Models\Ventas\PagoVenta::create([
                         'idVenta' => $venta->idVenta,
                         'idMetodoPago' => $pago['idMetodo'],
                         'idCuentaBancaria' => $pago['idCuentaBancaria'] ?? null,
@@ -111,11 +111,11 @@ class VentaService implements VentaServiceInterface
             } else {
                 // Si no enviaron pagos pero es de tienda y hay un total, asume Efectivo
                 if ($venta->canal === 'TIENDA' && $totalVenta > 0) {
-                    $metodoEfectivo = \App\Models\MetodoPago::where('nombreMetodo', 'LIKE', '%Efectivo%')
+                    $metodoEfectivo = \App\Models\Ventas\MetodoPago::where('nombreMetodo', 'LIKE', '%Efectivo%')
                                                             ->orWhere('idMetodoPago', 1)
                                                             ->first();
                     if ($metodoEfectivo) {
-                        \App\Models\PagoVenta::create([
+                        \App\Models\Ventas\PagoVenta::create([
                             'idVenta' => $venta->idVenta,
                             'idMetodoPago' => $metodoEfectivo->idMetodoPago,
                             'monto' => $totalVenta,

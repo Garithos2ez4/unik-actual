@@ -52,11 +52,11 @@ class TipoPaqueteEnviosSeeder extends Seeder
         ];
 
         // Buscar el ID de Shalom si existe, o dejarlo nulo
-        $shalom = \App\Models\Agencia::where('nombre', 'SHALOM')->first();
+        $shalom = \App\Models\Envios\Agencia::where('nombre', 'SHALOM')->first();
         $idAgencia = $shalom ? $shalom->idAgencia : null;
 
         foreach ($paquetes as $pkg) {
-            \App\Models\TipoPaqueteEnvio::create([
+            \App\Models\Envios\TipoPaqueteEnvio::create([
                 'nombre' => $pkg['nombre'],
                 'icono' => $pkg['icono'],
                 'clave_api' => $pkg['clave_api'],

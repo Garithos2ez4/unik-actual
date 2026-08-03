@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\CategoriaProducto;
-use App\Models\GrupoProducto;
+use App\Models\Catalogo\CategoriaProducto;
+use App\Models\Catalogo\GrupoProducto;
 
 class ScannerRepuestosSeeder extends Seeder
 {

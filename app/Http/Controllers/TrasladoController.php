@@ -53,7 +53,7 @@ class TrasladoController extends Controller
         $query = $request->input('query');
         if(empty($query)) return response()->json([]);
 
-        $productos = \App\Models\Producto::where('modelo', 'like', "%$query%")
+        $productos = \App\Models\Catalogo\Producto::where('modelo', 'like', "%$query%")
             ->orWhere('nombreProducto', 'like', "%$query%")
             ->orWhere('codigoProducto', 'like', "%$query%")
             ->orWhere('partNumber', 'like', "%$query%")
@@ -72,7 +72,7 @@ class TrasladoController extends Controller
         }
 
         // Series disponibles para traslado (solo las que cuentan como stock real)
-        $series = \App\Models\RegistroProducto::with(['Almacen', 'DetalleComprobante.Producto', 'DetalleComprobante.Comprobante.Preveedor'])
+        $series = \App\Models\Inventario\RegistroProducto::with(['Almacen', 'DetalleComprobante.Producto', 'DetalleComprobante.Comprobante.Preveedor'])
             ->whereHas('DetalleComprobante', function($q) use ($idProducto) {
                 $q->where('idProducto', $idProducto);
             })
@@ -87,7 +87,7 @@ class TrasladoController extends Controller
         $seriesArr = $request->input('series', []);
         if(empty($seriesArr)) return response()->json([]);
 
-        $series = \App\Models\RegistroProducto::with(['Almacen', 'DetalleComprobante.Producto', 'DetalleComprobante.Comprobante.Preveedor'])
+        $series = \App\Models\Inventario\RegistroProducto::with(['Almacen', 'DetalleComprobante.Producto', 'DetalleComprobante.Comprobante.Preveedor'])
             ->whereIn('numeroSerie', $seriesArr)
             ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
             ->get();

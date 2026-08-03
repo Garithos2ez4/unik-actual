@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Services\Licencias\Handlers;
-use App\Models\Licencia;
-use App\Models\LicenciaUsada;
-use App\Models\LicenciaRecuperada;
+use App\Models\Licencias\Licencia;
+use App\Models\Licencias\LicenciaUsada;
+use App\Models\Licencias\LicenciaRecuperada;
 use Illuminate\Http\UploadedFile;
 
 class LicenciaUsadaHandler implements CambioEstadoHandlerInterface

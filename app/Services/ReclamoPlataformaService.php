@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\ReclamoPlataforma;
-use App\Models\TipoReclamoPlataforma;
-use App\Models\SeguimientoReclamo;
-use App\Models\DiagnosticoReclamo;
+use App\Models\Reclamos\ReclamoPlataforma;
+use App\Models\Reclamos\TipoReclamoPlataforma;
+use App\Models\Reclamos\SeguimientoReclamo;
+use App\Models\Reclamos\DiagnosticoReclamo;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 

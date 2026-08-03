@@ -2,7 +2,7 @@
 
 namespace App\Services\Falabella;
 
-use App\Models\Producto;
+use App\Models\Catalogo\Producto;
 use App\Services\Falabella\Contracts\FalabellaCategoryMapper;
 use App\Services\Falabella\Mappers\LaptopMapper;
 use App\Services\Falabella\Mappers\MonitorMapper;

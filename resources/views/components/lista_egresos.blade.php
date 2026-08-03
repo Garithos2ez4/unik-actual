@@ -88,7 +88,7 @@
                         } else {
                             $producto = $egreso->RegistroProducto->DetalleComprobante->Producto ?? null;
                             if ($producto && isset($producto->precioDolar) && $producto->precioDolar > 0) {
-                                $tasaCambio = \App\Models\Calculadora::first()?->tasaCambio ?? 1;
+                                $tasaCambio = \App\Models\Precios\Calculadora::first()?->tasaCambio ?? 1;
                                 $fallbackPrecio = $producto->precioDolar * $tasaCambio;
                             }
                         }

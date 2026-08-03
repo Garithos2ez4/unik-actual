@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
 
-use App\Models\UbicacionAlmacen;
+use App\Models\Inventario\UbicacionAlmacen;
 
 class UbicacionAlmacenRepository implements UbicacionAlmacenRepositoryInterface
 {

@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Caracteristicas;
+use App\Models\Catalogo\Caracteristicas;
 
 class CaracteristicasRepository implements CaracteristicasRepositoryInterface
 {

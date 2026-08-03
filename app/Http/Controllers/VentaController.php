@@ -77,7 +77,7 @@ class VentaController extends Controller
 
     public function getVentasLaptopsAio()
     {
-        $ventas = \App\Models\Venta::with([
+        $ventas = \App\Models\Ventas\Venta::with([
             'Cliente',
             'Usuario',
             'DetallesVenta.Producto.MarcaProducto',
@@ -91,7 +91,7 @@ class VentaController extends Controller
             ->orderBy('idVenta', 'desc')
             ->get()
             ->map(function ($venta) {
-                $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+                $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
 
                 $laptop = null;
                 $componentes = [];

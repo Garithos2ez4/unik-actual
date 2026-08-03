@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\RangoPrecio;
+use App\Models\Precios\RangoPrecio;
 
 class RangoPrecioRepository implements RangoPrecioRepositoryInterface
 {

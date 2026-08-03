@@ -25,7 +25,7 @@ interface LicenciaServiceInterface
      * Crear una nueva licencia.
      *
      * @param array $data
-     * @return \App\Models\Licencia
+     * @return \App\Models\Licencias\Licencia
      */
     public function crearLicencia(array $data);
 
@@ -33,7 +33,7 @@ interface LicenciaServiceInterface
      * Registrar una licencia (forma genérica).
      *
      * @param array $data
-     * @return \App\Models\Licencia
+     * @return \App\Models\Licencias\Licencia
      */
     public function registrar(array $data);
 
@@ -51,7 +51,7 @@ interface LicenciaServiceInterface
      * @param string $serial
      * @param string $nuevoEstado
      * @param array $datosForm
-     * @return \App\Models\Licencia
+     * @return \App\Models\Licencias\Licencia
      */
     public function cambiarEstadoConFormulario(string $serial, string $nuevoEstado, array $datosForm);
 }

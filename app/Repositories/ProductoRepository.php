@@ -5,8 +5,8 @@ namespace App\Repositories;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use App\Models\Producto;
-use App\Models\MarcaProducto;
+use App\Models\Catalogo\Producto;
+use App\Models\Catalogo\MarcaProducto;
 
 class ProductoRepository implements ProductoRepositoryInterface
 {

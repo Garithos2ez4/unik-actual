@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 
 use App\Services\HeaderService;
-use App\Models\Almacen;
+use App\Models\Inventario\Almacen;
 
 class AlmacenController extends Controller
 {

@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
 
-use App\Models\Caracteristicas_Producto;
+use App\Models\Catalogo\Caracteristicas_Producto;
 
 class CaracteristicasProductoRepository implements CaracteristicasProductoRepositoryInterface
 {

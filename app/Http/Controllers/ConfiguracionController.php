@@ -29,9 +29,9 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 $empresas = $this->configuracionService->getAllEmpresas();
-                $bancos = \App\Models\Banco::all();
-                $metodosPago = \App\Models\MetodoPago::with('TipoMetodoPago', 'Banco')->get();
-                $tiposMetodoPago = \App\Models\TipoMetodoPago::all();
+                $bancos = \App\Models\Empresa\Banco::all();
+                $metodosPago = \App\Models\Ventas\MetodoPago::with('TipoMetodoPago', 'Banco')->get();
+                $tiposMetodoPago = \App\Models\Ventas\TipoMetodoPago::all();
 
                 return view('configweb', [
                     'user' => $userModel,
@@ -90,7 +90,7 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 // Eager load ubicaciones for the view
-                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+                $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
                 $proveedores = $this->configuracionService->getAllProveedores();
 
                 return view('configinventario', [
@@ -334,7 +334,7 @@ class ConfiguracionController extends Controller
                     return back();
                 }
 
-                $grupos = \App\Models\GrupoProducto::where('idCategoria', $idCategoria)->get();
+                $grupos = \App\Models\Catalogo\GrupoProducto::where('idCategoria', $idCategoria)->get();
 
                 foreach ($grupos as $grupo) {
                     foreach ($comisionesTemplate as $idRango => $comision) {

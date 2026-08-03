@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\CalculadoraServiceInterface;
-use App\Models\Venta;
+use App\Models\Ventas\Venta;
 
 class GananciaController extends Controller
 {
@@ -103,7 +103,7 @@ class GananciaController extends Controller
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
             ELSE 0 END";
 
-        $ganancias = \App\Models\DetalleVenta::query()
+        $ganancias = \App\Models\Ventas\DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')

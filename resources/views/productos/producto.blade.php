@@ -346,7 +346,7 @@
                     Ubicación {{ $almacen->descripcion }}:
                 </label>
                 @php
-                $ubicacionesExactas = \App\Models\UbicacionEstante::where('idAlmacen', $almacen->idAlmacen)
+                $ubicacionesExactas = \App\Models\Inventario\UbicacionEstante::where('idAlmacen', $almacen->idAlmacen)
                 ->where('estado', 1)
                 ->orderBy('nombre_rack')
                 ->orderBy('fila_estante')
@@ -380,7 +380,7 @@
                 </div>
 
                 @php
-                $racksEspecificos = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
+                $racksEspecificos = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
                 $q->where('idProducto', $producto->idProducto);
                 })
                 ->where('idAlmacen', $almacen->idAlmacen)

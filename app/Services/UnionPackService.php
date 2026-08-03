@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\DivisionPack;
-use App\Models\DivisionPackDetalle;
-use App\Models\ProductoPack;
-use App\Models\RegistroProducto;
-use App\Models\DetalleComprobante;
-use App\Models\IngresoProducto;
-use App\Models\Inventario;
+use App\Models\Inventario\DivisionPack;
+use App\Models\Inventario\DivisionPackDetalle;
+use App\Models\Catalogo\ProductoPack;
+use App\Models\Inventario\RegistroProducto;
+use App\Models\Ventas\DetalleComprobante;
+use App\Models\Inventario\IngresoProducto;
+use App\Models\Inventario\Inventario;
 use App\Repositories\InventarioRepositoryInterface;
 use App\Repositories\RegistroProductoRepositoryInterface;
 use Exception;
@@ -334,12 +334,12 @@ class UnionPackService implements UnionPackServiceInterface
             if (count($series) === 1) {
                 $serieResultante = $series[0];
             } else {
-                $productoPadre = \App\Models\Producto::find($idProductoPack);
+                $productoPadre = \App\Models\Catalogo\Producto::find($idProductoPack);
                 $modelOrCode = !empty($productoPadre->modelo) ? $productoPadre->modelo : $productoPadre->codigoProducto;
                 $cleanedModel = preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($modelOrCode));
                 $parcialCode = 'UNK-' . $cleanedModel;
                 
-                $validateCode = \App\Models\RegistroProducto::where('numeroSerie', 'like', "%{$parcialCode}%")->count();
+                $validateCode = \App\Models\Inventario\RegistroProducto::where('numeroSerie', 'like', "%{$parcialCode}%")->count();
                 $serieResultante = $parcialCode . '-' . (100000 + $validateCode + 1);
             }
 

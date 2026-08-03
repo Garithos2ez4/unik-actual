@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\EnvioProvincia;
-use App\Models\EnvioProvinciaDetalle;
-use App\Models\EnvioProvinciaProducto;
-use App\Models\Agencia;
-use App\Models\Provincia;
-use App\Models\Destino;
-use App\Models\SubAgencia;
+use App\Models\Envios\EnvioProvincia;
+use App\Models\Envios\EnvioProvinciaDetalle;
+use App\Models\Envios\EnvioProvinciaProducto;
+use App\Models\Envios\Agencia;
+use App\Models\Envios\Provincia;
+use App\Models\Envios\Destino;
+use App\Models\Envios\SubAgencia;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -32,7 +32,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
                 ]);
 
                 if ($hasReceptor) {
-                    \App\Models\EnvioProvinciaReceptor::create([
+                    \App\Models\Envios\EnvioProvinciaReceptor::create([
                         'id_envio_provincia_detalle' => $detalle->idEnvioProvinciaDetalle,
                         'nombre' => $data['receptor']['nombre'],
                         'dni' => $data['receptor']['dni'],
@@ -43,7 +43,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
 
             $hasDimensions = isset($data['peso']) || isset($data['largo']) || isset($data['ancho']) || isset($data['alto']) || isset($data['idTipoPaquete']);
             if ($hasDimensions) {
-                \App\Models\EnvioDimension::create([
+                \App\Models\Envios\EnvioDimension::create([
                     'idEnvioProvincia' => $envio->idEnvioProvincia,
                     'idTipoPaquete' => ($data['idTipoPaquete'] ?? 'custom') !== 'custom' ? $data['idTipoPaquete'] : null,
                     'largo_final' => $data['largo'] ?? 0,
@@ -94,7 +94,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
                 );
 
                 if ($hasReceptor) {
-                    \App\Models\EnvioProvinciaReceptor::updateOrCreate(
+                    \App\Models\Envios\EnvioProvinciaReceptor::updateOrCreate(
                         ['id_envio_provincia_detalle' => $detalle->idEnvioProvinciaDetalle],
                         [
                             'nombre' => $data['receptor']['nombre'],
@@ -104,13 +104,13 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
                     );
                 } else {
                     if ($detalle) {
-                        \App\Models\EnvioProvinciaReceptor::where('id_envio_provincia_detalle', $detalle->idEnvioProvinciaDetalle)->delete();
+                        \App\Models\Envios\EnvioProvinciaReceptor::where('id_envio_provincia_detalle', $detalle->idEnvioProvinciaDetalle)->delete();
                     }
                 }
             } else {
                 $detalle = EnvioProvinciaDetalle::where('idEnvioProvincia', $envio->idEnvioProvincia)->first();
                 if ($detalle) {
-                    \App\Models\EnvioProvinciaReceptor::where('id_envio_provincia_detalle', $detalle->idEnvioProvinciaDetalle)->delete();
+                    \App\Models\Envios\EnvioProvinciaReceptor::where('id_envio_provincia_detalle', $detalle->idEnvioProvinciaDetalle)->delete();
                     if ($detalle->origen !== 'FORMULARIO_PUBLICO') {
                         $detalle->delete();
                     }
@@ -118,7 +118,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
             }
             $hasDimensions = isset($data['peso']) || isset($data['largo']) || isset($data['ancho']) || isset($data['alto']) || isset($data['idTipoPaquete']);
             if ($hasDimensions) {
-                \App\Models\EnvioDimension::updateOrCreate(
+                \App\Models\Envios\EnvioDimension::updateOrCreate(
                     ['idEnvioProvincia' => $envio->idEnvioProvincia],
                     [
                         'idTipoPaquete' => ($data['idTipoPaquete'] ?? 'custom') !== 'custom' ? $data['idTipoPaquete'] : null,
@@ -130,7 +130,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
                     ]
                 );
             } else {
-                \App\Models\EnvioDimension::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
+                \App\Models\Envios\EnvioDimension::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();
             }
 
             EnvioProvinciaProducto::where('idEnvioProvincia', $envio->idEnvioProvincia)->delete();

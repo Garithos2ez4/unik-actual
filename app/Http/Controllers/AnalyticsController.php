@@ -7,10 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
-use App\Models\Venta;
-use App\Models\DetalleVenta;
-use App\Models\EgresoProducto;
-use App\Models\Producto;
+use App\Models\Ventas\Venta;
+use App\Models\Ventas\DetalleVenta;
+use App\Models\Inventario\EgresoProducto;
+use App\Models\Catalogo\Producto;
 
 class AnalyticsController extends Controller
 {
@@ -386,7 +386,7 @@ class AnalyticsController extends Controller
         $productosMenosGananciaUnitaria = $margenesProductos->sortBy('ganancia_neta_unitaria')->take(5)->values();
 
         // ── 9. Top 5 Productos Más Enviados ───────────────────
-        $topEnviados = \App\Models\EnvioProvinciaProducto::query()
+        $topEnviados = \App\Models\Envios\EnvioProvinciaProducto::query()
             ->join('envio_provincias', 'envio_provincia_productos.idEnvioProvincia', '=', 'envio_provincias.idEnvioProvincia')
             ->join('Producto', 'envio_provincia_productos.idProducto', '=', 'Producto.idProducto')
             ->selectRaw('Producto.nombreProducto, Producto.modelo, SUM(envio_provincia_productos.cantidad) as total_enviado')
@@ -397,7 +397,7 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 10. Top 5 Provincias Más Solicitadas ───────────────────
-        $topProvincias = \App\Models\EnvioProvincia::query()
+        $topProvincias = \App\Models\Envios\EnvioProvincia::query()
             ->join('destinos', 'envio_provincias.idDestino', '=', 'destinos.idDestino')
             ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
             ->selectRaw('provincias.nombre as nombre_provincia, COUNT(envio_provincias.idEnvioProvincia) as total_envios')
@@ -408,7 +408,7 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 11. Top 5 Envíos por Monto ───────────────────
-        $topEnviosPorMonto = \App\Models\EnvioProvincia::query()
+        $topEnviosPorMonto = \App\Models\Envios\EnvioProvincia::query()
             ->join('Venta', function($join) {
                 $join->on('envio_provincias.idCliente', '=', 'Venta.idCliente')
                      ->on(DB::raw('DATE(envio_provincias.fecha_envio)'), '=', DB::raw('DATE(Venta.fechaVenta)'));
@@ -603,7 +603,7 @@ class AnalyticsController extends Controller
                     return $venta;
                 });
 
-            $pagosTienda = \App\Models\PagoVenta::query()
+            $pagosTienda = \App\Models\Ventas\PagoVenta::query()
                 ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
                 ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
                 ->selectRaw("MetodoPago.nombreMetodo as metodo_pago, SUM(PagoVenta.monto) as total_monto, COUNT(PagoVenta.idPagoVenta) as cantidad_transacciones")
@@ -613,7 +613,7 @@ class AnalyticsController extends Controller
                 ->orderByDesc('total_monto')
                 ->get();
 
-            $detallePagosTienda = \App\Models\PagoVenta::query()
+            $detallePagosTienda = \App\Models\Ventas\PagoVenta::query()
                 ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
                 ->join('MetodoPago', 'PagoVenta.idMetodoPago', '=', 'MetodoPago.idMetodoPago')
                 ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
@@ -639,7 +639,7 @@ class AnalyticsController extends Controller
                 ->get();
 
             // ── Consulta para agrupar por SKU (Modelo) ───────────────────
-            $skusTienda = \App\Models\DetalleVenta::query()
+            $skusTienda = \App\Models\Ventas\DetalleVenta::query()
                 ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
                 ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
                 ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')

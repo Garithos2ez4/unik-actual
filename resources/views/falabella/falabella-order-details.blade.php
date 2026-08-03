@@ -41,7 +41,7 @@
                     <!-- Columna Falabella SKU -->
                     <div class="col text-center" style="max-width: 150px;">
                         @php
-                            $pub = \App\Models\Publicacion::where('titulo', $item->name)->first();
+                            $pub = \App\Models\Catalogo\Publicacion::where('titulo', $item->name)->first();
                             $display_sku = $pub ? $pub->sku : ($item->falabella_sku ?: $item->shop_sku);
                             // Asegurar que solo sea numérico
                             if (!is_numeric($display_sku)) {

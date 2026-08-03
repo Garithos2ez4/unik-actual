@@ -32,7 +32,7 @@
                         <div class="col-6 pt-2">
                             <label class="form-label fw-bold">Ubicación Específica (Opcional):</label>
                             @php
-                                $ubicacionesExactasGlobal = \App\Models\UbicacionEstante::where('estado', 1)
+                                $ubicacionesExactasGlobal = \App\Models\Inventario\UbicacionEstante::where('estado', 1)
                                     ->orderBy('idAlmacen')
                                     ->orderBy('nombre_rack')
                                     ->orderBy('fila_estante')

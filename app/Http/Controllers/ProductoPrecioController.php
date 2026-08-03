@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Producto;
+use App\Models\Catalogo\Producto;
 use App\Services\CalculadoraServiceInterface;
 use App\Services\PreciosService;
 
@@ -56,7 +56,7 @@ class ProductoPrecioController extends Controller
         $precioIgvSoles = round($precioConIgv * $tcUsar, 2);
 
         // Fetch último costo desde compras
-        $ultimoDetalle = \App\Models\DetalleComprobante::with('Comprobante')
+        $ultimoDetalle = \App\Models\Ventas\DetalleComprobante::with('Comprobante')
             ->where('idProducto', $idProducto)
             ->orderBy('idDetalleComprobante', 'desc')
             ->first();
@@ -171,7 +171,7 @@ class ProductoPrecioController extends Controller
     public function obtenerHistorialPrecioTienda($id)
     {
         try {
-            $historial = \App\Models\HistorialPrecioTienda::with('Usuario')
+            $historial = \App\Models\Precios\HistorialPrecioTienda::with('Usuario')
                 ->where('idProducto', $id)
                 ->orderBy('created_at', 'desc')
                 ->get()

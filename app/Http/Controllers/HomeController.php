@@ -47,7 +47,7 @@ class HomeController extends Controller
 
         // Nueva lógica para productos top del mes (Solo ventas que NO han sido devueltas)
         $productosMostSoldMonth = \Illuminate\Support\Facades\Cache::remember('dash_prod_most_sold_month', 60, function () {
-            return \App\Models\Producto::query()
+            return \App\Models\Catalogo\Producto::query()
                 ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
                 ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
                 ->join('EgresoProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
@@ -66,14 +66,14 @@ class HomeController extends Controller
         });
 
         $reclamosUrgentes = \Illuminate\Support\Facades\Cache::remember('dash_reclamos_urg', 60, function () {
-            return \App\Models\ReclamoPlataforma::where('estadoGeneral', 'ABIERTO')
+            return \App\Models\Reclamos\ReclamoPlataforma::where('estadoGeneral', 'ABIERTO')
                 ->where('fechaMaxRespuesta', '<=', now()->addDays(3))
                 ->count();
         });
 
         // Ranking de 5 productos con más stock (Suma de todos los almacenes)
         $productosMostStock = \Illuminate\Support\Facades\Cache::remember('dash_prod_most_stock', 60, function () {
-            return \App\Models\Producto::query()
+            return \App\Models\Catalogo\Producto::query()
                 ->join('Inventario', 'Inventario.idProducto', '=', 'Producto.idProducto')
                 ->select('Producto.*', \DB::raw('SUM(Inventario.stock) as total_stock'))
                 ->groupBy('Producto.idProducto')
@@ -84,7 +84,7 @@ class HomeController extends Controller
 
         // Top 5 publicaciones con mayor monto vendido (Mes actual)
         $publicacionesTopMonto = \Illuminate\Support\Facades\Cache::remember('dash_pub_top_monto', 60, function () {
-            return \App\Models\Publicacion::query()
+            return \App\Models\Catalogo\Publicacion::query()
                 ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
                 ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
                 ->whereMonth('EgresoProducto.fechaCompra', now()->month)
@@ -102,7 +102,7 @@ class HomeController extends Controller
 
         // Top 5 publicaciones con mayor monto vendido (Histórico)
         $publicacionesTopMontoHist = \Illuminate\Support\Facades\Cache::remember('dash_pub_top_monto_hist', 720, function () {
-            return \App\Models\Publicacion::query()
+            return \App\Models\Catalogo\Publicacion::query()
                 ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
                 ->select('Publicacion.*', \DB::raw('SUM(Publicacion.precioPublicacion) as total_monto'))
                 ->whereNotExists(function ($query) {
@@ -118,7 +118,7 @@ class HomeController extends Controller
 
         // Top 3 SKUs con más ventas (Mes actual)
         $skusMostSoldMonth = \Illuminate\Support\Facades\Cache::remember('dash_sku_most_sold', 60, function () {
-            return \App\Models\Publicacion::query()
+            return \App\Models\Catalogo\Publicacion::query()
                 ->join('EgresoProducto', 'EgresoProducto.idPublicacion', '=', 'Publicacion.idPublicacion')
                 ->select('Publicacion.sku', 'Publicacion.titulo', \DB::raw('COUNT(EgresoProducto.idEgreso) as total_ventas'))
                 ->whereMonth('EgresoProducto.fechaCompra', now()->month)
@@ -136,7 +136,7 @@ class HomeController extends Controller
 
         // Top 5 productos con más fallas (Devoluciones o Defectuosos con observación)
         $productosConFallas = \Illuminate\Support\Facades\Cache::remember('dash_prod_fallas', 60, function () {
-            return \App\Models\Producto::query()
+            return \App\Models\Catalogo\Producto::query()
                 ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
                 ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
                 ->leftJoin('devoluciones', 'RegistroProducto.idRegistro', '=', 'devoluciones.idRegistro')
@@ -161,7 +161,7 @@ class HomeController extends Controller
 
         // Ventas de los últimos 7 días
         $ventas7DiasRaw = \Illuminate\Support\Facades\Cache::remember('dash_ventas_7_dias', 60, function () {
-            return \App\Models\EgresoProducto::query()
+            return \App\Models\Inventario\EgresoProducto::query()
                 ->select(\DB::raw('DATE(fechaCompra) as fecha'), \DB::raw('COUNT(*) as total'))
                 ->where('fechaCompra', '>=', now()->subDays(6)->startOfDay())
                 ->groupBy(\DB::raw('DATE(fechaCompra)'))
@@ -242,7 +242,7 @@ class HomeController extends Controller
         }
 
         $productosOldStock = \Illuminate\Support\Facades\Cache::remember('dashboard_old_stock', now()->addMinutes(720), function () {
-            return \App\Models\Producto::select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
+            return \App\Models\Catalogo\Producto::select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.imagenProducto1')
                 ->join('DetalleComprobante', 'DetalleComprobante.idProducto', '=', 'Producto.idProducto')
                 ->join('RegistroProducto', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
                 ->join('IngresoProducto', 'IngresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
@@ -286,7 +286,7 @@ class HomeController extends Controller
 
         $alertasPrecio = collect();
         if ($tieneAccesoAnalitica) {
-            $alertasPrecio = \App\Models\AlertaPrecio::where('estado', 'pendiente')->get();
+            $alertasPrecio = \App\Models\Falabella\AlertaPrecio::where('estado', 'pendiente')->get();
         }
         return view('dashboard', [
             'user' => $userModel,
@@ -381,7 +381,7 @@ class HomeController extends Controller
     }
     public function ignorarAlerta($id)
     {
-        $alerta = \App\Models\AlertaPrecio::find($id);
+        $alerta = \App\Models\Falabella\AlertaPrecio::find($id);
         if ($alerta) {
             $alerta->update(['estado' => 'procesada']);
             return response()->json(['success' => true]);

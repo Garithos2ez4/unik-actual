@@ -61,7 +61,7 @@
                         <option value="" {{ old('grupo') ? '' : 'selected' }}>-Elige un grupo-</option>
                     @foreach($grupos as $grupo)
                         @php
-                            $gp = \App\Models\GrupoProducto::find($grupo['idGrupoProducto']);
+                            $gp = \App\Models\Catalogo\GrupoProducto::find($grupo['idGrupoProducto']);
                             $catName = $gp && $gp->CategoriaProducto ? $gp->CategoriaProducto->nombreCategoria : '';
                         @endphp
                         <option value="{{ $grupo['idGrupoProducto'] }}"

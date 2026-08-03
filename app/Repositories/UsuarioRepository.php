@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Usuario;
+use App\Models\Usuarios\Usuario;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 

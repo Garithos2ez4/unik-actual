@@ -114,7 +114,7 @@ class PlataformaController extends Controller
 
                     $products = $this->falabellaApiService->extractProducts($response);
 
-                    $falabellaPlataforma = \App\Models\Plataforma::where('nombrePlataforma', 'Falabella')->first();
+                    $falabellaPlataforma = \App\Models\Empresa\Plataforma::where('nombrePlataforma', 'Falabella')->first();
                     $falabellaPlataformaId = $falabellaPlataforma ? $falabellaPlataforma->idPlataforma : 0;
                     $encryptedId = encrypt($falabellaPlataformaId);
                 } catch (\Exception $e) {
@@ -360,7 +360,7 @@ class PlataformaController extends Controller
                             $image = null;
                             $skuToSearch = $item->seller_sku ?: $item->falabella_sku;
                             if ($skuToSearch && $skuToSearch !== '-' && $skuToSearch !== 'UNKNOWN') {
-                                $producto = \App\Models\Producto::where('codigoProducto', $skuToSearch)->first();
+                                $producto = \App\Models\Catalogo\Producto::where('codigoProducto', $skuToSearch)->first();
                                 if ($producto && $producto->imagenProducto1) {
                                     $image = asset('storage/' . $producto->imagenProducto1);
                                 }
@@ -448,7 +448,7 @@ class PlataformaController extends Controller
                             $image = null;
                             $skuToSearch = $item->seller_sku ?: $item->falabella_sku;
                             if ($skuToSearch && $skuToSearch !== '-' && $skuToSearch !== 'UNKNOWN') {
-                                $producto = \App\Models\Producto::where('codigoProducto', $skuToSearch)->first();
+                                $producto = \App\Models\Catalogo\Producto::where('codigoProducto', $skuToSearch)->first();
                                 if ($producto && $producto->imagenProducto1) {
                                     $image = asset('storage/' . $producto->imagenProducto1);
                                 }
@@ -595,7 +595,7 @@ class PlataformaController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 4) {
-                $order = \App\Models\FalabellaOrder::with('items')->where('order_id', $order_id)->firstOrFail();
+                $order = \App\Models\Falabella\FalabellaOrder::with('items')->where('order_id', $order_id)->firstOrFail();
 
                 return view('falabella.falabella-order-details', [
                     'order' => $order,

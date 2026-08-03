@@ -7,14 +7,14 @@ use App\Services\LicenciaServiceInterface;
 use App\Services\HeaderServiceInterface;
 use App\Exports\PlantillaLicenciaExport;
 use App\Imports\LicenciaImport;
-use App\Models\CategoriaLicencia;
-use App\Models\Licencia;
+use App\Models\Licencias\CategoriaLicencia;
+use App\Models\Licencias\Licencia;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Models\Preveedor;
-use App\Models\TipoLicencia;
+use App\Models\Empresa\Preveedor;
+use App\Models\Licencias\TipoLicencia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Models\LicenciaUsada;
+use App\Models\Licencias\LicenciaUsada;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 
@@ -165,7 +165,7 @@ class LicenciaController extends Controller
             }
 
             // Detectar duplicados en la BD
-            $existentes = \App\Models\Licencia::whereIn('voucher_code', $preview->pluck('voucher_code'))->pluck('voucher_code');
+            $existentes = \App\Models\Licencias\Licencia::whereIn('voucher_code', $preview->pluck('voucher_code'))->pluck('voucher_code');
             $duplicados = $existentes->count();
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             return back()->withInput()->with('import_error', 'Error en la validación del Excel: ' . collect($e->failures())->map(fn($f) => $f->errors()[0])->implode(', '));
@@ -207,7 +207,7 @@ class LicenciaController extends Controller
                 }
 
                 // Omitir duplicados sin explotar
-                if (\App\Models\Licencia::where('voucher_code', $code)->exists()) {
+                if (\App\Models\Licencias\Licencia::where('voucher_code', $code)->exists()) {
                     $omitidas++;
                     continue;
                 }
@@ -327,7 +327,7 @@ class LicenciaController extends Controller
     {
         $user = $this->headerService->getModelUser();
 
-        $licenciasDefectuosas = \App\Models\LicenciaDefectuosa::with('licencia.tipoLicencia', 'licencia.proveedor')
+        $licenciasDefectuosas = \App\Models\Licencias\LicenciaDefectuosa::with('licencia.tipoLicencia', 'licencia.proveedor')
             ->where('estado', 'DEFECTUOSA')
             ->orderByDesc('id')
             ->paginate(10);
@@ -341,7 +341,7 @@ class LicenciaController extends Controller
     {
         $user = $this->headerService->getModelUser();
 
-        $licenciasRecuperadas = \App\Models\LicenciaRecuperada::with('licencia', 'licencia.proveedor')
+        $licenciasRecuperadas = \App\Models\Licencias\LicenciaRecuperada::with('licencia', 'licencia.proveedor')
             ->where('estado', 'RECUPERADA')
             ->orderByDesc('id')
             ->paginate(10);
@@ -358,7 +358,7 @@ class LicenciaController extends Controller
             'nombre' => 'required|string|max:255|unique:tipo_licencia,nombre',
         ]);
 
-        $tipo = \App\Models\TipoLicencia::create([
+        $tipo = \App\Models\Licencias\TipoLicencia::create([
             'nombre' => $request->nombre,
             'estado' => 1
         ]);
@@ -376,13 +376,13 @@ class LicenciaController extends Controller
 
     public function getAllTipos()
     {
-        $tipos = \App\Models\TipoLicencia::orderBy('nombre')->get();
+        $tipos = \App\Models\Licencias\TipoLicencia::orderBy('nombre')->get();
         return response()->json($tipos);
     }
 
     public function toggleTipoEstado(Request $request)
     {
-        $tipo = \App\Models\TipoLicencia::find($request->id);
+        $tipo = \App\Models\Licencias\TipoLicencia::find($request->id);
         if ($tipo) {
             $tipo->estado = $request->estado ? 1 : 0;
             $tipo->save();

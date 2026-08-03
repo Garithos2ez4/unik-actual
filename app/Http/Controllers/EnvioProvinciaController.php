@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Services\HeaderServiceInterface;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Models\EnvioProvincia;
-use App\Models\Agencia;
-use App\Models\Provincia;
-use App\Models\Destino;
-use App\Models\Plataforma;
-use App\Models\Departamento;
-use App\Models\SubAgencia;
+use App\Models\Envios\EnvioProvincia;
+use App\Models\Envios\Agencia;
+use App\Models\Envios\Provincia;
+use App\Models\Envios\Destino;
+use App\Models\Empresa\Plataforma;
+use App\Models\Envios\Departamento;
+use App\Models\Envios\SubAgencia;
 use Throwable;
 
 class EnvioProvinciaController extends Controller
@@ -68,8 +68,8 @@ class EnvioProvinciaController extends Controller
                 $agencias = Agencia::where('estado', 1)->orderBy('nombre', 'asc')->get();
                 $departamentos = Departamento::orderBy('nombre', 'asc')->get();
                 $provincias = Provincia::orderBy('nombre', 'asc')->get();
-                $documentos = \App\Models\TipoDocumento::all();
-                $tiposPaquete = \App\Models\TipoPaqueteEnvio::with('dimensiones')->where('estado', 1)->get();
+                $documentos = \App\Models\Usuarios\TipoDocumento::all();
+                $tiposPaquete = \App\Models\Envios\TipoPaqueteEnvio::with('dimensiones')->where('estado', 1)->get();
 
                 return view('envios.create', [
                     'user' => $userModel,
@@ -124,8 +124,8 @@ class EnvioProvinciaController extends Controller
                 $destinos = $selectedProvId ? Destino::where('idProvincia', $selectedProvId)->orderBy('nombre', 'asc')->get() : collect();
 
                 $subagencias = ($envio->idAgencia && $envio->idDestino) ? SubAgencia::where('idAgencia', $envio->idAgencia)->where('idDestino', $envio->idDestino)->orderBy('nombre_oficina', 'asc')->get() : collect();
-                $documentos = \App\Models\TipoDocumento::all();
-                $tiposPaquete = \App\Models\TipoPaqueteEnvio::all();
+                $documentos = \App\Models\Usuarios\TipoDocumento::all();
+                $tiposPaquete = \App\Models\Envios\TipoPaqueteEnvio::all();
 
                 return view('envios.edit', [
                     'user' => $userModel,
@@ -519,7 +519,7 @@ class EnvioProvinciaController extends Controller
         $terminos = array_filter(explode(' ', $query), 'strlen');
 
         // 1. Buscar Registros donde el numero de serie coincida con el query (búsqueda manual de serie)
-        $registrosPorSerie = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+        $registrosPorSerie = \App\Models\Inventario\RegistroProducto::with(['DetalleComprobante.Producto'])
             ->where('estado', '!=', 'ENTREGADO')
             ->where('estado', '!=', 'INVALIDO')
             ->where('numeroSerie', 'LIKE', '%' . $query . '%')
@@ -527,7 +527,7 @@ class EnvioProvinciaController extends Controller
             ->get();
 
         // 2. Buscar Productos que coincidan con los términos (nombre, codigo, modelo)
-        $productos = \App\Models\Producto::where(function ($subQ) use ($terminos) {
+        $productos = \App\Models\Catalogo\Producto::where(function ($subQ) use ($terminos) {
             foreach ($terminos as $termino) {
                 $subQ->where(function ($wQ) use ($termino) {
                     $wQ->where('nombreProducto', 'LIKE', '%' . $termino . '%')
@@ -557,7 +557,7 @@ class EnvioProvinciaController extends Controller
         // buscar UN registro disponible (el primero)
         foreach ($productos as $prod) {
             if (!in_array($prod->idProducto, $productosAgregados)) {
-                $primerRegistro = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+                $primerRegistro = \App\Models\Inventario\RegistroProducto::with(['DetalleComprobante.Producto'])
                     ->where('estado', '!=', 'ENTREGADO')
                     ->where('estado', '!=', 'INVALIDO')
                     ->whereHas('DetalleComprobante', function ($q) use ($prod) {
@@ -651,7 +651,7 @@ class EnvioProvinciaController extends Controller
 
             $token = \Illuminate\Support\Str::random(32);
 
-            $solicitud = \App\Models\SolicitudEnvio::create([
+            $solicitud = \App\Models\Envios\SolicitudEnvio::create([
                 'idUser'           => $userModel->idUser,
                 'token'            => $token,
                 'estado'           => 'PENDIENTE',
@@ -683,13 +683,13 @@ class EnvioProvinciaController extends Controller
     {
         try {
             // Actualizar a EXPIRADO las solicitudes que ya pasaron su tiempo límite
-            \App\Models\SolicitudEnvio::where('estado', 'PENDIENTE')
+            \App\Models\Envios\SolicitudEnvio::where('estado', 'PENDIENTE')
                 ->whereNotNull('token_expires_at')
                 ->where('token_expires_at', '<', now())
                 ->update(['estado' => 'EXPIRADO']);
 
             // Solo traemos idUser y user para no cargar la bandeja (que es muy pesada)
-            $query = \App\Models\SolicitudEnvio::with(['Usuario:idUser,user']);
+            $query = \App\Models\Envios\SolicitudEnvio::with(['Usuario:idUser,user']);
 
             // Si pasan parametro ?estado=PROCESADO (u otro)
             if ($request->has('estado')) {
@@ -713,7 +713,7 @@ class EnvioProvinciaController extends Controller
     public function regenerarLink($id)
     {
         try {
-            $solicitud = \App\Models\SolicitudEnvio::findOrFail($id);
+            $solicitud = \App\Models\Envios\SolicitudEnvio::findOrFail($id);
             $token = \Illuminate\Support\Str::random(32);
 
             $solicitud->update([

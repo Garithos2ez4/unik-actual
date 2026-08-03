@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Exception;
-use App\Models\ProductoPack;
+use App\Models\Catalogo\ProductoPack;
 
 class ProductoPackController extends Controller
 {

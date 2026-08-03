@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
-use App\Models\Venta;
+use App\Models\Ventas\Venta;
 
 class AnalyticsFallabellaController extends Controller
 {
@@ -128,7 +128,7 @@ class AnalyticsFallabellaController extends Controller
             });
 
         // ── Consulta para agrupar por SKU (Modelo) ───────────────────
-        $skusFalabella = \App\Models\DetalleVenta::query()
+        $skusFalabella = \App\Models\Ventas\DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')

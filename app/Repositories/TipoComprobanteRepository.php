@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\TipoComprobante;
+use App\Models\Ventas\TipoComprobante;
 
 class TipoComprobanteRepository implements TipoComprobanteRepositoryInterface
 {

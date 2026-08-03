@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
 
-use App\Models\Garantia;
+use App\Models\Ventas\Garantia;
 use Carbon\Carbon;
 
 class GarantiaRepository implements GarantiaRepositoryInterface

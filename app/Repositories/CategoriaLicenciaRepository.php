@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
-use App\Models\CategoriaLicencia;
-use App\Models\Licencia;
+use App\Models\Licencias\CategoriaLicencia;
+use App\Models\Licencias\Licencia;
 
 class CategoriaLicenciaRepository implements  CategoriaLicenciaRepositoryInterface
 {

@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Empresa;
+use App\Models\Empresa\Empresa;
 
 class EmpresaRepository implements EmpresaRepositoryInterface
 {

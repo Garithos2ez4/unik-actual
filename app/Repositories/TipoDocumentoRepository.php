@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
 
-use App\Models\TipoDocumento;
+use App\Models\Usuarios\TipoDocumento;
 
 class TipoDocumentoRepository implements TipoDocumentoRepositoryInterface
 {

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\ProductoServiceInterface;
 use App\Services\VentaServiceInterface;
-use App\Models\RegistroProducto;
+use App\Models\Inventario\RegistroProducto;
 use Exception;
 
 class EgresoController extends Controller
@@ -46,7 +46,7 @@ class EgresoController extends Controller
                 $diaSeleccionado = $request->query('dia');
                 $egresos = $this->egresoService->getEgresosByMonth($month, 150, $diaSeleccionado);
                 $almacenes = $this->egresoService->getAllAlmacenes();
-                $usuarios = \App\Models\Usuario::all();
+                $usuarios = \App\Models\Usuarios\Usuario::all();
 
                 return view('egresos.egresos', [
                     'user' => $userModel,
@@ -67,10 +67,10 @@ class EgresoController extends Controller
         $userModel = $this->headerService->getModelUser();
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 9) {
-                $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
-                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
-                $empresas = \App\Models\Empresa::all();
-                $tipoDocumentos = \App\Models\TipoDocumento::all();
+                $metodosPago = \App\Models\Ventas\MetodoPago::where('estado', 1)->get();
+                $cuentasBancarias = \App\Models\Empresa\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
+                $empresas = \App\Models\Empresa\Empresa::all();
+                $tipoDocumentos = \App\Models\Usuarios\TipoDocumento::all();
                 return view('egresos.createegreso', [
                     'user' => $userModel,
                     'metodosPago' => $metodosPago,
@@ -137,11 +137,11 @@ class EgresoController extends Controller
                             $egresosGenerados = $createResult['egresos'];
 
                             // Determinar el canal dinámicamente basado en la primera publicación válida encontrada
-                            $plataformaTienda = \App\Models\Plataforma::find(7);
+                            $plataformaTienda = \App\Models\Empresa\Plataforma::find(7);
                             $canal = $plataformaTienda ? strtoupper(substr($plataformaTienda->nombrePlataforma, 0, 20)) : 'TIENDA';
                             foreach ($grupoItems as $item) {
                                 if (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') {
-                                    $publicacion = \App\Models\Publicacion::with('CuentasPlataforma.Plataforma')->find($item['idpublicacion']);
+                                    $publicacion = \App\Models\Catalogo\Publicacion::with('CuentasPlataforma.Plataforma')->find($item['idpublicacion']);
                                     if ($publicacion && $publicacion->CuentasPlataforma && $publicacion->CuentasPlataforma->Plataforma) {
                                         // Limitar a 20 caracteres por la bbdd
                                         $canalStr = $publicacion->CuentasPlataforma->Plataforma->nombrePlataforma;
@@ -166,7 +166,7 @@ class EgresoController extends Controller
                                     'idEgreso' => $egresosGenerados[$item['idregistro']] ?? null,
                                     'idPublicacion' => (isset($item['idpublicacion']) && $item['idpublicacion'] !== 'NULO' && $item['idpublicacion'] !== '') ? $item['idpublicacion'] : null,
                                     // Obtener idProducto usando el idRegistro a través del DetalleComprobante
-                                    'idProducto' => \App\Models\RegistroProducto::with('DetalleComprobante')->find($item['idregistro'])->DetalleComprobante->idProducto ?? null,
+                                    'idProducto' => \App\Models\Inventario\RegistroProducto::with('DetalleComprobante')->find($item['idregistro'])->DetalleComprobante->idProducto ?? null,
                                     'precioVenta' => $item['precioVenta'] ?? '', // '' hace que herede auto en el service, '0' se respeta como regalo
                                     'cantidad' => 1
                                 ];
@@ -256,12 +256,12 @@ class EgresoController extends Controller
                 \Illuminate\Support\Facades\DB::beginTransaction();
                 try {
                     // Obtener Egreso Original
-                    $egresoOriginal = \App\Models\EgresoProducto::findOrFail($idegreso);
+                    $egresoOriginal = \App\Models\Inventario\EgresoProducto::findOrFail($idegreso);
 
                     // Buscar Publicación
                     $idPublicacion = 'NULO';
                     if (!empty($sku)) {
-                        $publicacion = \App\Models\Publicacion::where('sku', $sku)->first();
+                        $publicacion = \App\Models\Catalogo\Publicacion::where('sku', $sku)->first();
                         if ($publicacion) {
                             $idPublicacion = $publicacion->idPublicacion;
                         }
@@ -287,9 +287,9 @@ class EgresoController extends Controller
                     $nuevoIdEgreso = $egresosGenerados[$idRegistro];
 
                     // Verificar si el original tiene una Venta asignada
-                    $detalleOriginal = \App\Models\DetalleVenta::where('idEgreso', $idegreso)->first();
+                    $detalleOriginal = \App\Models\Ventas\DetalleVenta::where('idEgreso', $idegreso)->first();
                     if ($detalleOriginal && $detalleOriginal->idVenta) {
-                        $venta = \App\Models\Venta::find($detalleOriginal->idVenta);
+                        $venta = \App\Models\Ventas\Venta::find($detalleOriginal->idVenta);
                         if ($venta) {
                             // Validar precio
                             $precioFinal = ($precio !== null && $precio !== '') ? floatval($precio) : 0;
@@ -300,18 +300,18 @@ class EgresoController extends Controller
                                 if ($idPublicacion !== 'NULO' && isset($publicacion)) {
                                     $precioFinal = $publicacion->precioPublicacion;
                                 } else {
-                                    $producto = \App\Models\RegistroProducto::find($idRegistro)->DetalleComprobante->Producto;
+                                    $producto = \App\Models\Inventario\RegistroProducto::find($idRegistro)->DetalleComprobante->Producto;
                                     if ($producto) {
-                                        $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 1;
+                                        $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 1;
                                         $precioFinal = $producto->precioDolar * $tasaCambio;
                                     }
                                 }
                             }
 
-                            \App\Models\DetalleVenta::create([
+                            \App\Models\Ventas\DetalleVenta::create([
                                 'idVenta' => $venta->idVenta,
                                 'idEgreso' => $nuevoIdEgreso,
-                                'idProducto' => \App\Models\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
+                                'idProducto' => \App\Models\Inventario\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
                                 'idPublicacion' => $idPublicacion !== 'NULO' ? $idPublicacion : null,
                                 'precioVenta' => $precioFinal,
                                 'cantidad' => 1,
@@ -319,7 +319,7 @@ class EgresoController extends Controller
                             ]);
 
                             // Recalcular el total de la venta
-                            $nuevoTotal = \App\Models\DetalleVenta::where('idVenta', $venta->idVenta)
+                            $nuevoTotal = \App\Models\Ventas\DetalleVenta::where('idVenta', $venta->idVenta)
                                 ->selectRaw('SUM(precioVenta * cantidad) as total')
                                 ->first()->total ?? 0;
 
@@ -340,7 +340,7 @@ class EgresoController extends Controller
                             'idRegistro' => $idRegistro,
                             'idEgreso' => $nuevoIdEgreso,
                             'idPublicacion' => $idPublicacion !== 'NULO' ? $idPublicacion : null,
-                            'idProducto' => \App\Models\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
+                            'idProducto' => \App\Models\Inventario\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
                             'precioVenta' => $precio,
                             'cantidad' => 1
                         ]];
@@ -371,7 +371,7 @@ class EgresoController extends Controller
                 $fechaMes = $request->input('month');
                 $fechaCarbon = null;
 
-                $query = \App\Models\EnvioProvinciaProducto::with(['EnvioProvincia.Cliente', 'EnvioProvincia.Destino'])
+                $query = \App\Models\Envios\EnvioProvinciaProducto::with(['EnvioProvincia.Cliente', 'EnvioProvincia.Destino'])
                     ->whereNotNull('nota_producto')
                     ->where('nota_producto', 'LIKE', '%S/N:%');
 
@@ -402,7 +402,7 @@ class EgresoController extends Controller
                     if (!empty($matches[1])) {
                         foreach ($matches[1] as $serial) {
                             $serialClasificado = trim($serial);
-                            $registro = \App\Models\RegistroProducto::with('DetalleComprobante.Producto')
+                            $registro = \App\Models\Inventario\RegistroProducto::with('DetalleComprobante.Producto')
                                 ->where('numeroSerie', $serialClasificado)
                                 ->where('estado', '!=', 'ENTREGADO')
                                 ->first();
@@ -436,7 +436,7 @@ class EgresoController extends Controller
         $idEnvioProducto = $request->input('id_envio_producto');
         $serial = $request->input('serial');
 
-        $envioProducto = \App\Models\EnvioProvinciaProducto::find($idEnvioProducto);
+        $envioProducto = \App\Models\Envios\EnvioProvinciaProducto::find($idEnvioProducto);
         if ($envioProducto && $envioProducto->nota_producto) {
             $nota = $envioProducto->nota_producto;
             $nota = preg_replace('/S\/N:\s*' . preg_quote($serial, '/') . '/', 'EGRESADO: ' . $serial, $nota);
@@ -512,10 +512,10 @@ class EgresoController extends Controller
         $userModel = $this->headerService->getModelUser();
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 9) {
-                $metodosPago = \App\Models\MetodoPago::where('estado', 1)->get();
-                $cuentasBancarias = \App\Models\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
-                $empresas = \App\Models\Empresa::all();
-                $tipoDocumentos = \App\Models\TipoDocumento::all();
+                $metodosPago = \App\Models\Ventas\MetodoPago::where('estado', 1)->get();
+                $cuentasBancarias = \App\Models\Empresa\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
+                $empresas = \App\Models\Empresa\Empresa::all();
+                $tipoDocumentos = \App\Models\Usuarios\TipoDocumento::all();
                 $tasaCambio = app(\App\Services\CalculadoraServiceInterface::class)->obtenerCambioDolar() ?? 3.42;
                 return view('egresos.egresos_masivos', [
                     'user' => $userModel,
@@ -541,7 +541,7 @@ class EgresoController extends Controller
         $words = array_filter(explode(' ', trim($query)));
         $tipo = $request->input('tipo');
 
-        $queryBuilder = \App\Models\Producto::query()
+        $queryBuilder = \App\Models\Catalogo\Producto::query()
             ->with('PrecioTienda')
             ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
             ->select(
@@ -577,14 +577,14 @@ class EgresoController extends Controller
             ->get();
 
         // Calcular precio de venta sugerido igual que la Web
-        $calculadora1 = \App\Models\Calculadora::find(1);
-        $calculadora2 = \App\Models\Calculadora::find(2);
+        $calculadora1 = \App\Models\Precios\Calculadora::find(1);
+        $calculadora2 = \App\Models\Precios\Calculadora::find(2);
 
         $tcSunat = $calculadora1 ? $calculadora1->tasaCambio : 3.42;
         $tcFijo = $calculadora2 ? $calculadora2->tasaCambio : 3.80;
         $igv = $calculadora1 ? $calculadora1->igv : 18;
         $facturacion = $calculadora1 ? $calculadora1->facturacion : 1;
-        $empresaUnik = \App\Models\Empresa::find(2);
+        $empresaUnik = \App\Models\Empresa\Empresa::find(2);
         $comisionEmpresa = $empresaUnik ? $empresaUnik->comision : 5;
 
         // Caché de comisiones
@@ -598,7 +598,7 @@ class EgresoController extends Controller
             // Rango de comisión
             $comisionRango = 0;
             if (!isset($comisionesPorGrupo[$p->idGrupo])) {
-                $comisionesPorGrupo[$p->idGrupo] = \App\Models\Comision::where('idGrupoProducto', $p->idGrupo)->with('RangoPrecio')->get();
+                $comisionesPorGrupo[$p->idGrupo] = \App\Models\Precios\Comision::where('idGrupoProducto', $p->idGrupo)->with('RangoPrecio')->get();
             }
             foreach ($comisionesPorGrupo[$p->idGrupo] as $com) {
                 if ($com->RangoPrecio && $precioSolesBase > $com->RangoPrecio->rangoMin && $precioSolesBase < $com->RangoPrecio->rangoMax) {
@@ -660,7 +660,7 @@ class EgresoController extends Controller
         $moneda = $registro->DetalleComprobante->Comprobante->moneda ?? 'SOLES';
 
         if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
-            $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+            $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
             $precioUnitario = $precioUnitario * $tasaCambio;
         }
 
@@ -683,7 +683,7 @@ class EgresoController extends Controller
                 $modeloPrincipal = $registro->DetalleComprobante->Producto->modelo ?? '';
 
                 if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
-                    $tasaCambio = \App\Models\Calculadora::first()->tasaCambio ?? 3.70;
+                    $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
                     $precioUnitario = $precioUnitario * $tasaCambio;
                 }
                 $costoBase = round($precioUnitario, 2);

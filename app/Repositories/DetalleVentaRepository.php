@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Models\DetalleVenta;
+use App\Models\Ventas\DetalleVenta;
 
 class DetalleVentaRepository implements DetalleVentaRepositoryInterface
 {

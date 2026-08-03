@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Models\Almacen;
+use App\Models\Inventario\Almacen;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 

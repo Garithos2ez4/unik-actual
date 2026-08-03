@@ -2,7 +2,7 @@
 
 namespace App\Services\Falabella\Mappers;
 
-use App\Models\Producto;
+use App\Models\Catalogo\Producto;
 use App\Services\Falabella\Contracts\FalabellaCategoryMapper;
 
 class CableMapper implements FalabellaCategoryMapper

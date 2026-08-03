@@ -2,7 +2,7 @@
 
 namespace App\Services\Licencias\Handlers;
 
-use App\Models\Licencia;
+use App\Models\Licencias\Licencia;
 use Illuminate\Http\UploadedFile;
 
 trait GuardarUsoLicencia
@@ -28,7 +28,7 @@ trait GuardarUsoLicencia
 
         unset($datos['archivo']);
 
-        \App\Models\LicenciaUsada::create([
+        \App\Models\Licencias\LicenciaUsada::create([
             'clave_key'   => $licencia->voucher_code,
             'id_licencia' => $licencia->id,
             'archivo'     => $archivo,

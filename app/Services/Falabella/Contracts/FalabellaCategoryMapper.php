@@ -2,7 +2,7 @@
 
 namespace App\Services\Falabella\Contracts;
 
-use App\Models\Producto;
+use App\Models\Catalogo\Producto;
 
 /**
  * Contrato para los mappers de categoría Falabella Express.

@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Producto;
-use App\Models\Calculadora;
-use App\Models\Inventario;
+use App\Models\Catalogo\Producto;
+use App\Models\Precios\Calculadora;
+use App\Models\Inventario\Inventario;
 use App\Services\Falabella\FalabellaCategoryResolverService;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Carbon\Carbon;
@@ -183,7 +183,7 @@ class FalabellaTemplateService
 
             if ($promedioBase > 0) {
                 // Factor de facturación (normalmente 1.01) desde la base de datos
-                $facturacionFactor = (\App\Models\Calculadora::first()->facturacion / 100) + 1;
+                $facturacionFactor = (\App\Models\Precios\Calculadora::first()->facturacion / 100) + 1;
 
                 // Replicando la fórmula exacta de public/js/calculator-scripts.js
                 $monto      = $promedioBase * ($comis + 1);

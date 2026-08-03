@@ -57,7 +57,7 @@ class IngresoController extends Controller
 
                 $documentos = $this->ingresoService->getAllTipoComprobante();
 
-                $almacenes = \App\Models\Almacen::with('Ubicaciones')->get();
+                $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
                 $estados = [
                     ['value' => 'NUEVO', 'name' => 'Nuevo'],
@@ -362,7 +362,7 @@ class IngresoController extends Controller
     {
         $serie = $request->input('serie');
 
-        $registro = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+        $registro = \App\Models\Inventario\RegistroProducto::with(['DetalleComprobante.Producto'])
             ->where('numeroSerie', $serie)
             ->first();
 
@@ -377,7 +377,7 @@ class IngresoController extends Controller
         $producto = $registro->DetalleComprobante->Producto;
         $estado = $registro->estado;
 
-        $esPack = \App\Models\ProductoPack::where('idProductoPack', $producto->idProducto)->exists();
+        $esPack = \App\Models\Catalogo\ProductoPack::where('idProductoPack', $producto->idProducto)->exists();
 
         if (!$esPack) {
             return response()->json(['success' => false, 'message' => 'El producto asociado a esta serie no es un pack.']);
@@ -407,7 +407,7 @@ class IngresoController extends Controller
             return response()->json([]);
         }
 
-        $registros = \App\Models\RegistroProducto::with(['DetalleComprobante.Producto'])
+        $registros = \App\Models\Inventario\RegistroProducto::with(['DetalleComprobante.Producto'])
             ->where('numeroSerie', 'like', "%$query%")
             ->where('estado', 'NUEVO')
             ->take(10)
@@ -418,7 +418,7 @@ class IngresoController extends Controller
             $prod = $reg->DetalleComprobante->Producto ?? null;
             if ($prod) {
                 // Verificar si es pack
-                $esPack = \App\Models\ProductoPack::where('idProductoPack', $prod->idProducto)->exists();
+                $esPack = \App\Models\Catalogo\ProductoPack::where('idProductoPack', $prod->idProducto)->exists();
                 if ($esPack) {
                     $resultados[] = [
                         'serie' => $reg->numeroSerie,
@@ -442,7 +442,7 @@ class IngresoController extends Controller
         // IDs de grupos permitidos: Cabezales, Tintas, Cartuchos...
         $gruposPermitidos = [124, 155, 156, 157, 158, 159, 44, 78, 79];
 
-        $productos = \App\Models\Producto::whereIn('idGrupo', $gruposPermitidos)
+        $productos = \App\Models\Catalogo\Producto::whereIn('idGrupo', $gruposPermitidos)
             ->whereIn('idProducto', function ($q) {
                 $q->select('idProductoPack')->from('ProductoPack');
             })

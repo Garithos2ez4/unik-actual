@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\CategoriaProducto;
-use App\Models\GrupoProducto;
-use App\Models\Comision;
-use App\Models\RangoPrecio;
+use App\Models\Catalogo\CategoriaProducto;
+use App\Models\Catalogo\GrupoProducto;
+use App\Models\Precios\Comision;
+use App\Models\Precios\RangoPrecio;
 use Illuminate\Support\Str;
 
 class SuministrosSeeder extends Seeder

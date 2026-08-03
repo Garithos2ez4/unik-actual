@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
 
-use App\Models\Cliente;
+use App\Models\Usuarios\Cliente;
 
 class ClienteRepository implements ClienteRepositoryInterface
 {

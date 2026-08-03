@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
-use App\Models\EnvioProvincia;
+use App\Models\Envios\EnvioProvincia;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsEnviosController extends Controller

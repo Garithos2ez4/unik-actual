@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Producto;
-use App\Models\Usuario;
+use App\Models\Catalogo\Producto;
+use App\Models\Usuarios\Usuario;
 use App\Services\FalabellaTemplateService;
 
 class ProductoFalabellaController extends Controller

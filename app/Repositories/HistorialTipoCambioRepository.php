@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\Models\HistorialTipoCambio;
+use App\Models\Precios\HistorialTipoCambio;
 
 class HistorialTipoCambioRepository implements HistorialTipoCambioRepositoryInterface
 {

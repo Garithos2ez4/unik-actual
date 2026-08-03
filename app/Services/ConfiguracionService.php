@@ -175,26 +175,26 @@ class ConfiguracionService implements ConfiguracionServiceInterface
 
     public function createMetodoPago($data)
     {
-        $ultimo = \App\Models\MetodoPago::orderBy('idMetodoPago', 'desc')->first();
+        $ultimo = \App\Models\Ventas\MetodoPago::orderBy('idMetodoPago', 'desc')->first();
         $data['idMetodoPago'] = $ultimo ? $ultimo->idMetodoPago + 1 : 1;
-        \App\Models\MetodoPago::create($data);
+        \App\Models\Ventas\MetodoPago::create($data);
     }
 
     public function createTipoMetodoPago($data)
     {
-        $ultimo = \App\Models\TipoMetodoPago::orderBy('idTipoMetodo', 'desc')->first();
+        $ultimo = \App\Models\Ventas\TipoMetodoPago::orderBy('idTipoMetodo', 'desc')->first();
         $data['idTipoMetodo'] = $ultimo ? $ultimo->idTipoMetodo + 1 : 1;
-        \App\Models\TipoMetodoPago::create($data);
+        \App\Models\Ventas\TipoMetodoPago::create($data);
     }
 
     public function updateMetodoPago($id, $data)
     {
-        \App\Models\MetodoPago::where('idMetodoPago', $id)->update($data);
+        \App\Models\Ventas\MetodoPago::where('idMetodoPago', $id)->update($data);
     }
 
     public function updateTipoMetodoPago($id, $data)
     {
-        \App\Models\TipoMetodoPago::where('idTipoMetodo', $id)->update($data);
+        \App\Models\Ventas\TipoMetodoPago::where('idTipoMetodo', $id)->update($data);
     }
 
     public function updateComisionEmpresa($id, $comision)
@@ -577,7 +577,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
             $this->ubicacionAlmacenRepository->update($id, $data);
 
             if ($oldName && $oldName !== $nombre) {
-                \App\Models\UbicacionEstante::where('idAlmacen', $oldAlmacenId)
+                \App\Models\Inventario\UbicacionEstante::where('idAlmacen', $oldAlmacenId)
                     ->where('nombre_rack', $oldName)
                     ->update(['nombre_rack' => $nombre]);
             }
@@ -589,7 +589,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         if ($id) {
             $oldUbicacion = $this->ubicacionAlmacenRepository->getOne($id);
             if ($oldUbicacion) {
-                \App\Models\UbicacionEstante::where('idAlmacen', $oldUbicacion->idAlmacen)
+                \App\Models\Inventario\UbicacionEstante::where('idAlmacen', $oldUbicacion->idAlmacen)
                     ->where('nombre_rack', $oldUbicacion->nombre)
                     ->delete();
             }
@@ -599,11 +599,11 @@ class ConfiguracionService implements ConfiguracionServiceInterface
 
     public function addFilaToRack($idAlmacen, $nombre_rack)
     {
-        $maxFila = \App\Models\UbicacionEstante::where('idAlmacen', $idAlmacen)
+        $maxFila = \App\Models\Inventario\UbicacionEstante::where('idAlmacen', $idAlmacen)
             ->where('nombre_rack', $nombre_rack)
             ->max('fila_estante') ?? 0;
 
-        \App\Models\UbicacionEstante::create([
+        \App\Models\Inventario\UbicacionEstante::create([
             'idAlmacen' => $idAlmacen,
             'nombre_rack' => $nombre_rack,
             'fila_estante' => $maxFila + 1,
@@ -613,6 +613,6 @@ class ConfiguracionService implements ConfiguracionServiceInterface
 
     public function deleteFilaFromRack($idUbicacionExacta)
     {
-        \App\Models\UbicacionEstante::where('idUbicacionExacta', $idUbicacionExacta)->delete();
+        \App\Models\Inventario\UbicacionEstante::where('idUbicacionExacta', $idUbicacionExacta)->delete();
     }
 }

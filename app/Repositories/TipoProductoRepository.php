@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\TipoProducto;
+use App\Models\Catalogo\TipoProducto;
 
 class TipoProductoRepository implements TipoProductoRepositoryInterface
 {

@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Comprobante;
+use App\Models\Ventas\Comprobante;
 
 class ComprobanteRepository implements ComprobanteRepositoryInterface
 {

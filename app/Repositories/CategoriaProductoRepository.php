@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\CategoriaProducto;
+use App\Models\Catalogo\CategoriaProducto;
 
 class CategoriaProductoRepository implements CategoriaProductoRepositoryInterface
 {

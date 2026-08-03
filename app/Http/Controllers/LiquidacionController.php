@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Producto;
-use App\Models\DetalleProducto;
-use App\Models\Liquidacion;
+use App\Models\Catalogo\Producto;
+use App\Models\Catalogo\DetalleProducto;
+use App\Models\Inventario\Liquidacion;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 
@@ -62,7 +62,7 @@ class LiquidacionController extends Controller
             ->get();
 
         // Inject current global TC for calculations
-        $tcGlobal = \App\Models\Calculadora::find(2)->tasaCambio ?? 1;
+        $tcGlobal = \App\Models\Precios\Calculadora::find(2)->tasaCambio ?? 1;
 
         $user = $this->headerService->getModelUser();
 

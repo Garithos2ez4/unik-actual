@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\ComisionPlataforma;
+use App\Models\Precios\ComisionPlataforma;
 
 class ComisionPlataformaRepository implements ComisionPlataformaRepositoryInterface
 {

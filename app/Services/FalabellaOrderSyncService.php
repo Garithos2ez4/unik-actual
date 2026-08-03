@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\FalabellaOrder;
+use App\Models\Falabella\FalabellaOrder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 

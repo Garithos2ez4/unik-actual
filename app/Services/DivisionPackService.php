@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\DivisionPack;
-use App\Models\DivisionPackDetalle;
-use App\Models\ProductoPack;
-use App\Models\RegistroProducto;
-use App\Models\DetalleComprobante;
-use App\Models\IngresoProducto;
-use App\Models\Inventario;
+use App\Models\Inventario\DivisionPack;
+use App\Models\Inventario\DivisionPackDetalle;
+use App\Models\Catalogo\ProductoPack;
+use App\Models\Inventario\RegistroProducto;
+use App\Models\Ventas\DetalleComprobante;
+use App\Models\Inventario\IngresoProducto;
+use App\Models\Inventario\Inventario;
 use App\Repositories\InventarioRepositoryInterface;
 use App\Repositories\RegistroProductoRepositoryInterface;
 use Exception;
@@ -152,7 +152,7 @@ class DivisionPackService implements DivisionPackServiceInterface
                         $modelOrCodeHijo = !empty($productoHijo->modelo) ? $productoHijo->modelo : $productoHijo->codigoProducto;
                         $cleanedModelHijo = preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($modelOrCodeHijo));
                         $parcialCodeHijo = 'UNK-' . $cleanedModelHijo;
-                        $validateCodeHijo = \App\Models\RegistroProducto::where('numeroSerie', 'like', "%{$parcialCodeHijo}%")->count();
+                        $validateCodeHijo = \App\Models\Inventario\RegistroProducto::where('numeroSerie', 'like', "%{$parcialCodeHijo}%")->count();
                         $serieHijoGenerada = $parcialCodeHijo . '-' . (100000 + $validateCodeHijo + 1);
 
                         $lastRegistro = RegistroProducto::orderBy('idRegistro', 'desc')->first();

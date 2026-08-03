@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Almacen;
+use App\Models\Inventario\Almacen;
 
 class AlmacenRepository implements AlmacenRepositoryInterface
 {

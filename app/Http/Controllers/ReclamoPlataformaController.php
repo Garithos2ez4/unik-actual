@@ -48,9 +48,9 @@ class ReclamoPlataformaController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 11) {
-                $plataformas = \App\Models\Plataforma::with('CuentasPlataforma')->get();
+                $plataformas = \App\Models\Empresa\Plataforma::with('CuentasPlataforma')->get();
                 $tipos = $this->reclamoService->getAllTipos();
-                $tipoDocumentos = \App\Models\TipoDocumento::all();
+                $tipoDocumentos = \App\Models\Usuarios\TipoDocumento::all();
                 return view('reclamos.create', [
                     'user' => $userModel,
                     'plataformas' => $plataformas,
@@ -87,7 +87,7 @@ class ReclamoPlataformaController extends Controller
             if ($acceso->idVista == 11) {
                 $reclamo = $this->reclamoService->getReclamoById($id);
                 $tipos = $this->reclamoService->getAllTipos();
-                $tipoDocumentos = \App\Models\TipoDocumento::all();
+                $tipoDocumentos = \App\Models\Usuarios\TipoDocumento::all();
                 return view('reclamos.edit', [
                     'user' => $userModel,
                     'reclamo' => $reclamo,
@@ -125,7 +125,7 @@ class ReclamoPlataformaController extends Controller
             $userModel = $this->headerService->getModelUser();
 
             // 1. Guardar el Seguimiento Padre (incluye el mensaje)
-            $seguimiento = \App\Models\SeguimientoReclamo::create([
+            $seguimiento = \App\Models\Reclamos\SeguimientoReclamo::create([
                 'idReclamoPlataforma' => $id,
                 'idUser'              => $userModel->idUser,
                 'respondioCanal'      => $request->input('respondioCanal'),
@@ -134,7 +134,7 @@ class ReclamoPlataformaController extends Controller
 
             // 2. ¿Pegó link de Foto? Lo guardamos
             if ($request->filled('urlFoto')) {
-                \App\Models\EvidenciaSeguimiento::create([
+                \App\Models\Envios\EvidenciaSeguimiento::create([
                     'idSeguimiento' => $seguimiento->idSeguimiento,
                     'tipoEvidencia' => 'FOTO',
                     'urlArchivo'    => $request->input('urlFoto')
@@ -143,7 +143,7 @@ class ReclamoPlataformaController extends Controller
 
             // 3. ¿Pegó link de Video? Lo guardamos
             if ($request->filled('urlVideo')) {
-                \App\Models\EvidenciaSeguimiento::create([
+                \App\Models\Envios\EvidenciaSeguimiento::create([
                     'idSeguimiento' => $seguimiento->idSeguimiento,
                     'tipoEvidencia' => 'VIDEO',
                     'urlArchivo'    => $request->input('urlVideo')
@@ -168,7 +168,7 @@ class ReclamoPlataformaController extends Controller
         $reclamos = collect();
 
         if ($orden || $caso) {
-            $query = \App\Models\ReclamoPlataforma::query();
+            $query = \App\Models\Reclamos\ReclamoPlataforma::query();
             if ($orden) {
                 $query->where('ordenCompra', 'like', "%$orden%");
             }
@@ -193,7 +193,7 @@ class ReclamoPlataformaController extends Controller
 
         if (!$query || strlen($query) < 3) return response()->json([]);
 
-        $results = \App\Models\ReclamoPlataforma::where($field == 'orden' ? 'ordenCompra' : 'numeroCaso', 'like', "%$query%")
+        $results = \App\Models\Reclamos\ReclamoPlataforma::where($field == 'orden' ? 'ordenCompra' : 'numeroCaso', 'like', "%$query%")
             ->select('idReclamoPlataforma', 'ordenCompra', 'numeroCaso', 'idPlataforma')
             ->with('Plataforma:idPlataforma,nombrePlataforma')
             ->distinct()

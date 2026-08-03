@@ -2,7 +2,7 @@
 
 namespace App\Services\Licencias\Handlers;
 
-use App\Models\Licencia;
+use App\Models\Licencias\Licencia;
 interface CambioEstadoHandlerInterface
 {
     public function handle(Licencia $licencia, array $datosForm): void;

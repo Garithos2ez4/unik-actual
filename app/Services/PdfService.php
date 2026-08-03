@@ -1,6 +1,6 @@
 <?php
 namespace App\Services;
-use App\Models\Producto;
+use App\Models\Catalogo\Producto;
 use App\Repositories\AlmacenRepositoryInterface;
 use App\Repositories\ComprobanteRepositoryInterface;
 use App\Repositories\GarantiaRepositoryInterface;

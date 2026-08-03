@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Preveedor;
+use App\Models\Empresa\Preveedor;
 
 class ProveedorRepository implements ProveedorRepositoryInterface
 {

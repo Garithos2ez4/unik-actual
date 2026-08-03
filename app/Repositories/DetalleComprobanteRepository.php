@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\DetalleComprobante;
+use App\Models\Ventas\DetalleComprobante;
 
 class DetalleComprobanteRepository implements DetalleComprobanteRepositoryInterface
 {

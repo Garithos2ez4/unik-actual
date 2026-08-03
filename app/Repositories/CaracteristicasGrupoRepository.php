@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Caracteristicas_Grupo;
+use App\Models\Catalogo\Caracteristicas_Grupo;
 
 class CaracteristicasGrupoRepository implements CaracteristicasGrupoRepositoryInterface
 {

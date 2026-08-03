@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Calculadora;
+use App\Models\Precios\Calculadora;
 use Brick\Math\Internal\Calculator;
 use Illuminate\Support\Arr;
 

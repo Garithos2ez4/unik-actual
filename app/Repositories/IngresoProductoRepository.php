@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\IngresoProducto;
+use App\Models\Inventario\IngresoProducto;
 
 class IngresoProductoRepository implements IngresoProductoRepositoryInterface
 {

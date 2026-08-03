@@ -118,7 +118,7 @@ class FalabellaScraperService
                             }
                         }
 
-                        if (!$pasaFiltro1 && stripos($vendedor, $miTienda) === false) {
+                        if (!$pasaFiltro1) {
                             continue;
                         }
 
@@ -126,7 +126,7 @@ class FalabellaScraperService
                         $modeloClean = preg_replace('/[^A-Z0-9]/', '', strtoupper($modelo));
                         $tituloClean = preg_replace('/[^A-Z0-9]/', '', $tituloUpper);
                         
-                        if (stripos($vendedor, $miTienda) === false && strpos($tituloClean, $modeloClean) === false) {
+                        if (strpos($tituloClean, $modeloClean) === false) {
                             continue;
                         }
 
@@ -134,7 +134,7 @@ class FalabellaScraperService
                         $esPackLocal = preg_match('/\b(PACK|KIT|UNIDADES|UND|COMBO|CAJA X|X\d+)\b/i', $nombreProductoLocal);
                         $esPackCompetidor = preg_match('/\b(PACK|KIT|UNIDADES|UND|COMBO|CAJA X|X\d+)\b/i', $titulo);
                         
-                        if (!$esPackLocal && $esPackCompetidor && stripos($vendedor, $miTienda) === false) {
+                        if (!$esPackLocal && $esPackCompetidor) {
                             continue; // Ignorar porque el competidor vende un pack/combo y nosotros no
                         }
 

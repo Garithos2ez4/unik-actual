@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Services\PdfServiceInterface;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
-use App\Models\UbicacionAlmacen;
-use App\Models\UbicacionEstante;
-use App\Models\RegistroProducto;
+use App\Models\Inventario\UbicacionAlmacen;
+use App\Models\Inventario\UbicacionEstante;
+use App\Models\Inventario\RegistroProducto;
 
 class PdfController extends Controller
 {

@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\MarcaProducto;
+use App\Models\Catalogo\MarcaProducto;
 
 class MarcaProductoRepository implements MarcaProductoRepositoryInterface
 {

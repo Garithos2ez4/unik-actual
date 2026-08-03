@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Calculadora;
+use App\Models\Precios\Calculadora;
 use App\Repositories\CalculadoraRepositoryInterface;
 use App\Repositories\PlataformaRepositoryInterface;
 use App\Repositories\CategoriaProductoRepositoryInterface;

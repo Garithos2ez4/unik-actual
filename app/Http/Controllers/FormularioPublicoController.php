@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\EnvioProvincia;
-use App\Models\EnvioProvinciaDetalle;
-use App\Models\Cliente;
-use App\Models\Departamento;
-use App\Models\Agencia;
-use App\Models\Provincia;
-use App\Models\Destino;
-use App\Models\SubAgencia;
-use App\Models\TipoDocumento;
+use App\Models\Envios\EnvioProvincia;
+use App\Models\Envios\EnvioProvinciaDetalle;
+use App\Models\Usuarios\Cliente;
+use App\Models\Envios\Departamento;
+use App\Models\Envios\Agencia;
+use App\Models\Envios\Provincia;
+use App\Models\Envios\Destino;
+use App\Models\Envios\SubAgencia;
+use App\Models\Usuarios\TipoDocumento;
 use Carbon\Carbon;
 
 class FormularioPublicoController extends Controller
@@ -21,7 +21,7 @@ class FormularioPublicoController extends Controller
      */
     public function show($token)
     {
-        $solicitud = \App\Models\SolicitudEnvio::where('token', $token)->first();
+        $solicitud = \App\Models\Envios\SolicitudEnvio::where('token', $token)->first();
 
         if (!$solicitud) {
             return view('public.formulario_error', [
@@ -77,7 +77,7 @@ class FormularioPublicoController extends Controller
      */
     public function store(Request $request, $token)
     {
-        $solicitud = \App\Models\SolicitudEnvio::where('token', $token)->first();
+        $solicitud = \App\Models\Envios\SolicitudEnvio::where('token', $token)->first();
 
         if (!$solicitud || $solicitud->estado === 'PROCESADO') {
             return view('public.formulario_error', [
@@ -165,7 +165,7 @@ class FormularioPublicoController extends Controller
 
         // Guardar datos del receptor si se proporcionaron (Shalom + RUC)
         if ($request->has('receptor') && !empty($request->input('receptor.nombre')) && !empty($request->input('receptor.dni'))) {
-            \App\Models\EnvioProvinciaReceptor::create([
+            \App\Models\Envios\EnvioProvinciaReceptor::create([
                 'id_envio_provincia_detalle' => $detalle->idEnvioProvinciaDetalle,
                 'nombre'   => $request->input('receptor.nombre'),
                 'dni'      => $request->input('receptor.dni'),
@@ -203,7 +203,7 @@ class FormularioPublicoController extends Controller
 
     public function subagencias($idAgencia, $idDestino)
     {
-        $subagencias = \App\Models\SubAgencia::where('idAgencia', $idAgencia)
+        $subagencias = \App\Models\Envios\SubAgencia::where('idAgencia', $idAgencia)
             ->where('idDestino', $idDestino)
             ->where('estado', 1)
             ->orderBy('nombre_oficina', 'asc')
@@ -257,9 +257,9 @@ class FormularioPublicoController extends Controller
 
     public function buscarCliente($documento)
     {
-        $cliente = \App\Models\Cliente::where('numeroDocumento', $documento)->first();
+        $cliente = \App\Models\Usuarios\Cliente::where('numeroDocumento', $documento)->first();
         if ($cliente) {
-            $ultimoEnvio = \App\Models\EnvioProvincia::with(['Detalle', 'Destino.Provincia'])
+            $ultimoEnvio = \App\Models\Envios\EnvioProvincia::with(['Detalle', 'Destino.Provincia'])
                 ->where('idCliente', $cliente->idCliente)
                 ->orderBy('idEnvioProvincia', 'desc')
                 ->first();

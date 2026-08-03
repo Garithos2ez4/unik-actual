@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Accesos;
+use App\Models\Usuarios\Accesos;
 use Exception;
 
 class AccesosRepository implements AccesosRepositoryInterface

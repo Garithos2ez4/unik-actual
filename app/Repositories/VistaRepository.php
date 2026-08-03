@@ -2,7 +2,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Vista;
+use App\Models\Usuarios\Vista;
 
 class VistaRepository implements VistaRepositoryInterface
 {

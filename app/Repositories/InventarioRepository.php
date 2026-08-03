@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Inventario;
+use App\Models\Inventario\Inventario;
 use Exception;
 
 class InventarioRepository implements InventarioRepositoryInterface
@@ -78,13 +78,13 @@ class InventarioRepository implements InventarioRepositoryInterface
                     // Sincronizar series genéricas (RegistroProducto)
                     if ($stock > $oldStock) {
                         $diff = $stock - $oldStock;
-                        $detalle = \App\Models\DetalleComprobante::where('idProducto', $idProducto)->latest('idDetalleComprobante')->first();
+                        $detalle = \App\Models\Ventas\DetalleComprobante::where('idProducto', $idProducto)->latest('idDetalleComprobante')->first();
                         if ($detalle) {
-                            $lastRegistro = \App\Models\RegistroProducto::orderBy('idRegistro', 'desc')->first();
+                            $lastRegistro = \App\Models\Inventario\RegistroProducto::orderBy('idRegistro', 'desc')->first();
                             $nextIdRegistro = $lastRegistro ? $lastRegistro->idRegistro + 1 : 1;
 
                             for ($i = 0; $i < $diff; $i++) {
-                                \App\Models\RegistroProducto::create([
+                                \App\Models\Inventario\RegistroProducto::create([
                                     'idRegistro' => $nextIdRegistro++,
                                     'idDetalleComprobante' => $detalle->idDetalleComprobante,
                                     'idAlmacen' => $almacen,
@@ -97,7 +97,7 @@ class InventarioRepository implements InventarioRepositoryInterface
                     } elseif ($stock < $oldStock) {
                         $diff = $oldStock - $stock;
                         // Eliminar series genéricas sobrantes
-                        $seriesToDelete = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function ($q) use ($idProducto) {
+                        $seriesToDelete = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function ($q) use ($idProducto) {
                             $q->where('idProducto', $idProducto);
                         })
                             ->where('idAlmacen', $almacen)
@@ -131,7 +131,7 @@ class InventarioRepository implements InventarioRepositoryInterface
                     $inventario->update(['idUbicacionExacta' => $idUbicacionExacta ?: null]);
 
                     // Asignar ubicacion_especifica a series sin asignar
-                    $registrosIds = \App\Models\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($idProducto) {
+                    $registrosIds = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($idProducto) {
                             $q->where('idProducto', $idProducto);
                         })
                         ->where('idAlmacen', $almacen)
@@ -140,7 +140,7 @@ class InventarioRepository implements InventarioRepositoryInterface
                         ->pluck('idRegistro');
 
                     if ($registrosIds->isNotEmpty()) {
-                        \App\Models\RegistroProducto::whereIn('idRegistro', $registrosIds)
+                        \App\Models\Inventario\RegistroProducto::whereIn('idRegistro', $registrosIds)
                             ->update(['ubicacion_especifica' => $idUbicacionExacta ?: null]);
                     }
                 }

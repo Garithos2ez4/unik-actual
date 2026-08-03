@@ -1,7 +1,7 @@
 <?php
 namespace App\Repositories;
 
-use App\Models\registroUpdate;
+use App\Models\Precios\RegistroUpdate;
 
 class RegistroUpdateRepository implements RegistroUpdateRepositoryInterface
 {

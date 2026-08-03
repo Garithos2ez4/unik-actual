@@ -2,9 +2,9 @@
 
 namespace App\Services\Licencias\Handlers;
 
-use App\Models\Licencia;
-use App\Models\LicenciaDefectuosa;
-use App\Models\LicenciaRecuperada;
+use App\Models\Licencias\Licencia;
+use App\Models\Licencias\LicenciaDefectuosa;
+use App\Models\Licencias\LicenciaRecuperada;
 class LicenciaDefectuosaHandler implements CambioEstadoHandlerInterface
 { 
      public function handle(Licencia $licencia, array $datosForm): void

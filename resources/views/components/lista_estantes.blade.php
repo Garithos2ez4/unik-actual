@@ -28,7 +28,7 @@
                     <div class="mt-2 p-1 bg-light border rounded">
                         <small class="fw-bold text-muted" style="font-size: 0.75rem;">Filas:</small>
                         @php
-                            $filasActuales = \App\Models\UbicacionEstante::where('nombre_rack', $ubicacion->nombre)
+                            $filasActuales = \App\Models\Inventario\UbicacionEstante::where('nombre_rack', $ubicacion->nombre)
                                 ->where('idAlmacen', $almacen->idAlmacen)
                                 ->orderBy('fila_estante')
                                 ->get();

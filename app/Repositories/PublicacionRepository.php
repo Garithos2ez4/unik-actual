@@ -3,7 +3,7 @@
 namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
-use App\Models\Publicacion;
+use App\Models\Catalogo\Publicacion;
 
 class PublicacionRepository implements PublicacionRepositoryInterface
 {

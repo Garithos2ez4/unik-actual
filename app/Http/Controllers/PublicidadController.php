@@ -6,8 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Hash;
 use App\Services\HeaderService;
-use App\Models\Empresa;
-use App\Models\EmpresaRedSocial;
+use App\Models\Empresa\Empresa;
+use App\Models\Empresa\EmpresaRedSocial;
 
 class PublicidadController extends Controller
 {
@@ -88,7 +88,7 @@ class PublicidadController extends Controller
             // Banners Principales y Verticales (img)
             if ($request->hasFile('img')) {
                 foreach($request->file('img') as $idBanner => $fileBanner) {
-                    $banner = \App\Models\Publicidad::where('idEmpresa', $idEmpresa)->where('idPublicidad', $idBanner)->first();
+                    $banner = \App\Models\Empresa\Publicidad::where('idEmpresa', $idEmpresa)->where('idPublicidad', $idBanner)->first();
                     if ($banner) {
                         if ($banner->imagenPublicidad && \Illuminate\Support\Facades\Storage::disk('public')->exists($banner->imagenPublicidad)) {
                             \Illuminate\Support\Facades\Storage::disk('public')->delete($banner->imagenPublicidad);
@@ -102,7 +102,7 @@ class PublicidadController extends Controller
             // Banners Campaña (imgPubli)
             if ($request->hasFile('imgPubli')) {
                 foreach($request->file('imgPubli') as $idBanner => $fileBanner) {
-                    $banner = \App\Models\Publicidad::where('idEmpresa', $idEmpresa)->where('idPublicidad', $idBanner)->first();
+                    $banner = \App\Models\Empresa\Publicidad::where('idEmpresa', $idEmpresa)->where('idPublicidad', $idBanner)->first();
                     if ($banner) {
                         if ($banner->imagenPublicidad && \Illuminate\Support\Facades\Storage::disk('public')->exists($banner->imagenPublicidad)) {
                             \Illuminate\Support\Facades\Storage::disk('public')->delete($banner->imagenPublicidad);

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\RegistroProducto;
+use App\Models\Inventario\RegistroProducto;
 use Exception;
 
 class ProductoHerramientaController extends Controller

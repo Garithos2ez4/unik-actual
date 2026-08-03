@@ -71,7 +71,7 @@
                         @forelse($products as $product)
                         @php
                             $norm = $product['_normalized'] ?? [];
-                            $localProd = \App\Models\Producto::where('codigoProducto', $norm['seller_sku'])->first();
+                            $localProd = \App\Models\Catalogo\Producto::where('codigoProducto', $norm['seller_sku'])->first();
                         @endphp
                         <tr>
                             <td class="ps-4">

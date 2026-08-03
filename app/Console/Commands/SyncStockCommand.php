@@ -3,11 +3,11 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\Producto;
-use App\Models\RegistroProducto;
-use App\Models\Inventario;
-use App\Models\Almacen;
-use App\Models\DetalleComprobante;
+use App\Models\Catalogo\Producto;
+use App\Models\Inventario\RegistroProducto;
+use App\Models\Inventario\Inventario;
+use App\Models\Inventario\Almacen;
+use App\Models\Ventas\DetalleComprobante;
 use Illuminate\Support\Facades\DB;
 
 class SyncStockCommand extends Command

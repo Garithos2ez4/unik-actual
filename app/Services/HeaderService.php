@@ -1,8 +1,8 @@
 <?php
 namespace App\Services;
 
-use App\Models\Usuario;
-use App\Models\Transaccion;
+use App\Models\Usuarios\Usuario;
+use App\Models\Ventas\Transaccion;
 use InvalidArgumentException;
 
 class HeaderService implements HeaderServiceInterface
