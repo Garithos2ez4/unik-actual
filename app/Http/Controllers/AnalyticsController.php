@@ -304,7 +304,7 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 8. Cálculos de Costos y Márgenes ──────────────────
-        $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
 
         $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
@@ -356,9 +356,18 @@ class AnalyticsController extends Controller
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, $precioPubExpr as ingresos,
                          (COALESCE(
                             NULLIF(CASE WHEN RegistroProducto.es_herramienta = 1 THEN 0
+                                         WHEN Comprobante.numeroComprobante LIKE '%INVENTARIO%' THEN NULL
                                          WHEN DetalleComprobante.precioUnitario > 0 OR Producto.idGrupo IN ($gruposCostoBajo) THEN 
                                 (CASE WHEN Comprobante.moneda = 'DOLAR' THEN DetalleComprobante.precioUnitario * $subqueryTipoCambioEgresoCosto ELSE DetalleComprobante.precioUnitario END) 
                             ELSE NULL END, NULL),
+                            (SELECT CASE WHEN c2.moneda = 'DOLAR' THEN dc2.precioUnitario * COALESCE((SELECT hs.tasa_cambio FROM historial_tipo_cambio hs ORDER BY ABS(DATEDIFF(hs.fecha, DATE(c2.fechaRegistro))) ASC LIMIT 1), $tc) ELSE dc2.precioUnitario END
+                             FROM DetalleComprobante dc2
+                             INNER JOIN Comprobante c2 ON c2.idComprobante = dc2.idComprobante
+                             WHERE dc2.idProducto = Producto.idProducto
+                               AND dc2.precioUnitario > 0
+                               AND c2.numeroComprobante NOT LIKE '%INVENTARIO%'
+                             ORDER BY dc2.idDetalleComprobante DESC
+                             LIMIT 1),
                             CASE WHEN RegistroProducto.es_herramienta = 1 THEN 0 ELSE COALESCE(Producto.precioDolar, 0) * $tc * 1.18 END
                          ) + ($comisionFalabellaEgreso)) as costos,
                          1 as cantidad_vendida")
@@ -454,7 +463,7 @@ class AnalyticsController extends Controller
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
         $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
-        $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
 
         $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
@@ -560,7 +569,7 @@ class AnalyticsController extends Controller
 
         $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(30), function () use ($fechaInicio, $fechaFin, $tc) {
             $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
-            $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+            $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
 
             $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 

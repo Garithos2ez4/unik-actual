@@ -354,13 +354,13 @@ function phase2_updateReferences(array $allFiles, bool $dryRun): void
 
             // ── \App\Models\Clase (inline) ──────────────────────────────────
             $content = preg_replace(
-                '/(?<![A-Za-z\\\\])App\\\\Models\\\\' . preg_quote($original, '/') . '(?![A-Za-z\\\\])/',
+                '/(?<![A-Za-z])App\\\\Models\\\\' . preg_quote($original, '/') . '(?![A-Za-z\\\\])/',
                 str_replace('\\', '\\\\', $newFqcn),
                 $content
             );
             if ($original !== $canonical) {
                 $content = preg_replace(
-                    '/(?<![A-Za-z\\\\])App\\\\Models\\\\' . preg_quote($canonical, '/') . '(?![A-Za-z\\\\])/',
+                    '/(?<![A-Za-z])App\\\\Models\\\\' . preg_quote($canonical, '/') . '(?![A-Za-z\\\\])/',
                     str_replace('\\', '\\\\', $newFqcn),
                     $content
                 );
@@ -406,7 +406,7 @@ function phase3_addCrossDomainImports(bool $dryRun): void
         $fileNamespace = $nsMatch[1]; // ej: App\Models\Catalogo
 
         // Obtener 'use' ya declarados
-        preg_match_all('/^use\s+(App\\\\Models\\\\[A-Za-z\\\\]+)\s*;/m', $content, $useMatches);
+        preg_match_all('/^use\s+(App\\\\Models\\\\[A-Za-z_\\\\]+)\s*;/m', $content, $useMatches);
         $existingUses = $useMatches[1] ?? [];
 
         // Detectar clases usadas con ::class en el archivo

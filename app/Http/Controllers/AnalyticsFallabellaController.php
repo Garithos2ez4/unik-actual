@@ -80,7 +80,7 @@ class AnalyticsFallabellaController extends Controller
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
         $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
-        $subqueryTipoCambioCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc))";
+        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
 
         $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 

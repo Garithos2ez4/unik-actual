@@ -644,6 +644,42 @@ class EgresoController extends Controller
         return response()->json($series);
     }
 
+    private function calcularCostoRealRegistro($registro, $tasaCambio)
+    {
+        if (!$registro || $registro->es_herramienta == 1) return 0;
+        
+        $dc = $registro->DetalleComprobante;
+        if (!$dc) return 0;
+
+        $idProducto = $dc->idProducto ?? 0;
+        $comp = $dc->Comprobante;
+        
+        if ($comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false && $dc->precioUnitario > 0) {
+            $moneda = $comp->moneda ?? 'SOLES';
+            $precio = $dc->precioUnitario;
+            return (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') ? $precio * $tasaCambio : $precio;
+        }
+
+        // Buscar otro
+        $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $idProducto)
+            ->where('precioUnitario', '>', 0)
+            ->whereHas('Comprobante', function($q) {
+                $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
+            })
+            ->orderBy('idDetalleComprobante', 'desc')
+            ->first();
+
+        if ($otroDc) {
+            $mon = $otroDc->Comprobante->moneda ?? 'SOLES';
+            $precio = $otroDc->precioUnitario ?? 0;
+            return (strtoupper($mon) === 'DOLAR' || strtoupper($mon) === 'USD') ? $precio * $tasaCambio : $precio;
+        }
+
+        // Fallback
+        $precioDolar = $dc->Producto->precioDolar ?? 0;
+        return $precioDolar * $tasaCambio * 1.18;
+    }
+
     public function getCostoRegistro(Request $request)
     {
         $idRegistro = $request->input('idRegistro');
@@ -651,20 +687,12 @@ class EgresoController extends Controller
             return response()->json(['costo' => 0]);
         }
 
-        $registro = RegistroProducto::with('DetalleComprobante.Comprobante')->find($idRegistro);
-        if (!$registro || !$registro->DetalleComprobante) {
-            return response()->json(['costo' => 0]);
-        }
+        $registro = RegistroProducto::with(['DetalleComprobante.Comprobante', 'DetalleComprobante.Producto'])->find($idRegistro);
+        $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
+        
+        $costo = $this->calcularCostoRealRegistro($registro, $tasaCambio);
 
-        $precioUnitario = $registro->DetalleComprobante->precioUnitario ?? 0;
-        $moneda = $registro->DetalleComprobante->Comprobante->moneda ?? 'SOLES';
-
-        if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
-            $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
-            $precioUnitario = $precioUnitario * $tasaCambio;
-        }
-
-        return response()->json(['costo' => round($precioUnitario, 2)]);
+        return response()->json(['costo' => round($costo, 2)]);
     }
 
     public function calcularCostoEnsamble(Request $request)
@@ -674,19 +702,13 @@ class EgresoController extends Controller
 
         $costoBase = 0;
         $modeloPrincipal = '';
+        $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
 
         if (!empty($idRegistroPrincipal)) {
             $registro = RegistroProducto::with(['DetalleComprobante.Comprobante', 'DetalleComprobante.Producto'])->find($idRegistroPrincipal);
             if ($registro && $registro->DetalleComprobante) {
-                $precioUnitario = $registro->DetalleComprobante->precioUnitario ?? 0;
-                $moneda = $registro->DetalleComprobante->Comprobante->moneda ?? 'SOLES';
                 $modeloPrincipal = $registro->DetalleComprobante->Producto->modelo ?? '';
-
-                if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
-                    $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
-                    $precioUnitario = $precioUnitario * $tasaCambio;
-                }
-                $costoBase = round($precioUnitario, 2);
+                $costoBase = round($this->calcularCostoRealRegistro($registro, $tasaCambio), 2);
             }
         }
 

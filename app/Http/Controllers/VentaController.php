@@ -102,18 +102,52 @@ class VentaController extends Controller
                 foreach ($venta->DetallesVenta as $detalle) {
                     // Calcular costo dinámico (igual que en GananciaController)
                     $costoUnitario = 0;
+                    $esHerramienta = false;
+                    $esInventario = false;
+                    $idProducto = $detalle->Producto->idProducto ?? 0;
+
                     if ($detalle->EgresoProducto && $detalle->EgresoProducto->RegistroProducto && $detalle->EgresoProducto->RegistroProducto->DetalleComprobante) {
+                        $esHerramienta = $detalle->EgresoProducto->RegistroProducto->es_herramienta == 1;
                         $dc = $detalle->EgresoProducto->RegistroProducto->DetalleComprobante;
-                        $moneda = $dc->Comprobante->moneda ?? 'SOLES';
-                        $precioCompra = $dc->precioUnitario ?? 0;
-                        if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
-                            $costoUnitario = $precioCompra * $tasaCambio;
+                        $comp = $dc->Comprobante;
+                        if (stripos($comp->numeroComprobante ?? '', 'INVENTARIO') !== false) {
+                            $esInventario = true;
                         } else {
-                            $costoUnitario = $precioCompra;
+                            $moneda = $comp->moneda ?? 'SOLES';
+                            $precioCompra = $dc->precioUnitario ?? 0;
+                            if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
+                                $costoUnitario = $precioCompra * $tasaCambio;
+                            } else {
+                                $costoUnitario = $precioCompra;
+                            }
                         }
-                    } else {
-                        $precioDolar = $detalle->Producto->precioDolar ?? 0;
-                        $costoUnitario = $precioDolar * $tasaCambio * 1.18;
+                    }
+
+                    if ($esHerramienta) {
+                        $costoUnitario = 0;
+                    } elseif ($esInventario || $costoUnitario <= 0) {
+                        // Buscar otro comprobante válido
+                        $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $idProducto)
+                            ->where('precioUnitario', '>', 0)
+                            ->whereHas('Comprobante', function($q) {
+                                $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
+                            })
+                            ->orderBy('idDetalleComprobante', 'desc')
+                            ->first();
+
+                        if ($otroDc) {
+                            $mon = $otroDc->Comprobante->moneda ?? 'SOLES';
+                            $precio = $otroDc->precioUnitario ?? 0;
+                            if (strtoupper($mon) === 'DOLAR' || strtoupper($mon) === 'USD') {
+                                $costoUnitario = $precio * $tasaCambio;
+                            } else {
+                                $costoUnitario = $precio;
+                            }
+                        } else {
+                            // Fallback al precioDolar
+                            $precioDolar = $detalle->Producto->precioDolar ?? 0;
+                            $costoUnitario = $precioDolar * $tasaCambio * 1.18;
+                        }
                     }
 
                     $costoFila = $costoUnitario * $detalle->cantidad;

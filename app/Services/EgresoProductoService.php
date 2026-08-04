@@ -54,10 +54,33 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
             $producto = $details->DetalleComprobante->Producto;
             $detalleComprobante = $details->DetalleComprobante ?? null;
-            $precioInventario = $detalleComprobante->precioUnitario ?? 0;
-            if ($precioInventario > 1 && $detalleComprobante && $detalleComprobante->Comprobante && strtoupper($detalleComprobante->Comprobante->moneda) === 'SOL') {
-                $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+            
+            $precioInventario = 0;
+            $comp = $detalleComprobante->Comprobante ?? null;
+            if ($detalleComprobante && $comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false) {
+                $precioInventario = $detalleComprobante->precioUnitario ?? 0;
+                if ($precioInventario > 1 && (strtoupper($comp->moneda) === 'SOL' || strtoupper($comp->moneda) === 'SOLES')) {
+                    $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+                }
             }
+
+            if ($precioInventario <= 1 && $producto) {
+                $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $producto->idProducto)
+                    ->where('precioUnitario', '>', 0)
+                    ->whereHas('Comprobante', function($q) {
+                        $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
+                    })
+                    ->orderBy('idDetalleComprobante', 'desc')
+                    ->first();
+                if ($otroDc) {
+                    $precioInventario = $otroDc->precioUnitario;
+                    $mon = $otroDc->Comprobante->moneda ?? 'SOLES';
+                    if (strtoupper($mon) === 'SOL' || strtoupper($mon) === 'SOLES') {
+                        $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+                    }
+                }
+            }
+
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
@@ -105,10 +128,33 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         if ($egreso) {
             $producto = $egreso->DetalleComprobante->Producto;
             $detalleComprobante = $egreso->DetalleComprobante ?? null;
-            $precioInventario = $detalleComprobante->precioUnitario ?? 0;
-            if ($precioInventario > 1 && $detalleComprobante && $detalleComprobante->Comprobante && strtoupper($detalleComprobante->Comprobante->moneda) === 'SOL') {
-                $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+            
+            $precioInventario = 0;
+            $comp = $detalleComprobante->Comprobante ?? null;
+            if ($detalleComprobante && $comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false) {
+                $precioInventario = $detalleComprobante->precioUnitario ?? 0;
+                if ($precioInventario > 1 && (strtoupper($comp->moneda) === 'SOL' || strtoupper($comp->moneda) === 'SOLES')) {
+                    $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+                }
             }
+
+            if ($precioInventario <= 1 && $producto) {
+                $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $producto->idProducto)
+                    ->where('precioUnitario', '>', 0)
+                    ->whereHas('Comprobante', function($q) {
+                        $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
+                    })
+                    ->orderBy('idDetalleComprobante', 'desc')
+                    ->first();
+                if ($otroDc) {
+                    $precioInventario = $otroDc->precioUnitario;
+                    $mon = $otroDc->Comprobante->moneda ?? 'SOLES';
+                    if (strtoupper($mon) === 'SOL' || strtoupper($mon) === 'SOLES') {
+                        $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
+                    }
+                }
+            }
+
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
             
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);

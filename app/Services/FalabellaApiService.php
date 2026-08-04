@@ -51,7 +51,7 @@ class FalabellaApiService
         );
 
         $response = Http::baseUrl(rtrim(config('services.falabella.base_url'), '/'))
-            ->timeout(60)
+            ->timeout(120)
             ->withHeaders([
                 'User-Agent' => 'LogunkApp/1.0 (+https://log.unikstoreperu.com)',
                 'Accept' => 'application/json'
@@ -423,8 +423,8 @@ class FalabellaApiService
 
         $response = Http::baseUrl(rtrim(config('services.falabella.base_url'), '/'))
             ->acceptJson()
-            ->timeout((int) config('services.falabella.timeout', 60))
-            ->connectTimeout((int) config('services.falabella.connect_timeout', 10))
+            ->timeout((int) config('services.falabella.timeout', 120))
+            ->connectTimeout((int) config('services.falabella.connect_timeout', 30))
             ->retry(
                 times: 3,
                 sleepMilliseconds: 1000,
