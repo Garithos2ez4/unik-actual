@@ -152,6 +152,20 @@
         return precioEnDolares;
     }
 
+    function getTcEnUso() {
+        const usarTcFijo = document.getElementById('usar_tc_fijo');
+        let tcUsar = TC_SUNAT;
+        
+        if (usarTcFijo && !usarTcFijo.checked) {
+            tcUsar = TC_FIJO;
+            const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
+            if (tcFijoPersonalizado && tcFijoPersonalizado.value && parseFloat(tcFijoPersonalizado.value) > 0) {
+                tcUsar = parseFloat(tcFijoPersonalizado.value);
+            }
+        }
+        return tcUsar;
+    }
+
     function actualizarPrecioTotalFijo() {
         const usarTcFijo = document.getElementById('usar_tc_fijo');
         const precioSunatInput = document.getElementById('precio-total-sunat');
@@ -175,6 +189,17 @@
         // Precio con TC Fijo (siempre se calcula usando la tasa determinada)
         if (precioFijoInput) {
             precioFijoInput.value = (precioEnDolares * tasaFijaUsar).toFixed(2);
+        }
+
+        // Sync "Precio Web Directo" (Soles) unless it's currently being typed by the user
+        if (!window.APP_DATA.isEditingWebPrice) {
+            const precioWebDirecto = document.getElementById('precio-web-directo');
+            const precioCalculadoInput = document.getElementById('precio-product-calculado');
+            
+            if (precioWebDirecto && precioCalculadoInput) {
+                const precioVentaUsd = parseFloat(precioCalculadoInput.value) || 0;
+                precioWebDirecto.value = (precioVentaUsd * getTcEnUso()).toFixed(2);
+            }
         }
     }
 
@@ -220,6 +245,25 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const precioWebDirecto = document.getElementById('precio-web-directo');
+        if (precioWebDirecto) {
+            precioWebDirecto.addEventListener('blur', function () {
+                let precioWeb = parseFloat(this.value) || 0;
+                let tcUsar = getTcEnUso();
+                
+                // Calculate reverse
+                let precioVentaUsd = precioWeb / tcUsar;
+                let costoBase = window.APP_DATA.lastCalculado || 0;
+                let ganancia = precioVentaUsd - costoBase;
+                
+                document.getElementById('precio-product-ganancia').value = ganancia.toFixed(2);
+                
+                if (typeof calcPrices === 'function') {
+                    calcPrices();
+                }
+            });
+        }
+
         document.addEventListener('calcPricesCompleted', function() {
             actualizarPrecioTotalFijo();
         });

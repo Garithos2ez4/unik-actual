@@ -36,6 +36,18 @@ class ReclamoPlataformaService implements ReclamoPlataformaServiceInterface
     {
         $reclamo = ReclamoPlataforma::findOrFail($id);
         $reclamo->update($data);
+
+        // Si el estado general cambia a CERRADO, actualizamos la Garantía a ENTREGADO
+        if (isset($data['estadoGeneral']) && $data['estadoGeneral'] === 'CERRADO') {
+            if ($reclamo->idRegistro) {
+                $garantia = \App\Models\Ventas\Garantia::where('idRegistro', $reclamo->idRegistro)->first();
+                if ($garantia) {
+                    $garantia->estado = 'ENTREGADO';
+                    $garantia->save();
+                }
+            }
+        }
+
         return $reclamo;
     }
 

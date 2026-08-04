@@ -40,7 +40,10 @@
                     @endif
                     <p class="mb-1"><small class="text-muted text-uppercase fw-bold">Orden:</small><br><strong>{{ $reclamo->ordenCompra ?? 'VENTA DIRECTA' }}</strong></p>
                     <p class="mb-1"><small class="text-muted text-uppercase fw-bold">Plataforma:</small><br>{{ $reclamo->Plataforma->nombrePlataforma ?? 'N/A' }}</p>
-                    <p class="mb-0"><small class="text-muted text-uppercase fw-bold">Fecha Reg:</small><br>{{ $reclamo->fechaReclamo->format('d-m-Y') }}</p>
+                    <p class="mb-3"><small class="text-muted text-uppercase fw-bold">Fecha Reg:</small><br>{{ $reclamo->fechaReclamo->format('d-m-Y') }}</p>
+                    <a href="{{ route('reclamos.reporte.pdf', $reclamo->idReclamoPlataforma) }}" target="_blank" class="btn btn-outline-danger w-100 fw-bold">
+                        <i class="bi bi-file-earmark-pdf"></i> Generar Informe Técnico
+                    </a>
                 </div>
             </div>
 

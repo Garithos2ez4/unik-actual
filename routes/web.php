@@ -281,6 +281,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::post('/update/{id}', [ReclamoPlataformaController::class, 'update'])->name('update');
         Route::post('/seguimiento/{id}', [ReclamoPlataformaController::class, 'addSeguimiento'])->name('seguimiento.add');
         Route::post('/diagnostico/{id}', [ReclamoPlataformaController::class, 'addDiagnostico'])->name('diagnostico.add');
+        Route::get('/reporte/{id}', [ReclamoPlataformaController::class, 'reportePdf'])->name('reporte.pdf');
     });
 
     Route::get('/web', [PublicidadController::class, 'index'])->name('publicidad');

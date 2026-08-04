@@ -6,6 +6,7 @@ use App\Services\HeaderServiceInterface;
 use App\Services\ReclamoPlataformaServiceInterface;
 use App\Services\PlataformaServiceInterface;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Throwable;
 
 class ReclamoPlataformaController extends Controller
@@ -213,5 +214,31 @@ class ReclamoPlataformaController extends Controller
         } catch (Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function reportePdf($id)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 11) {
+                $reclamo = $this->reclamoService->getReclamoById($id);
+                
+                $pathCab = public_path('storage/cabecera_garantia.jpg');
+                $imgCab = file_exists($pathCab) ? base64_encode(file_get_contents($pathCab)) : '';
+                $cabecera = $imgCab ? 'data:image/jpg;base64,'.$imgCab : '';
+
+                $pathFirma = public_path('storage/firmaflor.png');
+                $imgFirma = file_exists($pathFirma) ? base64_encode(file_get_contents($pathFirma)) : '';
+                $firma = $imgFirma ? 'data:image/png;base64,'.$imgFirma : '';
+
+                $pdf = Pdf::loadView('reclamos.pdf_report', compact('reclamo', 'cabecera', 'firma'));
+                
+                // Opción para abrir en el navegador (stream)
+                return $pdf->stream('informe_tecnico_' . $reclamo->codigoReclamo . '.pdf');
+            }
+        }
+
+        return redirect()->route('dashboard');
     }
 }

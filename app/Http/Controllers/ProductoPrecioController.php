@@ -74,6 +74,14 @@ class ProductoPrecioController extends Controller
             }
         }
 
+        // Calculate multiplier for $1 base price to use in frontend JS
+        $precioCalculadoMultiplier = $preciosService->getPrecioCalculado(
+            1,
+            $producto->idGrupo,
+            'DOLAR',
+            $producto->estadoProductoWeb
+        );
+
         return response()->json([
             'success' => true,
             'nombreProducto' => $producto->nombreProducto,
@@ -83,6 +91,7 @@ class ProductoPrecioController extends Controller
             'precioIgvSoles' => $precioIgvSoles,
             'gananciaExtra' => $producto->gananciaExtra,
             'precioCalculado' => round($precioCalculado, 2),
+            'precioCalculadoMultiplier' => $precioCalculadoMultiplier,
             'precioVentaUsd' => round($precioVentaUsd, 2),
             'precioVentaSoles' => $precioVentaSoles,
             'tasaCambio' => $tcUsar,

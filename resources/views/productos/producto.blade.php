@@ -175,6 +175,15 @@
                             <input type="number" name="tc_fijo" step="0.01" class="form-control input-edit mt-1" id="tc_fijo_personalizado" value="{{$producto->tc_fijo}}" placeholder="Ej: 3.80" disabled>
                             <small class="text-muted">Si se llena, esta tasa sobreescribira a la tasa fija global cuando se use TC Fijo.</small>
                         </div>
+                        
+                        <div class="mt-3 p-2 bg-light rounded border border-success">
+                            <label for="precio-web-directo" class="form-label fw-bold text-success mb-1">Precio en Web (S/.):</label>
+                            <div class="input-group w-100">
+                                <span class="input-group-text bg-success text-white border-success">S/</span>
+                                <input type="number" id="precio-web-directo" value="" class="form-control text-success fw-bold text-center border-success input-edit" step="0.01" placeholder="Ej: 150.00" disabled>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Calcula automáticamente la Utilidad</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -570,7 +579,7 @@
         productoIdEncriptado: "{{ encrypt($producto->idProducto) }}"
     };
 </script>
-<script src="{{ asset('js/update-product-scripts.js') }}?v=1.00"></script>
+<script src="{{ asset('js/update-product-scripts.js') }}?v=1.02"></script>
 @include('productos.logic.producto_scripts')
 
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.01"></script>

@@ -29,6 +29,7 @@ function calcPrices() {
                     let precioCalculado = document.getElementById('precio-product-calculado');
                     let divTotal = document.getElementById('div-total-price');
                     let gananciaVal = parseFloat(ganancia) || 0;
+                    window.APP_DATA.lastCalculado = data[0].calculado;
                     precioCalculado.value = (data[0].calculado + gananciaVal).toFixed(2);
                     divTotal.innerHTML = '';
 
@@ -91,7 +92,6 @@ function calcIgv() {
     let dolarSinIgv = document.getElementById('precio-product-igv');
 
     if (price > 0) {
-
 
         dolarSinIgv.value = (price * 1.18).toFixed(2);
     } else {
@@ -666,6 +666,20 @@ function getPrecioEnDolares() {
     return precioEnDolares;
 }
 
+function getTcEnUso() {
+    const usarTcFijo = document.getElementById('usar_tc_fijo');
+    let tcUsar = TC_SUNAT;
+
+    if (usarTcFijo && !usarTcFijo.checked) {
+        tcUsar = TC_FIJO;
+        const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
+        if (tcFijoPersonalizado && tcFijoPersonalizado.value && parseFloat(tcFijoPersonalizado.value) > 0) {
+            tcUsar = parseFloat(tcFijoPersonalizado.value);
+        }
+    }
+    return tcUsar;
+}
+
 function actualizarPrecioTotalFijo() {
     const usarTcFijo = document.getElementById('usar_tc_fijo');
     const precioSunatInput = document.getElementById('precio-total-sunat');
@@ -687,7 +701,39 @@ function actualizarPrecioTotalFijo() {
     if (precioFijoInput) {
         precioFijoInput.value = (precioEnDolares * tasaFijaUsar).toFixed(2);
     }
+
+    // Sync "Precio Web Directo" (Soles) unless it's currently being typed by the user
+    if (!window.APP_DATA.isEditingWebPrice) {
+        const precioWebDirecto = document.getElementById('precio-web-directo');
+        const precioCalculadoInput = document.getElementById('precio-product-calculado');
+
+        if (precioWebDirecto && precioCalculadoInput) {
+            const precioVentaUsd = parseFloat(precioCalculadoInput.value) || 0;
+            precioWebDirecto.value = (precioVentaUsd * getTcEnUso()).toFixed(2);
+        }
+    }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const precioWebDirecto = document.getElementById('precio-web-directo');
+    if (precioWebDirecto) {
+        precioWebDirecto.addEventListener('blur', function () {
+            let precioWeb = parseFloat(this.value) || 0;
+            let tcUsar = getTcEnUso();
+            
+            // Calculate reverse
+            let precioVentaUsd = precioWeb / tcUsar;
+            let costoBase = window.APP_DATA.lastCalculado || 0;
+            let ganancia = precioVentaUsd - costoBase;
+            
+            // Limit to prevent weird negatives if needed, or allow it
+            document.getElementById('precio-product-ganancia').value = ganancia.toFixed(2);
+            
+            // Trigger the calcPrices
+            calcPrices();
+        });
+    }
+});
 
 function toggleTipoCambio() {
     const usarTcFijo = document.getElementById('usar_tc_fijo');
@@ -744,7 +790,6 @@ if (tcFijoPersonalizado) {
     tcFijoPersonalizado.addEventListener('input', toggleTipoCambio);
 }
 
-// 👇 NUEVO BLOQUE: CREACIÓN RÁPIDA DE GRUPO (AJAX & DRAG-AND-DROP) 👇
 const quickImgInput = document.getElementById('quick-img');
 const quickImgContainer = document.getElementById('quick-img-drag-container');
 const quickImgPreview = document.getElementById('quick-img-preview');

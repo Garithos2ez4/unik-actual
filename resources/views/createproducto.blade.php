@@ -195,6 +195,14 @@
                         <label class="form-label">TC Personalizado:</label>
                         <input type="number" name="tc_fijo" step="0.01" class="form-control" id="tc_fijo_personalizado" value="{{ old('tc_fijo', optional($productoCopiar)->tc_fijo ?? '') }}" placeholder="Ej: 3.80">
                     </div>
+                    <div class="mb-3 col-12 text-center mt-2 p-2 bg-light rounded border border-success">
+                        <label for="precio-web-directo" class="form-label fw-bold text-success mb-1">Precio en Web (S/.):</label>
+                        <div class="input-group input-group-lg w-100 mx-auto">
+                            <span class="input-group-text bg-success text-white border-success">S/</span>
+                            <input type="number" id="precio-web-directo" value="" class="form-control text-success fw-bold text-center border-success" step="0.01" placeholder="Ej: 150.00">
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Calcula automáticamente la Utilidad</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -391,5 +399,5 @@
               }))
           };
       </script>
-      <script src="{{ asset('js/create-product-scripts.js') }}?v=1.01"></script>
+      <script src="{{ asset('js/create-product-scripts.js') }}?v=1.03"></script>
 @endsection

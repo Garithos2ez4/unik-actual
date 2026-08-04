@@ -24,7 +24,7 @@
                     <thead class="bg-dark text-white">
                         <tr>
                             <th class="ps-3">Colaborador</th>
-                            <th># Caso</th>
+                            <th class="text-center">Informe PDF</th>
                             <th>Fecha / Plazo (+3d)</th>
                             <th>Producto / Estado</th>
                             <th>Plataforma / Cuenta</th>
@@ -45,7 +45,11 @@
                                     <span>{{ $reclamo->Usuario->user ?? 'N/A' }}</span>
                                 </div>
                             </td>
-                            <td>{{ $reclamo->numeroCaso ?? '-' }}</td>
+                            <td class="text-center">
+                                <a href="{{ route('reclamos.reporte.pdf', $reclamo->idReclamoPlataforma) }}" target="_blank" class="btn btn-sm btn-outline-danger" title="Generar Informe Técnico">
+                                    <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+                                </a>
+                            </td>
                             <td>
                                 <div>{{ $reclamo->fechaReclamo->format('d-m-Y') }}</div>
                                 <small class="text-danger fw-bold">{{ $reclamo->fechaReclamo->copy()->addDays(3)->format('d-m-Y') }}</small>

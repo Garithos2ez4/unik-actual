@@ -49,10 +49,6 @@
 
     function recalcularDesdeBase() {
         let nuevoPrecioBase = parseFloat(document.getElementById('editUtilidadPrecioBase').value) || 0;
-        let oldPrecioBase = parseFloat(_utilidadData.precioDolar) || 1;
-        if (oldPrecioBase === 0) oldPrecioBase = 1; // prevent division by zero
-        
-        let ratio = nuevoPrecioBase / oldPrecioBase;
         
         // Update visual fields
         let tc = parseFloat(_utilidadData.tasaCambio) || 0;
@@ -62,13 +58,9 @@
         document.getElementById('editUtilidadPrecioBaseSoles').value = (nuevoPrecioBase * tc).toFixed(2);
         document.getElementById('editUtilidadPrecioIgvSoles').value = (precioConIgv * tc).toFixed(2);
         
-        // Approximate new precioCalculado based on the ratio
-        _utilidadData.precioCalculado = parseFloat(_utilidadData.originalPrecioCalculado || _utilidadData.precioCalculado) * ratio;
-        
-        // Save original to avoid compounding floating point errors on multiple keystrokes
-        if (!_utilidadData.originalPrecioCalculado) {
-            _utilidadData.originalPrecioCalculado = _utilidadData.precioCalculado / ratio;
-        }
+        // Exact recalculation using the server-provided multiplier
+        let multiplier = parseFloat(_utilidadData.precioCalculadoMultiplier) || 0;
+        _utilidadData.precioCalculado = nuevoPrecioBase * multiplier;
 
         recalcularPreviewUtilidad();
     }
@@ -79,23 +71,15 @@
         
         document.getElementById('editUtilidadPrecioBase').value = nuevoPrecioBase.toFixed(2);
         
-        let oldPrecioBase = parseFloat(_utilidadData.precioDolar) || 1;
-        if (oldPrecioBase === 0) oldPrecioBase = 1; // prevent division by zero
-        
-        let ratio = nuevoPrecioBase / oldPrecioBase;
         let tc = parseFloat(_utilidadData.tasaCambio) || 0;
         
         document.getElementById('editUtilidadPrecioBaseSoles').value = (nuevoPrecioBase * tc).toFixed(2);
         document.getElementById('editUtilidadPrecioIgvSoles').value = (nuevoPrecioIgv * tc).toFixed(2);
         
-        // Approximate new precioCalculado based on the ratio
-        _utilidadData.precioCalculado = parseFloat(_utilidadData.originalPrecioCalculado || _utilidadData.precioCalculado) * ratio;
+        // Exact recalculation using the server-provided multiplier
+        let multiplier = parseFloat(_utilidadData.precioCalculadoMultiplier) || 0;
+        _utilidadData.precioCalculado = nuevoPrecioBase * multiplier;
         
-        // Save original to avoid compounding floating point errors on multiple keystrokes
-        if (!_utilidadData.originalPrecioCalculado) {
-            _utilidadData.originalPrecioCalculado = _utilidadData.precioCalculado / ratio;
-        }
-
         recalcularPreviewUtilidad();
     }
 
