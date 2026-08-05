@@ -122,6 +122,23 @@ class FalabellaTemplateService
         return '';
     }
 
+    private function extractPeso(string $value): string
+    {
+        if (preg_match('/([\d]+(?:[.,]\d+)?)/', $value, $matches)) {
+            $num = (float)str_replace(',', '.', $matches[1]);
+            $strLower = strtolower(str_replace(' ', '', $value));
+            
+            // Si no menciona kilos, pero sí menciona gramos, lo dividimos entre 1000
+            if (strpos($strLower, 'kg') === false && strpos($strLower, 'kilo') === false) {
+                if (strpos($strLower, 'g') !== false || strpos($strLower, 'gr') !== false) {
+                    $num = $num / 1000;
+                }
+            }
+            return (string)round($num, 2);
+        }
+        return '';
+    }
+
     /**
      * Genera un SKU único para Falabella:
      * codigoProducto + modelo + usuario + V1/V2/V3
@@ -254,7 +271,7 @@ class FalabellaTemplateService
         $anchoCm   = $this->extractNumber($ancho);
         $largoCm   = $this->extractNumber($largo);
         $altoCm    = $this->extractNumber($alto);
-        $pesoCm    = $this->extractNumber($caractMap['Peso'] ?? '');
+        $pesoCm    = $this->extractPeso($caractMap['Peso'] ?? '');
         $pulgadasCm = $this->extractNumber($caractMap['Pulgadas'] ?? '');
 
         return compact(

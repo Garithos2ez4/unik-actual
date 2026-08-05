@@ -31,7 +31,7 @@
                 @php
                 $idGrp = (int) optional($producto->GrupoProducto)->idGrupoProducto;
                 $idCat = (int) optional($producto->GrupoProducto)->idCategoria;
-                $hasFalabella = in_array($idCat, [1, 3, 6,10]) || in_array($idGrp, [24, 49, 117, 155, 156, 157, 158, 159, 160, 169, 68, 71,72,73,74]);
+                $hasFalabella = in_array($idCat, [1, 3, 6,10]) || in_array($idGrp, [24, 25, 49, 117, 155, 156, 157, 158, 159, 160, 169, 68, 71,72,73,74]);
                 @endphp
                 @if($hasFalabella)
                 @php $idCatFbk = $idCat; @endphp

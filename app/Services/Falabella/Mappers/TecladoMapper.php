@@ -204,7 +204,7 @@ class TecladoMapper implements FalabellaCategoryMapper
             'L' => $context['saleEnd'],
             'M' => '2026',
             'N' => $this->resolveConectividad($d['caractMap']),
-            'O' => $d['caractMap']['Segmento'] ?? 'Computación',
+            'O' => $this->resolveSegmento($d['caractMap']),
             'P' => $d['caractMap']['Autonomia'] ?? '',
             'Q' => $d['caractMap']['Color'] ?? '',
             'R' => $d['dim'],
@@ -212,7 +212,7 @@ class TecladoMapper implements FalabellaCategoryMapper
             'T' => max(5, (float)$d['anchoCm']),
             'U' => max(5, (float)$d['largoCm']),
             'V' => max(5, (float)$d['altoCm']),
-            'W' => $d['pesoCm'],
+            'W' => round(max(0.03, min(3.0, (float)($d['pesoCm'] ?: 0.8))), 2),
         ];
     }
 
@@ -236,5 +236,36 @@ class TecladoMapper implements FalabellaCategoryMapper
         }
 
         return 'USB';
+    }
+
+    private function resolveSegmento(array $caract): string
+    {
+        $texto = strtolower(implode(' ', [
+            $caract['Segmento'] ?? '',
+            $caract['Tipo'] ?? ''
+        ]));
+
+        if (preg_match('/(gamer|gaming)/i', $texto)) {
+            return 'Gamer';
+        }
+        if (preg_match('/(creador|contenido)/i', $texto)) {
+            return 'Creador de Contenido';
+        }
+        if (preg_match('/(estudiant|educaci[oó]n)/i', $texto)) {
+            return 'Estudiante';
+        }
+        if (preg_match('/(productividad|trabajo|oficina|empresarial)/i', $texto)) {
+            return 'Productividad';
+        }
+
+        $raw = trim($caract['Segmento'] ?? '');
+        $validos = ['Creador de Contenido', 'Estudiante', 'Gamer', 'Productividad'];
+        foreach ($validos as $v) {
+            if (strcasecmp($raw, $v) === 0) {
+                return $v;
+            }
+        }
+
+        return 'Productividad';
     }
 }

@@ -8,6 +8,7 @@ use App\Services\Falabella\Mappers\LaptopMapper;
 use App\Services\Falabella\Mappers\MonitorMapper;
 use App\Services\Falabella\Mappers\ImpresoraMapper;
 use App\Services\Falabella\Mappers\CableMapper;
+use App\Services\Falabella\Mappers\MouseMapper;
 
 /**
  * Resuelve qué FalabellaCategoryMapper corresponde a un producto
@@ -42,6 +43,10 @@ class FalabellaCategoryResolverService
 
         if (in_array($idGrp, [68, 71, 72, 73, 74])) {
             return new \App\Services\Falabella\Mappers\CableMapper();
+        }
+
+        if (in_array($idGrp, [25])) {
+            return new \App\Services\Falabella\Mappers\MouseMapper();
         }
 
         return match ($idCat) {

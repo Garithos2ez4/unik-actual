@@ -536,8 +536,8 @@ class EnvioProvinciaController extends Controller
                 });
             }
         })
-        ->take(20)
-        ->get();
+            ->take(20)
+            ->get();
 
         $resultadosFinales = collect();
         $productosAgregados = [];

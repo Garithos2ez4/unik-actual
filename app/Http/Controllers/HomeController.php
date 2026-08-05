@@ -32,15 +32,15 @@ class HomeController extends Controller
         $productosStockMin = \Illuminate\Support\Facades\Cache::remember('dash_stock_min', 60, function () {
             return $this->dashboardService->getStockMinProducts()->total();
         });
-        
+
         $totalProductos = \Illuminate\Support\Facades\Cache::remember('dash_total_prod', 60, function () {
             return $this->dashboardService->getTotalProducts();
         });
-        
+
         $productosMostSold = \Illuminate\Support\Facades\Cache::remember('dash_most_sold_prod', 60, function () {
             return $this->dashboardService->getMostSoldProducts();
         });
-        
+
         $publicacionesMostSold = \Illuminate\Support\Facades\Cache::remember('dash_most_sold_pub', 60, function () {
             return $this->dashboardService->getMostSoldPublicaciones();
         });
@@ -189,12 +189,12 @@ class HomeController extends Controller
             $allInventory = $this->dashboardService->getAllInventory();
             $inventarioTotal = $allInventory->sum('stock');
             $almacenesList = $allInventory->unique('idAlmacen')->pluck('Almacen');
-            
+
             $stockArray = [];
             foreach ($almacenesList as $almacen) {
                 $stockArray[] = ['almacen' => $almacen, 'cantidad' => $this->dashboardService->getInventoryByAlmacen($almacen->idAlmacen)->sum('stock')];
             }
-            
+
             return [
                 'inventario' => $inventarioTotal,
                 'stock' => $stockArray
@@ -256,7 +256,7 @@ class HomeController extends Controller
                 ->take(10)
                 ->get();
         });
-        \Log::info("Count de productosOldStock: " . $productosOldStock->count());
+        //   \Log::info("Count de productosOldStock: " . $productosOldStock->count());
 
         if ($request->query('query')) {
             return response()->json([
