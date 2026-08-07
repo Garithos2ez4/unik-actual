@@ -857,4 +857,38 @@ class ConfiguracionController extends Controller
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
+
+    public function consultarTipoCambio(Request $request)
+    {
+        try {
+            $client = new \GuzzleHttp\Client(['base_uri' => 'https://api.apis.net.pe', 'verify' => false]);
+            
+            $fecha = $request->query('fecha', date('Y-m-d'));
+            
+            $parameters = [
+                'http_errors' => false,
+                'connect_timeout' => 5,
+                'headers' => [
+                    'Referer' => 'https://apis.net.pe/api-sunat-tipo-de-cambio',
+                    'User-Agent' => 'laravel/guzzle',
+                    'Accept' => 'application/json',
+                ],
+                'query' => ['fecha' => $fecha]
+            ];
+            
+            $res = $client->request('GET', '/v1/tipo-cambio-sunat', $parameters);
+            $response = json_decode($res->getBody()->getContents(), true);
+
+            if ($res->getStatusCode() == 200) {
+                return response()->json(['success' => true, 'data' => $response]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $response['message'] ?? 'Error al consultar SUNAT Tipo de Cambio'
+            ], $res->getStatusCode());
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 }

@@ -91,6 +91,94 @@ class ClienteController extends Controller
         return response()->json($response);
     }
 
+    public function consultarRuc($ruc)
+    {
+        try {
+            $token = env('DECOLECTA_TOKEN');
+            if (!$token) {
+                return response()->json(['success' => false, 'message' => 'Falta token de API'], 500);
+            }
+
+            $cacheKey = 'decolecta_ruc_' . $ruc;
+            $monthKey = 'decolecta_count_' . date('Y_m');
+
+            $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addDays(30), function () use ($token, $ruc, $monthKey) {
+                // Incrementar contador de llamadas
+                \Illuminate\Support\Facades\Cache::increment($monthKey);
+
+                $response = \Illuminate\Support\Facades\Http::withoutVerifying()
+                    ->withToken($token)
+                    ->acceptJson()
+                    ->get('https://api.decolecta.com/v1/sunat/ruc', [
+                        'numero' => $ruc
+                    ]);
+
+                if ($response->successful()) {
+                    return $response->json();
+                }
+
+                // Revertir contador si falla
+                \Illuminate\Support\Facades\Cache::decrement($monthKey);
+                throw new \Exception('Error al consultar SUNAT: ' . $response->status());
+            });
+
+            $currentCount = \Illuminate\Support\Facades\Cache::get($monthKey, 0);
+
+            return response()->json([
+                'success' => true, 
+                'data' => $data,
+                'api_count' => $currentCount,
+                'api_limit' => 100
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function consultarDni($dni)
+    {
+        try {
+            $token = env('DECOLECTA_TOKEN');
+            if (!$token) {
+                return response()->json(['success' => false, 'message' => 'Falta token de API'], 500);
+            }
+
+            $cacheKey = 'decolecta_dni_' . $dni;
+            $monthKey = 'decolecta_count_' . date('Y_m');
+
+            $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addDays(30), function () use ($token, $dni, $monthKey) {
+                // Incrementar contador de llamadas
+                \Illuminate\Support\Facades\Cache::increment($monthKey);
+
+                $response = \Illuminate\Support\Facades\Http::withoutVerifying()
+                    ->withToken($token)
+                    ->acceptJson()
+                    ->get('https://api.decolecta.com/v1/reniec/dni', [
+                        'numero' => $dni
+                    ]);
+
+                if ($response->successful()) {
+                    return $response->json();
+                }
+
+                // Revertir contador si falla
+                \Illuminate\Support\Facades\Cache::decrement($monthKey);
+                throw new \Exception('Error al consultar RENIEC: ' . $response->status());
+            });
+
+            $currentCount = \Illuminate\Support\Facades\Cache::get($monthKey, 0);
+
+            return response()->json([
+                'success' => true, 
+                'data' => $data,
+                'api_count' => $currentCount,
+                'api_limit' => 100
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     /**
      * Método privado para centralizar la lógica de validación de clientes.
      */

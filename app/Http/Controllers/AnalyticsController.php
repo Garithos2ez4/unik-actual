@@ -489,7 +489,7 @@ class AnalyticsController extends Controller
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM(CASE WHEN UPPER(Producto.modelo) LIKE '%RESET%' THEN 0 ELSE ((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) END) as costos,
+                         SUM(((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                          SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->where(function($q) { $this->applyInventarioFilter($q, true); })
@@ -594,7 +594,7 @@ class AnalyticsController extends Controller
                              GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                              (SELECT GROUP_CONCAT(DISTINCT MetodoPago.nombreMetodo SEPARATOR ', ') FROM PagoVenta JOIN MetodoPago ON PagoVenta.idMetodoPago = MetodoPago.idMetodoPago WHERE PagoVenta.idVenta = Venta.idVenta) as metodos_pago,
                              SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                             SUM(CASE WHEN UPPER(Producto.modelo) LIKE '%RESET%' THEN 0 ELSE ((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) END) as costos,
+                             SUM(((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                              0 as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->where(function($q) { $this->applyInventarioFilter($q, true); })
@@ -655,7 +655,7 @@ class AnalyticsController extends Controller
                 ->selectRaw("Producto.modelo as sku,
                              SUM(DetalleVenta.cantidad) as total_unidades,
                              SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                             SUM(CASE WHEN UPPER(Producto.modelo) LIKE '%RESET%' THEN 0 ELSE ((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) END) as costos,
+                             SUM(((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                              SUM(($comisionTiendaExpr) * DetalleVenta.cantidad) as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->where(function($q) { $this->applyInventarioFilter($q, true); })

@@ -20,13 +20,14 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
         try {
             $envio = EnvioProvincia::create($data);
 
-            $hasAddress = isset($data['entrega_domicilio']) || !empty($data['dir']) || !empty($data['ref']);
+            $hasAddress = isset($data['entrega_domicilio']) || isset($data['despachado']) || !empty($data['dir']) || !empty($data['ref']);
             $hasReceptor = isset($data['receptor']) && !empty($data['receptor']['nombre']) && !empty($data['receptor']['dni']);
             
             if ($hasAddress || $hasReceptor) {
                 $detalle = EnvioProvinciaDetalle::create([
                     'idEnvioProvincia' => $envio->idEnvioProvincia,
                     'entrega_domicilio' => $data['entrega_domicilio'] ?? 0,
+                    'despachado' => $data['despachado'] ?? 0,
                     'dir' => $data['dir'] ?? null,
                     'ref' => $data['ref'] ?? null,
                 ]);
@@ -80,7 +81,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
             $envio = EnvioProvincia::findOrFail($idEnvioProvincia);
             $envio->update($data);
 
-            $hasAddress = isset($data['entrega_domicilio']) || !empty($data['dir']) || !empty($data['ref']);
+            $hasAddress = isset($data['entrega_domicilio']) || isset($data['despachado']) || !empty($data['dir']) || !empty($data['ref']);
             $hasReceptor = isset($data['receptor']) && !empty($data['receptor']['nombre']) && !empty($data['receptor']['dni']);
 
             if ($hasAddress || $hasReceptor) {
@@ -88,6 +89,7 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
                     ['idEnvioProvincia' => $envio->idEnvioProvincia],
                     [
                         'entrega_domicilio' => $data['entrega_domicilio'] ?? 0,
+                        'despachado' => $data['despachado'] ?? 0,
                         'dir' => $data['dir'] ?? null,
                         'ref' => $data['ref'] ?? null,
                     ]

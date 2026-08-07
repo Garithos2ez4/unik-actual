@@ -14,7 +14,13 @@ class EnvioProvinciaDetalle extends Model
         'entrega_domicilio',
         'dir',
         'ref',
-        'origen'
+        'origen',
+        'despachado'
+    ];
+
+    protected $casts = [
+        'entrega_domicilio' => 'boolean',
+        'despachado' => 'boolean',
     ];
 
     public function EnvioProvincia()

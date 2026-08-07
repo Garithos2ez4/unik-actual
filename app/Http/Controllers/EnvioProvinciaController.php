@@ -58,6 +58,26 @@ class EnvioProvinciaController extends Controller
         return redirect()->route('dashboard');
     }
 
+    public function toggleDespachado(Request $request)
+    {
+        try {
+            $id = $request->input('idEnvioProvincia');
+            $estado = $request->input('despachado');
+
+            $detalle = \App\Models\Envios\EnvioProvinciaDetalle::firstOrCreate(
+                ['idEnvioProvincia' => $id],
+                ['entrega_domicilio' => 0, 'dir' => null, 'ref' => null]
+            );
+
+            $detalle->despachado = $estado ? 1 : 0;
+            $detalle->save();
+
+            return response()->json(['success' => true]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function create()
     {
         $userModel = $this->headerService->getModelUser();
@@ -179,7 +199,13 @@ class EnvioProvinciaController extends Controller
                     $fecha = null;
                 } else {
                     $fecha = $request->query('fecha', date('Y-m-d'));
-                    $envios = $query->whereDate('fecha_envio', $fecha)->get();
+                    $envios = $query->whereDate('fecha_envio', $fecha)
+                        ->where(function ($q) {
+                            $q->whereDoesntHave('Detalle')
+                              ->orWhereHas('Detalle', function ($q2) {
+                                  $q2->where('despachado', 0);
+                              });
+                        })->get();
                 }
 
                 return view('envios.pdf', [
@@ -209,7 +235,13 @@ class EnvioProvinciaController extends Controller
                     $fecha = null;
                 } else {
                     $fecha = $request->query('fecha', date('Y-m-d'));
-                    $envios = $query->whereDate('fecha_envio', $fecha)->get();
+                    $envios = $query->whereDate('fecha_envio', $fecha)
+                        ->where(function ($q) {
+                            $q->whereDoesntHave('Detalle')
+                              ->orWhereHas('Detalle', function ($q2) {
+                                  $q2->where('despachado', 0);
+                              });
+                        })->get();
                 }
 
                 return view('envios.lista_productos', [
@@ -249,7 +281,13 @@ class EnvioProvinciaController extends Controller
             $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
         } else {
             $fecha = $request->query('fecha', date('Y-m-d'));
-            $envios = $query->whereDate('fecha_envio', $fecha)->get();
+            $envios = $query->whereDate('fecha_envio', $fecha)
+                ->where(function ($q) {
+                    $q->whereDoesntHave('Detalle')
+                      ->orWhereHas('Detalle', function ($q2) {
+                          $q2->where('despachado', 0);
+                      });
+                })->get();
         }
 
         // Cargar la plantilla oficial de Shalom (preserva metadata, versión, hojas ocultas, validaciones)
@@ -458,7 +496,13 @@ class EnvioProvinciaController extends Controller
             $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
         } else {
             $fecha = $request->query('fecha', date('Y-m-d'));
-            $envios = $query->whereDate('fecha_envio', $fecha)->get();
+            $envios = $query->whereDate('fecha_envio', $fecha)
+                ->where(function ($q) {
+                    $q->whereDoesntHave('Detalle')
+                      ->orWhereHas('Detalle', function ($q2) {
+                          $q2->where('despachado', 0);
+                      });
+                })->get();
         }
 
         return view('envios.etiquetas2', compact('envios', 'fecha'));

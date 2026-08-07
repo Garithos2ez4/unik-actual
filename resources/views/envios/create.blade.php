@@ -176,9 +176,15 @@
                             <div class="col-md-12 mb-2 d-none" id="alerta_restricciones_shalom"></div>
 
                             <div class="col-md-12 d-flex align-items-center mb-2">
-                                <div class="form-check form-switch border p-3 rounded w-100" style="background-color: #f8f9fa;">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1">
-                                    <label class="form-check-label fw-bold text-primary" for="entrega_domicilio">¿Entrega a Domicilio?</label>
+                                <div class="d-flex gap-2">
+                                    <div class="form-check form-switch border p-3 rounded w-50" style="background-color: #f8f9fa;">
+                                        <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1">
+                                        <label class="form-check-label fw-bold text-primary" for="entrega_domicilio">¿Entrega a Domicilio?</label>
+                                    </div>
+                                    <div class="form-check form-switch border p-3 rounded w-50" style="background-color: #f8f9fa;">
+                                        <input class="form-check-input ms-0 me-2" type="checkbox" id="despachado" name="despachado" value="1">
+                                        <label class="form-check-label fw-bold text-success" for="despachado">¿Ya despachado?</label>
+                                    </div>
                                 </div>
                             </div>
 

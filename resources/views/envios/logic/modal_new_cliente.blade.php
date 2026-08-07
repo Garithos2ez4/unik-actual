@@ -1,1 +1,1 @@
-<script src="{{asset('js/createCliente.js')}}"></script>
+<script src="{{asset('js/createCliente.js')}}?v={{time()}}"></script>

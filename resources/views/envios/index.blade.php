@@ -58,6 +58,7 @@
                             <th>Producto/Cant</th>
                             <th>Registrado Por</th>
                             <th>Sede / Oficina</th>
+                            <th class="text-center">Desp.</th>
                             <th class="text-end pe-3">Acciones</th>
                         </tr>
                     </thead>
@@ -139,6 +140,14 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
+                            <td class="text-center">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input check-despachado" type="checkbox" 
+                                           data-id="{{ $envio->idEnvioProvincia }}" 
+                                           {{ optional($envio->Detalle)->despachado ? 'checked' : '' }} 
+                                           title="Marcar como despachado">
+                                </div>
+                            </td>
                             <td class="text-end pe-3">
                                 <a href="{{ route('envios.edit', $envio->idEnvioProvincia) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-pencil-square"></i> Editar
@@ -152,7 +161,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center py-5">
+                            <td colspan="13" class="text-center py-5">
                                 <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
                                 <p class="mt-2 text-muted">No se han registrado envíos aún.</p>
                             </td>
@@ -166,6 +175,46 @@
 </div>
 
 @include('envios.logic.tracking-flores')
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.check-despachado').forEach(check => {
+            check.addEventListener('change', function() {
+                const idEnvio = this.getAttribute('data-id');
+                const isChecked = this.checked ? 1 : 0;
+                const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                fetch('{{ route("envios.toggle-despachado") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: JSON.stringify({
+                        idEnvioProvincia: idEnvio,
+                        despachado: isChecked
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('¡Éxito!', 'El estado de despacho ha sido actualizado.', 'success');
+                    } else {
+                        this.checked = !isChecked; // revert
+                        Swal.fire('Error', data.message || 'No se pudo actualizar', 'error');
+                    }
+                })
+                .catch(err => {
+                    this.checked = !isChecked;
+                    console.error(err);
+                    Swal.fire('Error', 'Problema de conexión o de servidor', 'error');
+                });
+            });
+        });
+    });
+</script>
+@endpush
 
 <script>
     function accionSeleccionados(tipo) {

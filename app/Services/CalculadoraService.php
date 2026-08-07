@@ -172,6 +172,7 @@ class CalculadoraService implements CalculadoraServiceInterface
                    OR (SELECT idGrupo FROM Producto p WHERE p.idProducto = dc_inner.idProducto) IN ({$gruposExcepcion})
                )
              LIMIT 1),
+            (NULLIF({$aliasProducto}.precioDolar, 0) * {$tcOuter} * 1.18),
             (SELECT CASE 
                     WHEN c2.moneda = 'DOLAR' THEN dc2.precioUnitario * COALESCE((SELECT hs.tasa_cambio FROM historial_tipo_cambio hs ORDER BY ABS(DATEDIFF(hs.fecha, DATE(c2.fechaRegistro))) ASC LIMIT 1), {$tcOuter})
                     ELSE dc2.precioUnitario 
@@ -179,11 +180,11 @@ class CalculadoraService implements CalculadoraServiceInterface
              FROM DetalleComprobante dc2
              INNER JOIN Comprobante c2 ON c2.idComprobante = dc2.idComprobante
              WHERE dc2.idProducto = {$aliasProducto}.idProducto
-               AND dc2.precioUnitario > 0
+               AND dc2.precioUnitario > 0.50
                AND c2.numeroComprobante NOT LIKE '%INVENTARIO%'
              ORDER BY dc2.idDetalleComprobante DESC
              LIMIT 1),
-            COALESCE({$aliasProducto}.precioDolar, 0) * {$tcOuter} * 1.18
+            0
         )";
     }
 }

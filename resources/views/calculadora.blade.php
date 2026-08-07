@@ -10,7 +10,10 @@
                  <h2><i class="bi bi-calculator"></i> Calculadora</h2>
             </div>
             <div class="col-4 text-end text-secondary">
-                <h4>T.C: {{$valores->tasaCambio}}</h4>
+                <h4>
+                    T.C: <span id="span-tasa-cambio">{{$valores->tasaCambio}}</span>
+                    <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-consultar-tc" onclick="consultarTipoCambio()" title="Consultar SUNAT en tiempo real"><i class="bi bi-arrow-clockwise"></i></button>
+                </h4>
                 <h4>IGV: {{$valores->igv}}% </h4>
             </div>
         </div>
@@ -186,6 +189,43 @@
             igvFactor: {{ ($valores->igv / 100) + 1 }},
             tasaCambio: {{ $valores->tasaCambio }}
         };
+
+        function consultarTipoCambio() {
+            let btn = document.getElementById('btn-consultar-tc');
+            let icon = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            btn.disabled = true;
+
+            fetch('/tipo-cambio')
+                .then(res => res.json())
+                .then(data => {
+                    btn.innerHTML = icon;
+                    btn.disabled = false;
+                    if (data.success && data.data && data.data.venta) {
+                        let tc = data.data.venta;
+                        document.getElementById('span-tasa-cambio').innerText = tc;
+                        window.APP_DATA.tasaCambio = tc;
+                        
+                        Swal.fire('Actualizado', 'Tipo de cambio SUNAT obtenido: ' + tc, 'success');
+                        
+                        // Simular cambio para recalcular automáticamente
+                        let selectType = document.getElementById('select-type');
+                        if(selectType && typeof calculateTc === 'function') {
+                            calculateTc(selectType);
+                        } else {
+                            let input = document.getElementById('precio-entrada');
+                            if(input) input.dispatchEvent(new Event('keyup'));
+                        }
+                    } else {
+                        Swal.fire('Error', data.message || 'No se pudo obtener el TC de hoy', 'error');
+                    }
+                })
+                .catch(err => {
+                    btn.innerHTML = icon;
+                    btn.disabled = false;
+                    Swal.fire('Error', 'Problema de red al consultar', 'error');
+                });
+        }
     </script>
     <script src="{{ asset('js/calculator-scripts.js') }}?v=1.00"></script>
 @endsection

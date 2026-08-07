@@ -2,7 +2,7 @@
     let _utilidadData = {};
 
     function abrirModalEditarUtilidad(idProducto) {
-        fetch('{{ route("producto.getUtilidad", "") }}/' + idProducto)
+        fetch('{{ url("productos/get-utilidad") }}/' + idProducto)
             .then(response => response.json())
             .then(data => {
                 if(data.success) {

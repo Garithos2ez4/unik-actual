@@ -121,7 +121,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/usuario/getbandeja', [UsuarioController::class, 'getBandejaColaborador'])->name('getbandeja');
 
     Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
-    
+
     // Liquidación
     Route::get('/productos/liquidacion', [LiquidacionController::class, 'index'])->name('productos.liquidacion');
     Route::get('/productos/liquidacion/buscar-ajax', [LiquidacionController::class, 'buscarProductoAjax'])->name('productos.liquidacion.buscar-ajax');
@@ -221,6 +221,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::post('/store', [\App\Http\Controllers\EnvioProvinciaController::class, 'store'])->name('store');
         Route::get('/edit/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'edit'])->name('edit');
         Route::put('/update/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'update'])->name('update');
+        Route::post('/toggle-despachado', [\App\Http\Controllers\EnvioProvinciaController::class, 'toggleDespachado'])->name('toggle-despachado');
         Route::get('/pdf', [\App\Http\Controllers\EnvioProvinciaController::class, 'pdf'])->name('pdf');
         Route::get('/excel', [\App\Http\Controllers\EnvioProvinciaController::class, 'excel'])->name('excel');
         Route::get('/etiquetas', [\App\Http\Controllers\EnvioProvinciaController::class, 'etiquetas'])->name('etiquetas');
@@ -297,6 +298,9 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes');
     Route::get('/cliente/searchcliente', [ClienteController::class, 'searchCliente'])->name('searchcliente');
+    Route::get('/cliente/consultar-ruc/{ruc}', [ClienteController::class, 'consultarRuc'])->name('cliente.consultarRuc');
+    Route::get('/cliente/consultar-dni/{dni}', [ClienteController::class, 'consultarDni'])->name('cliente.consultarDni');
+    Route::get('/tipo-cambio', [\App\Http\Controllers\ConfiguracionController::class, 'consultarTipoCambio'])->name('tipo-cambio.consultar');
     Route::post('/cliente/create', [ClienteController::class, 'createCliente'])->name('createcliente');
     Route::post('/cliente/update/{id}', [ClienteController::class, 'updateCliente'])->name('updatecliente');
 

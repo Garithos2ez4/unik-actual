@@ -20,7 +20,10 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label client-document">DNI:</label>
-                            <input type="text" name="numerodoc" placeholder="88888888" maxlength="11" class="form-control" required pattern="\d+" title="solo numeros permitidos" oninput="validateNumericInput(this)" >
+                            <div class="input-group">
+                                <input type="text" name="numerodoc" placeholder="88888888" maxlength="11" class="form-control" required pattern="\d+" title="solo numeros permitidos" oninput="validateNumericInput(this)" >
+                                <button class="btn btn-outline-secondary" type="button" id="btn-consultar-ruc" style="display: none;" onclick="consultarRucAPI()" title="Consultar SUNAT/RENIEC"><i class="bi bi-search"></i></button>
+                            </div>
                         </div>
                         <div class="col-12">
                             <label class="form-label client-name">Nombres:</label>
