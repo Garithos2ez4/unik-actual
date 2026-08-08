@@ -327,6 +327,8 @@ Route::middleware(['validate.session'])->group(function () {
 
     //Configuracion-PRODUCTOS
     Route::get('/configuracion/productos', [ConfiguracionController::class, 'productos'])->name('configproductos');
+    Route::post('/configuracion/alerta/{id}/estado', [ConfiguracionController::class, 'updateAlertaEstado'])->name('updatealertaestado');
+    Route::post('/configuracion/alerta/ejecutar-bot', [ConfiguracionController::class, 'ejecutarBotPrecios'])->name('ejecutarbotprecios');
     Route::post('/configuracion/insertmarca', [ConfiguracionController::class, 'createMarcaProducto'])->name('insertmarca');
     Route::post('/configuracion/insertgrupo', [ConfiguracionController::class, 'createGrupoProducto'])->name('insertgrupo');
     Route::post('/configuracion/updategrupo', [ConfiguracionController::class, 'updateGrupoProducto'])->name('updategrupo');

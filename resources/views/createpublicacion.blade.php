@@ -40,9 +40,9 @@
         <div class="col-md-3 mb-2">
             <label class="form-label">Cuenta:</label>
             <select name="cuenta" class="form-select" id="cuenta-public">
-                <option value="" {{old('cuenta') == '' ? 'selected' : ''}} >-Elige una cuenta-</option>
+                <option value="">-Elige una cuenta-</option>
                 @foreach($plataforma->CuentasPlataforma as $cuenta)
-                    <option value="{{$cuenta->idCuentaPlataforma}}" {{old('cuenta') == $cuenta->idCuentaPlataforma ? 'selected' : '' }}>{{$cuenta->nombreCuenta}}</option>
+                    <option value="{{$cuenta->idCuentaPlataforma}}" {{ old('cuenta', request('cuenta')) == $cuenta->idCuentaPlataforma ? 'selected' : '' }}>{{$cuenta->nombreCuenta}}</option>
                 @endforeach
             </select>
         </div>

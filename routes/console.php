@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('exchange:update-daily')->dailyAt('11:00');
+Schedule::command('bot:falabella-prices')->dailyAt('10:00');

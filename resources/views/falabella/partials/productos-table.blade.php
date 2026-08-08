@@ -125,6 +125,7 @@
                                             'sku'    => $norm['falabella_sku'],
                                             'precio' => (isset($norm['sale_price']) && is_numeric($norm['sale_price']) && (float)$norm['sale_price'] > 0) ? $norm['sale_price'] : $norm['price'],
                                             'fecha'  => $norm['creation_date'] !== '-' ? $norm['creation_date'] : date('Y-m-d'),
+                                            'cuenta' => 1
                                         ];
                                         if ($localProd) {
                                             $createParams['producto']   = $localProd->modeloProducto;

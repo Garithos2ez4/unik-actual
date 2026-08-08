@@ -33,7 +33,7 @@ class ConfiguracionController extends Controller
                 $metodosPago = \App\Models\Ventas\MetodoPago::with('TipoMetodoPago', 'Banco')->get();
                 $tiposMetodoPago = \App\Models\Ventas\TipoMetodoPago::all();
 
-                return view('configweb', [
+                return view('configuracion.configweb', [
                     'user' => $userModel,
                     'pagina' => 'web',
                     'empresas' => $empresas,
@@ -65,7 +65,7 @@ class ConfiguracionController extends Controller
                 $plataformas = $this->configuracionService->getAllPlataformas();
 
 
-                return view('configcalculos', [
+                return view('configuracion.configcalculos', [
                     'user' => $userModel,
                     'pagina' => 'calculos',
                     'empresas' => $empresas,
@@ -93,7 +93,7 @@ class ConfiguracionController extends Controller
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
                 $proveedores = $this->configuracionService->getAllProveedores();
 
-                return view('configinventario', [
+                return view('configuracion.configinventario', [
                     'user' => $userModel,
                     'pagina' => 'inventario',
                     'almacenes' => $almacenes,
@@ -115,13 +115,15 @@ class ConfiguracionController extends Controller
                 $categorias = $this->configuracionService->getAllCategorias();
                 $marcas = $this->configuracionService->getAllMarcas();
                 $tipos = $this->configuracionService->getAllTipoProductos();
+                $alertas = \Illuminate\Support\Facades\DB::table('alerta_precios')->get();
 
-                return view('configproductos', [
+                return view('configuracion.configproductos', [
                     'user' => $userModel,
                     'pagina' => 'productos',
                     'categorias' => $categorias,
                     'marcas' => $marcas,
-                    'tipos' => $tipos
+                    'tipos' => $tipos,
+                    'alertas' => $alertas
                 ]);
             }
         }
@@ -139,7 +141,7 @@ class ConfiguracionController extends Controller
                 $categoria = $this->configuracionService->getOneCategoria(decrypt($idCategoria));
                 $spects = $this->configuracionService->getAllEspecificaciones();
 
-                return view('configespecificaciones', [
+                return view('configuracion.configespecificaciones', [
                     'user' => $userModel,
                     'pagina' => 'especificaciones',
                     'categorias' => $categorias,
@@ -163,7 +165,7 @@ class ConfiguracionController extends Controller
                 $spects = $this->configuracionService->getAllEspecificaciones();
                 $subDivide = 'GRUPOS';
 
-                return view('configespecificaciones-grupo', [
+                return view('configuracion.configespecificaciones-grupo', [
                     'user' => $userModel,
                     'pagina' => 'especificaciones',
                     'categorias' => $categorias,
@@ -186,7 +188,7 @@ class ConfiguracionController extends Controller
                 $spects = $this->configuracionService->getAllEspecificaciones();
                 $subDivide = 'GENERAL';
 
-                return view('configespecificaciones-general', [
+                return view('configuracion.configespecificaciones-general', [
                     'user' => $userModel,
                     'pagina' => 'especificaciones',
                     'caracteristicas' => $spects,
@@ -889,6 +891,58 @@ class ConfiguracionController extends Controller
             ], $res->getStatusCode());
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+    public function updateAlertaEstado(Request $request, $id)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) { // Configuracion
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'No autorizado']);
+        }
+
+        $request->validate([
+            'estado' => 'required|in:pendiente,resuelto,ignorado,procesada'
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('alerta_precios')
+            ->where('id', $id)
+            ->update([
+                'estado' => $request->estado,
+                'updated_at' => now()
+            ]);
+
+        return response()->json(['success' => true, 'message' => 'Estado actualizado']);
+    }
+
+    public function ejecutarBotPrecios()
+    {
+        $userModel = $this->headerService->getModelUser();
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) { // Configuracion
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'No autorizado']);
+        }
+
+        try {
+            $basePath = base_path();
+            pclose(popen("start /B cd $basePath && php artisan bot:falabella-prices", "r"));
+            return response()->json(['success' => true, 'message' => 'El bot se ha iniciado en segundo plano. Las alertas aparecerán en unos minutos.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al iniciar el bot: ' . $e->getMessage()]);
         }
     }
 }

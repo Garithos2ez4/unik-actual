@@ -16,86 +16,13 @@
     </div>
     <br>
     
-    <div class="row border shadow rounded-3 pt-2 mb-4">
-        <div class="col-md-8 border-bottom border-secondary pb-2">
-            <h3>Grupos</h3>
-            <label class="text-secondary">Conjunto donde se agrupan los productos.</label>
-        </div>
-        <div class="col-md-4 border-bottom border-secondary pb-2 text-end align-self-center">
-            <button class="btn btn-success mt-3" data-bs-toggle="modal" data-bs-target="#categoriaModal"><i class="bi bi-plus-lg"></i></button>
-        </div>
-        <div class="accordion accordion-flush mt-2" id="accordionGrupos">
-            @php
-                $count = 0;
-            @endphp
-            @foreach ($categorias as $categoria)
-            <div class="accordion-item">
-              <h2 class="accordion-header d-flex align-items-center" id="flush-headingOne-{{$count}}">
-                <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne-{{$count}}" aria-expanded="false" aria-controls="flush-collapseOne">
-                    <i class="{{$categoria->iconCategoria}} me-2"></i> {{$categoria->nombreCategoria}}  
-                </button>
-                <button class="btn btn-warning me-3" style="z-index: 10;" data-bs-toggle="modal" data-bs-target="#editCategoriaModal" onclick="populateEditCategoria({{$categoria->idCategoria}}, '{{$categoria->nombreCategoria}}', '{{$categoria->iconCategoria}}')">
-                    <i class="bi bi-pencil-square"></i>
-                </button>
-              </h2>
-              <div id="flush-collapseOne-{{$count}}" class="accordion-collapse collapse" aria-labelledby="flush-headingOne-{{$count}}" data-bs-parent="#accordionGrupos">
-                <div class="accordion-body">
-                    <div class="row">
-                        @foreach ($categoria->GrupoProducto as $grupo)
-                        <div class="col-md-3 pb-2">
-                            <div class="row bg-light text-center border rounded-3 ms-2 me-2 position-relative">
-                                <button class="btn btn-warning btn-sm position-absolute top-0 end-0" style="width: auto;" data-bs-toggle="modal" data-bs-target="#editGrupoModal" onclick="populateEditGrupo({{$grupo->idGrupoProducto}}, '{{$grupo->nombreGrupo}}', '{{$grupo->idTipoProducto}}')">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <div class="col-md-8 d-flex align-items-center">
-                                    <h6>{{$grupo->nombreGrupo}}</h6>
-                                </div>
-                                <div class="col-md-4 pt-0 pe-0 mt-3">
-                                    <img src="{{asset('storage/'. $grupo->imagenGrupo)}}" alt="" class="border ps-0 pe-0 w-100">
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
-                        <div class="col-md-3 pb-2">
-                            <div class="row bg-light text-center border rounded-3 ms-2 me-2 h-100">
-                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#grupoModal" onclick="sendGrupoData('{{$categoria->idCategoria}}','{{$categoria->nombreCategoria}}')">
-                                    <i class="bi bi-plus-lg"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-              </div>
-            </div>
-            @php
-                $count++;
-            @endphp
-            @endforeach
-        </div>
-        
-    </div>
+    @include('configuracion.components.grupos_lista', ['categorias' => $categorias])
     
     <br>
-    <div class="row border shadow rounded-3 pt-2 mb-4">
-        <div class="col-md-8 border-bottom border-secondary">
-            <h3>Marcas</h3>
-        </div>
-        <div class="col-md-4 border-bottom border-secondary text-end">
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#marcaModal"><i class="bi bi-bookmark-plus-fill"></i></button>
-        </div>
-        <div class="col-md-12 pt-2 mb-0 bg-list">
-            <div class="row">
-                @foreach ($marcas->sortBy('nombreMarca') as $marca)
-                <div class="col-md-2 pb-2">
-                    <div class="row bg-light text-center border rounded-3 ms-2 me-2 pt-2">
-                        <h5>{{$marca->nombreMarca}}</h5>
-                        <img src="{{asset('storage/'. $marca->imagenMarca)}}" alt="" class="border ps-0 pe-0">
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
+    @include('configuracion.components.marcas_lista', ['marcas' => $marcas])
+    
+    @include('configuracion.components.alertas_precios_lista', ['alertas' => $alertas])
+
     <form action="{{route('insertgrupo')}}" method="post" enctype="multipart/form-data" id="form-insert-grupo">
         @csrf
         <div class="modal fade" id="grupoModal" tabindex="-1" aria-labelledby="grupoModalLabel" aria-hidden="true">

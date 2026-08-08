@@ -58,8 +58,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $precioInventario = 0;
             $comp = $detalleComprobante->Comprobante ?? null;
             if ($detalleComprobante && $comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false) {
-                $precioInventario = $detalleComprobante->precioUnitario ?? 0;
-                if ($precioInventario > 1 && (strtoupper($comp->moneda) === 'SOL' || strtoupper($comp->moneda) === 'SOLES')) {
+                $precioInventario = ($detalleComprobante->precioUnitario ?? 0) / 1.18;
+                if ($precioInventario > 1 && in_array(strtoupper($comp->moneda), ['SOL', 'SOLES', 'PEN'])) {
                     $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
                 }
             }
@@ -73,9 +73,9 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     ->orderBy('idDetalleComprobante', 'desc')
                     ->first();
                 if ($otroDc) {
-                    $precioInventario = $otroDc->precioUnitario;
+                    $precioInventario = $otroDc->precioUnitario / 1.18;
                     $mon = $otroDc->Comprobante->moneda ?? 'SOLES';
-                    if (strtoupper($mon) === 'SOL' || strtoupper($mon) === 'SOLES') {
+                    if (in_array(strtoupper($mon), ['SOL', 'SOLES', 'PEN'])) {
                         $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
                     }
                 }
@@ -87,14 +87,15 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
 
             $usar_tc_fijo = $producto->usar_tc_fijo ?? true;
-            $tc_a_usar = $tasaCambio; // SUNAT
             
-            if (!$usar_tc_fijo) {
+            if ($usar_tc_fijo) {
                 if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
                     $tc_a_usar = $producto->tc_fijo;
                 } else {
                     $tc_a_usar = $tasaFijaGlobal;
                 }
+            } else {
+                $tc_a_usar = $tasaCambio; // SUNAT
             }
 
             $esHerramienta = (bool)$details->es_herramienta;
@@ -132,8 +133,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $precioInventario = 0;
             $comp = $detalleComprobante->Comprobante ?? null;
             if ($detalleComprobante && $comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false) {
-                $precioInventario = $detalleComprobante->precioUnitario ?? 0;
-                if ($precioInventario > 1 && (strtoupper($comp->moneda) === 'SOL' || strtoupper($comp->moneda) === 'SOLES')) {
+                $precioInventario = ($detalleComprobante->precioUnitario ?? 0) / 1.18;
+                if ($precioInventario > 1 && in_array(strtoupper($comp->moneda), ['SOL', 'SOLES', 'PEN'])) {
                     $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
                 }
             }
@@ -147,9 +148,9 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     ->orderBy('idDetalleComprobante', 'desc')
                     ->first();
                 if ($otroDc) {
-                    $precioInventario = $otroDc->precioUnitario;
+                    $precioInventario = $otroDc->precioUnitario / 1.18;
                     $mon = $otroDc->Comprobante->moneda ?? 'SOLES';
-                    if (strtoupper($mon) === 'SOL' || strtoupper($mon) === 'SOLES') {
+                    if (in_array(strtoupper($mon), ['SOL', 'SOLES', 'PEN'])) {
                         $precioInventario = $tasaCambio > 0 ? $precioInventario / $tasaCambio : $precioInventario;
                     }
                 }
@@ -161,14 +162,15 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
 
             $usar_tc_fijo = $producto->usar_tc_fijo ?? true;
-            $tc_a_usar = $tasaCambio; // SUNAT
             
-            if (!$usar_tc_fijo) {
+            if ($usar_tc_fijo) {
                 if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
                     $tc_a_usar = $producto->tc_fijo;
                 } else {
                     $tc_a_usar = $tasaFijaGlobal;
                 }
+            } else {
+                $tc_a_usar = $tasaCambio; // SUNAT
             }
 
             $esHerramienta = (bool)$egreso->es_herramienta;
