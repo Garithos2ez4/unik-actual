@@ -179,6 +179,7 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
+    Route::post('/egresos/upgrade', [EgresoController::class, 'upgradeEgreso'])->name('upgradeegreso');
     Route::get('/egresos/pendientes-envios', [EgresoController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
     Route::post('/egresos/pendientes-envios/mark', [EgresoController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
@@ -327,14 +328,21 @@ Route::middleware(['validate.session'])->group(function () {
 
     //Configuracion-PRODUCTOS
     Route::get('/configuracion/productos', [ConfiguracionController::class, 'productos'])->name('configproductos');
+
+    //Configuracion-PEDIDOS WEB
+    Route::get('/configuracion/pedidos-web', [ConfiguracionController::class, 'pedidosWeb'])->name('configpedidosweb');
+    Route::post('/configuracion/pedidos-web/{id}/estado', [ConfiguracionController::class, 'updatePedidoWebEstado'])->name('updatepedidowebestado');
+    Route::get('/api/check-new-orders', [HomeController::class, 'checkNewOrders'])->name('checkNewOrders');
     Route::post('/configuracion/alerta/{id}/estado', [ConfiguracionController::class, 'updateAlertaEstado'])->name('updatealertaestado');
+    Route::post('/configuracion/alerta/crear', [ConfiguracionController::class, 'crearAlertaManual'])->name('crearalertamanual');
     Route::post('/configuracion/alerta/ejecutar-bot', [ConfiguracionController::class, 'ejecutarBotPrecios'])->name('ejecutarbotprecios');
+    Route::post('/configuracion/vigilado/add', [ConfiguracionController::class, 'addVigilado'])->name('addvigilado');
+    Route::get('/configuracion/vigilado/delete/{id}', [ConfiguracionController::class, 'deleteVigilado'])->name('deletevigilado');
     Route::post('/configuracion/insertmarca', [ConfiguracionController::class, 'createMarcaProducto'])->name('insertmarca');
     Route::post('/configuracion/insertgrupo', [ConfiguracionController::class, 'createGrupoProducto'])->name('insertgrupo');
     Route::post('/configuracion/updategrupo', [ConfiguracionController::class, 'updateGrupoProducto'])->name('updategrupo');
     Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
     Route::post('/configuracion/updatecategoria', [ConfiguracionController::class, 'updateCategoriaProducto'])->name('updatecategoria');
-    Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
 
     //Configuracion-ESPECIFICACIONES
     Route::get('/configuracion/especificacionesxgeneral', [ConfiguracionController::class, 'especificacionesGeneral'])->name('configespecificacionesgeneral');

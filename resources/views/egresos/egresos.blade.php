@@ -133,6 +133,10 @@
                                             <label class="form-label fw-bold mb-0"><small>Precio Venta:</small></label>
                                             <input type="number" step="0.01" min="0" name="precio_venta" id="modal-egreso-edit-precio" class="form-control form-control-sm">
                                         </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-bold mb-0"><small>Precio Costo Base:</small></label>
+                                            <input type="number" step="0.01" min="0" name="precio_costo" id="modal-egreso-edit-precio-costo" class="form-control form-control-sm">
+                                        </div>
                                     </div>
                                     <hr class="mt-3 mb-2">
                                     <div class="row align-items-end">
@@ -154,6 +158,28 @@
                                         </div>
                                         <div class="col-4 text-end">
                                             <button type="button" class="btn btn-sm btn-success w-100" onclick="formDetailEgreso('append')">Añadir</button>
+                                        </div>
+                                    </div>
+                                    <div class="row align-items-end d-none" id="container-upgrade-section">
+                                        <div class="col-12 mt-2 mb-2">
+                                            <hr class="mt-1 mb-2">
+                                            <label class="form-label text-primary fw-bold mb-0"><small><i class="bi bi-cpu-fill"></i> Añadir Componente (Upgrade RAM/SSD)</small></label>
+                                        </div>
+                                        <div class="col-6 mb-2" style="position:relative">
+                                            <label class="form-label fw-bold mb-0"><small>Serie Componente:</small></label>
+                                            <input type="text" id="upgrade_serialnumber" name="upgrade_serialnumber" class="form-control form-control-sm" placeholder="Escanear Serial Number" oninput="searchRegistroUpgrade(this)" autocomplete="off">
+                                            <input type="hidden" id="hidden_upgrade_idregistro" name="upgrade_idregistro" value="">
+                                            <ul class="list-group w-100" style="position:absolute;top:100%;z-index:1100" id="suggestions-upgrade-serial"></ul>
+                                        </div>
+                                        <div class="col-6 mb-2">
+                                            <label class="form-label fw-bold mb-0"><small>Costo Componente:</small></label>
+                                            <input type="number" step="0.01" min="0" id="upgrade_costo" name="upgrade_costo" class="form-control form-control-sm" placeholder="S/ 0.00">
+                                        </div>
+                                        <div class="col-8">
+                                            <small class="text-muted" style="font-size: 0.75rem;">Su costo se sumará a este equipo.</small>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <button type="button" class="btn btn-sm btn-primary w-100" onclick="formDetailEgreso('upgrade')">Upgrade</button>
                                         </div>
                                     </div>
                                 </div>
@@ -191,7 +217,7 @@
                     </div>
                 </div>
         </form>
-        
+
         <!-- Modal de Confirmación de Migración -->
         <div class="modal fade" id="confirmMigrationModal" tabindex="-1" aria-labelledby="confirmMigrationModalLabel" aria-hidden="true" style="z-index: 1070; backdrop-filter: blur(4px);">
             <div class="modal-dialog modal-dialog-centered">

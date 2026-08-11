@@ -156,6 +156,8 @@ class CalculadoraService implements CalculadoraServiceInterface
         return "COALESCE(
             (SELECT CASE 
                     WHEN rp_inner.es_herramienta = 1 THEN 0
+                    -- Componente de upgrade: INVENTARIO sin precio unitario pero con precioCompra asignado manualmente
+                    WHEN dc_inner.precioUnitario <= 0 AND dc_inner.precioCompra > 0 AND c_inner.numeroComprobante LIKE '%INVENTARIO%' THEN dc_inner.precioCompra
                     WHEN dc_inner.precioUnitario <= 0 THEN NULL
                     WHEN c_inner.numeroComprobante LIKE '%INVENTARIO%' THEN NULL
                     WHEN c_inner.moneda = 'DOLAR' THEN dc_inner.precioUnitario * {$tcInner} 
@@ -169,6 +171,7 @@ class CalculadoraService implements CalculadoraServiceInterface
                AND (
                    dc_inner.precioUnitario > 0 
                    OR rp_inner.es_herramienta = 1 
+                   OR (dc_inner.precioUnitario <= 0 AND dc_inner.precioCompra > 0 AND c_inner.numeroComprobante LIKE '%INVENTARIO%')
                    OR (SELECT idGrupo FROM Producto p WHERE p.idProducto = dc_inner.idProducto) IN ({$gruposExcepcion})
                )
              LIMIT 1),

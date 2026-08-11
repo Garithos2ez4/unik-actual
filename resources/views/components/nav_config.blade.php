@@ -23,5 +23,9 @@
       <a class="nav-link {{$pag == 'inventario' ? 'bg-sistema-dos text-light active' : 'text-dark'}}"
         href="{{route('configinventario')}}">Inventario</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link {{$pag == 'pedidosweb' ? 'bg-sistema-dos text-light active' : 'text-dark'}}"
+        href="{{route('configpedidosweb')}}">Pedidos Web</a>
+    </li>
   </ul>
 </div>

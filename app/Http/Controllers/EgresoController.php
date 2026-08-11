@@ -336,29 +336,156 @@ class EgresoController extends Controller
                             'canal' => $idPublicacion !== 'NULO' ? 'PLATAFORMA' : 'TIENDA'
                         ];
 
-                        $detallesVenta = [[
-                            'idRegistro' => $idRegistro,
-                            'idEgreso' => $nuevoIdEgreso,
-                            'idPublicacion' => $idPublicacion !== 'NULO' ? $idPublicacion : null,
-                            'idProducto' => \App\Models\Inventario\RegistroProducto::find($idRegistro)->DetalleComprobante->idProducto,
-                            'precioVenta' => $precio,
-                            'cantidad' => 1
-                        ]];
-
-                        $this->ventaService->createVenta($ventaData, $detallesVenta, []);
+                        $detallesVenta = [
+                            [
+                                'idRegistro' => $idRegistro,
+                                'idEgreso' => $createResult['egresos'][$idRegistro] ?? null,
+                                'idPublicacion' => $idPublicacion !== 'NULO' ? $idPublicacion : null,
+                                'idProducto' => \App\Models\Inventario\RegistroProducto::with('DetalleComprobante')->find($idRegistro)->DetalleComprobante->idProducto ?? null,
+                                'precioVenta' => $precio,
+                                'cantidad' => 1
+                            ]
+                        ];
+                        $this->ventaService->appendVenta($ventaData, $detallesVenta);
                     }
 
                     \Illuminate\Support\Facades\DB::commit();
-                    $this->headerService->sendFlashAlerts('Producto añadido', 'El producto se sumó a la orden correctamente.', 'success', 'btn-success');
+                    $this->headerService->sendFlashAlerts('Éxito', 'El producto ha sido añadido a la orden.', 'success', 'btn-success');
                     return back();
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\DB::rollBack();
-                    $this->headerService->sendFlashAlerts('Error al añadir producto', $e->getMessage(), 'error', 'btn-danger');
+                    $this->headerService->sendFlashAlerts('Error', 'Hubo un problema al añadir el producto: ' . $e->getMessage(), 'error', 'btn-danger');
                     return back();
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta acción', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function upgradeEgreso(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 9) {
+                $idegreso = $request->input('idegreso');
+                $idRegistroUpgrade = $request->input('upgrade_idregistro');
+                $upgradeCostoInput = $request->input('upgrade_costo');
+
+                if (empty($idegreso) || empty($idRegistroUpgrade)) {
+                    $this->headerService->sendFlashAlerts('Datos incompletos', 'Verifica que hayas escaneado un componente válido.', 'info', 'btn-warning');
+                    return back();
+                }
+
+                \Illuminate\Support\Facades\DB::beginTransaction();
+                try {
+                    // Obtener Egreso Original (Laptop)
+                    $egresoLaptop = \App\Models\Inventario\EgresoProducto::findOrFail($idegreso);
+                    $registroLaptop = $egresoLaptop->RegistroProducto;
+                    $detalleLaptop = $registroLaptop->DetalleComprobante;
+
+                    // Obtener Registro del Componente (RAM/SSD)
+                    $registroComponente = \App\Models\Inventario\RegistroProducto::findOrFail($idRegistroUpgrade);
+                    $detalleComponente = $registroComponente->DetalleComprobante;
+
+                    if (!$detalleLaptop || !$detalleComponente) {
+                        throw new \Exception("Datos de compra inconsistentes.");
+                    }
+
+                    // Determinar costo a sumar (del input o del costo de compra original)
+                    $costoSumar = ($upgradeCostoInput !== null && $upgradeCostoInput !== '' && floatval($upgradeCostoInput) >= 0)
+                        ? floatval($upgradeCostoInput)
+                        : floatval($detalleComponente->precioCompra ?? 0);
+
+                    // 2. Aislar el costo en un DC exclusivo ANTES de crear el egreso
+                    // (para que el createEgreso registre el RP ya con el DC correcto)
+                    $idNuevoDc = null;
+                    if ($costoSumar > 0) {
+                        // Crear nuevo DC exclusivo con el costo del upgrade
+                        $maxDcId = \App\Models\Ventas\DetalleComprobante::max('idDetalleComprobante');
+                        $idNuevoDc = $maxDcId + 1;
+                        \App\Models\Ventas\DetalleComprobante::insert([
+                            'idDetalleComprobante' => $idNuevoDc,
+                            'idComprobante'        => $detalleComponente->idComprobante,
+                            'idProducto'           => $detalleComponente->idProducto,
+                            'medida'               => $detalleComponente->medida,
+                            'precioUnitario'       => $detalleComponente->precioUnitario,
+                            'precioCompra'         => $costoSumar,
+                        ]);
+                        // Reasignar el RP al nuevo DC antes de crear el egreso
+                        $registroComponente->idDetalleComprobante = $idNuevoDc;
+                        $registroComponente->save();
+                        // Refrescar para que createEgreso use el DC correcto
+                        $detalleComponente = \App\Models\Ventas\DetalleComprobante::find($idNuevoDc);
+                    }
+
+                    // 1. Crear el egreso para el componente (con el DC ya reasignado)
+                    $arrayEgreso = [
+                        'numeroOrden'   => $egresoLaptop->numeroOrden,
+                        'fechaCompra'   => $egresoLaptop->fechaCompra,
+                        'fechaDespacho' => $egresoLaptop->fechaDespacho
+                    ];
+                    $items = [
+                        [
+                            'idregistro'   => $idRegistroUpgrade,
+                            'idpublicacion' => 'NULO',
+                            'precioVenta'  => 0 // Upgrade: incluido en el precio del equipo
+                        ]
+                    ];
+                    $createResult = $this->egresoService->createEgreso($arrayEgreso, $items);
+
+                    // 3. Añadir observación cruzada
+                    $serialComponente = $registroComponente->numeroSerie;
+                    $serialLaptop = $registroLaptop->numeroSerie;
+
+                    $this->egresoService->updateEgreso('update', $idegreso,
+                        $registroLaptop->observacion . " [UPGRADE AÑADIDO: " . $serialComponente . " (S/" . number_format($costoSumar, 2) . ")]"
+                    );
+
+                    $idEgresoNuevo = $createResult['egresos'][$idRegistroUpgrade] ?? null;
+                    if ($idEgresoNuevo) {
+                        $this->egresoService->updateEgreso('update', $idEgresoNuevo,
+                            "Usado como UPGRADE para " . $serialLaptop
+                        );
+                    }
+
+                    // 4. Agregar a Venta con precio 0 para que figure en los registros
+                    $idVenta = null;
+                    if ($egresoLaptop->DetalleVenta) {
+                        $idVenta = $egresoLaptop->DetalleVenta->idVenta;
+                    } elseif ($egresoLaptop->RegistroProducto && $egresoLaptop->RegistroProducto->DetalleVenta) {
+                        $idVenta = $egresoLaptop->RegistroProducto->DetalleVenta->idVenta;
+                    } else {
+                        $venta = \App\Models\Ventas\Venta::where('numeroOrden', $egresoLaptop->numeroOrden)->first();
+                        if ($venta) {
+                            $idVenta = $venta->idVenta;
+                        }
+                    }
+
+                    if ($idVenta && $idEgresoNuevo) {
+                        \App\Models\Ventas\DetalleVenta::create([
+                            'idVenta'      => $idVenta,
+                            'idEgreso'     => $idEgresoNuevo,
+                            'idProducto'   => $detalleComponente->idProducto,
+                            'idPublicacion' => null,
+                            'precioVenta'  => 0,   // No genera ingreso — va en el equipo
+                            'cantidad'     => 1,
+                            'origenPrecio' => 'TIENDA',
+                            'estado'       => 'COMPLETADO',
+                        ]);
+                    }
+
+                    \Illuminate\Support\Facades\DB::commit();
+                    $this->headerService->sendFlashAlerts('Upgrade Exitoso', 'El componente ha sido descontado y su costo (S/ '.number_format($costoSumar, 2).') sumado a la Laptop.', 'success', 'btn-success');
+                    return back();
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\DB::rollBack();
+                    $this->headerService->sendFlashAlerts('Error', 'Hubo un problema al aplicar el upgrade: ' . $e->getMessage(), 'error', 'btn-danger');
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta acción', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -647,13 +774,13 @@ class EgresoController extends Controller
     private function calcularCostoRealRegistro($registro, $tasaCambio)
     {
         if (!$registro || $registro->es_herramienta == 1) return 0;
-        
+
         $dc = $registro->DetalleComprobante;
         if (!$dc) return 0;
 
         $idProducto = $dc->idProducto ?? 0;
         $comp = $dc->Comprobante;
-        
+
         if ($comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false && $dc->precioUnitario > 0) {
             $moneda = $comp->moneda ?? 'SOLES';
             $precio = $dc->precioUnitario;
@@ -663,7 +790,7 @@ class EgresoController extends Controller
         // Buscar otro
         $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $idProducto)
             ->where('precioUnitario', '>', 0)
-            ->whereHas('Comprobante', function($q) {
+            ->whereHas('Comprobante', function ($q) {
                 $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
             })
             ->orderBy('idDetalleComprobante', 'desc')
@@ -689,7 +816,7 @@ class EgresoController extends Controller
 
         $registro = RegistroProducto::with(['DetalleComprobante.Comprobante', 'DetalleComprobante.Producto'])->find($idRegistro);
         $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
-        
+
         $costo = $this->calcularCostoRealRegistro($registro, $tasaCambio);
 
         return response()->json(['costo' => round($costo, 2)]);

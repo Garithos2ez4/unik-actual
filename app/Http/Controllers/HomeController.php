@@ -23,6 +23,25 @@ class HomeController extends Controller
         $this->falabellaOrderSyncService = $falabellaOrderSyncService;
     }
 
+    public function checkNewOrders(Request $request)
+    {
+        $lastId = $request->get('last_id', 0);
+        
+        $newOrders = \App\Models\Web\PedidoWeb::with('cliente')
+            ->where('idPedidoWeb', '>', $lastId)
+            ->where('estado', 'PENDIENTE')
+            ->orderBy('idPedidoWeb', 'asc')
+            ->get();
+            
+        $maxId = \App\Models\Web\PedidoWeb::max('idPedidoWeb') ?? 0;
+            
+        return response()->json([
+            'success' => true,
+            'new_orders' => $newOrders,
+            'max_id' => max((int)$lastId, (int)$maxId)
+        ]);
+    }
+
     public function index(Request $request)
     {
         //variables de la cabecera

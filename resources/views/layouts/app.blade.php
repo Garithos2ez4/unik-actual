@@ -19,6 +19,7 @@
     <script src="{{ asset('js/sheetjs/xlsx.full.min.js') }}"></script>
     <script src="{{ asset('js/quill.js') }}"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="last-order-id" content="{{ \App\Models\Web\PedidoWeb::max('idPedidoWeb') ?? 0 }}">
     <script src="{{ asset('js/header-scripts.js') }}?v=1.02"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
@@ -364,6 +365,7 @@
     </footer>
     @stack('scripts')
     <script src="{{ asset('js/app.js') }}?v=1.03"></script>
+    <script src="{{ asset('js/check-orders.js') }}"></script>
 </body>
 
 </html>

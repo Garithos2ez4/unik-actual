@@ -54,7 +54,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         $result = $egresos->map(function ($details) use ($tasaCambio, $tasaFijaGlobal, $preciosService) {
             $producto = $details->DetalleComprobante->Producto;
             $detalleComprobante = $details->DetalleComprobante ?? null;
-            
+
             $precioInventario = 0;
             $comp = $detalleComprobante->Comprobante ?? null;
             if ($detalleComprobante && $comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false) {
@@ -67,7 +67,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             if ($precioInventario <= 1 && $producto) {
                 $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $producto->idProducto)
                     ->where('precioUnitario', '>', 0)
-                    ->whereHas('Comprobante', function($q) {
+                    ->whereHas('Comprobante', function ($q) {
                         $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
                     })
                     ->orderBy('idDetalleComprobante', 'desc')
@@ -82,12 +82,12 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             }
 
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
-            
+
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
 
             $usar_tc_fijo = $producto->usar_tc_fijo ?? true;
-            
+
             if ($usar_tc_fijo) {
                 if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
                     $tc_a_usar = $producto->tc_fijo;
@@ -112,7 +112,8 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 'image' => $producto->imagenProducto1,
                 'marca' => $producto->MarcaProducto->nombreMarca,
                 'es_herramienta' => $esHerramienta,
-                'precioSoles' => $precioFinalSoles
+                'precioSoles' => $precioFinalSoles,
+                'precioCompra' => $detalleComprobante->precioCompra ?? 0
             ];
         });
         return $result;
@@ -129,7 +130,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
         if ($egreso) {
             $producto = $egreso->DetalleComprobante->Producto;
             $detalleComprobante = $egreso->DetalleComprobante ?? null;
-            
+
             $precioInventario = 0;
             $comp = $detalleComprobante->Comprobante ?? null;
             if ($detalleComprobante && $comp && stripos($comp->numeroComprobante ?? '', 'INVENTARIO') === false) {
@@ -142,7 +143,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             if ($precioInventario <= 1 && $producto) {
                 $otroDc = \App\Models\Ventas\DetalleComprobante::where('idProducto', $producto->idProducto)
                     ->where('precioUnitario', '>', 0)
-                    ->whereHas('Comprobante', function($q) {
+                    ->whereHas('Comprobante', function ($q) {
                         $q->where('numeroComprobante', 'NOT LIKE', '%INVENTARIO%');
                     })
                     ->orderBy('idDetalleComprobante', 'desc')
@@ -157,12 +158,12 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             }
 
             $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
-            
+
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
 
             $usar_tc_fijo = $producto->usar_tc_fijo ?? true;
-            
+
             if ($usar_tc_fijo) {
                 if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
                     $tc_a_usar = $producto->tc_fijo;
@@ -253,28 +254,38 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
             }
 
+            $productoAjax    = $details->RegistroProducto->DetalleComprobante->Producto ?? null;
+            $idGrupoAjax     = $productoAjax->idGrupo ?? 0;
+            $nombreUpperAjax = strtoupper($productoAjax->nombreProducto ?? '');
+            $isLaptopOrAioAjax = in_array($idGrupoAjax, [1, 2, 3, 10])
+                || str_contains($nombreUpperAjax, 'LAPTOP')
+                || str_contains($nombreUpperAjax, 'AIO')
+                || str_contains($nombreUpperAjax, 'ALL IN ONE');
+
             return [
-                'idEgreso' => $details->idEgreso,
-                'idRegistro' => $details->idRegistro,
-                'idPublicacion' => $details->idPublicacion,
-                'nombreProducto' => $details->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
-                'numeroSerie' => $details->RegistroProducto->numeroSerie,
-                'sku' => $details->Publicacion ? $details->Publicacion->sku : null,
-                'numeroOrden' => $details->numeroOrden,
-                'fechaCompra' => $details->fechaCompra,
-                'fechaDespacho' => $details->fechaDespacho,
-                'fechaMovimiento' => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
-                'usuario' => $details->Usuario->user,
-                'observacion' => $observacionFinal,
-                'estado' => $state,
-                'idPlataforma' => $idPlataforma,
-                'idCuentaPlataforma' => $idCuentaPlataforma,
-                'nombrePlataforma' => $nombrePlataforma,
-                'cuenta' => $nombreCuenta,
-                'numeroOrden' => $details->numeroOrden,
+                'idEgreso'          => $details->idEgreso,
+                'idRegistro'        => $details->idRegistro,
+                'idPublicacion'     => $details->idPublicacion,
+                'nombreProducto'    => $productoAjax->nombreProducto ?? '',
+                'codigoProducto'    => $productoAjax->codigoProducto ?? '',
+                'numeroSerie'       => $details->RegistroProducto->numeroSerie,
+                'sku'               => $details->Publicacion ? $details->Publicacion->sku : null,
+                'numeroOrden'       => $details->numeroOrden,
+                'fechaCompra'       => $details->fechaCompra,
+                'fechaDespacho'     => $details->fechaDespacho,
+                'fechaMovimiento'   => $devolucion ? ($devolucion->fechaDevolucion ?? $details->RegistroProducto->fechaMovimiento) : $details->RegistroProducto->fechaMovimiento,
+                'usuario'           => $details->Usuario->user,
+                'observacion'       => $observacionFinal,
+                'estado'            => $state,
+                'idPlataforma'      => $idPlataforma,
+                'idCuentaPlataforma'=> $idCuentaPlataforma,
+                'nombrePlataforma'  => $nombrePlataforma,
+                'cuenta'            => $nombreCuenta,
                 'imagenPublicacion' => $details->Publicacion ? asset('storage/' . $details->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null,
-                'precioVenta' => $fallbackPrecio,
-                'hasDetalleVenta' => $detalleVenta !== null
+                'precioVenta'       => $fallbackPrecio,
+                'precioCosto'       => $details->RegistroProducto->DetalleComprobante->precioCompra ?? 0,
+                'hasDetalleVenta'   => $detalleVenta !== null,
+                'isLaptopOrAio'     => $isLaptopOrAioAjax,
             ];
         });
         return $result;
@@ -314,29 +325,29 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     if ($dc && $dc->Comprobante) {
                         $moneda = $dc->Comprobante->moneda ?? 'SOLES';
                         $tasaCambio = \App\Models\Precios\Calculadora::first()->tasaCambio ?? 3.70;
-                        
+
                         if (strtoupper($moneda) === 'DOLAR' || strtoupper($moneda) === 'USD') {
                             $newPrecioUnitario = $tasaCambio > 0 ? $customCostoSoles / $tasaCambio : $customCostoSoles;
                         } else {
                             $newPrecioUnitario = $customCostoSoles;
                         }
-                        
+
                         $newPrecioUnitario = round($newPrecioUnitario, 4);
                         $sharedCount = \App\Models\Inventario\RegistroProducto::where('idDetalleComprobante', $registro->idDetalleComprobante)->count();
-                        
+
                         if ($sharedCount > 1) {
                             $newDc = $dc->replicate();
                             $lastDc = \App\Models\Ventas\DetalleComprobante::orderBy('idDetalleComprobante', 'desc')->first();
                             $nextId = $lastDc ? $lastDc->idDetalleComprobante + 1 : 1;
-                            
+
                             $newDc->idDetalleComprobante = $nextId;
                             $newDc->precioUnitario = $newPrecioUnitario;
                             $newDc->precioCompra = $newPrecioUnitario;
                             $newDc->save();
-                            
+
                             $registro->idDetalleComprobante = $nextId;
                             $registro->save();
-                            
+
                             $newQty = $sharedCount - 1;
                             $dc->precioCompra = round($dc->precioUnitario * $newQty, 2);
                             $dc->save();
@@ -450,7 +461,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
             // Actualizar precio de venta en DetalleVenta y totalVenta en Venta
             if (isset($dataEgreso['precioVenta']) && $dataEgreso['precioVenta'] !== '') {
                 $nuevoPrecio = floatval($dataEgreso['precioVenta']);
-                
+
                 if ($nuevoPrecio == 0) {
                     $nuevoPrecio = 0.1;
                 }
@@ -492,10 +503,10 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                     // MIGRACIÓN AUTOMÁTICA DE EGRESO ANTIGUO
                     // 1. Obtener usuario (el del egreso actual o el logueado)
                     $idUser = $this->headerService->getModelUser()->idUser ?? $modelEgreso->idUser;
-                    
+
                     // 2. Determinar canal
                     $canal = $modelEgreso->idPublicacion ? 'PLATAFORMA' : 'TIENDA';
-                    
+
                     // 3. Crear cabecera Venta
                     $venta = \App\Models\Ventas\Venta::create([
                         'idUser'      => $idUser,
@@ -505,7 +516,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                         'totalVenta'  => $nuevoPrecio,
                         'observacion' => 'Migración automática de egreso histórico',
                     ]);
-                    
+
                     // 4. Crear DetalleVenta
                     \App\Models\Ventas\DetalleVenta::create([
                         'idVenta'       => $venta->idVenta,

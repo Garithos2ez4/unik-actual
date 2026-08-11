@@ -116,6 +116,7 @@ class ConfiguracionController extends Controller
                 $marcas = $this->configuracionService->getAllMarcas();
                 $tipos = $this->configuracionService->getAllTipoProductos();
                 $alertas = \Illuminate\Support\Facades\DB::table('alerta_precios')->get();
+                $vigilados = \App\Models\Falabella\ProductoVigiladoFalabella::all();
 
                 return view('configuracion.configproductos', [
                     'user' => $userModel,
@@ -123,12 +124,62 @@ class ConfiguracionController extends Controller
                     'categorias' => $categorias,
                     'marcas' => $marcas,
                     'tipos' => $tipos,
-                    'alertas' => $alertas
+                    'alertas' => $alertas,
+                    'vigilados' => $vigilados
                 ]);
             }
         }
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function pedidosWeb()
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $pedidos = \App\Models\Web\PedidoWeb::with(['cliente', 'detalles.producto'])->orderBy('created_at', 'desc')->get();
+
+                return view('configuracion.configpedidosweb', [
+                    'user' => $userModel,
+                    'pagina' => 'pedidosweb',
+                    'pedidos' => $pedidos
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function updatePedidoWebEstado(Request $request, $id)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) { // Configuracion
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'No autorizado']);
+        }
+
+        $request->validate([
+            'estado' => 'required|string'
+        ]);
+
+        $pedido = \App\Models\Web\PedidoWeb::find($id);
+        if (!$pedido) {
+            return response()->json(['success' => false, 'message' => 'Pedido no encontrado']);
+        }
+
+        $pedido->estado = $request->estado;
+        $pedido->save();
+
+        return response()->json(['success' => true, 'message' => 'Estado actualizado a '.$request->estado]);
     }
 
     public function especificaciones($idCategoria)
@@ -628,7 +679,7 @@ class ConfiguracionController extends Controller
         $nombre = $request->input('nombre');
         $descripcion = $request->input('descripcion');
         $num_filas = $request->input('num_filas', 1);
-        
+
         $rutaFoto = null;
         if ($request->hasFile('foto')) {
             $rutaFoto = $request->file('foto')->store('racks', 'public');
@@ -697,7 +748,7 @@ class ConfiguracionController extends Controller
         $userModel = $this->headerService->getModelUser();
         $nombre = $request->input('nombre');
         $descripcion = $request->input('descripcion');
-        
+
         $rutaFoto = null;
         if ($request->hasFile('foto')) {
             $rutaFoto = $request->file('foto')->store('racks', 'public');
@@ -864,9 +915,9 @@ class ConfiguracionController extends Controller
     {
         try {
             $client = new \GuzzleHttp\Client(['base_uri' => 'https://api.apis.net.pe', 'verify' => false]);
-            
+
             $fecha = $request->query('fecha', date('Y-m-d'));
-            
+
             $parameters = [
                 'http_errors' => false,
                 'connect_timeout' => 5,
@@ -877,7 +928,7 @@ class ConfiguracionController extends Controller
                 ],
                 'query' => ['fecha' => $fecha]
             ];
-            
+
             $res = $client->request('GET', '/v1/tipo-cambio-sunat', $parameters);
             $response = json_decode($res->getBody()->getContents(), true);
 
@@ -922,6 +973,65 @@ class ConfiguracionController extends Controller
         return response()->json(['success' => true, 'message' => 'Estado actualizado']);
     }
 
+    public function crearAlertaManual(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) { // Configuracion
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'No autorizado']);
+        }
+
+        $request->validate([
+            'modelo' => 'required|string|max:255',
+            'mi_precio' => 'required|numeric',
+            'competidor' => 'required|string|max:255',
+            'precio_competidor' => 'required|numeric'
+        ]);
+
+        $diferencia_porcentaje = 0;
+        if ($request->mi_precio > 0) {
+            $diferencia = $request->mi_precio - $request->precio_competidor;
+            $diferencia_porcentaje = round(($diferencia / $request->mi_precio) * 100, 2);
+        }
+
+        \Illuminate\Support\Facades\DB::table('alerta_precios')->insert([
+            'modelo' => $request->modelo,
+            'mi_precio' => $request->mi_precio,
+            'competidor' => $request->competidor,
+            'precio_competidor' => $request->precio_competidor,
+            'diferencia_porcentaje' => $diferencia_porcentaje,
+            'sugerencia' => $request->sugerencia ?? '',
+            'estado' => 'pendiente',
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Alerta manual registrada correctamente']);
+    }
+
+    public function addVigilado(Request $request)
+    {
+        $request->validate(['modelo' => 'required|string']);
+        \App\Models\Falabella\ProductoVigiladoFalabella::updateOrCreate(
+            ['modelo' => $request->modelo],
+            ['activo' => true]
+        );
+        return back();
+    }
+
+    public function deleteVigilado($id)
+    {
+        \App\Models\Falabella\ProductoVigiladoFalabella::where('id', $id)->delete();
+        return back();
+    }
+
     public function ejecutarBotPrecios()
     {
         $userModel = $this->headerService->getModelUser();
@@ -939,7 +1049,7 @@ class ConfiguracionController extends Controller
 
         try {
             $basePath = base_path();
-            pclose(popen("start /B cd $basePath && php artisan bot:falabella-prices", "r"));
+            pclose(popen("start /B cd $basePath && php artisan bot:falabella-prices > NUL 2>&1", "r"));
             return response()->json(['success' => true, 'message' => 'El bot se ha iniciado en segundo plano. Las alertas aparecerán en unos minutos.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al iniciar el bot: ' . $e->getMessage()]);

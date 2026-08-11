@@ -11,13 +11,13 @@
                         <small>Nro Orden</small>
                     </div>
                     @php
-                        $usuariosConEgresos = $egresos->map(function($e) { return $e->Usuario; })->unique('idUser');
+                    $usuariosConEgresos = $egresos->map(function($e) { return $e->Usuario; })->unique('idUser');
                     @endphp
                     <div class="col-md-1 d-none d-lg-block p-0">
                         <select class="form-select form-select-sm border-0 bg-transparent text-light text-center" onchange="filterEgresosByUser(this.value)" style="box-shadow:none; cursor:pointer">
                             <option value="all" class="text-dark">Usuario</option>
                             @foreach($usuariosConEgresos as $u)
-                                <option value="{{ $u->idUser }}" class="text-dark">{{ $u->user }}</option>
+                            <option value="{{ $u->idUser }}" class="text-dark">{{ $u->user }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -80,22 +80,27 @@
                         $detalleVenta = $egreso->DetalleVenta;
                         $fallbackPrecio = 0;
                         if ($detalleVenta && $detalleVenta->precioVenta > 0) {
-                            $fallbackPrecio = $detalleVenta->precioVenta;
+                        $fallbackPrecio = $detalleVenta->precioVenta;
                         } elseif ($detalleVenta && $detalleVenta->Venta && $detalleVenta->Venta->totalVenta > 0) {
-                            $fallbackPrecio = $detalleVenta->Venta->totalVenta;
+                        $fallbackPrecio = $detalleVenta->Venta->totalVenta;
                         } elseif ($egreso->Publicacion && $egreso->Publicacion->precioPublicacion > 0) {
-                            $fallbackPrecio = $egreso->Publicacion->precioPublicacion;
+                        $fallbackPrecio = $egreso->Publicacion->precioPublicacion;
                         } else {
-                            $producto = $egreso->RegistroProducto->DetalleComprobante->Producto ?? null;
-                            if ($producto && isset($producto->precioDolar) && $producto->precioDolar > 0) {
-                                $tasaCambio = \App\Models\Precios\Calculadora::first()?->tasaCambio ?? 1;
-                                $fallbackPrecio = $producto->precioDolar * $tasaCambio;
-                            }
+                        $producto = $egreso->RegistroProducto->DetalleComprobante->Producto ?? null;
+                        if ($producto && isset($producto->precioDolar) && $producto->precioDolar > 0) {
+                        $tasaCambio = \App\Models\Precios\Calculadora::first()?->tasaCambio ?? 1;
+                        $fallbackPrecio = $producto->precioDolar * $tasaCambio;
                         }
+                        }
+
+                        $productoObj = $egreso->RegistroProducto->DetalleComprobante->Producto ?? null;
+                        $idGrupo = $productoObj->idGrupo ?? 0;
+                        $nombreProdUpper = strtoupper($productoObj->nombreProducto ?? '');
+                        $isLaptopOrAio = in_array($idGrupo, [1, 2, 3, 10]) || str_contains($nombreProdUpper, 'LAPTOP') || str_contains($nombreProdUpper, 'AIO') || str_contains($nombreProdUpper, 'ALL IN ONE');
 
                         $egresoJson = [
                         'idEgreso' => $egreso->idEgreso,
-                        'nombreProducto' => $egreso->RegistroProducto->DetalleComprobante->Producto->nombreProducto,
+                        'nombreProducto' => $productoObj->nombreProducto ?? '',
                         'numeroSerie' => $egreso->RegistroProducto->numeroSerie,
                         'estado' => $state,
                         'fechaCompra' => $egreso->fechaCompra,
@@ -108,7 +113,9 @@
                         'numeroOrden' => $egreso->numeroOrden,
                         'imagenPublicacion' => $egreso->Publicacion ? asset('storage/'.$egreso->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) : null,
                         'precioVenta' => $fallbackPrecio,
-                        'hasDetalleVenta' => $detalleVenta !== null
+                        'precioCosto' => $egreso->RegistroProducto->DetalleComprobante->precioCompra ?? 0,
+                        'hasDetalleVenta' => $detalleVenta !== null,
+                        'isLaptopOrAio' => $isLaptopOrAio
                         ];
                         @endphp
                         <a href="javascript:void(0)"

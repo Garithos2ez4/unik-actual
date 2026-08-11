@@ -243,10 +243,24 @@ function viewModalEgreso(json) {
 
     // Poblar campos de edición y precio
     document.getElementById('modal-egreso-precio-text').textContent = json.precioVenta !== undefined ? parseFloat(json.precioVenta).toFixed(2) : '0.00';
-    
+
     let editPrecioInput = document.getElementById('modal-egreso-edit-precio');
     if (editPrecioInput) {
         editPrecioInput.value = json.precioVenta !== undefined ? json.precioVenta : '';
+    }
+
+    let editPrecioCostoInput = document.getElementById('modal-egreso-edit-precio-costo');
+    if (editPrecioCostoInput) {
+        editPrecioCostoInput.value = json.precioCosto !== undefined ? json.precioCosto : '';
+    }
+
+    let upgradeSection = document.getElementById('container-upgrade-section');
+    if (upgradeSection) {
+        if (json.isLaptopOrAio) {
+            upgradeSection.classList.remove('d-none');
+        } else {
+            upgradeSection.classList.add('d-none');
+        }
     }
 
     document.getElementById('modal-egreso-edit-fecha-compra').value = json.fechaCompra ? json.fechaCompra.split('T')[0] : '';
@@ -312,6 +326,18 @@ function formDetailEgreso(transaction) {
             return;
         }
         formEgreso.action = '/egresos/appendegreso';
+        hiddenTransaction.value = transaction;
+        formEgreso.submit();
+        return;
+    }
+
+    if (transaction === 'upgrade') {
+        let idRegistro = document.getElementById('hidden_upgrade_idregistro').value;
+        if (!idRegistro) {
+            alert('Debe escanear y seleccionar un componente válido para el Upgrade.');
+            return;
+        }
+        formEgreso.action = '/egresos/upgrade';
         hiddenTransaction.value = transaction;
         formEgreso.submit();
         return;
@@ -489,15 +515,15 @@ function searchRegistroAppend(inputElement) {
 
                     let colSerie = document.createElement('div');
                     colSerie.classList.add('col-md-12', 'd-flex', 'justify-content-between', 'align-items-center');
-                    
+
                     let spanSerie = document.createElement('span');
                     spanSerie.textContent = item.numeroSerie;
-                    
+
                     let spanEstado = document.createElement('span');
                     spanEstado.classList.add('badge', 'bg-primary');
                     spanEstado.style.fontSize = '10px';
                     spanEstado.textContent = item.estado;
-                    
+
                     colSerie.appendChild(spanSerie);
                     colSerie.appendChild(spanEstado);
 
@@ -526,5 +552,80 @@ function searchRegistroAppend(inputElement) {
     } else {
         suggestions.innerHTML = '';
         document.getElementById('hidden_append_idregistro').value = '';
+    }
+}
+
+function searchRegistroUpgrade(inputElement) {
+    let query = inputElement.value;
+    let suggestions = document.getElementById('suggestions-upgrade-serial');
+
+    function handleClickOutsideUpgrade(event) {
+        if (!suggestions.contains(event.target) && event.target !== inputElement) {
+            suggestions.innerHTML = '';
+            document.removeEventListener('click', handleClickOutsideUpgrade);
+        }
+    }
+
+    document.addEventListener('click', handleClickOutsideUpgrade);
+
+    if (query.length > 2) {
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', `/egresos/searchregistro?query=${query}`, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                suggestions.innerHTML = '';
+
+                data.forEach(item => {
+                    let li = document.createElement('li');
+                    li.classList.add('list-group-item', 'pe-0', 'hover-sistema-uno', 'text-truncate');
+                    li.style.cursor = "pointer";
+
+                    let divRow = document.createElement('div');
+                    divRow.classList.add('row', 'w-100');
+
+                    let colSerie = document.createElement('div');
+                    colSerie.classList.add('col-md-12', 'd-flex', 'justify-content-between', 'align-items-center');
+
+                    let spanSerie = document.createElement('span');
+                    spanSerie.textContent = item.numeroSerie;
+
+                    let spanEstado = document.createElement('span');
+                    spanEstado.classList.add('badge', 'bg-primary');
+                    spanEstado.style.fontSize = '10px';
+                    spanEstado.textContent = item.estado;
+
+                    colSerie.appendChild(spanSerie);
+                    colSerie.appendChild(spanEstado);
+
+                    let colProducto = document.createElement('div');
+                    colProducto.classList.add('col-md-12');
+                    let smallProducto = document.createElement('em');
+                    smallProducto.textContent = item.codigoProducto;
+                    smallProducto.style.fontSize = '12px';
+                    colProducto.appendChild(smallProducto);
+
+                    divRow.appendChild(colSerie);
+                    divRow.appendChild(colProducto);
+                    li.appendChild(divRow);
+
+                    li.addEventListener('click', function () {
+                        inputElement.value = item.numeroSerie;
+                        document.getElementById('hidden_upgrade_idregistro').value = item.idRegistroProducto;
+                        let inputCosto = document.getElementById('upgrade_costo');
+                        if (inputCosto && item.precioCompra !== undefined) {
+                            inputCosto.value = item.precioCompra;
+                        }
+                        suggestions.innerHTML = '';
+                    });
+
+                    suggestions.appendChild(li);
+                });
+            }
+        };
+        xhr.send();
+    } else {
+        suggestions.innerHTML = '';
+        document.getElementById('hidden_upgrade_idregistro').value = '';
     }
 }
