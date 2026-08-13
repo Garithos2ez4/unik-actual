@@ -94,8 +94,14 @@ class BotFalabellaPrices extends Command
                     $diferencia = $miPrecio - $precioCompetidor;
                     $diferenciaPorcentaje = $diferencia / $precioCompetidor;
 
+                    // Si la diferencia es mayor al 50%, seguramente estamos comparando la impresora contra un accesorio (tinta, caja de mantenimiento)
+                    if (abs($diferenciaPorcentaje) > 0.50) {
+                        $this->line("   -> DIFERENCIA MAYOR AL 50% (" . round(abs($diferenciaPorcentaje) * 100, 2) . "%). Se ignora por posible confusión con accesorio.");
+                        // Limpiar alertas previas si existían
+                        \App\Models\Falabella\AlertaPrecio::where('modelo', $modelo)->where('estado', 'pendiente')->update(['estado' => 'procesada']);
+                    }
                     // Si somos más caros por 1 sol o más
-                    if ($diferencia >= 1) {
+                    elseif ($diferencia >= 1) {
                         $this->warn("   -> MUY CARO: Mi precio: $miPrecio, Competidor: $precioCompetidor ($competidor)");
                         $this->guardarAlerta($modelo, $miPrecio, $precioCompetidor, $competidor, $diferenciaPorcentaje * 100, 'BAJAR');
                     } 

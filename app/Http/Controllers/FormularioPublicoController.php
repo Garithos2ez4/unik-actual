@@ -102,6 +102,10 @@ class FormularioPublicoController extends Controller
             'telefono'        => 'required|string|max:20',
             'idDestino'       => 'required|integer',
             'idAgencia'       => 'required|integer',
+            'correo'          => 'nullable|email:rfc,dns',
+        ], [
+            'correo.email' => 'El formato del correo no es válido.',
+            'correo.dns'   => 'El dominio del correo no existe o no puede recibir mensajes.'
         ]);
 
         $tipoDoc = (int)$request->idTipoDocumento;
@@ -203,10 +207,16 @@ class FormularioPublicoController extends Controller
 
     public function subagencias($idAgencia, $idDestino)
     {
-        $subagencias = \App\Models\Envios\SubAgencia::where('idAgencia', $idAgencia)
+        $query = \App\Models\Envios\SubAgencia::where('idAgencia', $idAgencia)
             ->where('idDestino', $idDestino)
-            ->where('estado', 1)
-            ->orderBy('nombre_oficina', 'asc')
+            ->where('estado', 1);
+
+        if ($idAgencia == 3) {
+            $query->where('nombre_oficina', 'NOT LIKE', '%AGENTE%')
+                  ->where('nombre_oficina', 'NOT LIKE', '%AG.%');
+        }
+
+        $subagencias = $query->orderBy('nombre_oficina', 'asc')
             ->get(['idSubAgencia', 'nombre_oficina', 'direccion']);
 
         // Filtrar agencias de Shalom que no reciben paquetes (Ej. Aeropuertos, México, Luna Pizarro)

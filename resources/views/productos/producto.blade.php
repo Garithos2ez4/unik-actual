@@ -128,6 +128,7 @@
             </div>
             <div class="mb-2 col-6 col-lg-8 text-end">
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
+                <button type="submit" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="col-6 col-md-6">
                 <div class="row">
@@ -175,15 +176,6 @@
                             <input type="number" name="tc_fijo" step="0.01" class="form-control input-edit mt-1" id="tc_fijo_personalizado" value="{{$producto->tc_fijo}}" placeholder="Ej: 3.80" disabled>
                             <small class="text-muted">Si se llena, esta tasa sobreescribira a la tasa fija global cuando se use TC Fijo.</small>
                         </div>
-                        
-                        <div class="mt-3 p-2 bg-light rounded border border-success">
-                            <label for="precio-web-directo" class="form-label fw-bold text-success mb-1">Precio en Web (S/.):</label>
-                            <div class="input-group w-100">
-                                <span class="input-group-text bg-success text-white border-success">S/</span>
-                                <input type="number" id="precio-web-directo" value="" class="form-control text-success fw-bold text-center border-success input-edit" step="0.01" placeholder="Ej: 150.00" disabled>
-                            </div>
-                            <small class="text-muted" style="font-size: 0.75rem;">Calcula automáticamente la Utilidad</small>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -208,13 +200,15 @@
                     </br>
                     <div id="div-precio-total-sunat" class="mb-2">
                         <label for="precio-total-sunat" class="form-label">Precio Total en Soles (TC SUNAT: {{$tc}})</label>
-                        <input type="number" id="precio-total-sunat" value="" class="form-control" disabled>
+                        <input type="number" id="precio-total-sunat" value="" class="form-control input-edit" step="0.01" disabled>
+                        <small class="text-muted" style="font-size: 0.75rem;">Modifica para calcular automáticamente la Utilidad</small>
                     </div>
 
                     <!--  NUEVO CONTENEDOR PARA EL TC FIJO  -->
                     <div id="div-precio-total-fijo" class="mb-2">
                         <label for="precio-total-fijo" class="form-label">Precio Total en Soles / Tasa Fija ({{$tasaFija}})</label>
-                        <input type="number" id="precio-total-fijo" value="" class="form-control" disabled>
+                        <input type="number" id="precio-total-fijo" value="" class="form-control input-edit" step="0.01" disabled>
+                        <small class="text-muted" style="font-size: 0.75rem;">Modifica para calcular automáticamente la Utilidad</small>
                     </div>
                     <!--  FIN DEL NUEVO CONTENEDOR -->
 

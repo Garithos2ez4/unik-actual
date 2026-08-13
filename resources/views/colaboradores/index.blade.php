@@ -65,7 +65,8 @@
         document.getElementById('id-modal-bandeja').value = idUser;
         document.getElementById('bandejaModalLabel').innerHTML = 'Pendientes de: ' + userName;
 
-        loader.style.display = 'flex';
+        loader.classList.remove('d-none');
+        loader.classList.add('d-flex');
 
         // Inicializar el modal de bootstrap
         let modalBandeja = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -79,7 +80,8 @@
             })
             .then(response => response.json())
             .then(data => {
-                loader.style.display = 'none';
+                loader.classList.remove('d-flex');
+                loader.classList.add('d-none');
                 if (typeof quill !== 'undefined') {
                     quill.root.innerHTML = data.bandeja || '';
                 } else {
@@ -87,7 +89,8 @@
                 }
             })
             .catch(error => {
-                loader.style.display = 'none';
+                loader.classList.remove('d-flex');
+                loader.classList.add('d-none');
                 console.log('Error:', error);
             });
     }

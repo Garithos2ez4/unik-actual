@@ -57,11 +57,18 @@
                             @endif
                         </form>
 
-                        <button type="button"
-                            onclick="generarEtiquetasFalabella('{{ route('plataformas.falabella.etiquetas-oficiales.pdf', ['date' => $selectedDate, 'status' => $selectedStatus]) }}')"
-                            class="btn btn-success btn-sm px-3 shadow-sm flex-shrink-0 d-flex align-items-center" title="Descargar etiquetas A4">
-                            <i class="bi bi-tags-fill me-1"></i> <span class="d-none d-md-inline">Etiquetas</span>
-                        </button>
+                        <div class="input-group input-group-sm shadow-sm flex-shrink-0">
+                            <select id="formatoEtiqueta" class="form-select border-success text-success bg-white fw-bold" style="max-width: 140px;" title="Formato de Etiqueta">
+                                <option value="a4_100">A4 - 4 por hoja</option>
+                                <option value="a4_1">A4 - 1 por hoja</option>
+                                <option value="termica">Termica 10x15</option>
+                            </select>
+                            <button type="button"
+                                onclick="generarEtiquetasFalabella('{{ route('plataformas.falabella.etiquetas-oficiales.pdf', ['date' => $selectedDate, 'status' => $selectedStatus]) }}')"
+                                class="btn btn-success px-3 d-flex align-items-center" title="Descargar etiquetas">
+                                <i class="bi bi-tags-fill me-1"></i> <span class="d-none d-md-inline">Etiquetas</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -220,10 +227,9 @@
                 degrees
             } = PDFLib;
             const outPdf = await PDFDocument.create();
-
-            // A4 dimensions in points
-            const pageWidth = 595.28;
-            const pageHeight = 841.89;
+            
+            const formatSelect = document.getElementById('formatoEtiqueta');
+            const formato = formatSelect ? formatSelect.value : 'a4_100';
 
             let currentPage = null;
             let labelCount = 0;
@@ -231,29 +237,80 @@
             for (const base64 of data.labels) {
                 try {
                     const labelPdf = await PDFDocument.load(base64);
-                    const [embeddedPage] = await outPdf.embedPdf(labelPdf, [0]);
-
-                    // Position logic for 2x2 layout
-                    if (labelCount % 4 === 0) {
-                        currentPage = outPdf.addPage([pageWidth, pageHeight]);
+                    
+                    if (formato === 'a4_1') {
+                        const [copiedPage] = await outPdf.copyPages(labelPdf, [0]);
+                        outPdf.addPage(copiedPage);
+                        labelCount++;
+                        continue;
                     }
 
-                    const indexOnPage = labelCount % 4;
-                    const col = indexOnPage % 2;
-                    const row = Math.floor(indexOnPage / 2);
+                    const sourcePage = labelPdf.getPages()[0];
+                    
+                    // La API de Falabella envía una hoja A4 completa, pero la etiqueta solo ocupa la esquina superior izquierda (10x15cm).
+                    // Recortamos (Crop) la hoja original a solo el área de la etiqueta para evitar los enormes espacios en blanco.
+                    const spHeight = sourcePage.getHeight(); 
+                    const cropWidth = 283.46; // 100mm
+                    const cropHeight = 425.20; // 150mm
+                    // x, y (desde abajo), width, height
+                    sourcePage.setCropBox(0, spHeight - cropHeight, cropWidth, cropHeight);
+                    
+                    const [embeddedPage] = await outPdf.embedPdf(labelPdf, [0]);
 
-                    const width = pageWidth / 2;
-                    const height = pageHeight / 2;
+                    if (formato === 'termica') {
+                        // 10x15cm (Aprox 4x6 pulgadas = 288x432 puntos)
+                        const pageWidth = 283.46; 
+                        const pageHeight = 425.20;
+                        
+                        currentPage = outPdf.addPage([pageWidth, pageHeight]);
+                        
+                        const scaleFactor = Math.min(pageWidth / embeddedPage.width, pageHeight / embeddedPage.height);
+                        
+                        currentPage.drawPage(embeddedPage, {
+                            x: (pageWidth - embeddedPage.width * scaleFactor) / 2,
+                            y: (pageHeight - embeddedPage.height * scaleFactor) / 2,
+                            width: embeddedPage.width * scaleFactor,
+                            height: embeddedPage.height * scaleFactor
+                        });
+                    } else {
+                        // Formato A4
+                        const pageWidth = 595.28;
+                        const pageHeight = 841.89;
+                        
+                        let scale = 1.0;
+                        if (formato === 'a4_90') scale = 0.90;
+                        if (formato === 'a4_110') scale = 1.10;
 
-                    const x = col * width;
-                    const y = pageHeight - ((row + 1) * height);
+                        if (labelCount % 4 === 0) {
+                            currentPage = outPdf.addPage([pageWidth, pageHeight]);
+                        }
 
-                    currentPage.drawPage(embeddedPage, {
-                        x,
-                        y,
-                        width,
-                        height
-                    });
+                        const indexOnPage = labelCount % 4;
+                        const col = indexOnPage % 2;
+                        const row = Math.floor(indexOnPage / 2);
+
+                        const quadWidth = pageWidth / 2;
+                        const quadHeight = pageHeight / 2;
+                        
+                        const baseScale = Math.min(quadWidth / embeddedPage.width, quadHeight / embeddedPage.height);
+                        const finalScale = baseScale * scale;
+                        
+                        const drawWidth = embeddedPage.width * finalScale;
+                        const drawHeight = embeddedPage.height * finalScale;
+                        
+                        const offsetX = (quadWidth - drawWidth) / 2;
+                        const offsetY = (quadHeight - drawHeight) / 2;
+
+                        const x = (col * quadWidth) + offsetX;
+                        const y = (pageHeight - ((row + 1) * quadHeight)) + offsetY;
+
+                        currentPage.drawPage(embeddedPage, {
+                            x,
+                            y,
+                            width: drawWidth,
+                            height: drawHeight
+                        });
+                    }
 
                     labelCount++;
                 } catch (err) {

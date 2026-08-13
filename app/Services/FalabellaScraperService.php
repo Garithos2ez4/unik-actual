@@ -23,7 +23,7 @@ class FalabellaScraperService
         try {
             $terminoBusqueda = $marcaLocal !== '' ? $marcaLocal . ' ' . $modelo : $modelo;
             $url = 'https://www.falabella.com.pe/falabella-pe/search?Ntt=' . urlencode($terminoBusqueda);
-            
+
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -38,7 +38,7 @@ class FalabellaScraperService
                 'Upgrade-Insecure-Requests: 1'
             ]);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            
+
             $html = curl_exec($ch);
             $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -52,29 +52,29 @@ class FalabellaScraperService
 
             if (preg_match('/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s', $html, $matches)) {
                 $data = json_decode($matches[1], true);
-                
+
                 $productosEncontrados = [];
-                
-                $buscarProductos = function($array) use (&$buscarProductos, &$productosEncontrados) {
+
+                $buscarProductos = function ($array) use (&$buscarProductos, &$productosEncontrados) {
                     if (!is_array($array)) return;
-                    
+
                     if (isset($array['displayName']) && isset($array['prices'])) {
                         $productosEncontrados[] = $array;
                     }
-                    
+
                     foreach ($array as $key => $value) {
                         if (is_array($value)) {
                             $buscarProductos($value);
                         }
                     }
                 };
-                
+
                 if ($data) {
                     $buscarProductos($data);
                 }
 
                 $productos = [];
-                
+
                 if (count($productosEncontrados) > 0) {
                     // Obtener palabras clave válidas (1era palabra del título, y singular de la categoría)
                     $palabrasValidas = [];
@@ -107,7 +107,7 @@ class FalabellaScraperService
                         $titulo = $item['displayName'];
                         $vendedor = $item['sellerName'] ?? 'FALABELLA';
                         $pricesArray = $item['prices'];
-                        
+
                         // Filtro 1: Debe coincidir AL MENOS UNA de las palabras clave principales
                         $tituloUpper = strtoupper($titulo);
                         $pasaFiltro1 = (count($palabrasValidas) === 0); // Si no hay palabras válidas, lo pasamos por defecto
@@ -122,24 +122,56 @@ class FalabellaScraperService
                             continue;
                         }
 
-                        // Filtro 2: El título DEBE contener el modelo exacto (ignorando guiones y espacios)
-                        $modeloClean = preg_replace('/[^A-Z0-9]/', '', strtoupper($modelo));
-                        $tituloClean = preg_replace('/[^A-Z0-9]/', '', $tituloUpper);
-                        
-                        if (strpos($tituloClean, $modeloClean) === false) {
-                            continue;
+                        // Filtro 2: Coincidencia flexible para variaciones de modelo
+                        $palabrasModelo = array_filter(explode(' ', strtoupper(trim($modelo))));
+                        $palabrasValidasModelo = [];
+
+                        // Extraemos solo las palabras relevantes (>2 caracteres)
+                        foreach ($palabrasModelo as $palabraMod) {
+                            $pMod = preg_replace('/[^A-Z0-9]/', '', $palabraMod);
+                            if (strlen($pMod) > 2) {
+                                $palabrasValidasModelo[] = $pMod;
+                            }
+                        }
+
+                        $marcaCompetidor = strtoupper($item['brand'] ?? '');
+                        $tituloLimpio = preg_replace('/[^A-Z0-9]/', '', $tituloUpper);
+                        $marcaLimpia = preg_replace('/[^A-Z0-9]/', '', $marcaCompetidor);
+                        $vendedorLimpio = preg_replace('/[^A-Z0-9]/', '', strtoupper($vendedor));
+
+                        $totalRequeridas = count($palabrasValidasModelo);
+                        $encontradas = 0;
+
+                        // Contamos cuántas palabras de la búsqueda existen realmente en el producto
+                        foreach ($palabrasValidasModelo as $pMod) {
+                            if (
+                                strpos($tituloLimpio, $pMod) !== false ||
+                                strpos($vendedorLimpio, $pMod) !== false ||
+                                strpos($marcaLimpia, $pMod) !== false
+                            ) {
+                                $encontradas++;
+                            }
+                        }
+
+                        // LÓGICA DE UMBRAL: 
+                        // Si buscamos 3 o más palabras, permitimos que 1 falle (ej. "HA" vs "GA")
+                        // Si son 1 o 2 palabras, exigimos coincidencia total para no traer basura.
+                        $umbral = $totalRequeridas >= 3 ? $totalRequeridas - 1 : $totalRequeridas;
+
+                        if ($encontradas < $umbral) {
+                            continue; // Descartamos solo si no alcanza el umbral mínimo
                         }
 
                         // Filtro 3: Evitar packs/combos de la competencia si nuestro producto es por unidad
                         $esPackLocal = preg_match('/\b(PACK|KIT|UNIDADES|UND|COMBO|CAJA X|X\d+)\b/i', $nombreProductoLocal);
                         $esPackCompetidor = preg_match('/\b(PACK|KIT|UNIDADES|UND|COMBO|CAJA X|X\d+)\b/i', $titulo);
-                        
+
                         if (!$esPackLocal && $esPackCompetidor) {
                             continue; // Ignorar porque el competidor vende un pack/combo y nosotros no
                         }
 
                         $precioMinimo = null;
-                        
+
                         if (is_array($pricesArray)) {
                             foreach ($pricesArray as $p) {
                                 if (isset($p['price'][0])) {
@@ -159,14 +191,14 @@ class FalabellaScraperService
                             ];
                         }
                     }
-                    
-                    usort($productos, function($a, $b) {
+
+                    usort($productos, function ($a, $b) {
                         return $a['precio_mas_bajo'] <=> $b['precio_mas_bajo'];
                     });
-                    
+
                     $soyElMasBarato = false;
                     $masBarato = null;
-                    
+
                     if (count($productos) > 0) {
                         $masBarato = $productos[0];
                         if ($miTienda !== '' && stripos($masBarato['vendedor'], $miTienda) !== false) {
@@ -184,7 +216,7 @@ class FalabellaScraperService
                         'productos' => $productos
                     ];
                 }
-                
+
                 return [
                     'success' => true,
                     'message' => 'No se encontraron productos para el modelo.',
@@ -197,7 +229,6 @@ class FalabellaScraperService
                 'success' => false,
                 'message' => 'No se pudo extraer la data JSON (posible cambio de estructura o captcha).'
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,

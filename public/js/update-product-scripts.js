@@ -129,14 +129,17 @@ segmentosFormulario.forEach(function (segmento) {
 
     if (boton) {
         boton.addEventListener('click', () => {
+            const btnSaveSection = segmento.querySelector(".btn-save-section");
             if (aux) {
                 inputs.forEach(function (input) {
                     input.disabled = false;
                 });
+                if(btnSaveSection) btnSaveSection.style.display = 'inline-block';
             } else {
                 inputs.forEach(function (input) {
                     input.disabled = true;
                 });
+                if(btnSaveSection) btnSaveSection.style.display = 'none';
             }
 
             if (aux) {

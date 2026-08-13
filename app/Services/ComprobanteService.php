@@ -181,13 +181,27 @@ class ComprobanteService implements ComprobanteServiceInterface
                 $precioCompra = $detalle->precioCompra;
                 foreach ($detalle->RegistroProducto as $registro) {
                     
-                    if ($registro->estado != 'ENTREGADO' && $registro->estado != 'INVALIDO') {
+                    if ($registro->estado != 'INVALIDO') {
                         $dataReg = ['estado' => 'INVALIDO'];
+                        
+                        if ($registro->estado == 'ENTREGADO') {
+                            // Anular la venta asociada para que no salga en métricas
+                            $egresos = \App\Models\Inventario\EgresoProducto::where('idRegistro', $registro->idRegistro)->get();
+                            foreach($egresos as $egreso) {
+                                \App\Models\Ventas\DetalleVenta::where('idEgreso', $egreso->idEgreso)->update([
+                                    'estado' => 'ANULADO',
+                                    'precioVenta' => 0
+                                ]);
+                            }
+                        } else {
+                            // Si no estaba entregado, lo removemos del inventario físico
+                            $this->inventarioRepository->removeStock($detalle->idProducto, $registro->idAlmacen);
+                        }
+
                         $precioCompra -= $detalle->precioUnitario;
                         $totalCompra -= $detalle->precioUnitario;
 
                         $this->registroProductoRepository->update($registro->idRegistro, $dataReg);
-                        $this->inventarioRepository->removeStock($detalle->idProducto, $registro->idAlmacen);
                     } else {
                         $updated = false;
                     }

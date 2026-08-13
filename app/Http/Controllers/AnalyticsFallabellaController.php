@@ -100,6 +100,8 @@ class AnalyticsFallabellaController extends Controller
         GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
         , 0)";
 
+        $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";
+
         // Usamos el Modelo Venta para iniciar la consulta
         $ventasFalabella = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
@@ -110,7 +112,8 @@ class AnalyticsFallabellaController extends Controller
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
-                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
+                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella,
+                         {$subqueryTcDia} as tc_dia")
             ->where('DetalleVenta.precioVenta', '>', 0.10)
             ->where('DetalleVenta.estado', 'COMPLETADO')
             ->whereRaw("UPPER(Venta.canal) = 'FALABELLA'")
@@ -124,6 +127,7 @@ class AnalyticsFallabellaController extends Controller
                 $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
                 $venta->comision_falabella = round($venta->comision_falabella, 2);
                 $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                $venta->tc_dia = round((float)$venta->tc_dia, 3);
                 return $venta;
             });
 

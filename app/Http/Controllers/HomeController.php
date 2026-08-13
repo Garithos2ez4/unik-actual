@@ -352,16 +352,33 @@ class HomeController extends Controller
         ]);
     }
 
-    public function stockMinDashboard()
+    public function stockMinDashboard(Request $request)
     {
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
 
-        $productos = $this->dashboardService->getStockMinProducts();
+        $productos = $this->dashboardService->getStockMinProducts()->appends($request->all());
+        $tc = app(\App\Services\CalculadoraServiceInterface::class)->getTasaCambio();
+        $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
+
+        if ($request->query('page') || $request->ajax()) {
+            $view = view('components.lista_producto', [
+                'productos' => $productos,
+                'tc' => $tc,
+                'container' => $request->query('container', 'container-list-products-dashboard'),
+                'almacenes' => $almacenes
+            ])->render();
+
+            $view = mb_convert_encoding($view, 'UTF-8', 'UTF-8');
+
+            return response()->json(['html' => $view]);
+        }
+
         return view('stockmin_dashboard', [
             'user' => $userModel,
             'productos' => $productos,
-            'tc' => app(\App\Services\CalculadoraServiceInterface::class)->getTasaCambio()
+            'tc' => $tc,
+            'almacenes' => $almacenes
         ]);
     }
 

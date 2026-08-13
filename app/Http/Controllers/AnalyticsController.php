@@ -34,26 +34,26 @@ class AnalyticsController extends Controller
     /**
      * Resuelve las fechas de inicio y fin desde el Request.
      */
-        private function applyInventarioFilter($query, $isVenta = true)
+    private function applyInventarioFilter($query, $isVenta = true)
     {
         if ($isVenta) {
             $query->whereNotExists(function ($q) {
                 $q->select(\Illuminate\Support\Facades\DB::raw(1))
-                  ->from('EgresoProducto')
-                  ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-                  ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-                  ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
-                  ->whereColumn('EgresoProducto.idEgreso', 'DetalleVenta.idEgreso')
-                  ->where('Comprobante.numeroComprobante', 'LIKE', 'INVENTARIO%');
+                    ->from('EgresoProducto')
+                    ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
+                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                    ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
+                    ->whereColumn('EgresoProducto.idEgreso', 'DetalleVenta.idEgreso')
+                    ->where('Comprobante.numeroComprobante', 'LIKE', 'INVENTARIO%');
             });
         } else {
             $query->whereNotExists(function ($q) {
                 $q->select(\Illuminate\Support\Facades\DB::raw(1))
-                  ->from('RegistroProducto')
-                  ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-                  ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
-                  ->whereColumn('RegistroProducto.idRegistro', 'EgresoProducto.idRegistro')
-                  ->where('Comprobante.numeroComprobante', 'LIKE', 'INVENTARIO%');
+                    ->from('RegistroProducto')
+                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                    ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
+                    ->whereColumn('RegistroProducto.idRegistro', 'EgresoProducto.idRegistro')
+                    ->where('Comprobante.numeroComprobante', 'LIKE', 'INVENTARIO%');
             });
         }
         return $query;
@@ -105,7 +105,9 @@ class AnalyticsController extends Controller
             ->selectRaw('DATE(Venta.fechaVenta) as fecha, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
         $qEgresos1 = EgresoProducto::query()
@@ -117,7 +119,9 @@ class AnalyticsController extends Controller
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
             ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas)
-            ->where(function($q) { $this->applyInventarioFilter($q, false); });
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, false);
+            });
 
         $ventasMesRaw = DB::query()
             ->fromSub($qVentas1->unionAll($qEgresos1), 'unioned')
@@ -145,7 +149,9 @@ class AnalyticsController extends Controller
             ->select('Publicacion.sku', 'Publicacion.titulo', 'DetalleVenta.cantidad as cantidad')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion)
             ->whereNotNull('DetalleVenta.idPublicacion');
 
@@ -155,7 +161,9 @@ class AnalyticsController extends Controller
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
             ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas)
-            ->where(function($q) { $this->applyInventarioFilter($q, false); });
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, false);
+            });
 
         $skusMostSoldMonth = DB::query()
             ->fromSub($qVentas2->unionAll($qEgresos2), 'unioned')
@@ -174,7 +182,9 @@ class AnalyticsController extends Controller
             ->selectRaw('COALESCE(Plataforma.nombrePlataforma, "VENTA DIRECTA") as plataforma, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
         $qEgresos3 = EgresoProducto::query()
@@ -188,7 +198,9 @@ class AnalyticsController extends Controller
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
             ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas)
-            ->where(function($q) { $this->applyInventarioFilter($q, false); });
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, false);
+            });
 
         $metricasPlataformas = DB::query()
             ->fromSub($qVentas3->unionAll($qEgresos3), 'unioned')
@@ -204,7 +216,9 @@ class AnalyticsController extends Controller
             ->selectRaw('Producto.idProducto, Producto.nombreProducto, Producto.modelo, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
         $qEgresos4 = EgresoProducto::query()
@@ -216,7 +230,9 @@ class AnalyticsController extends Controller
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
             ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas)
-            ->where(function($q) { $this->applyInventarioFilter($q, false); });
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, false);
+            });
 
         $productosMostRevenueMonth = DB::query()
             ->fromSub($qVentas4->unionAll($qEgresos4), 'unioned')
@@ -233,7 +249,9 @@ class AnalyticsController extends Controller
             ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'DetalleVenta.cantidad as cantidad')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
         $qEgresos5 = EgresoProducto::query()
@@ -249,7 +267,9 @@ class AnalyticsController extends Controller
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
             ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas)
-            ->where(function($q) { $this->applyInventarioFilter($q, false); });
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, false);
+            });
 
         $productosMostSoldMonth = DB::query()
             ->fromSub($qVentas5->unionAll($qEgresos5), 'unioned')
@@ -334,7 +354,9 @@ class AnalyticsController extends Controller
                          DetalleVenta.cantidad as cantidad_vendida")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0.10)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
         $comisionFalabellaEgreso = "CASE WHEN UPPER(Plataforma.nombrePlataforma) LIKE '%FALABELLA%' THEN 
@@ -373,7 +395,9 @@ class AnalyticsController extends Controller
                          1 as cantidad_vendida")
             ->whereBetween('EgresoProducto.fechaCompra', [$fechaInicio, $fechaFin])
             ->where('EgresoProducto.fechaCompra', '<', $fechaTransicion)
-            ->where(function($q) { $this->applyInventarioFilter($q, false); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, false);
+            })
             ->whereNotIn('EgresoProducto.numeroOrden', $ordenesIgnoradas);
 
         $margenesProductos = DB::query()
@@ -418,9 +442,9 @@ class AnalyticsController extends Controller
 
         // ── 11. Top 5 Envíos por Monto ───────────────────
         $topEnviosPorMonto = \App\Models\Envios\EnvioProvincia::query()
-            ->join('Venta', function($join) {
+            ->join('Venta', function ($join) {
                 $join->on('envio_provincias.idCliente', '=', 'Venta.idCliente')
-                     ->on(DB::raw('DATE(envio_provincias.fecha_envio)'), '=', DB::raw('DATE(Venta.fechaVenta)'));
+                    ->on(DB::raw('DATE(envio_provincias.fecha_envio)'), '=', DB::raw('DATE(Venta.fechaVenta)'));
             })
             ->join('Cliente', 'envio_provincias.idCliente', '=', 'Cliente.idCliente')
             ->selectRaw('envio_provincias.idEnvioProvincia, envio_provincias.fecha_envio, Cliente.numeroDocumento, Cliente.nombre, Cliente.apellidoPaterno, SUM(Venta.totalVenta) as monto_total')
@@ -492,7 +516,9 @@ class AnalyticsController extends Controller
                          SUM(((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                          SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley")
             ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
@@ -512,7 +538,9 @@ class AnalyticsController extends Controller
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
             ->where('DetalleVenta.precioVenta', '>', 0.10)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+            ->where(function ($q) {
+                $this->applyInventarioFilter($q, true);
+            })
             ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
@@ -597,7 +625,9 @@ class AnalyticsController extends Controller
                              SUM(((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                              0 as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+                ->where(function ($q) {
+                    $this->applyInventarioFilter($q, true);
+                })
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
@@ -640,7 +670,9 @@ class AnalyticsController extends Controller
                 ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
                 ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+                ->where(function ($q) {
+                    $this->applyInventarioFilter($q, true);
+                })
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
@@ -658,7 +690,9 @@ class AnalyticsController extends Controller
                              SUM(((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                              SUM(($comisionTiendaExpr) * DetalleVenta.cantidad) as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
-            ->where(function($q) { $this->applyInventarioFilter($q, true); })
+                ->where(function ($q) {
+                    $this->applyInventarioFilter($q, true);
+                })
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->groupBy('Producto.modelo')

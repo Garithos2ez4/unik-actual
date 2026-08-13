@@ -201,6 +201,7 @@ document.addEventListener('click', function (e) {
     const btnConf       = document.getElementById('btn-union-confirmar');
     const btnVolver1    = document.getElementById('btn-union-volver-paso1');
     const btnVolver2    = document.getElementById('btn-union-volver-paso2');
+    const btnAutoCompletar = document.getElementById('btn-union-autocompletar');
     const badge1        = document.getElementById('step-badge-1');
     const badge2        = document.getElementById('step-badge-2');
     const badge3        = document.getElementById('step-badge-3');
@@ -406,6 +407,38 @@ document.addEventListener('click', function (e) {
         });
         compContainer.scrollTop = scrollTop;
     };
+
+    // Auto-completar todos los slots
+    if (btnAutoCompletar) {
+        btnAutoCompletar.addEventListener('click', function () {
+            let changes = 0;
+            wizardData.componentesRequeridos.forEach((comp, ci) => {
+                let libres = comp.disponibles.filter(d => !comp.slots.includes(d.idRegistro));
+                for (let slot = 0; slot < comp.cantidadNecesaria; slot++) {
+                    if (!comp.slots[slot] && libres.length > 0) {
+                        const escogido = libres.shift();
+                        comp.slots[slot] = escogido.idRegistro;
+                        changes++;
+                    }
+                }
+            });
+
+            if (changes > 0) {
+                const scrollTop = compContainer.scrollTop;
+                renderizarComponentes();
+                compContainer.querySelectorAll('select').forEach(s => {
+                    const c  = parseInt(s.dataset.comp);
+                    const sl = parseInt(s.dataset.slot);
+                    const v  = wizardData.componentesRequeridos[c].slots[sl];
+                    if (v) s.value = v;
+                });
+                compContainer.scrollTop = scrollTop;
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Componentes autocompletados', showConfirmButton: false, timer: 1500 });
+            } else {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Todos los slots ya están asignados o no hay stock', showConfirmButton: false, timer: 1500 });
+            }
+        });
+    }
 
     // ── PASO 3: Validar, resumir, confirmar ────────────────────────────
     btnSig3.addEventListener('click', function () {

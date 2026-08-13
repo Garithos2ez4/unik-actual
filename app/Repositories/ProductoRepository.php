@@ -161,14 +161,20 @@ class ProductoRepository implements ProductoRepositoryInterface
 
     public function getStockMinProducts()
     {
-        return Producto::query()->where('estadoProductoWeb', '=', 'DISPONIBLE', 'and')
-            ->whereHas('Inventario', function ($query) {
-                $query->select(DB::raw('SUM(stock)'))
-                    ->from('Inventario')
-                    ->whereColumn('Inventario.idProducto', 'Producto.idProducto')
-                    ->havingRaw('SUM(stock) > 0')
-                    ->havingRaw('SUM(stock) < Producto.stockMin');
-            }, '>=', 1)
+        return Producto::query()
+            ->where('estadoProductoWeb', '=', 'DISPONIBLE')
+            ->select('Producto.*')
+
+            // 1. Calculamos el stock TOTAL sumando absolutamente todos los almacenes
+            ->selectRaw("COALESCE((SELECT SUM(stock) FROM Inventario WHERE Inventario.idProducto = Producto.idProducto), 0) as stock_total")
+
+            // 2. Filtramos: Que el stock total sea menor o igual al Stock Mínimo del producto, 
+            // y que sea mayor a 0 (para que los que están en 0 se vayan a una lista de "Agotados").
+            ->havingRaw('stock_total <= Producto.stockMin AND stock_total > 0')
+
+            // 3. Ordenamos para ver primero los que tienen menos stock
+            ->orderBy('stock_total', 'asc')
+
             ->paginate(50);
     }
 
@@ -326,19 +332,19 @@ class ProductoRepository implements ProductoRepositoryInterface
             $query->whereHas('Inventario', function ($q) use ($filtros) {
                 $q->where('idAlmacen', $filtros['almacen'])
                     ->where('stock', '>', 0);
-                    
+
                 if (isset($filtros['rack']) && $filtros['rack'] !== '') {
                     $q->where(function ($subQ) use ($filtros) {
                         $subQ->where('idUbicacionExacta', $filtros['rack'])
-                             ->orWhereExists(function ($query) use ($filtros) {
-                                 $query->select(\DB::raw(1))
-                                       ->from('RegistroProducto')
-                                       ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalle')
-                                       ->whereColumn('DetalleComprobante.idProducto', 'Inventario.idProducto')
-                                       ->whereColumn('RegistroProducto.idAlmacen', 'Inventario.idAlmacen')
-                                       ->whereNotIn('RegistroProducto.estado', ['ENTREGADO', 'INVALIDO'])
-                                       ->where('RegistroProducto.ubicacion_especifica', $filtros['rack']);
-                             });
+                            ->orWhereExists(function ($query) use ($filtros) {
+                                $query->select(\DB::raw(1))
+                                    ->from('RegistroProducto')
+                                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalle')
+                                    ->whereColumn('DetalleComprobante.idProducto', 'Inventario.idProducto')
+                                    ->whereColumn('RegistroProducto.idAlmacen', 'Inventario.idAlmacen')
+                                    ->whereNotIn('RegistroProducto.estado', ['ENTREGADO', 'INVALIDO'])
+                                    ->where('RegistroProducto.ubicacion_especifica', $filtros['rack']);
+                            });
                     });
                 }
             });

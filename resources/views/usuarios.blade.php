@@ -130,4 +130,5 @@
 
     }
 </script>
+@include('partials.modal_new_pass')
 @endsection

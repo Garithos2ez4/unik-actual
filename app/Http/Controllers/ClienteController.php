@@ -201,8 +201,8 @@ class ClienteController extends Controller
                     }
                 },
             ],
-            // Puedes agregar más reglas aquí si lo necesitas (ej. email)
-            'correo' => 'nullable|email',
+            // Regla email:rfc,dns verifica sintaxis y que el dominio exista (tenga registros MX)
+            'correo' => 'nullable|email:rfc,dns',
         ]);
     }
 }

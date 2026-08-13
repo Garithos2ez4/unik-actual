@@ -49,7 +49,12 @@
                         </button>
                         <strong id="union-nombre-pack-seleccionado"></strong>
                     </div>
-                    <p class="text-muted small">Para cada componente requerido, selecciona qué unidad del stock se usará.</p>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <p class="text-muted small mb-0">Para cada componente requerido, selecciona qué unidad del stock se usará.</p>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-union-autocompletar">
+                            <i class="bi bi-magic"></i> Auto-completar
+                        </button>
+                    </div>
                     <div id="union-componentes-container"></div>
                 </div>
 

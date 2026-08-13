@@ -23,14 +23,13 @@ class GananciaController extends Controller
     public function getAllGanancias()
     {
         $tc = $this->calculadoraService->getTasaCambio();
-        $costoExpr = $this->calculadoraService->getCostoVentaExpr((string)$tc);
+        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
+        $costoExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
         $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
+                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 WHEN GrupoProducto.idGrupoProducto IN (155, 156, 157, 158, 159, 160, 169) THEN 0.15 ELSE 0.10 END)
             ELSE 0 END";
-
-        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
 
         $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
         $costosComponentesSub = "COALESCE((SELECT SUM(
@@ -42,6 +41,8 @@ class GananciaController extends Controller
         AND dv_comp.precioVenta <= 0.10) / 
         GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
         , 0)";
+
+        $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";
 
         $ganancias = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
@@ -55,7 +56,8 @@ class GananciaController extends Controller
                          GROUP_CONCAT(RegistroProducto.numeroSerie SEPARATOR ', ') as series,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM(({$costoExpr} + ({$comisionFalabellaExpr})) * DetalleVenta.cantidad + ({$costosComponentesSub})) as costos,
-                         SUM(({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella")
+                         SUM(({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella,
+                         {$subqueryTcDia} as tc_dia")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
             ->orderByDesc('Venta.fechaVenta')
@@ -65,6 +67,7 @@ class GananciaController extends Controller
                 $venta->costos   = round($venta->costos, 2);
                 $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
                 $venta->comision_falabella = round($venta->comision_falabella, 2);
+                $venta->tc_dia   = round((float)$venta->tc_dia, 3);
 
                 // Deduplicar modelos: "A, A, A, B" => "A (x3), B"
                 if ($venta->modelo_raw) {
@@ -96,12 +99,15 @@ class GananciaController extends Controller
     public function getAllGananciasPorDetalle()
     {
         $tc = $this->calculadoraService->getTasaCambio();
-        $costoExpr = $this->calculadoraService->getCostoVentaExpr((string)$tc);
+        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
+        $costoExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
         $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
+                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 WHEN GrupoProducto.idGrupoProducto IN (155, 156, 157, 158, 159, 160, 169) THEN 0.15 ELSE 0.10 END)
             ELSE 0 END";
+
+        $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";
 
         $ganancias = \App\Models\Ventas\DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
@@ -117,7 +123,8 @@ class GananciaController extends Controller
                          GROUP_CONCAT(RegistroProducto.numeroSerie SEPARATOR ', ') as series,
                          (DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          (({$costoExpr} + ({$comisionFalabellaExpr})) * DetalleVenta.cantidad) as costos,
-                         (({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella")
+                         (({$comisionFalabellaExpr}) * DetalleVenta.cantidad) as comision_falabella,
+                         {$subqueryTcDia} as tc_dia")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy(
                 'DetalleVenta.idDetalleVenta',
@@ -140,6 +147,7 @@ class GananciaController extends Controller
                 $detalle->costos   = round($detalle->costos, 2);
                 $detalle->ganancia = round($detalle->ingresos - $detalle->costos, 2);
                 $detalle->comision_falabella = round($detalle->comision_falabella, 2);
+                $detalle->tc_dia   = round((float)$detalle->tc_dia, 3);
                 return $detalle;
             });
 
@@ -156,12 +164,15 @@ class GananciaController extends Controller
     public function getGananciaPorVenta($idVenta)
     {
         $tc = $this->calculadoraService->getTasaCambio();
-        $costoExpr = $this->calculadoraService->getCostoVentaExpr((string)$tc);
+        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
+        $costoExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
         $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
                 (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
                 + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 WHEN GrupoProducto.idGrupoProducto IN (155, 156, 157, 158, 159, 160, 169) THEN 0.15 ELSE 0.10 END)
             ELSE 0 END";
+
+        $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";
 
         $venta = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
@@ -171,7 +182,8 @@ class GananciaController extends Controller
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) as costos,
-                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella")
+                         SUM(($comisionFalabellaExpr) * DetalleVenta.cantidad) as comision_falabella,
+                         {$subqueryTcDia} as tc_dia")
             ->where('Venta.idVenta', $idVenta)
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta')

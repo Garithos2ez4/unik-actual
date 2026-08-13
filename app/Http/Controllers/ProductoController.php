@@ -67,6 +67,19 @@ class ProductoController extends Controller
                     'estados' => $this->productoService->filtroEstados('idGrupo', decrypt($idGrupo))
                 ];
 
+                $alertasReabastecimiento = collect();
+                if ($userModel->Accesos->contains('idVista', 10)) {
+                    $alertasReabastecimiento = \App\Models\Catalogo\Producto::query()
+                        ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1')
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 1 LIMIT 1), 0) as stock_tienda")
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 2 LIMIT 1), 0) as stock_alm2")
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 3 LIMIT 1), 0) as stock_alm3")
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 4 LIMIT 1), 0) as stock_alm4")
+                        ->havingRaw('stock_tienda <= 2 AND (stock_alm2 > 0 OR stock_alm3 > 0 OR stock_alm4 > 0)')
+                        ->orderBy('stock_tienda', 'asc')
+                        ->get();
+                }
+
                 return view('productos.productos', [
                     'user' => $userModel,
                     'grupos' => $grupos,
@@ -76,7 +89,8 @@ class ProductoController extends Controller
                     'categoria' => $categoria,
                     'almacenes' => $almacenes,
                     'tc' => $this->calculadoraService->getTasaCambio(),
-                    'filtros' => $filtros
+                    'filtros' => $filtros,
+                    'alertasReabastecimiento' => $alertasReabastecimiento
                 ]);
             }
         }

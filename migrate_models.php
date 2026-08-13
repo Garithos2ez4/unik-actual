@@ -1,34 +1,8 @@
 <?php
 
-/**
- * ============================================================================
- *  MIGRATE MODELS — Script de Reestructuración de Modelos Laravel
- * ============================================================================
- *  Transforma la carpeta app/Models de una estructura plana a una organización
- *  por dominios de negocio. Seguro para ejecutar en producción.
- *
- *  Fases:
- *    1. Backup automático del estado actual
- *    2. Mover archivos a subcarpetas y actualizar su namespace
- *    3. Corregir todos los `use App\Models\X` en el proyecto
- *    4. Añadir imports cruzados entre dominios en los propios modelos
- *    5. Limpiar caché de Laravel
- *
- *  Uso:
- *    php migrate_models.php              — Modo real (ejecuta cambios)
- *    php migrate_models.php --dry-run   — Simula sin modificar archivos
- *    php migrate_models.php --rollback  — Restaura el backup
- *
- *  Seguridad:
- *    - Es idempotente: se puede re-ejecutar sin causar daño doble.
- *    - Crea un backup ZIP antes de cualquier cambio.
- *    - Verifica cada archivo antes de moverlo.
- * ============================================================================
- */
 
 declare(strict_types=1);
 
-// ─── Configuración ───────────────────────────────────────────────────────────
 
 const BASE_DIR   = __DIR__;
 const MODELS_DIR = BASE_DIR . '/app/Models';
@@ -42,8 +16,7 @@ const SCAN_DIRS = [
     BASE_DIR . '/config',
 ];
 
-// Mapa: nombre de clase original => subcarpeta de destino
-// registroUpdate se renombra a RegistroUpdate (corrección PSR-4)
+
 const MIGRATIONS = [
     // Falabella
     'FalabellaOrder'              => 'Falabella',
