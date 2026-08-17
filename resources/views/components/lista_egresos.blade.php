@@ -5,7 +5,7 @@
             <li class="list-group-item bg-sistema-uno text-light" style="position:sticky;top:0;z-index:800">
                 <div class="row text-center">
                     <div class="col-2 col-md-2 text-start">
-                        <small>Producto</small>
+                        <small>Plataforma</small>
                     </div>
                     <div class="col-md-1 d-none d-lg-block">
                         <small>Nro Orden</small>
@@ -46,18 +46,22 @@
                 <div class="row text-center">
                     <div class="col-2 col-md-2 text-start">
                         <small>
-                            <a href="{{ route('producto', [encrypt($egreso->RegistroProducto->DetalleComprobante->Producto->idProducto)]) }}" class="decoration-link">
-                                {{ $egreso->RegistroProducto->DetalleComprobante->Producto->codigoProducto }}
-                            </a>
+                            @if($egreso->Publicacion && $egreso->Publicacion->CuentasPlataforma && $egreso->Publicacion->CuentasPlataforma->Plataforma)
+                                <img src="{{ asset('storage/'.$egreso->Publicacion->CuentasPlataforma->Plataforma->imagenPlataforma) }}" alt="Plataforma" style="max-height: 25px" class="rounded-1" title="{{ $egreso->Publicacion->CuentasPlataforma->Plataforma->nombrePlataforma }}">
+                            @elseif($egreso->DetalleVenta && $egreso->DetalleVenta->Venta && $egreso->DetalleVenta->Venta->canal)
+                                <span class="badge bg-primary">{{ $egreso->DetalleVenta->Venta->canal }}</span>
+                            @else
+                                <span class="badge bg-secondary">Tienda / Otro</span>
+                            @endif
                         </small>
                     </div>
-                    <div class="col-md-1 d-none d-lg-block">
+                    <div class="col-md-1 d-none d-lg-block text-break">
                         <small>{{ is_null($egreso->numeroOrden) ? 'No aplica' : $egreso->numeroOrden }}</small>
                     </div>
                     <div class="col-md-1 d-none d-lg-block">
                         <small>{{ $egreso->Usuario->user }}</small>
                     </div>
-                    <div class="col-md-2 d-none d-md-block">
+                    <div class="col-md-2 d-none d-md-block text-break">
                         <small>{{ is_null($egreso->Publicacion) || is_null($egreso->Publicacion->sku) ? 'No aplica' : $egreso->Publicacion->sku }}</small>
                     </div>
                     <div class="col-4 col-md-3 col-lg-2">

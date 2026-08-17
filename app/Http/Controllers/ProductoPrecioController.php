@@ -52,6 +52,12 @@ class ProductoPrecioController extends Controller
         $precioVentaUsd = $precioCalculado + $producto->gananciaExtra;
         $precioVentaSoles = round($precioVentaUsd * $tcUsar, 2);
 
+        // Si el producto está en liquidación, el precio web final es el precio de liquidación
+        if ($producto->estadoProductoWeb === 'LIQUIDACION' && $producto->liquidacion) {
+            $precioVentaSoles = $producto->liquidacion->precio_liquidacion;
+            $precioVentaUsd = round($precioVentaSoles / $tcUsar, 2);
+        }
+
         $precioBaseSoles = round($producto->precioDolar * $tcUsar, 2);
         $precioIgvSoles = round($precioConIgv * $tcUsar, 2);
 
@@ -96,7 +102,9 @@ class ProductoPrecioController extends Controller
             'precioVentaSoles' => $precioVentaSoles,
             'tasaCambio' => $tcUsar,
             'tipoTcLabel' => $tipoTcLabel,
-            'ultimoCosto' => $ultimoCosto
+            'ultimoCosto' => $ultimoCosto,
+            'isLiquidacion' => ($producto->estadoProductoWeb === 'LIQUIDACION'),
+            'precioLiquidacionSoles' => ($producto->estadoProductoWeb === 'LIQUIDACION' && $producto->liquidacion) ? $producto->liquidacion->precio_liquidacion : null
         ]);
     }
 

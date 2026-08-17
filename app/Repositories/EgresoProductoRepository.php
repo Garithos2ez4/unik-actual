@@ -36,6 +36,10 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
                   ->whereMonth('fechaDespacho', '=', $month, 'and');
         }
         
+        $query->whereHas('RegistroProducto', function($q) {
+            $q->where('estado', '!=', 'ELIMINADO');
+        });
+        
         return $query->orderBy('fechaDespacho','desc')
                                     ->paginate($cant);
     }

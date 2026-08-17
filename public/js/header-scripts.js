@@ -15,11 +15,15 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('options-user').addEventListener('mouseover',viewUser);
     document.getElementById('options-user').addEventListener('mouseout',hideUser);
 
-    disableReestablecer();
-        
-
-    document.getElementById('pass-modal-password').addEventListener('input', disableReestablecer);
-    document.getElementById('confirmpass-modal-password').addEventListener('input', disableReestablecer);
+    let passInput = document.getElementById('pass-modal-password');
+    let confirmPassInput = document.getElementById('confirmpass-modal-password');
+    let btnRes = document.getElementById('btn-reestablecer-modal-password');
+    
+    if (passInput && confirmPassInput && btnRes) {
+        disableReestablecer();
+        passInput.addEventListener('input', disableReestablecer);
+        confirmPassInput.addEventListener('input', disableReestablecer);
+    }
 });
 
 

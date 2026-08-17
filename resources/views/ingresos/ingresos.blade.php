@@ -38,6 +38,9 @@
             <a class="btn btn-outline-success me-1" id="btn-abrir-union-pack" title="Unir componentes en un Pack nuevo">
                 <i class="bi bi-boxes"></i><span class="d-none d-md-inline"> Unir en Pack</span>
             </a>
+            <a class="btn btn-outline-primary me-1" href="{{ route('compras.deltron') }}" title="Ver Ofertas en Deltron">
+                <i class="bi bi-robot"></i><span class="d-none d-md-inline"> Compras Deltron</span>
+            </a>
             <a class="btn btn-success" data-bs-toggle="modal" data-bs-target="#ingresoModal"><i
                     class="bi bi-file-earmark-plus"></i><span class="d-none d-md-inline"> Nuevo Registro</span></a>
             @endif

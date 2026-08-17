@@ -193,9 +193,15 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/series-disponibles', [EgresoController::class, 'getSeriesDisponibles'])->name('egresos.seriesdisponibles');
     Route::get('/egresos/costo-registro', [EgresoController::class, 'getCostoRegistro'])->name('egresos.costoregistro');
     Route::post('/egresos/calcular-costo-ensamble', [EgresoController::class, 'calcularCostoEnsamble'])->name('egresos.calcularcostoensamble');
+    Route::get('/egresos/check-stock', [EgresoController::class, 'checkStock'])->name('egresos.checkstock');
     Route::get('/egresos/{month}', [EgresoController::class, 'index'])->name('egresos');
     Route::post('/egresos/insertegreso', [EgresoController::class, 'insertEgreso'])->name('insertegreso');
     Route::post('/egresos/devolucionegreso', [EgresoController::class, 'devolucionEgreso'])->name('devolucionegreso');
+    Route::post('/egresos/anular', [EgresoController::class, 'anularEgreso'])->name('anularegreso');
+
+    // Deltron Compras
+    Route::get('/compras/deltron-ofertas', [\App\Http\Controllers\DeltronController::class, 'indexStock'])->name('compras.deltron');
+    Route::post('/compras/deltron-ofertas/sync', [\App\Http\Controllers\DeltronController::class, 'syncManual'])->name('compras.deltron.sync');
 
     // Rutas para Ventas
     Route::prefix('ventas')->name('ventas.')->group(function () {

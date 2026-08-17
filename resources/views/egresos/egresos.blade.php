@@ -209,6 +209,11 @@
                                     <button type="button" onclick="formDetailEgreso('devolucion')" id="modal-egreso-btn-devolucion" class="btn btn-warning"><i class="bi bi-arrow-clockwise"></i> Devoluci&oacute;n</button>
                                 </div>
                                 <div class="col-md-6 pe-0 text-end">
+                                    @foreach ($user->Accesos as $vista)
+                                    @if($vista->idVista == 10)
+                                    <button type="button" onclick="formDetailEgreso('anular')" id="modal-egreso-btn-anular" class="btn btn-danger"><i class="bi bi-trash"></i> Anular</button>
+                                    @endif
+                                    @endforeach
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cerrar</button>
                                     <button type="button" onclick="formDetailEgreso('update')" class="btn btn-primary"><i class="bi bi-floppy"></i> Actualizar</button>
                                 </div>

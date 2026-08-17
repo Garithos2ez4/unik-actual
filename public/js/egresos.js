@@ -365,6 +365,16 @@ function formDetailEgreso(transaction) {
         }
     }
 
+    if (transaction === 'anular') {
+        if (!confirm('¿Está seguro de que desea anular lógicamente este egreso? El producto desaparecerá del inventario y de los reportes.')) {
+            return;
+        }
+        formEgreso.action = '/egresos/anular';
+        hiddenTransaction.value = transaction;
+        formEgreso.submit();
+        return;
+    }
+
     hiddenTransaction.value = transaction;
     formEgreso.submit();
 }

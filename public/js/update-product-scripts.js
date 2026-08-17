@@ -34,13 +34,28 @@ function calcPrices() {
                         labelPrecio.classList.add('form-label');
                         labelPrecio.textContent = 'Precio Total:';
 
+                        let finalPrecioTotal = x.precio;
+                        // Si está en liquidación y tenemos el precio fijado, lo forzamos
+                        if (state === 'LIQUIDACION' && window.APP_DATA && window.APP_DATA.isLiquidacion && window.APP_DATA.precioLiquidacionSoles) {
+                            finalPrecioTotal = parseFloat(window.APP_DATA.precioLiquidacionSoles);
+                            if (type !== 'SOL') {
+                                // Si la vista está en dólares, revertimos el precio de soles a dólares
+                                finalPrecioTotal = finalPrecioTotal / window.APP_DATA.tc;
+                            }
+                        }
+
                         let inputPrecio = document.createElement('input');
                         inputPrecio.type = 'number';
                         inputPrecio.disabled = true;
                         inputPrecio.step = '0.01';
                         inputPrecio.classList.add('form-control');
                         inputPrecio.classList.add('price-product');
-                        inputPrecio.value = x.precio.toFixed(2);
+                        inputPrecio.value = finalPrecioTotal.toFixed(2);
+
+                        if (state === 'LIQUIDACION') {
+                            inputPrecio.title = "Precio fijado por liquidación";
+                            labelPrecio.innerHTML = 'Precio Total: <i class="bi bi-info-circle text-warning" title="Fijado por Liquidación"></i>';
+                        }
 
                         divPrecio.appendChild(labelEmpresa);
                         divPrecio.appendChild(labelPrecio);

@@ -68,8 +68,12 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (!sessionStorage.getItem('modalAlertasFalabellaShown')) {
-            var modalAlertas = new bootstrap.Modal(document.getElementById('modalAlertasPrecio'));
-            modalAlertas.show();
+            if (typeof window.modalsQueue !== 'undefined') {
+                window.modalsQueue.push('modalAlertasPrecio');
+            } else {
+                var modalAlertas = new bootstrap.Modal(document.getElementById('modalAlertasPrecio'));
+                modalAlertas.show();
+            }
             sessionStorage.setItem('modalAlertasFalabellaShown', 'true');
         } else {
             // Inicializar el modal sin mostrarlo, por si lo llaman desde otro botón luego

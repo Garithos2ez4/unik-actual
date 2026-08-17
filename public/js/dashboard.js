@@ -21,3 +21,26 @@ window.onload = function() {
     loadProducts();
     setInterval(loadProducts, 600000); // 10 minutos (600,000 ms) en lugar de 60 segundos para no saturar el servidor
 }
+
+window.modalsQueue = [];
+window.processModalQueue = function() {
+    if (window.modalsQueue.length > 0) {
+        var modalId = window.modalsQueue.shift();
+        var modalEl = document.getElementById(modalId);
+        if (modalEl) {
+            var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                // Esperar un poquito antes de abrir el siguiente para que la animación termine
+                setTimeout(window.processModalQueue, 400);
+            }, { once: true });
+            modal.show();
+        } else {
+            window.processModalQueue();
+        }
+    }
+};
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Iniciar la cola después de un breve delay
+    setTimeout(window.processModalQueue, 500);
+});

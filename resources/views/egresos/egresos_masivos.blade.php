@@ -304,6 +304,6 @@
         searchPublicacion: "{{ route('searchpublicacion') }}"
     };
 </script>
-<script src="{{asset('js/egresos_masivos.js')}}?v=1.0"></script>
+<script src="{{asset('js/egresos_masivos.js')}}?v=1.1"></script>
 @include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

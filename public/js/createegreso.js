@@ -224,6 +224,65 @@ function createItem(object, query) {
 
     cartManager.agregarProducto();
     calculateTotalVenta();
+
+    // Verificar stock bajo al agregar un producto al egreso
+    checkStockBajo(object.idRegistroProducto, divRowItem);
+}
+
+function checkStockBajo(idRegistro, divRowItem) {
+    fetch(`/egresos/check-stock?idRegistro=${idRegistro}`)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.alertaTipo) return;
+
+            // Agregar badge visual en el item
+            let badgeDiv = document.createElement('div');
+            badgeDiv.classList.add('col-12', 'mt-1');
+
+            if (data.alertaTipo === 'traer_almacen') {
+                let almacenesTexto = data.stockOtrosAlmacenes.map(a => `<b>${a.almacen}</b> (${a.stock} uds)`).join(', ');
+                badgeDiv.innerHTML = `<small class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> <b>Stock bajo en ${data.almacenOrigen}</b>: quedarán ${data.stockDespuesEgreso} uds. Traer de: ${almacenesTexto}</small>`;
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Stock bajo en ' + data.almacenOrigen,
+                    html: `
+                        <p>El producto <b>${data.producto}</b> quedará con <b>${data.stockDespuesEgreso}</b> unidad(es) en <b>${data.almacenOrigen}</b> después de este egreso.</p>
+                        <p class="text-muted">(Stock mínimo: ${data.stockMin})</p>
+                        <hr>
+                        <p><b>Traer de:</b></p>
+                        <ul class="list-unstyled">
+                            ${data.stockOtrosAlmacenes.map(a => `<li><i class="bi bi-box-seam"></i> <b>${a.almacen}</b>: ${a.stock} unidad(es)</li>`).join('')}
+                        </ul>
+                    `,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#f0ad4e'
+                });
+            } else if (data.alertaTipo === 'traer_proveedor') {
+                badgeDiv.innerHTML = `<small class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> <b>Stock total bajo</b>: quedarán ${data.stockTotalDespues} uds en total. Stock proveedor: ${data.stockProveedor} uds</small>`;
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Stock total bajo',
+                    html: `
+                        <p>El producto <b>${data.producto}</b> quedará con solo <b>${data.stockTotalDespues}</b> unidad(es) en total después de este egreso.</p>
+                        <p class="text-muted">(Stock mínimo: ${data.stockMin})</p>
+                        <hr>
+                        <p><b>Solicitar al proveedor:</b></p>
+                        <p><i class="bi bi-box-seam"></i> Stock disponible en proveedor: <b>${data.stockProveedor}</b> unidad(es)</p>
+                    `,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#d9534f'
+                });
+            }
+
+            // Insertar el badge en el item del egreso
+            let rowContent = divRowItem.querySelector('.row');
+            if (rowContent) {
+                rowContent.appendChild(badgeDiv);
+            }
+        })
+        .catch(err => console.error('Error al verificar stock:', err));
 }
 
 

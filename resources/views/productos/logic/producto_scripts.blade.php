@@ -182,13 +182,22 @@
         }
 
         // Precio con TC SUNAT (siempre se calcula, a menos que esté en foco)
+        let precioSunatValue = (precioEnDolares * TC_SUNAT).toFixed(2);
+        let precioFijoValue = (precioEnDolares * tasaFijaUsar).toFixed(2);
+
+        let stateElement = document.getElementById('estado-product');
+        if (stateElement && stateElement.value === 'LIQUIDACION' && window.APP_DATA && window.APP_DATA.isLiquidacion && window.APP_DATA.precioLiquidacionSoles) {
+            precioSunatValue = parseFloat(window.APP_DATA.precioLiquidacionSoles).toFixed(2);
+            precioFijoValue = precioSunatValue;
+        }
+
         if (precioSunatInput && document.activeElement !== precioSunatInput) {
-            precioSunatInput.value = (precioEnDolares * TC_SUNAT).toFixed(2);
+            precioSunatInput.value = precioSunatValue;
         }
 
         // Precio con TC Fijo (siempre se calcula, a menos que esté en foco)
         if (precioFijoInput && document.activeElement !== precioFijoInput) {
-            precioFijoInput.value = (precioEnDolares * tasaFijaUsar).toFixed(2);
+            precioFijoInput.value = precioFijoValue;
         }
 
         // Sync "Precio Web Directo" logic is removed, as it's now handled by the total inputs themselves

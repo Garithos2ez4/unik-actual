@@ -181,9 +181,14 @@
             </div>
             <div class="col-6 col-md-6">
                 <div class="row">
-                    <h5>Precio venta</h5>
+                    <div class="col-12 d-flex align-items-center">
+                        <h5 class="mb-0">Precio venta</h5>
+                        @if($producto->estadoProductoWeb === 'LIQUIDACION')
+                        <span class="badge bg-warning text-dark ms-3"><i class="bi bi-exclamation-triangle-fill"></i> LIQUIDACIÓN: Precio Fijo</span>
+                        @endif
+                    </div>
                 </div>
-                <div class="row">
+                <div class="row mt-2">
                     <div class="mb-3 col-md-6 col-lg-4">
                         <label for="precio-producto" class="form-label">Utilidad:</label>
                         <input type="number" value="{{number_format($producto->gananciaExtra, 2, '.', '')}}" name="ganancia" id="precio-product-ganancia" class="form-control input-edit price-product" step="0.01" disabled>
@@ -331,7 +336,7 @@
             ->first();
             @endphp
 
-            @if(($inventario && $inventario->stock > 0) || $ingresoEdit === "input-edit")
+            @if($inventario && $inventario->stock > 0)
             <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label">
                     Stock {{ $almacen->descripcion }}:
@@ -570,10 +575,12 @@
 <script>
     window.APP_DATA = {
         tc: parseFloat("{{ $tc ?? '0' }}"),
-        productoIdEncriptado: "{{ encrypt($producto->idProducto) }}"
+        productoIdEncriptado: "{{ encrypt($producto->idProducto) }}",
+        isLiquidacion: {{ $producto->estadoProductoWeb === 'LIQUIDACION' ? 'true' : 'false' }},
+        precioLiquidacionSoles: {{ ($producto->estadoProductoWeb === 'LIQUIDACION' && $producto->liquidacion) ? $producto->liquidacion->precio_liquidacion : 'null' }}
     };
 </script>
-<script src="{{ asset('js/update-product-scripts.js') }}?v=1.02"></script>
+<script src="{{ asset('js/update-product-scripts.js') }}?v=1.03"></script>
 @include('productos.logic.producto_scripts')
 
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.01"></script>

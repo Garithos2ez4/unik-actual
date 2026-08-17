@@ -97,7 +97,7 @@
 </div>
 
 <!-- Incluimos el otro archivo blade para el modal de detalles -->
-@include('components.modal_detalle_devolucion')
+@include('components.modals.modal_detalle_devolucion')
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -107,10 +107,14 @@
         
         // Si no hemos visto este set exacto de devoluciones, mostramos el modal
         if (lastSeenReturns !== currentReturnsIds) {
-            var myModal = new bootstrap.Modal(document.getElementById('modalDevolucionesHoy'), {
-                keyboard: false
-            });
-            myModal.show();
+            if (typeof window.modalsQueue !== 'undefined') {
+                window.modalsQueue.push('modalDevolucionesHoy');
+            } else {
+                var myModal = new bootstrap.Modal(document.getElementById('modalDevolucionesHoy'), {
+                    keyboard: false
+                });
+                myModal.show();
+            }
             
             // Guardamos el nuevo set para no volver a mostrarlo hasta que haya cambios
             localStorage.setItem('last_seen_returns_falabella', currentReturnsIds);

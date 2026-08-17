@@ -14,6 +14,11 @@
                 <!-- Nombre del producto -->
                 <p class="fw-bold text-truncate mb-3" id="editUtilidadNombreProducto" title="" style="font-size: 0.9em;"></p>
 
+                <!-- Alerta de Liquidación -->
+                <div class="alert alert-warning py-1 px-2 mb-2 d-none" id="editUtilidadAlertaLiquidacion" style="font-size: 0.85em;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Este producto está en <strong>LIQUIDACIÓN</strong>. El precio es fijo.
+                </div>
+
                 <div class="row g-2">
                     <!-- Columna izquierda: Precio base (solo lectura) -->
                     <div class="col-6">
@@ -94,4 +99,3 @@
 </div>
 
 @include('productos.logic.editar_utilidad_scripts')
-

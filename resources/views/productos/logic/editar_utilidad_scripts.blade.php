@@ -15,7 +15,13 @@
                     document.getElementById('editUtilidadPrecioBaseSoles').value = parseFloat(data.precioBaseSoles).toFixed(2);
                     document.getElementById('editUtilidadPrecioIgvSoles').value = parseFloat(data.precioIgvSoles).toFixed(2);
                     document.getElementById('editUtilidadGanancia').value = parseFloat(data.gananciaExtra).toFixed(2);
-                    recalcularPreviewUtilidad();
+                    
+                    if (data.isLiquidacion) {
+                        document.getElementById('editUtilidadAlertaLiquidacion').classList.remove('d-none');
+                    } else {
+                        document.getElementById('editUtilidadAlertaLiquidacion').classList.add('d-none');
+                    }
+                    
                     recalcularPreviewUtilidad();
                     
                     let showModal = () => {
@@ -41,6 +47,18 @@
 
         let precioVentaUsd = precioCalculado + ganancia;
         let precioVentaSoles = precioVentaUsd * tc;
+
+        // Sobrescribir si es liquidación
+        if (_utilidadData.isLiquidacion && _utilidadData.precioLiquidacionSoles) {
+            precioVentaSoles = parseFloat(_utilidadData.precioLiquidacionSoles);
+            precioVentaUsd = precioVentaSoles / tc;
+            // Opcional: Deshabilitar campos o advertir
+            document.getElementById('editUtilidadPrecioWeb').readOnly = true;
+            document.getElementById('editUtilidadPrecioWeb').title = "Precio fijado por liquidación";
+        } else {
+            document.getElementById('editUtilidadPrecioWeb').readOnly = false;
+            document.getElementById('editUtilidadPrecioWeb').title = "";
+        }
 
         document.getElementById('editUtilidadPrecioVentaUsd').textContent = '$' + precioVentaUsd.toFixed(2);
         document.getElementById('editUtilidadTC').textContent = tc.toFixed(2) + (_utilidadData.tipoTcLabel ? ' (' + _utilidadData.tipoTcLabel + ')' : '');

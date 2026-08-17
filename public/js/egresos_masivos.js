@@ -473,7 +473,53 @@
         // Renderizar y actualizar
         renderCarrito();
         actualizarResumen();
+
+        // Verificar stock bajo para cada serie agregada
+        if (listadoSeries.length > 0) {
+            checkStockBajoMasivo(listadoSeries[0].idRegistro, nuevoItem.nombreProducto);
+        }
     };
+
+    function checkStockBajoMasivo(idRegistro, nombreProducto) {
+        fetch(`/egresos/check-stock?idRegistro=${idRegistro}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.alertaTipo) return;
+
+                if (data.alertaTipo === 'traer_almacen') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '⚠️ Stock bajo en ' + data.almacenOrigen,
+                        html: `
+                            <p>El producto <b>${data.producto}</b> quedará con <b>${data.stockDespuesEgreso}</b> unidad(es) en <b>${data.almacenOrigen}</b> después de este egreso.</p>
+                            <p class="text-muted">(Stock mínimo: ${data.stockMin})</p>
+                            <hr>
+                            <p><b>Traer de:</b></p>
+                            <ul class="list-unstyled">
+                                ${data.stockOtrosAlmacenes.map(a => `<li>📦 <b>${a.almacen}</b>: ${a.stock} unidad(es)</li>`).join('')}
+                            </ul>
+                        `,
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#f0ad4e'
+                    });
+                } else if (data.alertaTipo === 'traer_proveedor') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '🚨 Stock total bajo',
+                        html: `
+                            <p>El producto <b>${data.producto}</b> quedará con solo <b>${data.stockTotalDespues}</b> unidad(es) en total después de este egreso.</p>
+                            <p class="text-muted">(Stock mínimo: ${data.stockMin})</p>
+                            <hr>
+                            <p><b>Solicitar al proveedor:</b></p>
+                            <p>📦 Stock disponible en proveedor: <b>${data.stockProveedor}</b> unidad(es)</p>
+                        `,
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#d9534f'
+                    });
+                }
+            })
+            .catch(err => console.error('Error al verificar stock:', err));
+    }
 
     function renderCarrito() {
         const sectionCarrito = document.getElementById('seccion-carrito');

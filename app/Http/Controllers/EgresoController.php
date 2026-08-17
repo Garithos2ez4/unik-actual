@@ -238,6 +238,44 @@ class EgresoController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
+    public function anularEgreso(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 10) {
+                $idegreso = $request->input('idegreso');
+
+                if (isset($idegreso)) {
+                    \Illuminate\Support\Facades\DB::transaction(function() use ($idegreso) {
+                        $egreso = \App\Models\Inventario\EgresoProducto::find($idegreso);
+                        if ($egreso) {
+                            $registro = \App\Models\Inventario\RegistroProducto::find($egreso->idRegistro);
+                            if ($registro) {
+                                $registro->estado = 'ELIMINADO';
+                                $registro->save();
+                            }
+                            
+                            $detalleVenta = \App\Models\Ventas\DetalleVenta::withoutGlobalScope('completado')
+                                                ->where('idEgreso', $idegreso)->first();
+                            if ($detalleVenta) {
+                                $detalleVenta->estado = 'ELIMINADO';
+                                $detalleVenta->save();
+                            }
+                        }
+                    });
+
+                    $this->headerService->sendFlashAlerts('Operacion exitosa', 'El egreso fue anulado lógicamente', 'success', 'btn-success');
+                    return back();
+                } else {
+                    $this->headerService->sendFlashAlerts('Datos incompletos', 'No se especificó el egreso', 'info', 'btn-warning');
+                    return back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para anular egresos', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
     public function appendEgreso(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
@@ -820,6 +858,77 @@ class EgresoController extends Controller
         $costo = $this->calcularCostoRealRegistro($registro, $tasaCambio);
 
         return response()->json(['costo' => round($costo, 2)]);
+    }
+
+    public function checkStock(Request $request)
+    {
+        $idRegistro = $request->input('idRegistro');
+        if (empty($idRegistro)) {
+            return response()->json(['alertaTipo' => null]);
+        }
+
+        $registro = RegistroProducto::with('DetalleComprobante.Producto')->find($idRegistro);
+        if (!$registro || !$registro->DetalleComprobante || !$registro->DetalleComprobante->Producto) {
+            return response()->json(['alertaTipo' => null]);
+        }
+
+        $producto = $registro->DetalleComprobante->Producto;
+        $idProducto = $producto->idProducto;
+        $idAlmacenOrigen = $registro->idAlmacen;
+        $stockMin = $producto->stockMin ?? 2;
+
+        // Obtener stock por almacén
+        $inventarios = \App\Models\Inventario\Inventario::where('idProducto', $idProducto)->get();
+        $almacenes = \App\Models\Inventario\Almacen::all()->keyBy('idAlmacen');
+
+        $stockAlmacenOrigen = 0;
+        $stockOtros = [];
+        $stockTotal = 0;
+
+        foreach ($inventarios as $inv) {
+            $stockTotal += $inv->stock;
+            if ($inv->idAlmacen == $idAlmacenOrigen) {
+                $stockAlmacenOrigen = $inv->stock;
+            } else {
+                if ($inv->stock > 0) {
+                    $stockOtros[] = [
+                        'almacen' => $almacenes->has($inv->idAlmacen) ? $almacenes[$inv->idAlmacen]->descripcion : 'Almacén ' . $inv->idAlmacen,
+                        'idAlmacen' => $inv->idAlmacen,
+                        'stock' => $inv->stock
+                    ];
+                }
+            }
+        }
+
+        // Stock del proveedor
+        $invProveedor = \App\Models\Inventario\Inventario_Proveedor::where('idProducto', $idProducto)->first();
+        $stockProveedor = $invProveedor ? $invProveedor->stock : 0;
+
+        $almacenOrigenNombre = $almacenes->has($idAlmacenOrigen) ? $almacenes[$idAlmacenOrigen]->descripcion : 'Almacén ' . $idAlmacenOrigen;
+
+        // Determinar tipo de alerta
+        // El stock después de este egreso será (stockAlmacenOrigen - 1)
+        $stockDespuesEgreso = $stockAlmacenOrigen - 1;
+        $stockTotalDespues = $stockTotal - 1;
+        $alertaTipo = null;
+
+        if ($stockDespuesEgreso <= $stockMin && count($stockOtros) > 0) {
+            $alertaTipo = 'traer_almacen';
+        } elseif ($stockTotalDespues <= $stockMin && $stockProveedor > 0) {
+            $alertaTipo = 'traer_proveedor';
+        }
+
+        return response()->json([
+            'producto' => $producto->nombreProducto,
+            'stockMin' => $stockMin,
+            'stockAlmacenOrigen' => $stockAlmacenOrigen,
+            'almacenOrigen' => $almacenOrigenNombre,
+            'stockDespuesEgreso' => $stockDespuesEgreso,
+            'stockOtrosAlmacenes' => $stockOtros,
+            'stockProveedor' => $stockProveedor,
+            'stockTotalDespues' => $stockTotalDespues,
+            'alertaTipo' => $alertaTipo
+        ]);
     }
 
     public function calcularCostoEnsamble(Request $request)

@@ -200,6 +200,24 @@ class HomeController extends Controller
         }
 
 
+        $topReabastecimiento = collect();
+        if ($userModel->Accesos->contains('idVista', 10)) {
+            $topReabastecimiento = \Illuminate\Support\Facades\Cache::remember('dash_top_reabastecimiento_10', 60, function () {
+                return \App\Models\Catalogo\Producto::query()
+                    ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1')
+                    ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 1 LIMIT 1), 0) as stock_tienda")
+                    ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 2 LIMIT 1), 0) as stock_alm2")
+                    ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 3 LIMIT 1), 0) as stock_alm3")
+                    ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 4 LIMIT 1), 0) as stock_alm4")
+                    ->selectRaw("COALESCE((SELECT SUM(cantidad) FROM DetalleVenta WHERE DetalleVenta.idProducto = Producto.idProducto AND estado = 'COMPLETADO'), 0) as total_ventas")
+                    ->havingRaw('stock_tienda <= 2 AND (stock_alm2 > 0 OR stock_alm3 > 0 OR stock_alm4 > 0)')
+                    ->orderBy('total_ventas', 'desc')
+                    ->limit(10)
+                    ->get();
+            });
+        }
+
+
         $registros = \Illuminate\Support\Facades\Cache::remember('dash_registros', 60, function () {
             return $this->dashboardService->getRegistrosXEstados();
         });
@@ -307,6 +325,10 @@ class HomeController extends Controller
         if ($tieneAccesoAnalitica) {
             $alertasPrecio = \App\Models\Falabella\AlertaPrecio::where('estado', 'pendiente')->get();
         }
+        $almacenes = \Illuminate\Support\Facades\Cache::remember('dash_almacenes', 3600, function () {
+            return \App\Models\Inventario\Almacen::all();
+        });
+
         return view('dashboard', [
             'user' => $userModel,
             'registros' => $registros,
@@ -328,6 +350,8 @@ class HomeController extends Controller
             'ventas7Dias' => $ventas7Dias,
             'devolucionesHoy' => $devolucionesHoy,
             'alertasPrecio' => $alertasPrecio,
+            'topReabastecimiento' => $topReabastecimiento,
+            'almacenes' => $almacenes,
         ]);
     }
 

@@ -25,7 +25,7 @@ class DetalleVenta extends Model
         'precioVenta',    // El precio real cobrado
         'cantidad',
         'origenPrecio',   // 'TIENDA' | 'PUBLICACION' | 'NEGOCIADO'
-        'estado',         // 'COMPLETADO' | 'DEVUELTO'
+        'estado',         // 'COMPLETADO' | 'DEVUELTO' | 'ELIMINADO'
     ];
 
     protected static function booted()

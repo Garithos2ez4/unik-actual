@@ -11,3 +11,4 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('exchange:update-daily')->dailyAt('11:00');
 Schedule::command('bot:falabella-prices')->dailyAt('10:00');
+Schedule::command('scrape:deltron')->dailyAt('02:00');
