@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Models\Falabella;
+namespace App\Models\Ecommerce;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class FalabellaOrder extends Model
+class RipleyOrder extends Model
 {
-    protected $table = 'falabella_orders';
+    protected $table = 'ripley_orders';
 
     protected $fillable = [
         'order_id',
@@ -21,8 +21,8 @@ class FalabellaOrder extends Model
         'shipping_type',
         'delivery_info',
         'items_count',
-        'created_at_falabella',
-        'updated_at_falabella',
+        'created_at_ripley',
+        'updated_at_ripley',
         'promised_shipping_time',
         'shipping_city',
         'shipping_address',
@@ -34,14 +34,14 @@ class FalabellaOrder extends Model
     protected $casts = [
         'statuses' => 'array',
         'payload' => 'array',
-        'created_at_falabella' => 'datetime',
-        'updated_at_falabella' => 'datetime',
+        'created_at_ripley' => 'datetime',
+        'updated_at_ripley' => 'datetime',
         'promised_shipping_time' => 'datetime',
         'synced_at' => 'datetime',
     ];
 
     public function items(): HasMany
     {
-        return $this->hasMany(FalabellaOrderItem::class, 'order_id', 'order_id');
+        return $this->hasMany(RipleyOrderItem::class, 'order_id', 'order_id');
     }
 }

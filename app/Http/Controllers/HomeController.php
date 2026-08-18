@@ -25,20 +25,28 @@ class HomeController extends Controller
 
     public function checkNewOrders(Request $request)
     {
-        $lastId = $request->get('last_id', 0);
-        
+        // 1. Web Orders
         $newOrders = \App\Models\Web\PedidoWeb::with('cliente')
-            ->where('idPedidoWeb', '>', $lastId)
             ->where('estado', 'PENDIENTE')
             ->orderBy('idPedidoWeb', 'asc')
             ->get();
-            
-        $maxId = \App\Models\Web\PedidoWeb::max('idPedidoWeb') ?? 0;
-            
+
+        // 2. Ripley Orders (Trigger sync and fetch)
+        try {
+            \Illuminate\Support\Facades\Artisan::call('ripley:sync-orders');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error sincronizando Ripley desde API checkNewOrders: " . $e->getMessage());
+        }
+
+        $ripleyOrders = \App\Models\Ecommerce\RipleyOrder::whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING'])
+            ->where('created_at_ripley', '>=', now()->subDays(5))
+            ->orderBy('id', 'asc')
+            ->get();
+
         return response()->json([
             'success' => true,
             'new_orders' => $newOrders,
-            'max_id' => max((int)$lastId, (int)$maxId)
+            'ripley_orders' => $ripleyOrders
         ]);
     }
 
@@ -265,7 +273,7 @@ class HomeController extends Controller
             }
             $devolucionesHoy = $this->falabellaOrderSyncService->getReturns(now()->toDateString(), now()->toDateString(), null);
 
-            // Auto-sync bot de precios Falabella (1 vez al día en segundo plano)
+            // Auto-sync bot de precios Falabella (1 vez al dÃ­a en segundo plano)
             $cacheKeyBot = 'falabella_bot_run_' . now()->toDateString();
             if (!\Illuminate\Support\Facades\Cache::has($cacheKeyBot)) {
                 try {
@@ -323,7 +331,7 @@ class HomeController extends Controller
 
         $alertasPrecio = collect();
         if ($tieneAccesoAnalitica) {
-            $alertasPrecio = \App\Models\Falabella\AlertaPrecio::where('estado', 'pendiente')->get();
+            $alertasPrecio = \App\Models\Ecommerce\AlertaPrecio::where('estado', 'pendiente')->get();
         }
         $almacenes = \Illuminate\Support\Facades\Cache::remember('dash_almacenes', 3600, function () {
             return \App\Models\Inventario\Almacen::all();
@@ -441,7 +449,7 @@ class HomeController extends Controller
     }
     public function ignorarAlerta($id)
     {
-        $alerta = \App\Models\Falabella\AlertaPrecio::find($id);
+        $alerta = \App\Models\Ecommerce\AlertaPrecio::find($id);
         if ($alerta) {
             $alerta->update(['estado' => 'procesada']);
             return response()->json(['success' => true]);

@@ -43,7 +43,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -77,7 +77,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -102,7 +102,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -116,7 +116,7 @@ class ConfiguracionController extends Controller
                 $marcas = $this->configuracionService->getAllMarcas();
                 $tipos = $this->configuracionService->getAllTipoProductos();
                 $alertas = \Illuminate\Support\Facades\DB::table('alerta_precios')->get();
-                $vigilados = \App\Models\Falabella\ProductoVigiladoFalabella::all();
+                $vigilados = \App\Models\Ecommerce\ProductoVigiladoFalabella::all();
 
                 return view('configuracion.configproductos', [
                     'user' => $userModel,
@@ -129,7 +129,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -148,7 +148,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -201,7 +201,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -226,7 +226,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -247,7 +247,7 @@ class ConfiguracionController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -293,7 +293,7 @@ class ConfiguracionController extends Controller
                         return back();
                     }
 
-                    $this->headerService->sendFlashAlerts('Ocurrio un error', 'Hubo un error de operacion intentalo más tarde', 'warning', 'btn-danger');
+                    $this->headerService->sendFlashAlerts('Ocurrio un error', 'Hubo un error de operacion intentalo mÃ¡s tarde', 'warning', 'btn-danger');
                     return back();
                 } else if ($operacion == 'UPDATE') {
                     if (isset($idCaracteristica) && isset($tipo)) {
@@ -301,10 +301,10 @@ class ConfiguracionController extends Controller
                         $this->headerService->sendFlashAlerts('Operacion exitosa', 'Datos actualizados correctamente', 'success', 'btn-success');
                         return back();
                     }
-                    $this->headerService->sendFlashAlerts('Ocurrio un error', 'Hubo un error de operacion intentalo más tarde', 'warning', 'btn-danger');
+                    $this->headerService->sendFlashAlerts('Ocurrio un error', 'Hubo un error de operacion intentalo mÃ¡s tarde', 'warning', 'btn-danger');
                     return back();
                 } else {
-                    $this->headerService->sendFlashAlerts('Ocurrio un error', 'Hubo un error de operacion intentalo más tarde', 'warning', 'btn-danger');
+                    $this->headerService->sendFlashAlerts('Ocurrio un error', 'Hubo un error de operacion intentalo mÃ¡s tarde', 'warning', 'btn-danger');
                     return back();
                 }
             }
@@ -361,7 +361,7 @@ class ConfiguracionController extends Controller
             if ($acceso->idVista == 7) {
                 if ($idCaracteristica && $idGrupo) {
                     $this->configuracionService->deleteCaracteristicaXGrupo($idGrupo, $idCaracteristica);
-                    return response()->json('Eliminación exitosa');
+                    return response()->json('EliminaciÃ³n exitosa');
                 }
             }
         }
@@ -370,8 +370,8 @@ class ConfiguracionController extends Controller
     }
 
     /**
-     * Aplica una plantilla de comisiones uniforme a todos los grupos de una categoría.
-     * Template basado en la estructura estándar (9 rangos ordenados).
+     * Aplica una plantilla de comisiones uniforme a todos los grupos de una categorÃ­a.
+     * Template basado en la estructura estÃ¡ndar (9 rangos ordenados).
      */
     public function aplicarComisionUniforme(Request $request)
     {
@@ -397,7 +397,7 @@ class ConfiguracionController extends Controller
 
                 $this->headerService->sendFlashAlerts(
                     'Comisiones actualizadas',
-                    'Se aplicó la plantilla uniforme a todos los grupos de la categoría.',
+                    'Se aplicÃ³ la plantilla uniforme a todos los grupos de la categorÃ­a.',
                     'success',
                     'btn-success'
                 );
@@ -572,10 +572,10 @@ class ConfiguracionController extends Controller
             if ($acceso->idVista == 7) {
                 if ($data['nombreMetodo'] && $data['idTipoMetodo']) {
                     $this->configuracionService->createMetodoPago($data);
-                    $this->headerService->sendFlashAlerts('Éxito', 'Método de pago agregado correctamente', 'success', 'btn-success');
+                    $this->headerService->sendFlashAlerts('Ã‰xito', 'MÃ©todo de pago agregado correctamente', 'success', 'btn-success');
                     return back();
                 } else {
-                    $this->headerService->sendFlashAlerts('Faltan Datos', 'El nombre y tipo de método son obligatorios', 'warning', 'btn-warning');
+                    $this->headerService->sendFlashAlerts('Faltan Datos', 'El nombre y tipo de mÃ©todo son obligatorios', 'warning', 'btn-warning');
                     return back();
                 }
             }
@@ -595,7 +595,7 @@ class ConfiguracionController extends Controller
             if ($acceso->idVista == 7) {
                 if ($data['nombreTipo']) {
                     $this->configuracionService->createTipoMetodoPago($data);
-                    $this->headerService->sendFlashAlerts('Éxito', 'Tipo de método agregado correctamente', 'success', 'btn-success');
+                    $this->headerService->sendFlashAlerts('Ã‰xito', 'Tipo de mÃ©todo agregado correctamente', 'success', 'btn-success');
                     return back();
                 } else {
                     $this->headerService->sendFlashAlerts('Faltan Datos', 'El nombre del tipo es obligatorio', 'warning', 'btn-warning');
@@ -622,10 +622,10 @@ class ConfiguracionController extends Controller
             if ($acceso->idVista == 7) {
                 if ($id && $data['nombreMetodo'] && $data['idTipoMetodo']) {
                     $this->configuracionService->updateMetodoPago($id, $data);
-                    $this->headerService->sendFlashAlerts('Éxito', 'Método de pago actualizado correctamente', 'success', 'btn-success');
+                    $this->headerService->sendFlashAlerts('Ã‰xito', 'MÃ©todo de pago actualizado correctamente', 'success', 'btn-success');
                     return back();
                 } else {
-                    $this->headerService->sendFlashAlerts('Faltan Datos', 'El nombre y tipo de método son obligatorios', 'warning', 'btn-warning');
+                    $this->headerService->sendFlashAlerts('Faltan Datos', 'El nombre y tipo de mÃ©todo son obligatorios', 'warning', 'btn-warning');
                     return back();
                 }
             }
@@ -646,7 +646,7 @@ class ConfiguracionController extends Controller
             if ($acceso->idVista == 7) {
                 if ($id && $data['nombreTipo']) {
                     $this->configuracionService->updateTipoMetodoPago($id, $data);
-                    $this->headerService->sendFlashAlerts('Éxito', 'Tipo de método actualizado correctamente', 'success', 'btn-success');
+                    $this->headerService->sendFlashAlerts('Ã‰xito', 'Tipo de mÃ©todo actualizado correctamente', 'success', 'btn-success');
                     return back();
                 } else {
                     $this->headerService->sendFlashAlerts('Faltan Datos', 'El nombre del tipo es obligatorio', 'warning', 'btn-warning');
@@ -688,7 +688,7 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 $this->configuracionService->createUbicacionAlmacen($idAlmacen, $nombre, $descripcion, $rutaFoto, $num_filas);
-                $this->headerService->sendFlashAlerts('Éxito', 'Ubicación añadida correctamente', 'success', 'btn-success');
+                $this->headerService->sendFlashAlerts('Ã‰xito', 'UbicaciÃ³n aÃ±adida correctamente', 'success', 'btn-success');
                 return back();
             }
         }
@@ -705,7 +705,7 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 $this->configuracionService->addFilaToRack($idAlmacen, $nombre_rack);
-                $this->headerService->sendFlashAlerts('Éxito', 'Fila agregada correctamente', 'success', 'btn-success');
+                $this->headerService->sendFlashAlerts('Ã‰xito', 'Fila agregada correctamente', 'success', 'btn-success');
                 return back();
             }
         }
@@ -720,7 +720,7 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 $this->configuracionService->deleteFilaFromRack($idUbicacionExacta);
-                $this->headerService->sendFlashAlerts('Éxito', 'Fila eliminada correctamente', 'success', 'btn-success');
+                $this->headerService->sendFlashAlerts('Ã‰xito', 'Fila eliminada correctamente', 'success', 'btn-success');
                 return back();
             }
         }
@@ -733,9 +733,9 @@ class ConfiguracionController extends Controller
         $userModel = $this->headerService->getModelUser();
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
-                // Posible mejora: Verificar si está en uso antes de borrar
+                // Posible mejora: Verificar si estÃ¡ en uso antes de borrar
                 $this->configuracionService->deleteUbicacionAlmacen($id);
-                $this->headerService->sendFlashAlerts('Éxito', 'Ubicación eliminada correctamente', 'success', 'btn-success');
+                $this->headerService->sendFlashAlerts('Ã‰xito', 'UbicaciÃ³n eliminada correctamente', 'success', 'btn-success');
                 return back();
             }
         }
@@ -757,7 +757,7 @@ class ConfiguracionController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 $this->configuracionService->updateUbicacionAlmacen($id, $nombre, $descripcion, $rutaFoto);
-                $this->headerService->sendFlashAlerts('Éxito', 'Ubicación actualizada correctamente', 'success', 'btn-success');
+                $this->headerService->sendFlashAlerts('Ã‰xito', 'UbicaciÃ³n actualizada correctamente', 'success', 'btn-success');
                 return back();
             }
         }
@@ -826,7 +826,7 @@ class ConfiguracionController extends Controller
                 if (isset($nombre) && isset($img)) {
                     try {
                         $this->configuracionService->createMarcaProducto($nombre, $img);
-                        $this->headerService->sendFlashAlerts('Éxito', 'Marca creada correctamente', 'success', 'btn-success');
+                        $this->headerService->sendFlashAlerts('Ã‰xito', 'Marca creada correctamente', 'success', 'btn-success');
                     } catch (\Exception $e) {
                         $this->headerService->sendFlashAlerts('Error', 'La marca ya existe o hubo un problema: ' . $e->getMessage(), 'warning', 'btn-danger');
                     }
@@ -1019,7 +1019,7 @@ class ConfiguracionController extends Controller
     public function addVigilado(Request $request)
     {
         $request->validate(['modelo' => 'required|string']);
-        \App\Models\Falabella\ProductoVigiladoFalabella::updateOrCreate(
+        \App\Models\Ecommerce\ProductoVigiladoFalabella::updateOrCreate(
             ['modelo' => $request->modelo],
             ['activo' => true]
         );
@@ -1028,7 +1028,7 @@ class ConfiguracionController extends Controller
 
     public function deleteVigilado($id)
     {
-        \App\Models\Falabella\ProductoVigiladoFalabella::where('id', $id)->delete();
+        \App\Models\Ecommerce\ProductoVigiladoFalabella::where('id', $id)->delete();
         return back();
     }
 
@@ -1050,7 +1050,7 @@ class ConfiguracionController extends Controller
         try {
             $basePath = base_path();
             pclose(popen("start /B cd $basePath && php artisan bot:falabella-prices > NUL 2>&1", "r"));
-            return response()->json(['success' => true, 'message' => 'El bot se ha iniciado en segundo plano. Las alertas aparecerán en unos minutos.']);
+            return response()->json(['success' => true, 'message' => 'El bot se ha iniciado en segundo plano. Las alertas aparecerÃ¡n en unos minutos.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error al iniciar el bot: ' . $e->getMessage()]);
         }

@@ -191,6 +191,8 @@
     // Escuchar cambios en agencia y tipo de documento
     document.getElementById('select-agencia').addEventListener('change', toggleSeccionReceptor);
     document.getElementById('idTipoDocumento').addEventListener('change', toggleSeccionReceptor);
+    // Llamar al inicio por si hay un valor preseleccionado
+    toggleSeccionReceptor();
 
     // ─── Autocompletar Cliente por Documento ───────────────────
     document.getElementById('numeroDocumento').addEventListener('input', function(e) {
@@ -213,7 +215,11 @@
                 .then(data => {
                     if (data.success) {
                         const c = data.cliente;
-                        if (c.idTipoDocumento) document.getElementById('idTipoDocumento').value = c.idTipoDocumento;
+                        if (c.idTipoDocumento) {
+                            document.getElementById('idTipoDocumento').value = c.idTipoDocumento;
+                            // Disparar cambio para que toggleSeccionReceptor actualice los campos
+                            document.getElementById('idTipoDocumento').dispatchEvent(new Event('change'));
+                        }
                         
                         if (c.nombre) {
                             let el = document.getElementById('nombre');
@@ -330,6 +336,10 @@
     });
 
     document.getElementById('form-envio-publico').addEventListener('submit', function(e) {
+        const selectDoc = document.getElementById('idTipoDocumento');
+        const tipoDocVal = selectDoc ? selectDoc.value : '';
+        const isRuc = tipoDocVal === '3';
+
         const campos = [{
                 id: 'idTipoDocumento',
                 label: 'Tipo de Documento'
@@ -340,11 +350,7 @@
             },
             {
                 id: 'nombre',
-                label: 'Nombres'
-            },
-            {
-                id: 'apellidoPaterno',
-                label: 'Apellido Paterno'
+                label: isRuc ? 'Razón Social' : 'Nombres'
             },
             {
                 id: 'telefono',
@@ -360,6 +366,11 @@
             },
         ];
 
+        // Solo exigir apellido paterno si NO es RUC
+        if (!isRuc) {
+            campos.splice(3, 0, { id: 'apellidoPaterno', label: 'Apellido Paterno' });
+        }
+
         let faltantes = [];
         campos.forEach(c => {
             const el = document.getElementById(c.id);
@@ -370,6 +381,12 @@
                 if(el) el.style.borderColor = '';
             }
         });
+
+        // Limpiar borde de apellido paterno si es RUC
+        if (isRuc) {
+            const elPaterno = document.getElementById('apellidoPaterno');
+            if (elPaterno) elPaterno.style.borderColor = '';
+        }
 
         const selectSub = document.getElementById('select-subagencia');
         if (selectSub && selectSub.required && (!selectSub.value || selectSub.value === '')) {
@@ -391,9 +408,7 @@
         }
 
         // Validar formato del documento
-        const selectDoc = document.getElementById('idTipoDocumento');
         const inputNumDoc = document.getElementById('numeroDocumento');
-        const tipoDocVal = selectDoc ? selectDoc.value : '';
         const numDocVal = inputNumDoc ? inputNumDoc.value.trim() : '';
 
         if (tipoDocVal === '1' && !/^[0-9]{8}$/.test(numDocVal)) {

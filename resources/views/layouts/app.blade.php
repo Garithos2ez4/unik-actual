@@ -209,6 +209,30 @@
                                     </li>
                                 </ul>
                             </li>
+                            <li class="mb-1 mt-2">
+                                <button class="btn btn-sm text-light fw-bold p-0 border-0 d-flex align-items-center w-100"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseRipley"
+                                    aria-expanded="false">
+                                    <i class="bi bi-shop-window me-2"></i> RIPLEY <i class="bi bi-chevron-down small ms-auto me-2"></i>
+                                </button>
+                                <ul class="collapse list-unstyled ps-3 mt-1" id="collapseRipley">
+                                    <li>
+                                        <a href="{{ route('plataformas.ripley.orders') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Órdenes
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.ripley.etiquetas') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Etiquetas
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('dashboard.analitica.ripley') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Analítica
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
                         </ul>
                     </li>
                     @break

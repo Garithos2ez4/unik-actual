@@ -589,13 +589,12 @@ class PlataformaController extends Controller
     }
 
     public function falabellaOrderDetails(Request $request, $order_id)
-
     {
         $userModel = $this->headerService->getModelUser();
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 4) {
-                $order = \App\Models\Falabella\FalabellaOrder::with('items')->where('order_id', $order_id)->firstOrFail();
+                $order = \App\Models\Ecommerce\FalabellaOrder::with('items')->where('order_id', $order_id)->firstOrFail();
 
                 return view('falabella.falabella-order-details', [
                     'order' => $order,
@@ -691,6 +690,156 @@ class PlataformaController extends Controller
                 } else {
                     $this->headerService->sendFlashAlerts('Faltan datos', 'Ingresa datos en el formulario.', 'info', 'btn-warning');
                     return redirect()->back();
+                }
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    // ─── RIPLEY ───────────────────────────────────────────────────────────────
+
+    public function ripleyOrders(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 4) {
+                $selectedDate   = $request->query('date', now()->toDateString());
+                $selectedStatus = trim((string) $request->query('status', ''));
+
+                $query = \App\Models\Ecommerce\RipleyOrder::with('items');
+                if ($selectedDate) {
+                    $query->whereDate('created_at_ripley', $selectedDate);
+                }
+
+                if (filled($selectedStatus) && $selectedStatus !== 'all') {
+                    $query->where('status', $selectedStatus);
+                }
+
+                $orders = $query->orderByDesc('created_at_ripley')->get();
+
+                return view('ripley.ripley-orders', [
+                    'user'           => $userModel,
+                    'selectedDate'   => $selectedDate,
+                    'selectedStatus' => $selectedStatus,
+                    'orders'         => $orders,
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function ripleyEtiquetas(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 4) {
+                $selectedDate   = $request->query('date', now()->toDateString());
+                $selectedStatus = trim((string) $request->query('status', 'pending'));
+
+                $query = \App\Models\Ecommerce\RipleyOrder::with('items');
+
+                if ($selectedDate) {
+                    $query->whereDate('promised_shipping_time', $selectedDate);
+                }
+
+                if (filled($selectedStatus) && $selectedStatus === 'pending') {
+                    // En Mirakl, WAITING_ACCEPTANCE y SHIPPING significan que el vendedor debe enviarlo
+                    $query->whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING', 'pending', 'ready_to_ship', 'waiting_debit_payment']);
+                } elseif (filled($selectedStatus) && $selectedStatus !== 'all') {
+                    $query->where('status', $selectedStatus);
+                }
+
+                $orders = $query->orderByDesc('promised_shipping_time')->get();
+
+                return view('ripley.ripley-etiquetas', [
+                    'user'           => $userModel,
+                    'selectedDate'   => $selectedDate,
+                    'selectedStatus' => $selectedStatus,
+                    'orders'         => $orders,
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function ripleyEtiquetasDescargar(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 4) {
+                @ini_set('max_execution_time', '300');
+                @set_time_limit(300);
+
+                $selectedDate   = $request->query('date', now()->toDateString());
+                $selectedStatus = trim((string) $request->query('status', 'pending'));
+
+                $query = \App\Models\Ecommerce\RipleyOrder::with('items');
+
+                if ($selectedDate) {
+                    $query->whereDate('promised_shipping_time', $selectedDate);
+                }
+
+                if (filled($selectedStatus) && $selectedStatus === 'pending') {
+                    $query->whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING', 'pending', 'ready_to_ship', 'waiting_debit_payment']);
+                } elseif (filled($selectedStatus) && $selectedStatus !== 'all') {
+                    $query->where('status', $selectedStatus);
+                }
+
+                $orders = $query->orderByDesc('promised_shipping_time')->get();
+
+                if ($orders->isEmpty()) {
+                    $this->headerService->sendFlashAlerts('Sin etiquetas', 'No hay órdenes para la fecha/estado seleccionado.', 'info', 'btn-warning');
+                    return redirect()->back();
+                }
+
+                // Obtenemos los IDs de las ordenes
+                $orderIds = $orders->pluck('order_id')->toArray();
+
+                try {
+                    $ripleyApi = app(\App\Services\RipleyApiService::class);
+                    $result = $ripleyApi->getDocumentsRaw($orderIds);
+
+                    $contentType = $result['content_type'];
+                    $labels = [];
+
+                    if (str_contains(strtolower($contentType), 'zip')) {
+                        // Extract ZIP
+                        $tempZip = storage_path('app/temp_ripley_' . time() . '.zip');
+                        file_put_contents($tempZip, $result['body']);
+
+                        $zip = new \ZipArchive;
+                        if ($zip->open($tempZip) === TRUE) {
+                            for ($i = 0; $i < $zip->numFiles; $i++) {
+                                $filename = $zip->getNameIndex($i);
+                                if (str_ends_with(strtolower($filename), '.pdf')) {
+                                    $pdfContent = $zip->getFromIndex($i);
+                                    $labels[] = base64_encode($pdfContent);
+                                }
+                            }
+                            $zip->close();
+                        }
+                        @unlink($tempZip);
+                    } else {
+                        // Es un solo PDF
+                        $labels[] = base64_encode($result['body']);
+                    }
+
+                    if (empty($labels)) {
+                        return response()->json(['success' => false, 'error' => 'No se encontraron etiquetas PDF en la respuesta.']);
+                    }
+
+                    return response()->json([
+                        'success' => true,
+                        'labels'  => $labels,
+                    ]);
+                } catch (\Throwable $e) {
+                    return response()->json(['success' => false, 'error' => $e->getMessage()]);
                 }
             }
         }

@@ -491,7 +491,26 @@ class AnalyticsController extends Controller
 
         $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
-        $comisionRipleyExpr = "0";
+        $pesoRipleySubquery = "COALESCE(
+            (SELECT CAST(REPLACE(REPLACE(cp52.caracteristicaProducto, ' KG', ''), ',', '.') AS DECIMAL(10,3))
+             FROM caracteristicas_producto cp52
+             WHERE cp52.idProducto = Producto.idProducto AND cp52.idCaracteristica = 52 LIMIT 1),
+            (SELECT CAST(REPLACE(REPLACE(cp10.caracteristicaProducto, ' KG', ''), ',', '.') AS DECIMAL(10,3))
+             FROM caracteristicas_producto cp10
+             WHERE cp10.idProducto = Producto.idProducto AND cp10.idCaracteristica = 10 LIMIT 1)
+        )";
+        $tarifaLogisticaRipleyExpr = "CASE
+            WHEN ({$pesoRipleySubquery}) IS NULL THEN 0
+            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 13.10
+            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 13.10
+            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 15.90
+            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 20.70
+            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 38.10
+            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 66.20
+            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 174.10
+            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 174.10
+            ELSE 361.90 END";
+        $comisionRipleyExpr = "(DetalleVenta.precioVenta * 0.12) + CASE WHEN DetalleVenta.precioVenta <= 39.00 THEN 2.00 ELSE 0 END + (({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1))";
 
         $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
         $costosComponentesSub = "COALESCE((SELECT SUM(
@@ -514,7 +533,8 @@ class AnalyticsController extends Controller
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM(((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
-                         SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley")
+                         SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley,
+                         SUM(({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1) * DetalleVenta.cantidad) as tarifa_peso_ripley")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->where(function ($q) {
                 $this->applyInventarioFilter($q, true);
@@ -529,6 +549,7 @@ class AnalyticsController extends Controller
                 $venta->costos   = round($venta->costos, 2);
                 $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
                 $venta->comision_ripley = round($venta->comision_ripley, 2);
+                $venta->tarifa_peso_ripley = round($venta->tarifa_peso_ripley, 2);
                 $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
                 return $venta;
             });

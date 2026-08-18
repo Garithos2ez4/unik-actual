@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Falabella\FalabellaOrder;
+use App\Models\Ecommerce\FalabellaOrder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -79,7 +79,7 @@ class FalabellaOrderSyncService
                 $sellerSku = $item['seller_sku'] ?? null;
                 $falabellaSku = $item['falabella_sku'] ?? null;
 
-                // Intento de rescate de SKU numérico si no viene
+                // Intento de rescate de SKU numÃ©rico si no viene
                 if ($sellerSku && (!is_numeric($falabellaSku) || blank($falabellaSku) || $falabellaSku === '-')) {
                     try {
                         $productResponse = $this->falabellaApiService->getProducts([
@@ -183,8 +183,8 @@ class FalabellaOrderSyncService
             $totalCount += $result['count'];
         }
 
-        // Paso 2: Re-verificar órdenes locales que siguen como pending/ready_to_ship
-        // pero que podrían haber cambiado a shipped/canceled en Falabella
+        // Paso 2: Re-verificar Ã³rdenes locales que siguen como pending/ready_to_ship
+        // pero que podrÃ­an haber cambiado a shipped/canceled en Falabella
         $staleRefreshed = $this->refreshStaleOrders();
         $orderIds = array_merge($orderIds, $staleRefreshed);
 
@@ -247,16 +247,16 @@ class FalabellaOrderSyncService
     }
 
     /**
-     * Re-consulta órdenes locales que siguen como pending/ready_to_ship
-     * pero que están FUERA del lookback window (ya que el lookback las habría
+     * Re-consulta Ã³rdenes locales que siguen como pending/ready_to_ship
+     * pero que estÃ¡n FUERA del lookback window (ya que el lookback las habrÃ­a
      * actualizado si estuvieran dentro del rango). Solo hace 1 llamada API
-     * por fecha única de creación, agrupando órdenes del mismo día.
+     * por fecha Ãºnica de creaciÃ³n, agrupando Ã³rdenes del mismo dÃ­a.
      */
     private function refreshStaleOrders(int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS): array
     {
         $lookbackCutoff = now()->subDays($lookbackDays)->startOfDay();
 
-        // Verificar TODAS las órdenes locales que siguen como pending/ready_to_ship para evitar que se queden atascadas
+        // Verificar TODAS las Ã³rdenes locales que siguen como pending/ready_to_ship para evitar que se queden atascadas
         $staleOrders = FalabellaOrder::whereIn('status', ['pending', 'ready_to_ship'])
             ->whereNotNull('created_at_falabella')
             ->get();
@@ -267,7 +267,7 @@ class FalabellaOrderSyncService
 
         $refreshedIds = [];
 
-        // Agrupar por fecha de creación (YYYY-MM-DD) para minimizar llamadas API
+        // Agrupar por fecha de creaciÃ³n (YYYY-MM-DD) para minimizar llamadas API
         $byDate = $staleOrders->groupBy(fn ($o) => Carbon::parse($o->created_at_falabella)->toDateString());
 
         foreach ($byDate as $dateStr => $ordersOnDate) {
@@ -281,7 +281,7 @@ class FalabellaOrderSyncService
 
                 $apiOrders = $this->falabellaApiService->extractOrders($response);
 
-                // Indexar por order_id para búsqueda O(1)
+                // Indexar por order_id para bÃºsqueda O(1)
                 $apiIndexed = collect($apiOrders)->keyBy(fn ($o) => (string)($o['_normalized']['order_id'] ?? ''));
 
                 foreach ($ordersOnDate as $localOrder) {
@@ -295,7 +295,7 @@ class FalabellaOrderSyncService
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning(
-                    "Error refrescando órdenes del {$dateStr}: " . $e->getMessage()
+                    "Error refrescando Ã³rdenes del {$dateStr}: " . $e->getMessage()
                 );
             }
         }
@@ -306,7 +306,7 @@ class FalabellaOrderSyncService
 
     /**
      * Sincroniza devoluciones desde la API de Falabella para un rango de fechas.
-     * Hace 1 llamada por estado (rango completo) en lugar de 1 por día por estado.
+     * Hace 1 llamada por estado (rango completo) en lugar de 1 por dÃ­a por estado.
      */
     public function syncReturnsByDateRange(string $dateFrom, string $dateTo): array
     {
@@ -317,7 +317,7 @@ class FalabellaOrderSyncService
 
         foreach (self::RETURN_STATUSES as $returnStatus) {
             try {
-                // Usar UpdatedAfter porque devoluciones se inician después de la creación de la orden
+                // Usar UpdatedAfter porque devoluciones se inician despuÃ©s de la creaciÃ³n de la orden
                 $response  = $this->falabellaApiService->getOrders([
                     'UpdatedAfter'  => $createdAfter,
                     'UpdatedBefore' => $createdBefore,

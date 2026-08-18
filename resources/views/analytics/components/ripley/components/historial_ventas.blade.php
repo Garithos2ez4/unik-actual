@@ -16,6 +16,8 @@
                             <th class="text-uppercase small fw-bold text-secondary">Producto(s)</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Ingresos</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Costos Base</th>
+                            <th class="text-uppercase small fw-bold text-secondary text-end">Comisión R.</th>
+                            <th class="text-uppercase small fw-bold text-secondary text-end" title="Tarifa por peso del paquete logístico (Primera milla)">Tarifa Peso</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Ganancia Neta</th>
                             <th class="text-uppercase small fw-bold text-secondary text-center">Margen (%)</th>
                         </tr>
@@ -32,21 +34,23 @@
                                 </div>
                             </td>
                             <td class="text-end fw-semibold text-dark">S/ {{ number_format($venta->ingresos, 2) }}</td>
-                            <td class="text-end text-muted small">S/ {{ number_format($venta->costos, 2) }}</td>
+                            <td class="text-end text-muted small">S/ {{ number_format($venta->costos - $venta->comision_ripley, 2) }}</td>
+                            <td class="text-end text-danger small">-S/ {{ number_format($venta->comision_ripley - $venta->tarifa_peso_ripley, 2) }}</td>
+                            <td class="text-end text-danger small">-S/ {{ number_format($venta->tarifa_peso_ripley, 2) }}</td>
                             <td class="text-end fw-bold text-success">S/ {{ number_format($venta->ganancia, 2) }}</td>
                             <td class="text-center">
                                 @if($venta->margen > 20)
-                                    <span class="badge bg-success rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
                                 @elseif($venta->margen > 0)
-                                    <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
                                 @else
-                                    <span class="badge bg-danger rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
                                 @endif
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2 text-light"></i>
                                 No hay ventas registradas en Ripley.
                             </td>
@@ -56,21 +60,23 @@
                     <tfoot class="table-light fw-bold text-dark">
                         <tr>
                             <td colspan="4" class="text-end text-uppercase">Totales del Período:</td>
-                            <td class="text-end">S/ {{ number_format($ventasRipley->sum('ingresos'), 2) }}</td>
-                            <td class="text-end">S/ {{ number_format($ventasRipley->sum('costos'), 2) }}</td>
+                            <td class="text-end text-dark">S/ {{ number_format($ventasRipley->sum('ingresos'), 2) }}</td>
+                            <td class="text-end text-dark">S/ {{ number_format($ventasRipley->sum('costos') - $ventasRipley->sum('comision_ripley'), 2) }}</td>
+                            <td class="text-end text-danger">-S/ {{ number_format($ventasRipley->sum('comision_ripley') - $ventasRipley->sum('tarifa_peso_ripley'), 2) }}</td>
+                            <td class="text-end text-danger">-S/ {{ number_format($ventasRipley->sum('tarifa_peso_ripley'), 2) }}</td>
                             <td class="text-end text-success">S/ {{ number_format($ventasRipley->sum('ganancia'), 2) }}</td>
                             <td class="text-center">
                                 @php
-                                    $totIngresos = $ventasRipley->sum('ingresos');
-                                    $totGanancia = $ventasRipley->sum('ganancia');
-                                    $totMargen = $totIngresos > 0 ? ($totGanancia / $totIngresos) * 100 : 0;
+                                $totIngresos = $ventasRipley->sum('ingresos');
+                                $totGanancia = $ventasRipley->sum('ganancia');
+                                $totMargen = $totIngresos > 0 ? ($totGanancia / $totIngresos) * 100 : 0;
                                 @endphp
                                 @if($totMargen > 20)
-                                    <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
                                 @elseif($totMargen > 0)
-                                    <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
                                 @else
-                                    <span class="badge bg-danger rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
                                 @endif
                             </td>
                         </tr>

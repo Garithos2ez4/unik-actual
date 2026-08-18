@@ -77,6 +77,7 @@ Route::middleware(['validate.session'])->group(function () {
 
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
+    Route::get('/ganancias/ripley', [GananciaController::class, 'getRipleyGanancias'])->name('ganancias.ripley');
     Route::get('/ganancias/detalles', [GananciaController::class, 'getAllGananciasPorDetalle'])->name('ganancias.detalles');
     Route::get('/ganancias/venta/{idVenta}', [GananciaController::class, 'getGananciaPorVenta'])->name('ganancias.venta');
 
@@ -277,6 +278,13 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/etiquetas-oficiales-pdf', [PlataformaController::class, 'falabellaEtiquetasOficialesPdf'])->name('etiquetas-oficiales.pdf');
         Route::get('/devoluciones', [PlataformaController::class, 'falabellaReturns'])->name('devoluciones');
         Route::post('/sync-devoluciones', [PlataformaController::class, 'syncFalabellaReturns'])->name('sync-devoluciones');
+    });
+
+    // RIPLEY
+    Route::prefix('plataformas/ripley')->name('plataformas.ripley.')->group(function () {
+        Route::get('/orders', [PlataformaController::class, 'ripleyOrders'])->name('orders');
+        Route::get('/etiquetas', [PlataformaController::class, 'ripleyEtiquetas'])->name('etiquetas');
+        Route::get('/etiquetas/descargar', [PlataformaController::class, 'ripleyEtiquetasDescargar'])->name('etiquetas.descargar');
     });
 
     Route::prefix('reclamos-plataforma')->name('reclamos.')->group(function () {
