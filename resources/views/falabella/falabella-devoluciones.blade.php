@@ -8,11 +8,11 @@
     {{-- Header --}}
     @php
     $statMap = [
-        'canceled' => ['label' => 'Cancelada / Devolución', 'color' => 'danger', 'icon' => 'bi-x-circle-fill'],
-        'returned' => ['label' => 'Devuelta', 'color' => 'success', 'icon' => 'bi-check-circle-fill'],
+        'canceled' => ['label' => 'Cancelada (Antes de envío)', 'color' => 'danger', 'icon' => 'bi-x-circle-fill'],
+        'returned' => ['label' => 'Cerrada / Reembolsada', 'color' => 'secondary', 'icon' => 'bi-slash-circle-fill'],
         'return_waiting_for_approval' => ['label' => 'Esperando aprobación', 'color' => 'warning', 'icon' => 'bi-hourglass-split'],
-        'return_shipped_by_customer' => ['label' => 'En camino', 'color' => 'info', 'icon' => 'bi-truck'],
-        'return_delivered_to_seller' => ['label' => 'Recibida por vendedor', 'color' => 'primary', 'icon' => 'bi-box-arrow-in-down'],
+        'return_shipped_by_customer' => ['label' => 'En camino al almacén', 'color' => 'info', 'icon' => 'bi-truck'],
+        'return_delivered_to_seller' => ['label' => 'Devuelta al almacén', 'color' => 'success', 'icon' => 'bi-box-arrow-in-down'],
     ];
 
     $reasonMap = [
@@ -171,11 +171,19 @@
                         
                         // Extraer razón de devolución desde el primer ítem
                         $firstItemInfo = collect($return->items)->first();
-                        $apiReason = $firstItemInfo ? ($firstItemInfo->payload['Reason'] ?? '') : '';
+                        $apiReason = '';
+                        $apiReasonDetail = '';
+                        
+                        if ($firstItemInfo && isset($firstItemInfo->payload)) {
+                            $apiReason = $firstItemInfo->payload['Reason'] ?? $firstItemInfo->payload['CancelReason'] ?? '';
+                            $apiReasonDetail = $firstItemInfo->payload['ReasonDetail'] ?? '';
+                        }
+                        
+                        $finalReasonText = $apiReasonDetail ?: $apiReason;
                         
                         $mappedReason = $reasonMap[$apiReason] ?? [
-                            'title' => $apiReason ?: 'Devolución general',
-                            'detail' => $apiReason ? 'Motivo reportado por API' : 'Motivo no especificado por Falabella'
+                            'title' => $finalReasonText ?: 'Devolución / Cancelación',
+                            'detail' => $apiReasonDetail ? 'Detalle: ' . $apiReasonDetail : ($apiReason ? 'Motivo: ' . $apiReason : 'Motivo no especificado por Falabella')
                         ];
                         @endphp
                         <tr>
@@ -216,6 +224,17 @@
                                     class="btn btn-outline-danger btn-sm rounded-pill px-3">
                                     <i class="bi bi-eye-fill me-1"></i> Ver detalle
                                 </a>
+                                <button class="btn btn-sm btn-outline-danger shadow-sm ms-1" type="button" 
+                                    onclick="document.getElementById('payload-{{ $return->id }}').classList.toggle('d-none');">
+                                    <i class="bi bi-code-slash"></i> JSON
+                                </button>
+                            </td>
+                        </tr>
+                        <tr id="payload-{{ $return->id }}" class="d-none bg-light">
+                            <td colspan="7">
+                                <div class="p-2" style="max-height: 200px; overflow-y: auto;">
+                                    <pre class="small mb-0 text-muted"><code>{{ json_encode($return->items->first()->payload ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</code></pre>
+                                </div>
                             </td>
                         </tr>
                         @empty

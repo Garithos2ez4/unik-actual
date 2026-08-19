@@ -100,6 +100,7 @@ class FormularioPublicoController extends Controller
             'apellidoPaterno' => 'required_unless:idTipoDocumento,3|nullable|string|max:100',
             'apellidoMaterno' => 'nullable|string|max:100',
             'telefono'        => 'required|string|max:20',
+            'telefono_registrante' => 'nullable|string|max:20',
             'idDestino'       => 'required|integer',
             'idAgencia'       => 'required|integer',
             'correo'          => 'nullable|email:rfc,dns',
@@ -165,6 +166,7 @@ class FormularioPublicoController extends Controller
             'dir'    => $request->dir ?? '',
             'ref'    => $request->ref ?? '',
             'origen' => 'FORMULARIO_PUBLICO',
+            'telefono_registrante' => $request->telefono_registrante ?? null,
         ]);
 
         // Guardar datos del receptor si se proporcionaron (Shalom + RUC)

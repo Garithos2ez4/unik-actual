@@ -167,7 +167,7 @@
                                 disabled>
 
                             <label class="form-check-label" for="usar_tc_fijo">
-                                Usar Tipo de Cambio Fijo
+                                Usar Tipo de Cambio Sunat
                             </label>
                         </div>
 

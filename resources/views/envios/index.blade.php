@@ -98,7 +98,16 @@
                             </td>
                             <td>
                                 <div>{{ $envio->Cliente->nombre ?? 'N/A' }}</div>
-                                <small class="text-muted">{{ $envio->Cliente->telefono ?? '-' }} / {{ $envio->Cliente->numeroDocumento ?? '-' }}</small>
+                                <small class="text-muted" title="Teléfono del destinatario">
+                                    <i class="bi bi-phone"></i> {{ $envio->Cliente->telefono ?? '-' }}
+                                </small>
+                                @if($envio->Detalle && $envio->Detalle->telefono_registrante)
+                                    <br>
+                                    <small class="text-success fw-bold" title="WhatsApp de quien registró">
+                                        <i class="bi bi-whatsapp"></i> {{ $envio->Detalle->telefono_registrante }}
+                                    </small>
+                                @endif
+                                <br><small class="text-muted">{{ $envio->Cliente->numeroDocumento ?? '-' }}</small>
                             </td>
                             <td>
                                 <span class="badge bg-info text-dark">{{ $envio->Plataforma->nombrePlataforma ?? 'N/A' }}</span>

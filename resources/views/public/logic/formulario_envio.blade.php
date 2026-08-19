@@ -100,7 +100,7 @@
         const selectDestino = document.getElementById('select-destino');
         const selectSubAgencia = document.getElementById('select-subagencia');
         const containerSub = document.getElementById('container-subagencia');
-        
+
         const idAgencia = selectAgencia.value;
         const idDestino = selectDestino.value;
 
@@ -151,11 +151,11 @@
         const seccion = document.getElementById('seccion-receptor');
         const selectAgencia = document.getElementById('select-agencia');
         const selectDoc = document.getElementById('idTipoDocumento');
-        
+
         // Shalom = idAgencia 1, RUC = idTipoDocumento 3
         const esShalom = selectAgencia && selectAgencia.value === '1';
         const esRuc = selectDoc && selectDoc.value === '3';
-        
+
         // 1. Mostrar/Ocultar sección receptor (Shalom + RUC)
         if (esShalom && esRuc) {
             seccion.style.display = 'block';
@@ -171,7 +171,7 @@
         const divPaterno = document.getElementById('div-apellido-paterno');
         const divMaterno = document.getElementById('div-apellido-materno');
         const labelNombre = document.getElementById('label-nombre');
-        
+
         if (esRuc) {
             if (divPaterno) divPaterno.style.display = 'none';
             if (divMaterno) divMaterno.style.display = 'none';
@@ -197,7 +197,7 @@
     // ─── Autocompletar Cliente por Documento ───────────────────
     document.getElementById('numeroDocumento').addEventListener('input', function(e) {
         let val = e.target.value.trim();
-        
+
         // Desbloquear campos por defecto mientras escribe
         const fieldsToLock = ['nombre', 'apellidoPaterno', 'apellidoMaterno'];
         fieldsToLock.forEach(id => {
@@ -220,7 +220,7 @@
                             // Disparar cambio para que toggleSeccionReceptor actualice los campos
                             document.getElementById('idTipoDocumento').dispatchEvent(new Event('change'));
                         }
-                        
+
                         if (c.nombre) {
                             let el = document.getElementById('nombre');
                             el.value = c.nombre;
@@ -239,7 +239,7 @@
                             el.readOnly = true;
                             el.classList.add('bg-light');
                         }
-                        
+
                         if (c.telefono) document.getElementById('telefono').value = c.telefono;
                         if (c.correo) document.getElementById('correo').value = c.correo;
 
@@ -304,9 +304,9 @@
                                             if (containerSub) containerSub.style.display = 'block';
                                             selSub.innerHTML = '<option value="">Seleccione oficina...</option>';
                                             subData.forEach(s => {
-                                                 const partes = s.nombre_oficina.split(' / ');
-                                                 const nombreTerminal = partes[partes.length - 1];
-                                                 selSub.innerHTML += `<option value="${s.idSubAgencia}">${nombreTerminal} - ${s.direccion}</option>`;
+                                                const partes = s.nombre_oficina.split(' / ');
+                                                const nombreTerminal = partes[partes.length - 1];
+                                                selSub.innerHTML += `<option value="${s.idSubAgencia}">${nombreTerminal} - ${s.direccion}</option>`;
                                             });
                                             selSub.disabled = false;
                                             selSub.required = true;
@@ -368,7 +368,10 @@
 
         // Solo exigir apellido paterno si NO es RUC
         if (!isRuc) {
-            campos.splice(3, 0, { id: 'apellidoPaterno', label: 'Apellido Paterno' });
+            campos.splice(3, 0, {
+                id: 'apellidoPaterno',
+                label: 'Apellido Paterno'
+            });
         }
 
         let faltantes = [];
@@ -376,9 +379,9 @@
             const el = document.getElementById(c.id);
             if (!el || !el.value || el.value === '') {
                 faltantes.push(c.label);
-                if(el) el.style.borderColor = '#ef4444';
+                if (el) el.style.borderColor = '#ef4444';
             } else {
-                if(el) el.style.borderColor = '';
+                if (el) el.style.borderColor = '';
             }
         });
 
@@ -443,7 +446,7 @@
             let faltantesReceptor = [];
             if (!receptorNombre || receptorNombre.length < 3) faltantesReceptor.push('Nombre del receptor (mín. 3 letras)');
             if (!receptorDni || receptorDni.length !== 8) faltantesReceptor.push('DNI del receptor (8 dígitos)');
-            
+
             if (faltantesReceptor.length > 0) {
                 e.preventDefault();
                 if (!receptorNombre || receptorNombre.length < 3) document.getElementById('receptor_nombre').style.borderColor = '#ef4444';
@@ -457,7 +460,10 @@
                 return;
             }
         }
-
+        document.getElementById('telefono').style.borderColor = '';
+        if (document.getElementById('telefono_registrante')) {
+            document.getElementById('telefono_registrante').style.borderColor = '';
+        }
         const telefonoVal = document.getElementById('telefono').value.trim();
         if (telefonoVal.length !== 9) {
             e.preventDefault();
@@ -465,10 +471,26 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Número inválido',
-                text: 'El número de celular debe tener exactamente 9 dígitos.',
+                text: 'El número de celular del destinatario debe tener exactamente 9 dígitos.',
                 confirmButtonColor: '#00b1b9'
             });
             return;
+        }
+
+        const chkMismoNumero = document.getElementById('mismo_numero');
+        const telefonoReg = document.getElementById('telefono_registrante');
+        if (chkMismoNumero && !chkMismoNumero.checked && telefonoReg) {
+            if (telefonoReg.value.trim().length !== 9) {
+                e.preventDefault();
+                telefonoReg.style.borderColor = '#ef4444';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Número de WhatsApp inválido',
+                    text: 'Por favor, ingresa el número de 9 dígitos desde el cual te comunicaste.',
+                    confirmButtonColor: '#00b1b9'
+                });
+                return;
+            }
         }
 
         // Deshabilitar botón para evitar doble envío
@@ -483,6 +505,20 @@
             labelDir.textContent = 'Dirección Exacta';
         } else {
             labelDir.textContent = 'Dirección de entrega';
+        }
+    });
+
+    document.getElementById('mismo_numero').addEventListener('change', function() {
+        const divReg = document.getElementById('div-numero-registrante');
+        const inputReg = document.getElementById('telefono_registrante');
+        if (this.checked) {
+            divReg.style.display = 'none';
+            inputReg.value = '';
+            inputReg.removeAttribute('required');
+        } else {
+            divReg.style.display = 'block';
+            inputReg.setAttribute('required', 'required');
+            inputReg.focus();
         }
     });
 </script>

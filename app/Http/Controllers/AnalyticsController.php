@@ -37,16 +37,11 @@ class AnalyticsController extends Controller
     private function applyInventarioFilter($query, $isVenta = true)
     {
         if ($isVenta) {
-            $query->whereNotExists(function ($q) {
-                $q->select(\Illuminate\Support\Facades\DB::raw(1))
-                    ->from('EgresoProducto')
-                    ->join('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
-                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
-                    ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
-                    ->whereColumn('EgresoProducto.idEgreso', 'DetalleVenta.idEgreso')
-                    ->where('Comprobante.numeroComprobante', 'LIKE', 'INVENTARIO%');
-            });
+            // No filtramos las ventas por INVENTARIO porque una venta es válida y genera ingresos
+            // sin importar de dónde provino el stock inicial del producto vendido.
+            return $query;
         } else {
+            // Para compras/gastos, sí filtramos los comprobantes de INVENTARIO para no inflar los costos
             $query->whereNotExists(function ($q) {
                 $q->select(\Illuminate\Support\Facades\DB::raw(1))
                     ->from('RegistroProducto')
@@ -491,11 +486,19 @@ class AnalyticsController extends Controller
 
         $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
 
+        $pesoRipleySubqueryInner = function($col) {
+            return "CASE 
+                WHEN UPPER($col.caracteristicaProducto) LIKE '%GR%' OR (UPPER($col.caracteristicaProducto) LIKE '%G%' AND UPPER($col.caracteristicaProducto) NOT LIKE '%KG%') 
+                THEN CAST(REPLACE($col.caracteristicaProducto, ',', '.') AS DECIMAL(10,3)) / 1000
+                ELSE CAST(REPLACE($col.caracteristicaProducto, ',', '.') AS DECIMAL(10,3))
+            END";
+        };
+
         $pesoRipleySubquery = "COALESCE(
-            (SELECT CAST(REPLACE(REPLACE(cp52.caracteristicaProducto, ' KG', ''), ',', '.') AS DECIMAL(10,3))
+            (SELECT " . $pesoRipleySubqueryInner('cp52') . "
              FROM caracteristicas_producto cp52
              WHERE cp52.idProducto = Producto.idProducto AND cp52.idCaracteristica = 52 LIMIT 1),
-            (SELECT CAST(REPLACE(REPLACE(cp10.caracteristicaProducto, ' KG', ''), ',', '.') AS DECIMAL(10,3))
+            (SELECT " . $pesoRipleySubqueryInner('cp10') . "
              FROM caracteristicas_producto cp10
              WHERE cp10.idProducto = Producto.idProducto AND cp10.idCaracteristica = 10 LIMIT 1)
         )";

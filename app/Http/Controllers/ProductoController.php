@@ -111,6 +111,18 @@ class ProductoController extends Controller
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
+                $usarTcFijo = $producto->usar_tc_fijo ?? true;
+                if ($usarTcFijo) {
+                    $tcUsar = (float)$this->calculadoraService->getTasaCambio();
+                } else {
+                    $tasaFijaGlobal = (float)$this->calculadoraService->getTasaFija()->tasaCambio;
+                    if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
+                        $tcUsar = (float)$producto->tc_fijo;
+                    } else {
+                        $tcUsar = $tasaFijaGlobal;
+                    }
+                }
+
                 return view('productos.producto', [
                     'user' => $userModel,
                     'producto' => $producto,
@@ -118,7 +130,7 @@ class ProductoController extends Controller
                     'proveedor' => $proveedor,
                     'grupos' => $grupos,
                     'almacenes' => $almacenes,
-                    'tc' => $this->calculadoraService->getTasaCambio(),
+                    'tc' => $tcUsar,
                     'igv' => $this->calculadoraService->getIgv(),
                     'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio
                 ]);
@@ -520,8 +532,22 @@ class ProductoController extends Controller
                     }
                     if ($request->has('tipoprecio') && !empty($tipoprecio)) {
                         if ($tipoprecio == 'SOL') {
-                            $precio = $request->input('precio') / $this->calculadoraService->getTasaCambio();
-                            $ganancia = $request->input('ganancia') / $this->calculadoraService->getTasaCambio();
+                            // Determinar el TC correcto que se estaba usando
+                            $usar_tc_fijo_submit = $request->boolean('usar_tc_fijo');
+                            $tc_fijo_submit = $request->input('tc_fijo');
+                            
+                            if ($usar_tc_fijo_submit) {
+                                $tcAUsar = $this->calculadoraService->getTasaCambio(); // SUNAT
+                            } else {
+                                if (!empty($tc_fijo_submit) && $tc_fijo_submit > 0) {
+                                    $tcAUsar = $tc_fijo_submit; // Personalizado
+                                } else {
+                                    $tcAUsar = $this->calculadoraService->getTasaFija()->tasaCambio; // Global Fijo
+                                }
+                            }
+
+                            $precio = $request->input('precio') / $tcAUsar;
+                            $ganancia = $request->input('ganancia') / $tcAUsar;
                         } else {
                             $precio = $request->input('precio');
                             $ganancia = $request->input('ganancia');

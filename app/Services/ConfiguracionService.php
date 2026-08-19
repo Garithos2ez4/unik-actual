@@ -555,6 +555,17 @@ class ConfiguracionService implements ConfiguracionServiceInterface
                 'foto' => $foto
             ];
             $this->ubicacionAlmacenRepository->create($data);
+
+            if ($num_filas > 0) {
+                for ($i = 1; $i <= (int)$num_filas; $i++) {
+                    \App\Models\Inventario\UbicacionEstante::create([
+                        'idAlmacen' => $idAlmacen,
+                        'nombre_rack' => $nombre,
+                        'fila_estante' => $i,
+                        'estado' => 1
+                    ]);
+                }
+            }
         }
     }
 

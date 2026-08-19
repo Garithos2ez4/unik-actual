@@ -15,7 +15,8 @@ class EnvioProvinciaDetalle extends Model
         'dir',
         'ref',
         'origen',
-        'despachado'
+        'despachado',
+        'telefono_registrante'
     ];
 
     protected $casts = [

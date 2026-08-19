@@ -13,6 +13,7 @@
             <span id="timer-text">--:--</span>
         </div>
         @endif
+
     </div>
 
     @if($esDespues5pm)
@@ -70,6 +71,17 @@
                 <div class="col-12 col-sm-6">
                     <label class="form-label">Celular / Teléfono <span class="required-star">*</span></label>
                     <input type="tel" name="telefono" id="telefono" class="form-control" placeholder="Ej: 987654321" required minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="mismo_numero" checked>
+                        <label class="form-check-label text-muted" for="mismo_numero" style="font-size: 0.85rem;">
+                            ¿Te comunicaste con nosotros desde este mismo número?
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6" id="div-numero-registrante" style="display: none;">
+                    <label class="form-label text-primary fw-bold">Tu N° de WhatsApp <span class="required-star">*</span></label>
+                    <input type="tel" name="telefono_registrante" id="telefono_registrante" class="form-control border-primary" placeholder="Número con el que nos escribiste" minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
                 </div>
 
                 <div class="col-12">
