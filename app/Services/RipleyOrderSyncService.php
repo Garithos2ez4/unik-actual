@@ -67,13 +67,18 @@ class RipleyOrderSyncService
             if (empty($lineId)) continue;
 
             $lineAttributes = ['order_item_id' => $lineId];
+            $productTitle = $linePayload['product_title'] ?? null;
+            if (empty($productTitle) || strtolower(trim($productTitle)) === 'n/a') {
+                $productTitle = $linePayload['offer_sku'] ?? $linePayload['product_shop_sku'] ?? 'Producto Ripley';
+            }
+
             $lineValues = [
                 'order_id' => $orderId,
                 'order_number' => $orderId,
                 'seller_sku' => $linePayload['offer_sku'] ?? null,
                 'ripley_sku' => $linePayload['product_sku'] ?? null,
                 'shop_sku' => $linePayload['product_shop_sku'] ?? null,
-                'name' => $linePayload['product_title'] ?? null,
+                'name' => $productTitle,
                 'status' => $linePayload['order_line_state'] ?? null,
                 'price' => $linePayload['price'] ?? 0,
                 'quantity' => $linePayload['quantity'] ?? 1,

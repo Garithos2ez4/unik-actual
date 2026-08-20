@@ -27,6 +27,29 @@
         </div>
     </div>
 
+    <div class="search-container">
+        <form action="{{ route('licencias.defectuosas') }}" method="GET" class="search-form">
+            <div class="search-input-group">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text"
+                    name="search"
+                    class="search-input"
+                    placeholder="Buscar por Clave, Voucher, N° Ticket o N° Orden..."
+                    value="{{ old('search', $search ?? '') }}">
+            </div>
+            <button type="submit" class="btn-search">
+                <i class="bi bi-search"></i>
+                Buscar
+            </button>
+            @if(!empty($search))
+                <a href="{{ route('licencias.defectuosas') }}" class="btn-clear">
+                    <i class="bi bi-x-circle"></i>
+                    Limpiar
+                </a>
+            @endif
+        </form>
+    </div>
+
     @if($licenciasDefectuosas->isEmpty())
         <div class="empty-state">
             <div class="empty-state-icon">

@@ -271,10 +271,6 @@
                             const pageWidth = 595.28;
                             const pageHeight = 841.89;
 
-                            let scale = 1.0;
-                            if (formato === 'a4_90') scale = 0.90;
-                            if (formato === 'a4_110') scale = 1.10;
-
                             if (labelCount % 4 === 0) {
                                 currentPage = outPdf.addPage([pageWidth, pageHeight]);
                             }
@@ -287,11 +283,14 @@
                             const quadHeight = pageHeight / 2;
 
                             const baseScale = Math.min(quadWidth / embeddedPage.width, quadHeight / embeddedPage.height);
-                            const finalScale = baseScale * scale;
+                            // Aplicamos un margen automático del 6% (94% scale) para que no toquen los bordes físicos de la hoja
+                            const safeScale = 0.94; 
+                            const finalScale = baseScale * safeScale;
 
                             const drawWidth = embeddedPage.width * finalScale;
                             const drawHeight = embeddedPage.height * finalScale;
 
+                            // Esto centra la etiqueta perfectamente dentro de su cuadrante
                             const offsetX = (quadWidth - drawWidth) / 2;
                             const offsetY = (quadHeight - drawHeight) / 2;
 

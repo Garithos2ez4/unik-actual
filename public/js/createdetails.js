@@ -70,6 +70,15 @@ document.addEventListener('DOMContentLoaded', function() {
             newInput.placeholder = 'Característica';
             newInput.name = 'insertcaracteristicas[' + selectedValue + ']';
         }
+
+        let infoTooltip = null;
+        if(selectedText.toLowerCase().includes('peso')){
+            infoTooltip = document.createElement('span');
+            infoTooltip.className = 'input-group-text bg-info text-white';
+            infoTooltip.innerHTML = '<i class="bi bi-info-circle"></i>';
+            infoTooltip.setAttribute('data-bs-toggle', 'tooltip');
+            infoTooltip.setAttribute('title', "Ejemplo: Para menos de 1 Kilo digita '0.75' o '750gr'. El sistema lo lee en KG.");
+        }
         
 
         newBtnDelete.className = 'btn btn-outline-danger';
@@ -82,6 +91,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         newDiv.appendChild(newSpan);
         newDiv.appendChild(newInput);
+        if (infoTooltip) {
+            newDiv.appendChild(infoTooltip);
+            // Re-initialize tooltips if bootstrap is available globally
+            if (typeof bootstrap !== 'undefined') {
+                new bootstrap.Tooltip(infoTooltip);
+            }
+        }
         newDiv.appendChild(newBtnDelete);
         document.getElementById('containerDivs').appendChild(newDiv);
         

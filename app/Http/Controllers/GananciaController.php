@@ -54,15 +54,15 @@ class GananciaController extends Controller
         )";
         $tarifaLogisticaRipleyExpr = "CASE
             WHEN ({$pesoRipleySubquery}) IS NULL THEN 0
-            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 15.90
-            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 20.70
-            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 38.10
-            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 66.20
-            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 174.10
-            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 174.10
-            ELSE 361.90 END";
+            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 5.90
+            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 9.90
+            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 12.90
+            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 15.90
+            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 28.90
+            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 40.90
+            ELSE 40.90 END";
         $comisionRipleyExpr = "CASE WHEN UPPER(Venta.canal) = 'RIPLEY' THEN (DetalleVenta.precioVenta * 0.12) + CASE WHEN DetalleVenta.precioVenta <= 39.00 THEN 2.00 ELSE 0 END + (({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1)) ELSE 0 END";
 
         $ganancias = Venta::query()
@@ -148,15 +148,15 @@ class GananciaController extends Controller
         )";
         $tarifaLogisticaRipleyExpr = "CASE
             WHEN ({$pesoRipleySubquery}) IS NULL THEN 0
-            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 15.90
-            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 20.70
-            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 38.10
-            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 66.20
-            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 174.10
-            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 174.10
-            ELSE 361.90 END";
+            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 5.90
+            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 9.90
+            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 12.90
+            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 15.90
+            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 28.90
+            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 40.90
+            ELSE 40.90 END";
             
         // Ripley comision: 12% + S/2 si precio <= 39
         $comisionRipleySoloExpr = "(DetalleVenta.precioVenta * 0.12) + CASE WHEN DetalleVenta.precioVenta <= 39.00 THEN 2.00 ELSE 0 END";
@@ -239,15 +239,15 @@ class GananciaController extends Controller
         )";
         $tarifaLogisticaRipleyExpr = "CASE
             WHEN ({$pesoRipleySubquery}) IS NULL THEN 0
-            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 15.90
-            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 20.70
-            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 38.10
-            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 66.20
-            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 174.10
-            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 174.10
-            ELSE 361.90 END";
+            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 5.90
+            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 9.90
+            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 12.90
+            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 15.90
+            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 28.90
+            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 40.90
+            ELSE 40.90 END";
         $comisionRipleyExpr = "CASE WHEN UPPER(Venta.canal) = 'RIPLEY' THEN (DetalleVenta.precioVenta * 0.12) + CASE WHEN DetalleVenta.precioVenta <= 39.00 THEN 2.00 ELSE 0 END + (({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1)) ELSE 0 END";
 
         $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";
@@ -327,15 +327,15 @@ class GananciaController extends Controller
         )";
         $tarifaLogisticaRipleyExpr = "CASE
             WHEN ({$pesoRipleySubquery}) IS NULL THEN 0
-            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 13.10
-            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 15.90
-            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 20.70
-            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 38.10
-            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 66.20
-            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 174.10
-            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 174.10
-            ELSE 361.90 END";
+            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 4.90
+            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 5.90
+            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 9.90
+            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 12.90
+            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 15.90
+            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 28.90
+            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 40.90
+            ELSE 40.90 END";
         $comisionRipleyExpr = "CASE WHEN UPPER(Venta.canal) = 'RIPLEY' THEN (DetalleVenta.precioVenta * 0.12) + CASE WHEN DetalleVenta.precioVenta <= 39.00 THEN 2.00 ELSE 0 END + (({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1)) ELSE 0 END";
 
         $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";

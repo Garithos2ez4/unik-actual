@@ -45,25 +45,71 @@ function mostrarNotificacionCopiado(preClave) {
         notification.remove();
     }, 3000);
 }
-  function filtrarPorTipo() {
-      const tipo = document.getElementById('filtro-tipo').value;
-      const search = document.querySelector('[name="search"]')?.value || '';
-      const containerName = 'container-list-licencias';
-      const url = `${window.location.pathname}?tipo=${tipo}&search=${search}&container=${containerName}`;
+let searchDebounceTimer = null;
 
-      const container = document.getElementById(containerName);
-      container.innerHTML = `
-          <div class="text-center p-3">
-              <div class="spinner-border text-primary" role="status">
-                  <span class="visually-hidden">Cargando...</span>
-              </div>
-          </div>
-      `;
+function debounceBuscarLicencias() {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        buscarLicencias();
+    }, 400);
+}
 
-      fetch(url)
-          .then(res => res.json())
-          .then(data => {
-              container.innerHTML = data.html;
-          })
-          .catch(err => console.error('Error al cargar filtro:', err));
-  }
+function buscarLicencias() {
+    const tipo = document.getElementById('filtro-tipo')?.value || document.getElementById('search-hidden-tipo')?.value || '';
+    const searchInput = document.getElementById('input-search-licencias');
+    const search = searchInput ? searchInput.value.trim() : '';
+    const containerName = 'container-list-licencias';
+    const clearBtn = document.getElementById('btn-clear-licencias');
+
+    if (clearBtn) {
+        if (search.length > 0) {
+            clearBtn.classList.remove('d-none');
+        } else {
+            clearBtn.classList.add('d-none');
+        }
+    }
+
+    const url = `${window.location.pathname}?tipo=${encodeURIComponent(tipo)}&search=${encodeURIComponent(search)}&container=${containerName}`;
+
+    const container = document.getElementById(containerName);
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="text-center p-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Buscando...</span>
+            </div>
+            <p class="text-muted mt-2 mb-0" style="font-size: 0.9rem;">Buscando licencias...</p>
+        </div>
+    `;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            container.innerHTML = data.html;
+        })
+        .catch(err => {
+            console.error('Error al buscar licencias:', err);
+            container.innerHTML = `
+                <div class="alert alert-danger text-center my-3">
+                    Ocurrió un error al realizar la búsqueda. Por favor, reintente.
+                </div>
+            `;
+        });
+}
+
+function limpiarBusqueda(e) {
+    if (e) e.preventDefault();
+    const searchInput = document.getElementById('input-search-licencias');
+    if (searchInput) searchInput.value = '';
+    const clearBtn = document.getElementById('btn-clear-licencias');
+    if (clearBtn) clearBtn.classList.add('d-none');
+    buscarLicencias();
+}
+
+function filtrarPorTipo() {
+    const tipo = document.getElementById('filtro-tipo')?.value || '';
+    const hiddenTipo = document.getElementById('search-hidden-tipo');
+    if (hiddenTipo) hiddenTipo.value = tipo;
+    buscarLicencias();
+}

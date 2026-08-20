@@ -41,20 +41,45 @@ class LicenciaController extends Controller
         $tiposLicencias = TipoLicencia::where('estado', 1)->get();
         $proveedores = Preveedor::all();
         $user = $this->headerService->getModelUser();
-        $search = $request->input('search');
+        $search = trim((string) $request->input('search', ''));
         $tipo = $request->input('tipo');
+        $estado = $request->input('estado');
 
-        $licencias = $this->licenciaService->getLicenciasNuevasQuery()
-            ->when($search, function ($query) use ($search) {
-                $query->where('voucher_code', 'like', "%{$search}%");
+        $query = Licencia::query()
+            ->when(!$search && !$estado, function ($q) {
+                // Si no hay búsqueda activa ni filtro de estado, mostrar inventario de NUEVAS por defecto
+                $q->where('estado', 'NUEVA');
+            })
+            ->when($estado, function ($q, $estado) {
+                $q->where('estado', $estado);
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('voucher_code', 'like', "%{$search}%")
+                        ->orWhere('orden_compra', 'like', "%{$search}%")
+                        ->orWhereHas('licenciasUsadas', function ($sub) use ($search) {
+                            $sub->where('clave_key', 'like', "%{$search}%")
+                                ->orWhere('serial_equipo', 'like', "%{$search}%")
+                                ->orWhere('orden', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('licenciasDefectuosas', function ($sub) use ($search) {
+                            $sub->where('clave_key', 'like', "%{$search}%")
+                                ->orWhere('numero_ticket', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('licenciasRecuperadas', function ($sub) use ($search) {
+                            $sub->where('serial_defectuosa', 'like', "%{$search}%")
+                                ->orWhere('serial_recuperada', 'like', "%{$search}%")
+                                ->orWhere('numero_ticket', 'like', "%{$search}%");
+                        });
+                });
             })
             ->when($tipo, function ($query, $tipo) {
                 $query->where('id_tipo', $tipo);
             })
-            ->with('tipoLicencia')
-            ->orderByDesc('id')
-            ->paginate(10)
-            ->appends($request->all());
+            ->with(['tipoLicencia', 'proveedor', 'categoriaLicencia', 'licenciasUsadas', 'licenciasDefectuosas', 'licenciasRecuperadas'])
+            ->orderByDesc('id');
+
+        $licencias = $query->paginate(10)->appends($request->all());
 
         $totalesPorTipo = Licencia::select('id_tipo', DB::raw('COUNT(*) as total'))
             ->where('estado', 'NUEVA')
@@ -78,6 +103,7 @@ class LicenciaController extends Controller
             'proveedores' => $proveedores,
             'tiposLicencias' => $tiposLicencias,
             'tipoSeleccionado' => $tipo,
+            'estadoSeleccionado' => $estado,
             'totalesPorTipo' => $totalesPorTipo
         ]);
     }
@@ -323,32 +349,59 @@ class LicenciaController extends Controller
         ]);
     }
 
-    public function defectuosas()
+    public function defectuosas(Request $request)
     {
         $user = $this->headerService->getModelUser();
+        $search = trim((string) $request->input('search', ''));
 
         $licenciasDefectuosas = \App\Models\Licencias\LicenciaDefectuosa::with('licencia.tipoLicencia', 'licencia.proveedor')
             ->where('estado', 'DEFECTUOSA')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($query) use ($search) {
+                    $query->where('clave_key', 'like', "%{$search}%")
+                        ->orWhere('orden', 'like', "%{$search}%")
+                        ->orWhere('numero_ticket', 'like', "%{$search}%")
+                        ->orWhereHas('licencia', function ($sub) use ($search) {
+                            $sub->where('voucher_code', 'like', "%{$search}%");
+                        });
+                });
+            })
             ->orderByDesc('id')
-            ->paginate(10);
+            ->paginate(10)
+            ->appends($request->all());
 
         return view('licencias.defectuosas', [
             'licenciasDefectuosas' => $licenciasDefectuosas,
-            'user' => $user
+            'user' => $user,
+            'search' => $search
         ]);
     }
-    public function recuperadas()
+    public function recuperadas(Request $request)
     {
         $user = $this->headerService->getModelUser();
+        $search = trim((string) $request->input('search', ''));
 
         $licenciasRecuperadas = \App\Models\Licencias\LicenciaRecuperada::with('licencia', 'licencia.proveedor')
             ->where('estado', 'RECUPERADA')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($query) use ($search) {
+                    $query->where('serial_recuperada', 'like', "%{$search}%")
+                        ->orWhere('serial_defectuosa', 'like', "%{$search}%")
+                        ->orWhere('orden', 'like', "%{$search}%")
+                        ->orWhere('numero_ticket', 'like', "%{$search}%")
+                        ->orWhereHas('licencia', function ($sub) use ($search) {
+                            $sub->where('voucher_code', 'like', "%{$search}%");
+                        });
+                });
+            })
             ->orderByDesc('id')
-            ->paginate(10);
+            ->paginate(10)
+            ->appends($request->all());
 
         return view('licencias.recuperadas', [
             'licenciasRecuperadas' => $licenciasRecuperadas,
-            'user' => $user
+            'user' => $user,
+            'search' => $search
         ]);
     }
 

@@ -111,17 +111,7 @@ class ProductoController extends Controller
                 $grupos = $this->productoService->getAllLabelGrupo();
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
-                $usarTcFijo = $producto->usar_tc_fijo ?? true;
-                if ($usarTcFijo) {
-                    $tcUsar = (float)$this->calculadoraService->getTasaCambio();
-                } else {
-                    $tasaFijaGlobal = (float)$this->calculadoraService->getTasaFija()->tasaCambio;
-                    if (isset($producto->tc_fijo) && $producto->tc_fijo > 0) {
-                        $tcUsar = (float)$producto->tc_fijo;
-                    } else {
-                        $tcUsar = $tasaFijaGlobal;
-                    }
-                }
+                $tcSunat = (float)$this->calculadoraService->getTasaCambio();
 
                 return view('productos.producto', [
                     'user' => $userModel,
@@ -130,7 +120,7 @@ class ProductoController extends Controller
                     'proveedor' => $proveedor,
                     'grupos' => $grupos,
                     'almacenes' => $almacenes,
-                    'tc' => $tcUsar,
+                    'tc' => $tcSunat,
                     'igv' => $this->calculadoraService->getIgv(),
                     'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio
                 ]);

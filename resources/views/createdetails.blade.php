@@ -50,6 +50,9 @@
                         </select>
                     @else
                         <input type="text" name="updatecaracteristicas[{{ $car->idCaracteristica }}]" class="form-control" placeholder="Caracteristica" value="{{$car->caracteristicaProducto}}" aria-label="" aria-describedby="" maxlength="100">
+                        @if(stripos($car->Caracteristicas->especificacion, 'peso') !== false)
+                            <span class="input-group-text bg-info text-white" data-bs-toggle="tooltip" title="Ejemplo: Para menos de 1 Kilo digita '0.75' o '750gr'. El sistema lo lee en KG."><i class="bi bi-info-circle"></i></span>
+                        @endif
                     @endif
                     <button class="btn btn-outline-danger" onclick="sendDataToDeleteSpect({{$car->idCaracteristica}},'{{$car->Caracteristicas->especificacion}}')" type="button" data-bs-toggle="modal" data-bs-target="#modalDeleteSpect">
                         <i class="bi bi-trash"></i>
