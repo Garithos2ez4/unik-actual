@@ -7,17 +7,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
+use App\Services\GananciaQueryService;
 use App\Models\Ventas\Venta;
 
 class AnalyticsFallabellaController extends Controller
 {
     protected $headerService;
     protected $calculadoraService;
+    protected $gananciaQueryService;
 
-    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService)
+    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService, GananciaQueryService $gananciaQueryService)
     {
         $this->headerService = $headerService;
         $this->calculadoraService = $calculadoraService;
+        $this->gananciaQueryService = $gananciaQueryService;
     }
 
     /**
@@ -80,27 +83,8 @@ class AnalyticsFallabellaController extends Controller
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
         $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
-        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
-
-        $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
-
-        $comisionFalabellaExpr = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
-                (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 WHEN GrupoProducto.idGrupoProducto IN (155, 156, 157, 158, 159, 160, 169) THEN 0.15 ELSE 0.10 END)
-            ELSE 0 END";
-
-        $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
-        $costosComponentesSub = "COALESCE((SELECT SUM(
-            ({$costosComponentesSubInner}) * dv_comp.cantidad
-        )
-        FROM DetalleVenta dv_comp
-        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
-        WHERE dv_comp.idVenta = DetalleVenta.idVenta
-        AND dv_comp.precioVenta <= 0.10) / 
-        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
-        , 0)";
-
-        $subqueryTcDia = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Venta.fechaVenta))) ASC LIMIT 1), $tc)";
+        $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
+        extract($exprs);
 
         // Usamos el Modelo Venta para iniciar la consulta
         $ventasFalabella = Venta::query()
@@ -121,15 +105,7 @@ class AnalyticsFallabellaController extends Controller
             ->groupBy('Venta.idVenta', 'Venta.numeroOrden', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
             ->orderByDesc('Venta.fechaVenta')
             ->get()
-            ->map(function ($venta) {
-                $venta->ingresos = round($venta->ingresos, 2);
-                $venta->costos   = round($venta->costos, 2);
-                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
-                $venta->comision_falabella = round($venta->comision_falabella, 2);
-                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
-                $venta->tc_dia = round((float)$venta->tc_dia, 3);
-                return $venta;
-            });
+            ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta));
 
         // ── Consulta para agrupar por SKU (Modelo) ───────────────────
         $skusFalabella = \App\Models\Ventas\DetalleVenta::query()
@@ -147,14 +123,7 @@ class AnalyticsFallabellaController extends Controller
             ->groupBy('Producto.modelo')
             ->orderByDesc('ingresos')
             ->get()
-            ->map(function ($sku) {
-                $sku->ingresos = round($sku->ingresos, 2);
-                $sku->costos = round($sku->costos, 2);
-                $sku->ganancia = round($sku->ingresos - $sku->costos, 2);
-                $sku->comision_falabella = round($sku->comision_falabella, 2);
-                $sku->margen = $sku->ingresos > 0 ? round(($sku->ganancia / $sku->ingresos) * 100, 2) : 0;
-                return $sku;
-            });
+            ->map(fn($sku) => $this->gananciaQueryService->formatVentaItem($sku));
 
         $skusMayorRotacion = $skusFalabella->sortByDesc('total_unidades')->take(5)->values();
         $skusMayorRentabilidad = $skusFalabella->sortByDesc('ganancia')->take(5)->values();

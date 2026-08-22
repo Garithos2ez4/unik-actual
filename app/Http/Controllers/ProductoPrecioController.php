@@ -35,7 +35,7 @@ class ProductoPrecioController extends Controller
         );
 
         $usarTcFijo = $producto->usar_tc_fijo ?? true;
-        if ($usarTcFijo) {
+        if (!$usarTcFijo) {
             $tcUsar = (float)$this->calculadoraService->getTasaCambio();
             $tipoTcLabel = 'SUNAT';
         } else {

@@ -81,7 +81,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
             }
 
-            $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
+            $precioDolarBase = ($producto->precioDolar > 0) ? $producto->precioDolar : $precioInventario;
 
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);
@@ -157,7 +157,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
                 }
             }
 
-            $precioDolarBase = ($precioInventario > 1) ? $precioInventario : ($producto->precioDolar ?? 0);
+            $precioDolarBase = ($producto->precioDolar > 0) ? $producto->precioDolar : $precioInventario;
 
             $precioCalculado = $preciosService->getPrecioCalculado($precioDolarBase, $producto->idGrupo, 'DOLAR', $producto->estadoProductoWeb);
             $precioDolarTotal = $precioCalculado + ($producto->gananciaExtra ?? 0);

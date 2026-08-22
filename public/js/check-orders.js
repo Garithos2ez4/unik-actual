@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
-    let notifiedWebOrders = JSON.parse(localStorage.getItem('notifiedWebOrders')) || [];
-    let notifiedRipleyOrders = JSON.parse(localStorage.getItem('notifiedRipleyOrders')) || [];
+    let today = new Date().toISOString().split('T')[0];
+    
+    // Web: Usa reseteo diario para recordar pedidos pendientes
+    let storedWebData = JSON.parse(localStorage.getItem('notifiedWebData')) || { date: '', orders: [] };
+    if (storedWebData.date !== today) {
+        storedWebData = { date: today, orders: [] };
+        localStorage.setItem('notifiedWebData', JSON.stringify(storedWebData));
+    }
+    let notifiedWebOrders = storedWebData.orders;
+
+    // Ripley: Solo 1 vez por orden y nunca más (persistente)
+    let notifiedRipleyOrders = JSON.parse(localStorage.getItem('notifiedRipleyOrders_v2')) || [];
 
     function checkOrders() {
         fetch(`/api/check-new-orders`, {
@@ -12,56 +22,56 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Alertas Pedidos Web
+                let showWebAlert = false;
+                let showRipleyAlert = false;
+                
+                let webHtml = '';
                 if (data.new_orders && data.new_orders.length > 0) {
                     data.new_orders.forEach(order => {
                         if (!notifiedWebOrders.includes(order.idPedidoWeb)) {
+                            showWebAlert = true;
                             let clienteNombre = order.cliente ? (order.cliente.nombre + ' ' + order.cliente.apellidos) : 'Desconocido';
-                            Swal.fire({
-                                icon: 'success',
-                                title: '¡Nuevo Pedido Web!',
-                                html: `<div style="font-size: 1.1em; margin-bottom: 15px;">Pedido <b>#${order.idPedidoWeb}</b> por <b>S/ ${parseFloat(order.total).toFixed(2)}</b></div><div style="color: #555;">Cliente: ${clienteNombre}</div>`,
-                                showConfirmButton: true,
-                                showCancelButton: true,
-                                confirmButtonText: '<i class="bi bi-box-arrow-up-right"></i> Ir a Pedidos Web',
-                                cancelButtonText: 'Cerrar',
-                                confirmButtonColor: '#28a745',
-                                backdrop: `rgba(0,0,0,0.6)`
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = "/configuracion/pedidos-web";
-                                }
-                            });
+                            webHtml += `<div style="text-align: left; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                                <b>Pedido #${order.idPedidoWeb}</b> (Web) - S/ ${parseFloat(order.total).toFixed(2)}<br>
+                                <small style="color: #666;">Cliente: ${clienteNombre}</small>
+                            </div>`;
                             notifiedWebOrders.push(order.idPedidoWeb);
                         }
                     });
-                    localStorage.setItem('notifiedWebOrders', JSON.stringify(notifiedWebOrders));
                 }
 
-                // Alertas Pedidos Ripley
+                let ripleyHtml = '';
                 if (data.ripley_orders && data.ripley_orders.length > 0) {
                     data.ripley_orders.forEach(order => {
                         if (!notifiedRipleyOrders.includes(order.order_id)) {
-                            Swal.fire({
-                                icon: 'info',
-                                title: '¡Nuevo Pedido en Ripley!',
-                                html: `<div style="font-size: 1.1em; margin-bottom: 15px;">Orden <b>#${order.order_id}</b> por <b>S/ ${parseFloat(order.price).toFixed(2)}</b></div><div style="color: #555;">Cliente: ${order.customer_name}</div>`,
-                                showConfirmButton: true,
-                                showCancelButton: true,
-                                confirmButtonText: '<i class="bi bi-graph-up"></i> Ver Analítica Ripley',
-                                cancelButtonText: 'Cerrar',
-                                confirmButtonColor: '#0dcaf0',
-                                backdrop: `rgba(0,0,0,0.6)`
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = "/dashboard/analitica/ripley";
-                                }
-                            });
+                            showRipleyAlert = true;
+                            ripleyHtml += `<div style="text-align: left; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                                <b>Orden #${order.order_id}</b> (Ripley) - S/ ${parseFloat(order.price).toFixed(2)}<br>
+                                <small style="color: #666;">Cliente: ${order.customer_name}</small>
+                            </div>`;
                             notifiedRipleyOrders.push(order.order_id);
                         }
                     });
-                    localStorage.setItem('notifiedRipleyOrders', JSON.stringify(notifiedRipleyOrders));
                 }
+                
+                if (showWebAlert || showRipleyAlert) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: '¡Tienes pedidos pendientes!',
+                        html: `<div style="max-height: 300px; overflow-y: auto;">${webHtml}${ripleyHtml}</div>`,
+                        showConfirmButton: true,
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#0dcaf0',
+                        backdrop: `rgba(0,0,0,0.6)`
+                    });
+                }
+
+                // Guardar Web (Con fecha)
+                storedWebData.orders = notifiedWebOrders;
+                localStorage.setItem('notifiedWebData', JSON.stringify(storedWebData));
+
+                // Guardar Ripley (Persistente)
+                localStorage.setItem('notifiedRipleyOrders_v2', JSON.stringify(notifiedRipleyOrders));
             }
         })
         .catch(error => console.error('Error verificando nuevos pedidos:', error));

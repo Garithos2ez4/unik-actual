@@ -7,18 +7,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
+use App\Services\GananciaQueryService;
 use App\Models\Ventas\Venta;
-
 
 class AnalyticsMercadolibreController extends Controller
 {
     protected $headerService;
     protected $calculadoraService;
+    protected $gananciaQueryService;
 
-    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService)
+    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService, GananciaQueryService $gananciaQueryService)
     {
         $this->headerService = $headerService;
         $this->calculadoraService = $calculadoraService;
+        $this->gananciaQueryService = $gananciaQueryService;
     }
 
     private function validateAccess($userModel, int $idVista)
@@ -60,20 +62,8 @@ class AnalyticsMercadolibreController extends Controller
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
         $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
-        $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr((string)$tc);
-
-        $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr((string)$tc, null, 'dv_comp', 'p_comp');
-        $costosComponentesSub = "COALESCE((SELECT SUM(
-            ({$costosComponentesSubInner}) * dv_comp.cantidad
-        )
-        FROM DetalleVenta dv_comp
-        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
-        WHERE dv_comp.idVenta = DetalleVenta.idVenta
-        AND dv_comp.precioVenta <= 0.10) / 
-        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
-        , 0)";
-
-        $comisionMercadoLibreExpr = "0";
+        $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
+        extract($exprs);
 
         // Usamos el Modelo Venta para iniciar la consulta
         $ventasMercadoLibre = Venta::query()
@@ -92,39 +82,26 @@ class AnalyticsMercadolibreController extends Controller
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
             ->orderByDesc('Venta.fechaVenta')
             ->get()
-            ->map(function ($venta) {
-                $venta->ingresos = round($venta->ingresos, 2);
-                $venta->costos   = round($venta->costos, 2);
-                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
-                $venta->comision_mercadolibre = round($venta->comision_mercadolibre, 2);
-                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
-                return $venta;
-            });
+            ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta));
 
         // Cuentas de Mercado Libre
         $cuentasMercadoLibre = DB::table('Venta')
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->join('publicacion', 'DetalleVenta.idPublicacion', '=', 'publicacion.idPublicacion')
-            ->join('cuentasplataforma', 'publicacion.idCuentaPlataforma', '=', 'cuentasplataforma.idCuentaPlataforma')
+            ->join('Publicacion', 'DetalleVenta.idPublicacion', '=', 'Publicacion.idPublicacion')
+            ->join('CuentasPlataforma', 'Publicacion.idCuentaPlataforma', '=', 'CuentasPlataforma.idCuentaPlataforma')
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->select(
-                'cuentasplataforma.nombreCuenta',
+                'CuentasPlataforma.nombreCuenta',
                 DB::raw('COUNT(DISTINCT Venta.idVenta) as cantidad_ventas'),
                 DB::raw('SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_ingresos'),
                 DB::raw("SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as total_costos")
             )
-            ->groupBy('cuentasplataforma.nombreCuenta')
+            ->groupBy('CuentasPlataforma.nombreCuenta')
             ->orderByDesc('total_ingresos')
             ->get()
-            ->map(function ($cuenta) {
-                $cuenta->total_ingresos = round($cuenta->total_ingresos, 2);
-                $cuenta->total_costos = round($cuenta->total_costos, 2);
-                $cuenta->ganancia = round($cuenta->total_ingresos - $cuenta->total_costos, 2);
-                $cuenta->margen = $cuenta->total_ingresos > 0 ? round(($cuenta->ganancia / $cuenta->total_ingresos) * 100, 2) : 0;
-                return $cuenta;
-            });
+            ->map(fn($cuenta) => $this->gananciaQueryService->formatVentaItem($cuenta));
 
         // ── Consulta para agrupar por SKU (Modelo) ───────────────────
         $skusMercadoLibre = \App\Models\Ventas\DetalleVenta::query()
@@ -142,14 +119,7 @@ class AnalyticsMercadolibreController extends Controller
             ->groupBy('Producto.modelo')
             ->orderByDesc('ingresos')
             ->get()
-            ->map(function ($sku) {
-                $sku->ingresos = round($sku->ingresos, 2);
-                $sku->costos = round($sku->costos, 2);
-                $sku->ganancia = round($sku->ingresos - $sku->costos, 2);
-                $sku->comision_mercadolibre = round($sku->comision_mercadolibre, 2);
-                $sku->margen = $sku->ingresos > 0 ? round(($sku->ganancia / $sku->ingresos) * 100, 2) : 0;
-                return $sku;
-            });
+            ->map(fn($sku) => $this->gananciaQueryService->formatVentaItem($sku));
 
         $skusMayorRotacion = $skusMercadoLibre->sortByDesc('total_unidades')->take(5)->values();
         $skusMayorRentabilidad = $skusMercadoLibre->sortByDesc('ganancia')->take(5)->values();

@@ -33,7 +33,7 @@
                                             @foreach ($categoria->GrupoProducto as $grupo)
                                             <div class="col-md-3 pb-2">
                                                 <div class="row bg-light text-center border rounded-3 ms-2 me-2 position-relative h-100">
-                                                    <button class="btn btn-warning btn-sm position-absolute top-0 end-0" style="width: auto; z-index: 5;" data-bs-toggle="modal" data-bs-target="#editGrupoModal" onclick="populateEditGrupo({{$grupo->idGrupoProducto}}, '{{$grupo->nombreGrupo}}', '{{$grupo->idTipoProducto}}')">
+                                                    <button class="btn btn-warning btn-sm position-absolute top-0 end-0" style="width: auto; z-index: 5;" data-bs-toggle="modal" data-bs-target="#editGrupoModal" onclick="populateEditGrupo({{$grupo->idGrupoProducto}}, '{{$grupo->nombreGrupo}}', '{{$grupo->idTipoProducto}}', '{{$grupo->imagenGrupo ? asset('storage/' . $grupo->imagenGrupo) : ''}}')">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                     <div class="col-md-12 pt-4 pb-2">

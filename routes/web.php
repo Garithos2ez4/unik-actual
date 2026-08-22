@@ -339,6 +339,17 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/configuracion/deletecomisionplataforma', [ConfiguracionController::class, 'deleteComisionPlataforma'])->name('deletecomisionplataforma');
     Route::post('/configuracion/tipo-cambio', [ConfiguracionController::class, 'cambiarTipoCambio'])->name('configuracion.tipoCambio');
 
+    //Configuracion-COMISIONES PLATAFORMAS (NUEVAS REGLAS)
+    Route::get('/configuracion/comisiones', [\App\Http\Controllers\ReglaComisionController::class, 'index'])->name('comisiones.index');
+    Route::post('/configuracion/comisiones', [\App\Http\Controllers\ReglaComisionController::class, 'store'])->name('comisiones.store');
+    Route::put('/configuracion/comisiones/{id}', [\App\Http\Controllers\ReglaComisionController::class, 'update'])->name('comisiones.update');
+    Route::delete('/configuracion/comisiones/{id}', [\App\Http\Controllers\ReglaComisionController::class, 'destroy'])->name('comisiones.destroy');
+
+    Route::post('/configuracion/tarifas-envio', [\App\Http\Controllers\ReglaComisionController::class, 'storeTarifa'])->name('tarifas-envio.store');
+    Route::put('/configuracion/tarifas-envio/{id}', [\App\Http\Controllers\ReglaComisionController::class, 'updateTarifa'])->name('tarifas-envio.update');
+    Route::delete('/configuracion/tarifas-envio/{id}', [\App\Http\Controllers\ReglaComisionController::class, 'destroyTarifa'])->name('tarifas-envio.destroy');
+
+
 
     //Configuracion-PRODUCTOS
     Route::get('/configuracion/productos', [ConfiguracionController::class, 'productos'])->name('configproductos');

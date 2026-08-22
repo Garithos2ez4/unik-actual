@@ -706,15 +706,24 @@ class PlataformaController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 4) {
                 $selectedDate   = $request->query('date', now()->toDateString());
-                $selectedStatus = trim((string) $request->query('status', ''));
+                $selectedStatus = trim((string) $request->query('status', 'pending'));
 
                 $query = \App\Models\Ecommerce\RipleyOrder::with('items');
                 if ($selectedDate) {
-                    $query->whereDate('created_at_ripley', $selectedDate);
+                    $query->where(function($q) use ($selectedDate) {
+                        $q->whereDate('created_at_ripley', $selectedDate)
+                          ->orWhereDate('sync_date', $selectedDate);
+                    });
                 }
 
                 if (filled($selectedStatus) && $selectedStatus !== 'all') {
-                    $query->where('status', $selectedStatus);
+                    if ($selectedStatus === 'pending') {
+                        $query->whereIn('status', ['SHIPPING', 'STAGING', 'WAITING_ACCEPTANCE']);
+                    } elseif ($selectedStatus === 'shipped') {
+                        $query->whereIn('status', ['SHIPPED', 'RECEIVED']);
+                    } else {
+                        $query->where('status', $selectedStatus);
+                    }
                 }
 
                 $orders = $query->orderByDesc('created_at_ripley')->get();

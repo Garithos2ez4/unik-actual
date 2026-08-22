@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
+use App\Services\GananciaQueryService;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\DetalleVenta;
 use App\Models\Inventario\EgresoProducto;
@@ -16,11 +17,13 @@ class AnalyticsController extends Controller
 {
     protected $headerService;
     protected $calculadoraService;
+    protected $gananciaQueryService;
 
-    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService)
+    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService, GananciaQueryService $gananciaQueryService)
     {
         $this->headerService = $headerService;
         $this->calculadoraService = $calculadoraService;
+        $this->gananciaQueryService = $gananciaQueryService;
     }
 
     /**
@@ -319,25 +322,10 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 8. Cálculos de Costos y Márgenes ──────────────────
-        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
+        $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
+        extract($exprs);
 
-        $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
-
-        $comisionFalabellaVenta = "CASE WHEN UPPER(Venta.canal) = 'FALABELLA' THEN 
-                (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + (DetalleVenta.precioVenta * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 END";
-
-        $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
-        $costosComponentesSub = "COALESCE((SELECT SUM(
-            ({$costosComponentesSubInner}) * dv_comp.cantidad
-        )
-        FROM DetalleVenta dv_comp
-        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
-        WHERE dv_comp.idVenta = DetalleVenta.idVenta
-        AND dv_comp.precioVenta <= 0.10) / 
-        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
-        , 0)";
+        $comisionSvc = app(\App\Services\ComisionPlataformaService::class);
 
         $qVentas8 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
@@ -345,7 +333,7 @@ class AnalyticsController extends Controller
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
             ->selectRaw("Producto.idProducto, Producto.nombreProducto, Producto.modelo, 
                          (DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos, 
-                         ((($costoVentaExpr) + ($comisionFalabellaVenta)) * DetalleVenta.cantidad) + ($costosComponentesSub) as costos,
+                         ((($costoVentaExpr) + ($comisionFalabellaExpr)) * DetalleVenta.cantidad) + ($costosComponentesSub) as costos,
                          DetalleVenta.cantidad as cantidad_vendida")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->where('DetalleVenta.precioVenta', '>', 0.10)
@@ -354,10 +342,8 @@ class AnalyticsController extends Controller
             })
             ->where('Venta.fechaVenta', '>=', $fechaTransicion);
 
-        $comisionFalabellaEgreso = "CASE WHEN UPPER(Plataforma.nombrePlataforma) LIKE '%FALABELLA%' THEN 
-                (CASE WHEN GrupoProducto.idCategoria IN (1, 3) OR GrupoProducto.idGrupoProducto IN (10, 40, 41, 42, 43) THEN 10.90 ELSE 3.90 END)
-                + ($precioPubExpr * CASE WHEN GrupoProducto.idGrupoProducto = 10 THEN 0.08 ELSE 0.10 END)
-            ELSE 0 END";
+        $falabellaExprEgreso = $comisionSvc->getComisionExpr('FALABELLA', 'GrupoProducto.idCategoria', 'GrupoProducto.idGrupoProducto', $precioPubExpr);
+        $comisionFalabellaEgreso = "CASE WHEN UPPER(Plataforma.nombrePlataforma) LIKE '%FALABELLA%' THEN {$falabellaExprEgreso} ELSE 0 END";
 
         $subqueryTipoCambioEgresoCosto = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(Comprobante.fechaRegistro))) ASC LIMIT 1), $tc))";
 
@@ -482,49 +468,8 @@ class AnalyticsController extends Controller
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
         $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
-        $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
-
-        $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
-
-        $pesoRipleySubqueryInner = function($col) {
-            return "CASE 
-                WHEN UPPER($col.caracteristicaProducto) LIKE '%GR%' OR (UPPER($col.caracteristicaProducto) LIKE '%G%' AND UPPER($col.caracteristicaProducto) NOT LIKE '%KG%') 
-                THEN CAST(REPLACE($col.caracteristicaProducto, ',', '.') AS DECIMAL(10,3)) / 1000
-                ELSE CAST(REPLACE($col.caracteristicaProducto, ',', '.') AS DECIMAL(10,3))
-            END";
-        };
-
-        $pesoRipleySubquery = "COALESCE(
-            (SELECT " . $pesoRipleySubqueryInner('cp52') . "
-             FROM caracteristicas_producto cp52
-             WHERE cp52.idProducto = Producto.idProducto AND cp52.idCaracteristica = 52 LIMIT 1),
-            (SELECT " . $pesoRipleySubqueryInner('cp10') . "
-             FROM caracteristicas_producto cp10
-             WHERE cp10.idProducto = Producto.idProducto AND cp10.idCaracteristica = 10 LIMIT 1)
-        )";
-        $tarifaLogisticaRipleyExpr = "CASE
-            WHEN ({$pesoRipleySubquery}) IS NULL THEN 0
-            WHEN ({$pesoRipleySubquery}) <= 0.50  THEN 4.90
-            WHEN ({$pesoRipleySubquery}) <= 1.00  THEN 4.90
-            WHEN ({$pesoRipleySubquery}) <= 3.00  THEN 5.90
-            WHEN ({$pesoRipleySubquery}) <= 8.00  THEN 9.90
-            WHEN ({$pesoRipleySubquery}) <= 25.00 THEN 12.90
-            WHEN ({$pesoRipleySubquery}) <= 40.00 THEN 15.90
-            WHEN ({$pesoRipleySubquery}) <= 150.00 THEN 28.90
-            WHEN ({$pesoRipleySubquery}) <= 260.00 THEN 40.90
-            ELSE 40.90 END";
-        $comisionRipleyExpr = "(DetalleVenta.precioVenta * 0.12) + CASE WHEN DetalleVenta.precioVenta <= 39.00 THEN 2.00 ELSE 0 END + (({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1))";
-
-        $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
-        $costosComponentesSub = "COALESCE((SELECT SUM(
-            ({$costosComponentesSubInner}) * dv_comp.cantidad
-        )
-        FROM DetalleVenta dv_comp
-        LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
-        WHERE dv_comp.idVenta = DetalleVenta.idVenta
-        AND dv_comp.precioVenta <= 0.10) / 
-        GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
-        , 0)";
+        $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
+        extract($exprs);
 
         // Usamos el Modelo Venta para iniciar la consulta
         $ventasRipley = Venta::query()
@@ -535,8 +480,14 @@ class AnalyticsController extends Controller
             ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         SUM(((($costoVentaExpr) + ($comisionRipleyExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
-                         SUM(($comisionRipleyExpr) * DetalleVenta.cantidad) as comision_ripley,
+                         
+                         /* SOLO el costo del producto */
+                         SUM(({$costoVentaExpr}) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos_base,
+                         
+                         /* Comisión limpia de Ripley */
+                         SUM(({$ripleyExpr}) * DetalleVenta.cantidad) as comision_ripley,
+                         
+                         /* Tarifa de peso separada */
                          SUM(({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1) * DetalleVenta.cantidad) as tarifa_peso_ripley")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->where(function ($q) {
@@ -547,16 +498,7 @@ class AnalyticsController extends Controller
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
             ->orderByDesc('Venta.fechaVenta')
             ->get()
-            ->map(function ($venta) {
-                $venta->ingresos = round($venta->ingresos, 2);
-                $venta->costos   = round($venta->costos, 2);
-                $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
-                $venta->comision_ripley = round($venta->comision_ripley, 2);
-                $venta->tarifa_peso_ripley = round($venta->tarifa_peso_ripley, 2);
-                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
-                return $venta;
-            });
-
+            ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta));
         // ── Consulta para tendencia de ventas por mes (Gráfico) ────────
         $ventasMesRaw = Venta::query()
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
@@ -621,22 +563,10 @@ class AnalyticsController extends Controller
 
         $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(30), function () use ($fechaInicio, $fechaFin, $tc) {
             $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
-            $subqueryTipoCambioCosto = "COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(c_inner.fechaRegistro))) ASC LIMIT 1), $tc)";
-
-            $costoVentaExpr = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc);
+            $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
+            extract($exprs);
 
             $comisionTiendaExpr = "0";
-
-            $costosComponentesSubInner = $this->calculadoraService->getCostoVentaExpr($subqueryTipoCambioCosto, (string)$tc, 'dv_comp', 'p_comp');
-            $costosComponentesSub = "COALESCE((SELECT SUM(
-                ({$costosComponentesSubInner}) * dv_comp.cantidad
-            )
-            FROM DetalleVenta dv_comp
-            LEFT JOIN Producto p_comp ON dv_comp.idProducto = p_comp.idProducto
-            WHERE dv_comp.idVenta = DetalleVenta.idVenta
-            AND dv_comp.precioVenta <= 0.10) / 
-            GREATEST((SELECT COUNT(*) FROM DetalleVenta dv_main WHERE dv_main.idVenta = DetalleVenta.idVenta AND dv_main.precioVenta > 0.10), 1)
-            , 0)";
 
             $ventasTienda = Venta::query()
                 ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
@@ -649,22 +579,12 @@ class AnalyticsController extends Controller
                              SUM(((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                              0 as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
-                ->where(function ($q) {
-                    $this->applyInventarioFilter($q, true);
-                })
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
                 ->orderByDesc('Venta.fechaVenta')
                 ->get()
-                ->map(function ($venta) {
-                    $venta->ingresos = round($venta->ingresos, 2);
-                    $venta->costos   = round($venta->costos, 2);
-                    $venta->ganancia = round($venta->ingresos - $venta->costos, 2);
-                    $venta->comision_tienda = 0;
-                    $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
-                    return $venta;
-                });
+                ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta));
 
             $pagosTienda = \App\Models\Ventas\PagoVenta::query()
                 ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')

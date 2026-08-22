@@ -16,10 +16,18 @@ function populateEditCategoria(id, nombre, icon) {
     document.getElementById('btn-modal-edit-categoria').disabled = false;
 }
 
-function populateEditGrupo(id, nombre, tipo) {
+function populateEditGrupo(id, nombre, tipo, image_url) {
     document.getElementById('edit-id-grupo').value = id;
     document.getElementById('edit-nombre-grupo').value = nombre;
     document.getElementById('edit-tipo-grupo').value = tipo;
+    
+    const imgModal = document.getElementById('img-modal-edit-grupo');
+    if (image_url) {
+        imgModal.src = image_url;
+    } else {
+        imgModal.src = 'https://placehold.co/300x300?text=Cambiar+Imagen';
+    }
+    
     document.getElementById('btn-modal-edit-grupo').disabled = false;
 }
 

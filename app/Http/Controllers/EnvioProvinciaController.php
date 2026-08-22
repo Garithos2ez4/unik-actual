@@ -489,13 +489,13 @@ class EnvioProvinciaController extends Controller
         }
 
         $ids = $request->query('ids');
+        $fecha = $request->query('fecha', date('Y-m-d'));
         $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino.Provincia.Departamento', 'SubAgencia', 'Productos.Producto', 'Detalle']);
 
         if (!empty($ids)) {
             $idArray = explode(',', $ids);
             $envios = $query->whereIn('idEnvioProvincia', $idArray)->get();
         } else {
-            $fecha = $request->query('fecha', date('Y-m-d'));
             $envios = $query->whereDate('fecha_envio', $fecha)
                 ->where(function ($q) {
                     $q->whereDoesntHave('Detalle')

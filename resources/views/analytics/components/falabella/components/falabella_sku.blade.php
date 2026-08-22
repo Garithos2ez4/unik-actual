@@ -39,7 +39,7 @@
                                     -S/ {{ number_format($sku->comision_falabella, 2) }} <i class="bi bi-shop text-muted ms-1" style="font-size: 0.8rem;"></i>
                                 </span>
                                 <span class="text-muted" style="font-size: 0.75rem;" title="Costo Base">
-                                    -S/ {{ number_format($sku->costos - $sku->comision_falabella, 2) }} <i class="bi bi-box text-muted ms-1" style="font-size: 0.8rem;"></i>
+                                    S/ {{ number_format($sku->costos, 2) }} <i class="bi bi-box text-muted ms-1" style="font-size: 0.8rem;"></i>
                                 </span>
                             </div>
                         </td>

@@ -34,8 +34,8 @@
                                 </div>
                             </td>
                             <td class="text-end fw-semibold text-dark">S/ {{ number_format($venta->ingresos, 2) }}</td>
-                            <td class="text-end text-muted small">S/ {{ number_format($venta->costos - $venta->comision_ripley, 2) }}</td>
-                            <td class="text-end text-danger small">-S/ {{ number_format($venta->comision_ripley - $venta->tarifa_peso_ripley, 2) }}</td>
+                            <td class="text-end text-muted small">S/ {{ number_format($venta->costos, 2) }}</td>
+                            <td class="text-end text-danger small">-S/ {{ number_format($venta->comision_ripley, 2) }}</td>
                             <td class="text-end text-danger small">-S/ {{ number_format($venta->tarifa_peso_ripley, 2) }}</td>
                             <td class="text-end fw-bold text-success">S/ {{ number_format($venta->ganancia, 2) }}</td>
                             <td class="text-center">
@@ -61,8 +61,8 @@
                         <tr>
                             <td colspan="4" class="text-end text-uppercase">Totales del Período:</td>
                             <td class="text-end text-dark">S/ {{ number_format($ventasRipley->sum('ingresos'), 2) }}</td>
-                            <td class="text-end text-dark">S/ {{ number_format($ventasRipley->sum('costos') - $ventasRipley->sum('comision_ripley'), 2) }}</td>
-                            <td class="text-end text-danger">-S/ {{ number_format($ventasRipley->sum('comision_ripley') - $ventasRipley->sum('tarifa_peso_ripley'), 2) }}</td>
+                            <td class="text-end text-dark">S/ {{ number_format($ventasRipley->sum('costos'), 2) }}</td>
+                            <td class="text-end text-danger">-S/ {{ number_format($ventasRipley->sum('comision_ripley'), 2) }}</td>
                             <td class="text-end text-danger">-S/ {{ number_format($ventasRipley->sum('tarifa_peso_ripley'), 2) }}</td>
                             <td class="text-end text-success">S/ {{ number_format($ventasRipley->sum('ganancia'), 2) }}</td>
                             <td class="text-center">

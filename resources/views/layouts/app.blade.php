@@ -341,7 +341,7 @@
     </footer>
     @stack('scripts')
     <script src="{{ asset('js/app.js') }}?v=1.03"></script>
-    <script src="{{ asset('js/check-orders.js') }}"></script>
+    <script src="{{ asset('js/check-orders.js') }}?v=1.4"></script>
 </body>
 
 </html>

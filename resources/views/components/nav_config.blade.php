@@ -12,6 +12,10 @@
       <a class="nav-link {{$pag == 'productos' ? 'bg-sistema-dos text-light active' : 'text-dark'}}"
         href="{{route('configproductos')}}">Productos</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link {{$pag == 'comisiones' ? 'bg-sistema-dos text-light active' : 'text-dark'}}"
+        href="{{route('comisiones.index')}}">Comisiones</a>
+    </li>
     <li class="nav-item dropdown">
       <a class="nav-link dropdown-toggle {{$pag == 'especificaciones' ? 'bg-sistema-dos text-light active' : 'text-dark'}}" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Especificaciones</a>
       <ul class="dropdown-menu pb-0 pt-0">

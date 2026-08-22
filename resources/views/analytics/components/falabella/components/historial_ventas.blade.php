@@ -44,7 +44,7 @@
                             </div>
                         </td>
                         <td class="text-end fw-semibold text-dark">S/ {{ number_format($venta->ingresos, 2) }}</td>
-                        <td class="text-end text-muted small">S/ {{ number_format($venta->costos - $venta->comision_falabella, 2) }}</td>
+                        <td class="text-end text-muted small">S/ {{ number_format($venta->costos, 2) }}</td>
                         <td class="text-end text-danger small">-S/ {{ number_format($venta->comision_falabella, 2) }}</td>
                         <td class="text-end fw-bold text-success">S/ {{ number_format($venta->ganancia, 2) }}</td>
                         <td class="text-center">
@@ -70,7 +70,7 @@
                     <tr>
                         <td colspan="4" class="text-end text-uppercase">Totales del Período:</td>
                         <td class="text-end">S/ {{ number_format($ventasFalabella->sum('ingresos'), 2) }}</td>
-                        <td class="text-end">S/ {{ number_format($ventasFalabella->sum(fn($v) => $v->costos - $v->comision_falabella), 2) }}</td>
+                        <td class="text-end">S/ {{ number_format($ventasFalabella->sum('costos'), 2) }}</td>
                         <td class="text-end text-danger">-S/ {{ number_format($ventasFalabella->sum('comision_falabella'), 2) }}</td>
                         <td class="text-end text-success">S/ {{ number_format($ventasFalabella->sum('ganancia'), 2) }}</td>
                         <td class="text-center">

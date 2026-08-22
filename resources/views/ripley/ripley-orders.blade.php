@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Ordenes Ripley')
 
@@ -24,8 +24,8 @@
                         <div class="input-group input-group-sm border-start">
                             <span class="input-group-text bg-transparent border-0 small fw-bold text-muted">Estado:</span>
                             <select name="status" class="form-select border-0 bg-transparent" style="min-width: 120px;">
-                                <option value=""       {{ $selectedStatus == ''      ? 'selected' : '' }}>Todos</option>
                                 <option value="pending" {{ $selectedStatus == 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value=""       {{ $selectedStatus == ''      ? 'selected' : '' }}>Todos</option>
                                 <option value="shipped" {{ $selectedStatus == 'shipped' ? 'selected' : '' }}>Shipped</option>
                             </select>
                         </div>
