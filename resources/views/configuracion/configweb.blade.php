@@ -7,7 +7,7 @@
     <br>
     <div class="row">
         <div class="col-md-12">
-            <h2><i class="bi bi-gear-fill"></i> Configuraci&oacuten</h2>
+            <h2><i class="bi bi-gear-fill"></i> Configuración</h2>
         </div>
     </div>
     <br>
@@ -49,7 +49,7 @@
                 <div class="col-md-12 d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="mb-0">Datos Bancarios</h3>
-                        <p class="text-secondary mb-0">N&uacute;meros de cuenta registrados para la web.</p>
+                        <p class="text-secondary mb-0">Números de cuenta registrados para la web.</p>
                     </div>
                     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCuentaBancariaModal" title="Añadir Cuenta">
                         <i class="bi bi-plus-lg"></i>
@@ -76,7 +76,7 @@
                                                 <h6>Bancos</h6>
                                             </div>
                                             <div class="col-6 col-md-3">
-                                                <h6>N&uacutemeros de cuenta</h6>
+                                                <h6>Números de cuenta</h6>
                                             </div>
                                             <div class="col-3 col-md-2">
                                                 <h6>Tipo</h6>
@@ -134,10 +134,10 @@
     <div class="row border shadow rounded-3 pt-2 pb-2">
         <div class="col-md-12 d-flex justify-content-between align-items-center">
             <div>
-                <h3 class="mb-0">Tipos de M&eacute;todos de Pago</h3>
-                <p class="text-secondary mb-0">Categor&iacute;as de m&eacute;todos de pago (ej. Efectivo, Tarjeta POS).</p>
+                <h3 class="mb-0">Tipos de Métodos de Pago</h3>
+                <p class="text-secondary mb-0">Categorías de métodos de pago (ej. Efectivo, Tarjeta POS).</p>
             </div>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTipoMetodoPagoModal" title="A&ntilde;adir Tipo">
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTipoMetodoPagoModal" title="Añadir Tipo">
                 <i class="bi bi-plus-lg"></i>
             </button>
         </div>
@@ -146,7 +146,7 @@
                 <li class="list-group-item bg-sistema-uno text-light">
                     <div class="row text-center">
                         <div class="col-10">
-                            <h6>Tipo de M&eacute;todo</h6>
+                            <h6>Tipo de Método</h6>
                         </div>
                         <div class="col-2">
                             <h6>Editar</h6>
@@ -174,10 +174,10 @@
     <div class="row border shadow rounded-3 pt-2 pb-2">
         <div class="col-md-12 d-flex justify-content-between align-items-center">
             <div>
-                <h3 class="mb-0">M&eacute;todos de Pago</h3>
-                <p class="text-secondary mb-0">M&eacute;todos de pago habilitados para el registro de ventas y egresos.</p>
+                <h3 class="mb-0">Métodos de Pago</h3>
+                <p class="text-secondary mb-0">Métodos de pago habilitados para el registro de ventas y egresos.</p>
             </div>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addMetodoPagoModal" title="A&ntilde;adir M&eacute;todo">
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addMetodoPagoModal" title="Añadir Método">
                 <i class="bi bi-plus-lg"></i>
             </button>
         </div>
@@ -186,7 +186,7 @@
                 <li class="list-group-item bg-sistema-uno text-light">
                     <div class="row text-center">
                         <div class="col-3">
-                            <h6>M&eacute;todo</h6>
+                            <h6>Método</h6>
                         </div>
                         <div class="col-3">
                             <h6>Tipo</h6>
@@ -326,18 +326,18 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="addMetodoPagoModalLabel">A&ntilde;adir M&eacute;todo de Pago</h5>
+                        <h5 class="modal-title" id="addMetodoPagoModalLabel">Añadir Método de Pago</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-12 mb-2">
-                                <label class="form-label">Nombre del M&eacute;todo:</label>
+                                <label class="form-label">Nombre del Método:</label>
                                 <input type="text" class="form-control" maxlength="50" name="nombreMetodo" required placeholder="Ej: Izypay">
                             </div>
 
                             <div class="col-md-12 mb-2">
-                                <label class="form-label">Tipo de M&eacute;todo:</label>
+                                <label class="form-label">Tipo de Método:</label>
                                 <select class="form-select" name="idTipoMetodo" required>
                                     <option value="">Seleccione Tipo...</option>
                                     @foreach($tiposMetodoPago as $tipo)
@@ -373,7 +373,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="addTipoMetodoPagoModalLabel">A&ntilde;adir Tipo de M&eacute;todo de Pago</h5>
+                        <h5 class="modal-title" id="addTipoMetodoPagoModalLabel">Añadir Tipo de Método de Pago</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -400,19 +400,19 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="editMetodoPagoModalLabel">Editar M&eacute;todo de Pago</h5>
+                        <h5 class="modal-title" id="editMetodoPagoModalLabel">Editar Método de Pago</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
                             <input type="hidden" name="idMetodoPago" id="hidden-edit-metodo-id">
                             <div class="col-md-12 mb-2">
-                                <label class="form-label">Nombre del M&eacute;todo:</label>
+                                <label class="form-label">Nombre del Método:</label>
                                 <input type="text" class="form-control" maxlength="50" name="nombreMetodo" id="input-edit-metodo-nombre" required>
                             </div>
 
                             <div class="col-md-12 mb-2">
-                                <label class="form-label">Tipo de M&eacute;todo:</label>
+                                <label class="form-label">Tipo de Método:</label>
                                 <select class="form-select" name="idTipoMetodo" id="select-edit-metodo-tipo" required>
                                     <option value="">Seleccione Tipo...</option>
                                     @foreach($tiposMetodoPago as $tipo)
@@ -455,7 +455,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="editTipoMetodoPagoModalLabel">Editar Tipo de M&eacute;todo de Pago</h5>
+                        <h5 class="modal-title" id="editTipoMetodoPagoModalLabel">Editar Tipo de Método de Pago</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">

@@ -37,7 +37,7 @@
             $q->where('idProducto', $producto->idProducto);
             })
             ->where('idAlmacen', $almacen->idAlmacen)
-            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
+            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION', 'DEFECTUOSO'])
             ->with('UbicacionExacta')
             ->get();
 
@@ -45,22 +45,25 @@
             $distribucion = [];
 
             if($seriesAlmacen->count() > 0) {
-            foreach($seriesAlmacen as $serie) {
-            // Si la serie tiene una ubicación específica, usamos esa, sino forzamos a 'Sin asignar'
-            $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : 'Sin asignar';
-            $fotoRack = null;
+                foreach($seriesAlmacen as $serie) {
+                    $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : 'Sin asignar';
+                    $fotoRack = null;
 
-            if(!isset($distribucion[$nombreRack])) {
-            $distribucion[$nombreRack] = ['cantidad' => 0, 'foto' => $fotoRack];
-            }
-            $distribucion[$nombreRack]['cantidad']++;
-            }
+                    if(!isset($distribucion[$nombreRack])) {
+                        $distribucion[$nombreRack] = ['cantidad' => 0, 'defectuosos' => 0, 'foto' => $fotoRack];
+                    }
+                    $distribucion[$nombreRack]['cantidad']++;
+                    if ($serie->estado === 'DEFECTUOSO') {
+                        $distribucion[$nombreRack]['defectuosos']++;
+                    }
+                }
             } else {
-            // Si es un producto que se vende a granel (sin series), todo va al rack general
-            $distribucion[$rackGeneralNombre] = [
-            'cantidad' => $inventario->stock,
-            'foto' => $rackGeneralFoto
-            ];
+                // Si es un producto que se vende a granel (sin series), todo va al rack general
+                $distribucion[$rackGeneralNombre] = [
+                    'cantidad' => $inventario->stock,
+                    'defectuosos' => 0,
+                    'foto' => $rackGeneralFoto
+                ];
             }
             @endphp
 
@@ -80,13 +83,22 @@
                                 </a>
                                 @endif
                             </div>
-                            <span class="fw-bold text-dark small">{{ $data['cantidad'] }} und.</span>
+                            <div>
+                                <span class="fw-bold text-dark small">{{ $data['cantidad'] }} und.</span>
+                                @if($data['defectuosos'] > 0)
+                                    <span class="badge bg-danger ms-1" style="font-size: 10px;" title="Productos defectuosos en esta ubicación">({{ $data['defectuosos'] }} def.)</span>
+                                @endif
+                            </div>
                         </div>
                         @endforeach
                     </div>
                 </td>
                 <td class="align-middle">
-                    <span class="badge bg-success" style="font-size: 16px;">{{ $inventario->stock }}</span>
+                    <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $inventario->stock }}</span>
+                    @php $totalDefectuosos = $seriesAlmacen->where('estado', 'DEFECTUOSO')->count(); @endphp
+                    @if($totalDefectuosos > 0)
+                        <br><span class="badge bg-danger mt-1" style="font-size: 11px;" title="Stock defectuoso no sumado al total"> +{{ $totalDefectuosos }} def.</span>
+                    @endif
                 </td>
             </tr>
             @endif

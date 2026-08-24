@@ -7,7 +7,7 @@
     <br>
     <div class="row">
         <div class="col-md-12">
-            <h2><i class="bi bi-gear-fill"></i> Configuraci&oacuten</h2>
+            <h2><i class="bi bi-gear-fill"></i> Configuración</h2>
         </div>
     </div>
     <br>
@@ -79,7 +79,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="deleteSpectXGrupoModalLabel">Estas seguro(a) de borrar esta
-                            especificaci&oacute;n?
+                            especificación?
                             <span class="text-secondary fst-italic" id="title-modal-deleteespecificacionxgrupo"></span>
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -102,7 +102,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="spectXGrupoModalLabel">Agregar Especificaci&oacute;n <span id="title-modal-addespecificacionxgrupo"></span></h5>
+                        <h5 class="modal-title" id="spectXGrupoModalLabel">Agregar Especificación <span id="title-modal-addespecificacionxgrupo"></span></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">

@@ -66,15 +66,28 @@ class LaptopMapper implements FalabellaCategoryMapper
 
         // 3. Construcción de Títulos SEO
 
+        // Obtenemos el nombre del grupo (Ej: "Laptop Gamer", "Laptops", etc.)
+        $nombreGrupo = optional($producto->GrupoProducto)->nombreGrupo;
+        $tipoBase = $nombreGrupo ?: 'Laptop';
+        
+        // Singularizar si viene en plural para que se lea mejor
+        if (strtolower($tipoBase) === 'laptops') {
+            $tipoBase = 'Laptop';
+        } elseif (strtolower($tipoBase) === 'notebooks') {
+            $tipoBase = 'Notebook';
+        }
+
         // Título 1: El del sistema (Intacto)
         $titulo1 = $base;
 
-        // Título 2: Enfoque Poder / Gamer
-        $t2_parts = array_filter(['Laptop Gamer', $marca, $modelo, $procCorto, $ram, $gpuCorta]);
+        // Título 2: Enfoque Poder / Basado en su Grupo
+        $t2_parts = array_filter([$tipoBase, $marca, $modelo, $procCorto, $ram, $gpuCorta]);
         $titulo2 = implode(' ', $t2_parts);
 
-        // Título 3: Enfoque Técnico / Pantalla (Usamos 'Notebook' para captar otra intención de búsqueda)
-        $t3_parts = array_filter(['Notebook', $marca, $modelo, $pantalla, $hz, $storage, $procCorto]);
+        // Título 3: Enfoque Técnico / Pantalla (Usamos 'Notebook' u otra variante para captar otra intención de búsqueda)
+        $tipoAlternativo = (stripos($tipoBase, 'laptop') !== false) ? str_ireplace('laptop', 'Notebook', $tipoBase) : 'Notebook';
+        
+        $t3_parts = array_filter([$tipoAlternativo, $marca, $modelo, $pantalla, $hz, $storage, $procCorto]);
         $titulo3 = implode(' ', $t3_parts);
 
         // Fallback: Si el producto no tiene modelo registrado en BD, armamos algo decente con el nombre original
@@ -82,8 +95,9 @@ class LaptopMapper implements FalabellaCategoryMapper
             // Tomamos solo las primeras 3 palabras del título original (Ej: LAPTOP HP VICTUS)
             $baseCorta = implode(' ', array_slice(explode(' ', $base), 0, 3));
 
-            $titulo2 = $baseCorta . ' Gamer ' . implode(' ', array_filter([$procCorto, $ram, $gpuCorta]));
-            $titulo3 = str_replace('LAPTOP', 'Notebook', $baseCorta) . ' ' . implode(' ', array_filter([$pantalla, $hz, $storage, $procCorto]));
+            // Ya no forzamos la palabra "Gamer", solo añadimos las specs
+            $titulo2 = $baseCorta . ' ' . implode(' ', array_filter([$procCorto, $ram, $gpuCorta]));
+            $titulo3 = str_replace(['LAPTOP', 'Laptop'], 'Notebook', $baseCorta) . ' ' . implode(' ', array_filter([$pantalla, $hz, $storage, $procCorto]));
         }
 
         return [

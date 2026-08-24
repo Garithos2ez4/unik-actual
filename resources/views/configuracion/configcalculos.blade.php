@@ -7,7 +7,7 @@
     <br>
     <div class="row">
         <div class="col-md-12">
-            <h2><i class="bi bi-gear-fill"></i> Configuraci&oacuten</h2>
+            <h2><i class="bi bi-gear-fill"></i> Configuración</h2>
         </div>
     </div>
     <br>

@@ -35,7 +35,9 @@ class HomeController extends Controller
         try {
             \Illuminate\Support\Facades\Artisan::call('ripley:sync-orders');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error sincronizando Ripley desde API checkNewOrders: " . $e->getMessage());
+            if (strpos($e->getMessage(), 'cURL error 6') === false && strpos($e->getMessage(), 'cURL error 28') === false) {
+                \Illuminate\Support\Facades\Log::error("Error sincronizando Ripley desde API checkNewOrders: " . $e->getMessage());
+            }
         }
 
         $ripleyOrders = \App\Models\Ecommerce\RipleyOrder::whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING'])

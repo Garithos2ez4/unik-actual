@@ -31,8 +31,11 @@ class SyncRipleyOrders extends Command
             $count = $syncService->syncPendingOrders();
             $this->info("Sincronización completada. $count órdenes actualizadas.");
         } catch (\Exception $e) {
-            $this->error("Error en sincronización Ripley: " . $e->getMessage());
-            \Illuminate\Support\Facades\Log::error("Ripley Sync Error: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (strpos($msg, 'cURL error 6') === false && strpos($msg, 'cURL error 28') === false) {
+                $this->error("Error en sincronización Ripley: " . $msg);
+                \Illuminate\Support\Facades\Log::error("Ripley Sync Error: " . $msg);
+            }
         }
     }
 }

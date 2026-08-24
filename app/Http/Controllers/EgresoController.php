@@ -95,12 +95,18 @@ class EgresoController extends Controller
                 $items = $request->input('items');
 
                 if (empty($items)) {
+                    if ($request->wantsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => 'El carrito está vacío o las series no son válidas.']);
+                    }
                     $this->headerService->sendFlashAlerts('Error en el formulario', 'Verifica que las series esten correctas existan', 'info', 'btn-warning');
                     return back();
                 }
 
                 if (!is_null($fechapedido) && !is_null($fechadespacho)) {
                     if ($fechapedido > $fechadespacho) {
+                        if ($request->wantsJson() || $request->ajax()) {
+                            return response()->json(['success' => false, 'message' => 'La fecha de pedido no puede ser posterior a la fecha de despacho']);
+                        }
                         $this->headerService->sendFlashAlerts('Error de validación', 'La fecha de pedido no puede ser posterior a la fecha de despacho', 'error', 'btn-danger');
                         return back();
                     }
@@ -180,14 +186,27 @@ class EgresoController extends Controller
                         }
 
                         \Illuminate\Support\Facades\DB::commit();
+                        
+                        if ($request->wantsJson() || $request->ajax()) {
+                            return response()->json(['success' => true, 'message' => 'Egreso y Venta registrados exitosamente.']);
+                        }
+                        
                         $this->headerService->sendFlashAlerts('Egreso y Venta registrados', 'Operacion exitosa', 'success', 'btn-success');
                         return back();
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\DB::rollBack();
+                        
+                        if ($request->wantsJson() || $request->ajax()) {
+                            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+                        }
+                        
                         $this->headerService->sendFlashAlerts('Error al registrar egreso/venta', $e->getMessage(), 'error', 'btn-danger');
                         return back();
                     }
                 } else {
+                    if ($request->wantsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => 'Verifica que los datos ingresados existan (fechas incompletas).']);
+                    }
                     $this->headerService->sendFlashAlerts('Datos incompletos', 'Verifica que los datos ingresados existan', 'info', 'btn-warning');
                     return back();
                 }
@@ -681,6 +700,7 @@ class EgresoController extends Controller
                 $cuentasBancarias = \App\Models\Empresa\CuentasTransferencia::with('Banco')->orderBy('idBanco')->get();
                 $empresas = \App\Models\Empresa\Empresa::all();
                 $tipoDocumentos = \App\Models\Usuarios\TipoDocumento::all();
+                $almacenes = \App\Models\Inventario\Almacen::all();
                 $tasaCambio = app(\App\Services\CalculadoraServiceInterface::class)->obtenerCambioDolar() ?? 3.42;
                 return view('egresos.egresos_masivos', [
                     'user' => $userModel,
@@ -688,7 +708,8 @@ class EgresoController extends Controller
                     'cuentasBancarias' => $cuentasBancarias,
                     'empresas' => $empresas,
                     'tasaCambio' => $tasaCambio,
-                    'tipoDocumentos' => $tipoDocumentos
+                    'tipoDocumentos' => $tipoDocumentos,
+                    'almacenes' => $almacenes
                 ]);
             }
         }
@@ -802,7 +823,7 @@ class EgresoController extends Controller
             ->join('Almacen', 'RegistroProducto.idAlmacen', '=', 'Almacen.idAlmacen')
             ->where('DetalleComprobante.idProducto', $idProducto)
             ->whereIn('RegistroProducto.estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION'])
-            ->select('RegistroProducto.idRegistro', 'RegistroProducto.numeroSerie', 'Almacen.descripcion as almacen')
+            ->select('RegistroProducto.idRegistro', 'RegistroProducto.numeroSerie', 'Almacen.descripcion as almacen', 'Almacen.idAlmacen', 'RegistroProducto.estado', 'RegistroProducto.es_herramienta')
             ->orderBy('RegistroProducto.idRegistro', 'desc')
             ->get();
 

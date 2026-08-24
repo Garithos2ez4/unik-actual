@@ -29,12 +29,10 @@
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
                 @php
-                $idGrp = (int) optional($producto->GrupoProducto)->idGrupoProducto;
-                $idCat = (int) optional($producto->GrupoProducto)->idCategoria;
-                $hasFalabella = in_array($idCat, [1, 3, 6,10]) || in_array($idGrp, [24, 25, 49, 117, 155, 156, 157, 158, 159, 160, 169, 68, 71,72,73,74]);
+                $hasFalabella = $producto->hasMapper('falabella');
                 @endphp
                 @if($hasFalabella)
-                @php $idCatFbk = $idCat; @endphp
+                @php $hasCompleto = $producto->hasTemplateCompleto('falabella'); @endphp
                 <div class="btn-group me-2">
                     <a href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;"
                         class="btn btn-success" title="Descargar plantilla Falabella Express">
@@ -46,7 +44,7 @@
                         <span class="visually-hidden">Toggle</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        @if($idCatFbk === 3) {{-- Template Completo solo para monitores --}}
+                        @if($hasCompleto) {{-- Template Completo --}}
                         <li>
                             <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
                                 <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo

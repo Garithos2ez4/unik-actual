@@ -12,9 +12,18 @@
         </div>
     </div>
 
-    {{-- BUSCADOR DE PRODUCTOS --}}
+    {{-- BUSCADOR DE PRODUCTOS Y ALMACÉN --}}
     <div class="row mt-2">
-        <div class="col-12 col-md-6" style="position:relative">
+        <div class="col-12 col-md-3 mb-2">
+            <label class="form-label fw-bold mb-1"><i class="bi bi-shop"></i> Almacén Origen</label>
+            <select class="form-select" id="select-almacen-masivo">
+                <option value="ALL">Todos los almacenes</option>
+                @foreach($almacenes ?? [] as $almacen)
+                    <option value="{{ $almacen->idAlmacen }}">{{ $almacen->descripcion }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-12 col-md-6 mb-2" style="position:relative">
             <label class="form-label fw-bold mb-1"><i class="bi bi-search"></i> Buscar Producto</label>
             <input type="text" id="input-buscar-producto" class="form-control" placeholder="Marca, Modelo, Código o PartNumber..." autocomplete="off">
             <ul class="list-group shadow" id="suggestions-producto" style="position:absolute;z-index:1000;top:100%;left:0;width:100%;max-height:350px;overflow-y:auto"></ul>

@@ -7,7 +7,7 @@
     <br>
     <div class="row">
         <div class="col-md-12">
-            <h2><i class="bi bi-gear-fill"></i> Configuraci&oacuten</h2>
+            <h2><i class="bi bi-gear-fill"></i> Configuración</h2>
         </div>
     </div>
     <br>
@@ -177,7 +177,7 @@
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-12">
-                                <label for="" class="form-label">Raz&oacute;n Social:</label>
+                                <label for="" class="form-label">Razón Social:</label>
                                 <input type="text" class="form-control" value="" name="razonsocial" placeholder="EMPRESA S.A.C" required>
                             </div>
                             <div class="col-md-6">

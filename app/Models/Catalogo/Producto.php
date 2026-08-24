@@ -199,4 +199,41 @@ class Producto extends Model
     {
         return $this->hasOne(Liquidacion::class, 'idProducto', 'idProducto');
     }
+
+    public function hasMapper(string $plataformaNombre): bool
+    {
+        $idCategoria = optional($this->GrupoProducto)->idCategoria;
+        $idGrupo = $this->idGrupo;
+        
+        return PlataformaMapper::whereHas('plataforma', function($q) use ($plataformaNombre) {
+                $q->where('nombrePlataforma', 'like', "%{$plataformaNombre}%");
+            })
+            ->where(function($query) use ($idCategoria, $idGrupo) {
+                if ($idCategoria) {
+                    $query->orWhere('idCategoria', $idCategoria);
+                }
+                if ($idGrupo) {
+                    $query->orWhere('idGrupoProducto', $idGrupo);
+                }
+            })->exists();
+    }
+
+    public function hasTemplateCompleto(string $plataformaNombre): bool
+    {
+        $idCategoria = optional($this->GrupoProducto)->idCategoria;
+        $idGrupo = $this->idGrupo;
+        
+        return PlataformaMapper::whereHas('plataforma', function($q) use ($plataformaNombre) {
+                $q->where('nombrePlataforma', 'like', "%{$plataformaNombre}%");
+            })
+            ->where('tipo_template', 'completo')
+            ->where(function($query) use ($idCategoria, $idGrupo) {
+                if ($idCategoria) {
+                    $query->orWhere('idCategoria', $idCategoria);
+                }
+                if ($idGrupo) {
+                    $query->orWhere('idGrupoProducto', $idGrupo);
+                }
+            })->exists();
+    }
 }

@@ -422,15 +422,17 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 11. Top 5 Envíos por Monto ───────────────────
-        $topEnviosPorMonto = \App\Models\Envios\EnvioProvincia::query()
-            ->join('Venta', function ($join) {
-                $join->on('envio_provincias.idCliente', '=', 'Venta.idCliente')
-                    ->on(DB::raw('DATE(envio_provincias.fecha_envio)'), '=', DB::raw('DATE(Venta.fechaVenta)'));
+        $topEnviosPorMonto = \App\Models\Ventas\Venta::query()
+            ->join('Cliente', 'Venta.idCliente', '=', 'Cliente.idCliente')
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                      ->from('envio_provincias')
+                      ->whereColumn('envio_provincias.idCliente', 'Venta.idCliente')
+                      ->whereColumn(DB::raw('DATE(envio_provincias.fecha_envio)'), DB::raw('DATE(Venta.fechaVenta)'));
             })
-            ->join('Cliente', 'envio_provincias.idCliente', '=', 'Cliente.idCliente')
-            ->selectRaw('envio_provincias.idEnvioProvincia, envio_provincias.fecha_envio, Cliente.numeroDocumento, Cliente.nombre, Cliente.apellidoPaterno, SUM(Venta.totalVenta) as monto_total')
-            ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
-            ->groupBy('envio_provincias.idEnvioProvincia', 'envio_provincias.fecha_envio', 'Cliente.numeroDocumento', 'Cliente.nombre', 'Cliente.apellidoPaterno')
+            ->selectRaw('MAX(Venta.idVenta) as idEnvioProvincia, MAX(DATE(Venta.fechaVenta)) as fecha_envio, Cliente.numeroDocumento, Cliente.nombre, Cliente.apellidoPaterno, SUM(Venta.totalVenta) as monto_total')
+            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+            ->groupBy('Cliente.numeroDocumento', 'Cliente.nombre', 'Cliente.apellidoPaterno')
             ->orderByDesc('monto_total')
             ->limit(5)
             ->get();

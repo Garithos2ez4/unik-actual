@@ -368,6 +368,9 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/configuracion/updategrupo', [ConfiguracionController::class, 'updateGrupoProducto'])->name('updategrupo');
     Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
     Route::post('/configuracion/updatecategoria', [ConfiguracionController::class, 'updateCategoriaProducto'])->name('updatecategoria');
+    
+    Route::post('/configuracion/insertmapper', [ConfiguracionController::class, 'insertMapper'])->name('insert_mapper');
+    Route::delete('/configuracion/deletemapper/{id}', [ConfiguracionController::class, 'deleteMapper'])->name('delete_mapper');
 
     //Configuracion-ESPECIFICACIONES
     Route::get('/configuracion/especificacionesxgeneral', [ConfiguracionController::class, 'especificacionesGeneral'])->name('configespecificacionesgeneral');

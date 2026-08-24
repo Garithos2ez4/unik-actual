@@ -29,30 +29,28 @@ class FalabellaCategoryResolverService
         $idCat = $grupo ? (int) $grupo->idCategoria : 0;
         $idGrp = $grupo ? (int) $grupo->idGrupoProducto : 0;
 
-        if (in_array($idGrp, [155, 156, 157, 158, 159, 160, 169])) {
-            return new \App\Services\Falabella\Mappers\SuministrosMapper();
+        // 1. Buscar primero por Grupo (Tiene prioridad específica)
+        $mapperConfig = \App\Models\Catalogo\PlataformaMapper::whereHas('plataforma', function($q) {
+                $q->where('nombrePlataforma', 'like', '%Falabella%');
+            })
+            ->where('idGrupoProducto', $idGrp)
+            ->first();
+
+        // 2. Si no hay regla de Grupo, buscar por Categoría general
+        if (!$mapperConfig) {
+            $mapperConfig = \App\Models\Catalogo\PlataformaMapper::whereHas('plataforma', function($q) {
+                    $q->where('nombrePlataforma', 'like', '%Falabella%');
+                })
+                ->where('idCategoria', $idCat)
+                ->first();
         }
 
-        if (in_array($idGrp, [49])) {
-            return new \App\Services\Falabella\Mappers\ProcesadorMapper();
+        // 3. Instanciar la clase dinámicamente si existe en la BD
+        if ($mapperConfig && $mapperConfig->mapper_class && class_exists($mapperConfig->mapper_class)) {
+            return new $mapperConfig->mapper_class();
         }
 
-        if (in_array($idGrp, [24, 117])) {
-            return new \App\Services\Falabella\Mappers\TecladoMapper();
-        }
-
-        if (in_array($idGrp, [68, 71, 72, 73, 74])) {
-            return new \App\Services\Falabella\Mappers\CableMapper();
-        }
-
-        if (in_array($idGrp, [25])) {
-            return new \App\Services\Falabella\Mappers\MouseMapper();
-        }
-
-        return match ($idCat) {
-            self::CATEGORIA_LAPTOP    => new LaptopMapper(),
-            self::CATEGORIA_IMPRESORA => new ImpresoraMapper(),
-            default                   => new MonitorMapper(), // monitores + fallback
-        };
+        // Fallback por defecto si no se encuentra mapeo
+        return new MonitorMapper(); 
     }
 }

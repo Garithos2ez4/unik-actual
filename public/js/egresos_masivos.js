@@ -34,6 +34,15 @@
             }
         }
         if (checkOrdenNoAplica) checkOrdenNoAplica.checked = false;
+
+        const selectAlmacen = document.getElementById('select-almacen-masivo');
+        if (selectAlmacen) {
+            selectAlmacen.addEventListener('change', function() {
+                if (productoSeleccionado) {
+                    cargarSeries(productoSeleccionado.idProducto);
+                }
+            });
+        }
     });
 
     // ==================== BÚSQUEDA DE PRODUCTOS ====================
@@ -232,22 +241,46 @@
         fetch(window.routes.seriesDisponibles + '?idProducto=' + idProducto)
             .then(r => r.json())
             .then(data => {
-                // Filtrar series que ya están en el carrito de egreso para este u otros productos
+                // Obtener el almacén seleccionado
+                let almacenId = document.getElementById('select-almacen-masivo').value;
+
+                // Filtrar series que ya están en el carrito y por almacén
                 const seriesAgregadas = new Set();
                 productosEnCarrito.forEach(item => {
                     item.series.forEach(s => seriesAgregadas.add(s.idRegistro));
                 });
 
-                seriesDisponibles = data.filter(s => !seriesAgregadas.has(s.idRegistro));
+                // Todas las series que no están en el carrito (sin importar el almacén)
+                let seriesGlobales = data.filter(s => !seriesAgregadas.has(s.idRegistro));
+
+                // Filtrar por el almacén seleccionado
+                seriesDisponibles = seriesGlobales.filter(s => {
+                    if (almacenId !== 'ALL' && s.idAlmacen != almacenId) return false;
+                    return true;
+                });
 
                 if (seriesDisponibles.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Sin series disponibles',
-                        text: 'Todas las series disponibles en stock de este producto ya han sido añadidas al carrito de egreso.'
-                    });
-                    limpiarProducto();
-                    return;
+                    if (seriesGlobales.length > 0) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Sin stock en este almacén',
+                            text: 'No hay series en el almacén seleccionado, pero SÍ HAY STOCK en otros almacenes.',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Sin series disponibles',
+                            text: 'No hay series disponibles para este producto en ningún almacén o ya fueron agregadas.',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000
+                        });
+                    }
                 }
 
                 seriesSeleccionadas.clear();
@@ -877,8 +910,57 @@
         }).then(result => {
             if (result.isConfirmed) {
                 // Habilitar temporalmente los inputs deshabilitados antes del submit para que viajen al servidor
+                const inputNumeroOrden = document.getElementById('input-numero-orden-masivo');
                 if (inputNumeroOrden) inputNumeroOrden.disabled = false;
-                this.submit();
+                
+                const form = e.target;
+                const formData = new FormData(form);
+                
+                Swal.fire({
+                    title: 'Procesando...',
+                    text: 'Registrando lote masivo',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: data.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Validación',
+                            text: data.message
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error Inesperado',
+                        text: 'Ocurrió un error al enviar los datos. Revisa la consola para más detalles.'
+                    });
+                });
             }
         });
     });
