@@ -65,7 +65,7 @@
                     <div class="card shadow-sm border-primary border-top border-3">
                         <div class="card-body p-0 table-responsive">
                             <table class="table table-hover table-bordered mb-0 text-center align-middle" style="font-size: 0.9rem;">
-                                <thead class="table-dark">
+                                <thead class="bg-sistema-uno text-white">
                                     <tr>
                                         <th>Plataforma</th>
                                         <th>Nombre</th>
@@ -147,17 +147,40 @@
                                                         </div>
                                                         <div class="row">
                                                             <div class="col-6 mb-3">
-                                                                <label class="form-label">Condición</label>
-                                                                <select class="form-select" name="tipo_condicion" required>
+                                                            <label class="form-label">Condición</label>
+                                                                <select class="form-select select-tipo-condicion" name="tipo_condicion" required>
                                                                     <option value="DEFAULT" {{ $regla->tipo_condicion == 'DEFAULT' ? 'selected' : '' }}>Por Defecto</option>
                                                                     <option value="PRECIO_MENOR_IGUAL" {{ $regla->tipo_condicion == 'PRECIO_MENOR_IGUAL' ? 'selected' : '' }}>Precio <= X</option>
                                                                     <option value="CATEGORIA_IN" {{ $regla->tipo_condicion == 'CATEGORIA_IN' ? 'selected' : '' }}>Categoría en (IDs)</option>
-                                                                    <option value="GRUPO_IN" {{ $regla->tipo_condicion == 'GRUPO_IN' ? 'selected' : '' }}>Grupo en (IDs)</option>
+                                                                    <option value="GRUPO_IN" {{ $regla->tipo_condicion == 'GRUPO_IN' ? 'selected' : '' }}>Grupo en (Nombres)</option>
                                                                 </select>
                                                             </div>
                                                             <div class="col-6 mb-3">
                                                                 <label class="form-label">Valor de la Condición</label>
-                                                                <input type="text" class="form-control" name="valor_condicion" value="{{ $regla->valor_condicion }}" placeholder="Ej: 39.00 o 1,3">
+                                                                @php
+                                                                    $isGrupo = ($regla->tipo_condicion == 'GRUPO_IN');
+                                                                    $isCat = ($regla->tipo_condicion == 'CATEGORIA_IN');
+                                                                    $valoresArray = ($isGrupo || $isCat) ? explode(',', $regla->valor_condicion) : [];
+                                                                @endphp
+                                                                <div class="valor-condicion-text-wrapper {{ ($isGrupo || $isCat) ? 'd-none' : '' }}">
+                                                                    <input type="text" class="form-control" name="valor_condicion" value="{{ $regla->valor_condicion }}" placeholder="Ej: 39.00 o 1,3" {{ ($isGrupo || $isCat) ? 'disabled' : '' }}>
+                                                                </div>
+                                                                <div class="valor-condicion-select-cat-wrapper {{ $isCat ? '' : 'd-none' }}">
+                                                                    <select multiple class="form-control tom-select-cats" name="valor_condicion[]" {{ $isCat ? '' : 'disabled' }}>
+                                                                        <option value="">Buscar categorías...</option>
+                                                                        @foreach($categorias as $cat)
+                                                                            <option value="{{ $cat->idCategoria }}" {{ in_array($cat->idCategoria, $valoresArray) ? 'selected' : '' }}>{{ $cat->nombreCategoria }}</option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                </div>
+                                                                <div class="valor-condicion-select-grp-wrapper {{ $isGrupo ? '' : 'd-none' }}">
+                                                                    <select multiple class="form-control tom-select-grupos" name="valor_condicion[]" {{ $isGrupo ? '' : 'disabled' }}>
+                                                                        <option value="">Buscar grupos...</option>
+                                                                        @foreach($grupos as $grp)
+                                                                            <option value="{{ $grp->nombreGrupo }}" {{ in_array($grp->nombreGrupo, $valoresArray) ? 'selected' : '' }}>{{ $grp->nombreGrupo }}</option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div class="row">
@@ -224,7 +247,7 @@
                     <div class="card shadow-sm border-info border-top border-3">
                         <div class="card-body p-0 table-responsive">
                             <table class="table table-hover table-bordered mb-0 text-center align-middle" style="font-size: 0.9rem;">
-                                <thead class="table-dark">
+                                <thead class="bg-sistema-uno text-white">
                                     <tr>
                                         <th>Plataforma</th>
                                         <th>Peso Máximo (KG)</th>
@@ -367,16 +390,34 @@
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label">Condición</label>
-                            <select class="form-select" name="tipo_condicion" required>
+                            <select class="form-select select-tipo-condicion" name="tipo_condicion" required>
                                 <option value="DEFAULT">Por Defecto</option>
                                 <option value="PRECIO_MENOR_IGUAL">Precio <= X</option>
                                 <option value="CATEGORIA_IN">Categoría en (IDs)</option>
-                                <option value="GRUPO_IN">Grupo en (IDs)</option>
+                                <option value="GRUPO_IN">Grupo en (Nombres)</option>
                             </select>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label">Valor de la Condición</label>
-                            <input type="text" class="form-control" name="valor_condicion" placeholder="Ej: 39.00 o 1,3">
+                            <div class="valor-condicion-text-wrapper">
+                                <input type="text" class="form-control" name="valor_condicion" placeholder="Ej: 39.00 o 1,3">
+                            </div>
+                            <div class="valor-condicion-select-cat-wrapper d-none">
+                                <select multiple class="form-control tom-select-cats" name="valor_condicion[]" disabled>
+                                    <option value="">Buscar categorías...</option>
+                                    @foreach($categorias as $cat)
+                                        <option value="{{ $cat->idCategoria }}">{{ $cat->nombreCategoria }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="valor-condicion-select-grp-wrapper d-none">
+                                <select multiple class="form-control tom-select-grupos" name="valor_condicion[]" disabled>
+                                    <option value="">Buscar grupos...</option>
+                                    @foreach($grupos as $grp)
+                                        <option value="{{ $grp->nombreGrupo }}">{{ $grp->nombreGrupo }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -475,4 +516,58 @@
     </div>
 </div>
 
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar Tom Select en todos los selects que lo requieran
+    document.querySelectorAll('.tom-select-grupos, .tom-select-cats').forEach(function(el) {
+        new TomSelect(el, {
+            plugins: ['remove_button'],
+            placeholder: 'Buscar...',
+            maxOptions: 100
+        });
+    });
+
+    // Manejar el cambio de Condición en cualquier formulario (Nuevo o Edición)
+    document.querySelectorAll('.select-tipo-condicion').forEach(function(selectEl) {
+        selectEl.addEventListener('change', function(e) {
+            const form = this.closest('form');
+            const tipo = this.value;
+            const isGrupo = (tipo === 'GRUPO_IN');
+            const isCat = (tipo === 'CATEGORIA_IN');
+            
+            const textWrapper = form.querySelector('.valor-condicion-text-wrapper');
+            const catWrapper = form.querySelector('.valor-condicion-select-cat-wrapper');
+            const grpWrapper = form.querySelector('.valor-condicion-select-grp-wrapper');
+            
+            const textInput = form.querySelector('input[name="valor_condicion"]');
+            const catSelect = catWrapper ? catWrapper.querySelector('select') : null;
+            const grpSelect = grpWrapper ? grpWrapper.querySelector('select') : null;
+
+            // Ocultar todos
+            if(textWrapper) textWrapper.classList.add('d-none');
+            if(catWrapper) catWrapper.classList.add('d-none');
+            if(grpWrapper) grpWrapper.classList.add('d-none');
+            
+            // Deshabilitar todos
+            if(textInput) textInput.disabled = true;
+            if(catSelect && catSelect.tomselect) catSelect.tomselect.disable();
+            if(grpSelect && grpSelect.tomselect) grpSelect.tomselect.disable();
+
+            // Activar solo el seleccionado
+            if (isGrupo) {
+                if(grpWrapper) grpWrapper.classList.remove('d-none');
+                if(grpSelect && grpSelect.tomselect) grpSelect.tomselect.enable();
+            } else if (isCat) {
+                if(catWrapper) catWrapper.classList.remove('d-none');
+                if(catSelect && catSelect.tomselect) catSelect.tomselect.enable();
+            } else {
+                if(textWrapper) textWrapper.classList.remove('d-none');
+                if(textInput) textInput.disabled = false;
+            }
+        });
+    });
+});
+</script>
+@endpush
 @endsection

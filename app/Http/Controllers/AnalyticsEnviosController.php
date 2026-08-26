@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
+use App\Services\EnvioProvinciaServiceInterface;
 use App\Models\Envios\EnvioProvincia;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsEnviosController extends Controller
 {
     protected $headerService;
+    protected $envioProvinciaService;
 
-    public function __construct(HeaderServiceInterface $headerService)
+    public function __construct(HeaderServiceInterface $headerService, EnvioProvinciaServiceInterface $envioProvinciaService)
     {
         $this->headerService = $headerService;
+        $this->envioProvinciaService = $envioProvinciaService;
     }
 
     private function resolveDateRange(Request $request)
@@ -69,19 +72,13 @@ class AnalyticsEnviosController extends Controller
         }
         [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
 
-        // Obtener el top 5 de destinos/provincias
-        $topProvincias = EnvioProvincia::select('idDestino', DB::raw('count(*) as total'))
-            ->whereBetween('fecha_envio', [$fechaInicio, $fechaFin])
-            ->with('Destino.Provincia')
-            ->groupBy('idDestino')
-            ->orderBy('total', 'desc')
-            ->take(5)
-            ->get()
+        // Obtener el top 5 de provincias usando el método unificado del servicio
+        $topProvincias = $this->envioProvinciaService->getTopProvincias($fechaInicio, $fechaFin, 5)
             ->map(function ($item) {
                 return [
-                    'provincia' => $item->Destino && $item->Destino->Provincia ? $item->Destino->Provincia->nombre : 'Desconocido', // o nombreProvincia
-                    'destino' => $item->Destino ? $item->Destino->nombre : 'Desconocido',
-                    'total' => $item->total
+                    'provincia' => $item->nombre_provincia,
+                    'destino' => $item->nombre_provincia, // Mantenemos la estructura para el frontend
+                    'total' => $item->total_envios
                 ];
             });
 

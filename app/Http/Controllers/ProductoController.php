@@ -3,12 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Catalogo\Producto;
-use App\Models\Usuarios\Usuario;
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
-use App\Services\PreciosService;
-use App\Services\FalabellaTemplateService;
 
 use App\Services\ProductoServiceInterface;
 use Exception;
@@ -525,7 +522,7 @@ class ProductoController extends Controller
                             // Determinar el TC correcto que se estaba usando
                             $usar_tc_fijo_submit = $request->boolean('usar_tc_fijo');
                             $tc_fijo_submit = $request->input('tc_fijo');
-                            
+
                             if ($usar_tc_fijo_submit) {
                                 $tcAUsar = $this->calculadoraService->getTasaCambio(); // SUNAT
                             } else {
@@ -596,9 +593,7 @@ class ProductoController extends Controller
                         $arrayProduct['tc_fijo'] = $request->input('tc_fijo');
                     }
 
-                    // Procesar URLs de YouTube y guardar solo el ID
-                    // Solo se actualiza si el usuario envió un valor nuevo.
-                    // Si el campo viene vacío, se mantiene el valor existente en BD.
+
                     if (!empty($video1)) {
                         $videoId1 = $this->productoService->getYoutubeVideoId($video1);
                         $arrayProduct['videoUrl1'] = $videoId1 ?: null;
@@ -669,7 +664,6 @@ class ProductoController extends Controller
                         }
                     }
 
-                    // 👉 Detalle Producto (Web & Pase) 👈
                     if ($request->has('mostrarPrecioWeb') || $request->has('precio_pase')) {
                         $realId = decrypt($idProducto);
                         $mostrarWeb = $request->input('mostrarPrecioWeb') == '1' ? true : false;
@@ -798,8 +792,4 @@ class ProductoController extends Controller
             'message' => 'Acceso denegado.'
         ], 403);
     }
-
-    // --- MÉTODOS PARA CONFIGURACIÓN DE PACKS ---
-
-
 }

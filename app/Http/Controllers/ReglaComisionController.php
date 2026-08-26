@@ -13,11 +13,17 @@ class ReglaComisionController extends Controller
         $user = app(\App\Services\HeaderService::class)->getModelUser();
         $reglas = ReglaComision::orderBy('plataforma')->orderBy('prioridad', 'desc')->get();
         $tarifas = \App\Models\Ecommerce\ReglaTarifaEnvio::orderBy('plataforma')->orderBy('peso_maximo')->get();
-        return view('configuracion.configcomisiones', compact('reglas', 'tarifas', 'user'));
+        $categorias = \App\Models\Catalogo\CategoriaProducto::orderBy('nombreCategoria')->get();
+        $grupos = \App\Models\Catalogo\GrupoProducto::orderBy('nombreGrupo')->get();
+        return view('configuracion.configcomisiones', compact('reglas', 'tarifas', 'user', 'categorias', 'grupos'));
     }
 
     public function store(Request $request)
     {
+        if ($request->has('valor_condicion') && is_array($request->valor_condicion)) {
+            $request->merge(['valor_condicion' => implode(',', $request->valor_condicion)]);
+        }
+
         $data = $request->validate([
             'plataforma' => 'required|string',
             'nombre_regla' => 'required|string',
@@ -39,6 +45,10 @@ class ReglaComisionController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($request->has('valor_condicion') && is_array($request->valor_condicion)) {
+            $request->merge(['valor_condicion' => implode(',', $request->valor_condicion)]);
+        }
+
         $regla = ReglaComision::findOrFail($id);
         
         $data = $request->validate([

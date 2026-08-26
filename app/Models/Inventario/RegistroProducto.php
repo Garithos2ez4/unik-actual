@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models\Inventario;
+
 use App\Models\Ventas\DetalleComprobante;
 use App\Models\Catalogo\Producto;
 use App\Models\Ventas\Garantia;

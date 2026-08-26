@@ -333,8 +333,6 @@
             ->where('idAlmacen', $almacen->idAlmacen)
             ->first();
             @endphp
-
-            @if($inventario && $inventario->stock > 0)
             <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label">
                     Stock {{ $almacen->descripcion }}:
@@ -408,7 +406,6 @@
                 </small>
                 @endif
             </div>
-            @endif
             @endforeach
             <div class="col-6 col-md-4 col-lg-2">
                 <label class="form-label">Stock Proveedor:</label>

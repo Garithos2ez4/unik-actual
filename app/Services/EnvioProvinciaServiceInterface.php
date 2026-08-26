@@ -12,4 +12,5 @@ interface EnvioProvinciaServiceInterface
     public function createProvincia($nombre);
     public function createDestino($idProvincia, $nombre);
     public function createSubAgencia($idAgencia, $idDestino, $nombre_oficina, $direccion, $telefono);
+    public function getTopProvincias($fechaInicio, $fechaFin, $limit = 5);
 }

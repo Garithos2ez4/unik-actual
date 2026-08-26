@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
 use App\Services\GananciaQueryService;
+use App\Services\EnvioProvinciaServiceInterface;
 use App\Models\Ventas\Venta;
 use App\Models\Ventas\DetalleVenta;
 use App\Models\Inventario\EgresoProducto;
@@ -18,12 +19,18 @@ class AnalyticsController extends Controller
     protected $headerService;
     protected $calculadoraService;
     protected $gananciaQueryService;
+    protected $envioProvinciaService;
 
-    public function __construct(HeaderServiceInterface $headerService, CalculadoraServiceInterface $calculadoraService, GananciaQueryService $gananciaQueryService)
-    {
+    public function __construct(
+        HeaderServiceInterface $headerService, 
+        CalculadoraServiceInterface $calculadoraService, 
+        GananciaQueryService $gananciaQueryService,
+        EnvioProvinciaServiceInterface $envioProvinciaService
+    ) {
         $this->headerService = $headerService;
         $this->calculadoraService = $calculadoraService;
         $this->gananciaQueryService = $gananciaQueryService;
+        $this->envioProvinciaService = $envioProvinciaService;
     }
 
     /**
@@ -411,15 +418,7 @@ class AnalyticsController extends Controller
             ->get();
 
         // ── 10. Top 5 Provincias Más Solicitadas ───────────────────
-        $topProvincias = \App\Models\Envios\EnvioProvincia::query()
-            ->join('destinos', 'envio_provincias.idDestino', '=', 'destinos.idDestino')
-            ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
-            ->selectRaw('provincias.nombre as nombre_provincia, COUNT(envio_provincias.idEnvioProvincia) as total_envios')
-            ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
-            ->groupBy('provincias.idProvincia', 'provincias.nombre')
-            ->orderByDesc('total_envios')
-            ->limit(5)
-            ->get();
+        $topProvincias = $this->envioProvinciaService->getTopProvincias($fechaInicio, $fechaFin, 5);
 
         // ── 11. Top 5 Envíos por Monto ───────────────────
         $topEnviosPorMonto = \App\Models\Ventas\Venta::query()

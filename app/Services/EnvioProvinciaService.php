@@ -213,4 +213,17 @@ class EnvioProvinciaService implements EnvioProvinciaServiceInterface
             'estado' => 1
         ]);
     }
+
+    public function getTopProvincias($fechaInicio, $fechaFin, $limit = 5)
+    {
+        return EnvioProvincia::query()
+            ->join('destinos', 'envio_provincias.idDestino', '=', 'destinos.idDestino')
+            ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
+            ->selectRaw('provincias.nombre as nombre_provincia, COUNT(envio_provincias.idEnvioProvincia) as total_envios')
+            ->whereBetween('envio_provincias.fecha_envio', [$fechaInicio, $fechaFin])
+            ->groupBy('provincias.idProvincia', 'provincias.nombre')
+            ->orderByDesc('total_envios')
+            ->limit($limit)
+            ->get();
+    }
 }

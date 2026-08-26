@@ -271,7 +271,7 @@ class EnvioProvinciaController extends Controller
         }
 
         $ids = $request->query('ids');
-        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'SubAgencia', 'Productos.Producto', 'Detalle', 'Dimension.tipoPaquete'])
+        $query = EnvioProvincia::with(['Cliente', 'Agencia', 'Destino', 'SubAgencia', 'Productos.Producto', 'Detalle.Receptor', 'Dimension.tipoPaquete'])
             ->whereHas('Agencia', function ($q) {
                 $q->where('nombre', 'LIKE', '%SHALOM%');
             });
@@ -443,9 +443,14 @@ class EnvioProvinciaController extends Controller
                     }
                 }
             }
+            
+            $receptor = optional(optional($envio->Detalle)->Receptor);
+            $dniDestino = $receptor->dni ?? optional($envio->Cliente)->numeroDocumento ?? '';
+            $telefonoDestino = $receptor->telefono ?? optional($envio->Cliente)->telefono ?? '';
+            $nombreDestino = $receptor->nombre ?? optional($envio->Cliente)->nombres ?? '';
 
-            $sheet->setCellValueExplicit('A' . $row, optional($envio->Cliente)->numeroDocumento ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit('B' . $row, optional($envio->Cliente)->telefono ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('A' . $row, $dniDestino, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B' . $row, $telefonoDestino, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue('C' . $row, ''); // CONTACTO (DOC)
             $sheet->setCellValue('D' . $row, ''); // TELF. CONTACTO
             $sheet->setCellValue('E' . $row, $envio->numero_guia ?? ''); // NRO GRR
