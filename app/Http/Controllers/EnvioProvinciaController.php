@@ -880,4 +880,92 @@ class EnvioProvinciaController extends Controller
             ], 500);
         }
     }
+
+
+
+    public function pendientesEnvios(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 9) {
+                $fechaDia = $request->input('dia');
+                $fechaMes = $request->input('month');
+                $fechaCarbon = null;
+
+                $query = \App\Models\Envios\EnvioProvinciaProducto::with(['EnvioProvincia.Cliente', 'EnvioProvincia.Destino'])
+                    ->whereNotNull('nota_producto')
+                    ->where('nota_producto', 'LIKE', '%S/N:%');
+
+                if ($fechaDia) {
+                    $fechaCarbon = \Carbon\Carbon::parse($fechaDia);
+                    $query->whereHas('EnvioProvincia', function ($q) use ($fechaDia) {
+                        $q->whereDate('fecha_envio', $fechaDia);
+                    });
+                } elseif ($fechaMes) {
+                    $fechaCarbon = \Carbon\Carbon::parse($fechaMes . '-01');
+                    $query->whereHas('EnvioProvincia', function ($q) use ($fechaMes) {
+                        $q->whereMonth('fecha_envio', date('m', strtotime($fechaMes)))
+                            ->whereYear('fecha_envio', date('Y', strtotime($fechaMes)));
+                    });
+                } else {
+                    $fechaCarbon = \Carbon\Carbon::now();
+                    $query->whereHas('EnvioProvincia', function ($q) {
+                        $q->whereMonth('fecha_envio', date('m'))
+                            ->whereYear('fecha_envio', date('Y'));
+                    });
+                }
+
+                $pes = $query->orderBy('idEnvioProvinciaProducto', 'desc')->get();
+
+                $series = [];
+                foreach ($pes as $pe) {
+                    preg_match_all('/S\/N:\s*([^\s,]+)/', $pe->nota_producto, $matches);
+                    if (!empty($matches[1])) {
+                        foreach ($matches[1] as $serial) {
+                            $serialClasificado = trim($serial);
+                            $registro = \App\Models\Inventario\RegistroProducto::with('DetalleComprobante.Producto')
+                                ->where('numeroSerie', $serialClasificado)
+                                ->where('estado', '!=', 'ENTREGADO')
+                                ->first();
+
+                            if ($registro) {
+                                $series[] = [
+                                    'idEnvioProducto' => $pe->idEnvioProvinciaProducto,
+                                    'serial' => $serialClasificado,
+                                    'producto' => $registro->DetalleComprobante->Producto->nombreProducto ?? 'Producto desconocido',
+                                    'envio' => $pe->EnvioProvincia->toArray(),
+                                    'cantidad' => $pe->cantidad
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                return view('egresos.pendientes_envios', [
+                    'user' => $userModel,
+                    'series' => $series,
+                    'fecha' => $fechaCarbon
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+
+    public function markPendienteEgresado(Request $request)
+    {
+        $idEnvioProducto = $request->input('id_envio_producto');
+        $serial = $request->input('serial');
+
+        $envioProducto = \App\Models\Envios\EnvioProvinciaProducto::find($idEnvioProducto);
+        if ($envioProducto && $envioProducto->nota_producto) {
+            $nota = $envioProducto->nota_producto;
+            $nota = preg_replace('/S\/N:\s*' . preg_quote($serial, '/') . '/', 'EGRESADO: ' . $serial, $nota);
+            $envioProducto->nota_producto = $nota;
+            $envioProducto->save();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false, 'message' => 'No encontrado']);
+    }
 }

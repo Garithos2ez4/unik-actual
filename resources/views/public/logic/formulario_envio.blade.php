@@ -95,6 +95,33 @@
             });
     }
 
+    function verificarCostoAgencia() {
+        const selectAgencia = document.getElementById('select-agencia');
+        if (!selectAgencia || !selectAgencia.value) return;
+
+        const nombreAgencia = selectAgencia.options[selectAgencia.selectedIndex].text.toUpperCase();
+        const agenciasExoneradas = ['SHALOM', 'FLORES', 'CAVASSA', 'KARSIL'];
+        
+        let tieneCostoAdicional = true;
+        for (let i = 0; i < agenciasExoneradas.length; i++) {
+            if (nombreAgencia.includes(agenciasExoneradas[i])) {
+                tieneCostoAdicional = false;
+                break;
+            }
+        }
+
+        if (tieneCostoAdicional) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Costo Adicional de Traslado',
+                html: 'Shalom, Flores, Cavassa y Karsil <b>no tienen cobro de traslado</b> hasta la agencia.<br><br>' +
+                      'El envío por otras agencias tiene un <b>costo adicional de traslado</b>, el cual puede exonerarse dependiendo del monto y la hora de tu compra.<br><br>' +
+                      '<i>Por favor, comunícate con tu vendedor para coordinar el pago.</i>',
+                confirmButtonColor: '#00b1b9'
+            });
+        }
+    }
+
     function cargarSubAgencias() {
         const selectAgencia = document.getElementById('select-agencia');
         const selectDestino = document.getElementById('select-destino');

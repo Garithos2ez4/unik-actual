@@ -20,6 +20,20 @@ class FalabellaScraperService
             return ['success' => false, 'message' => 'El parámetro modelo es requerido'];
         }
 
+        // Recuperar el producto local si no se pasó el nombre
+        if (empty($nombreProductoLocal)) {
+            $prodLocal = \App\Models\Catalogo\Producto::with(['GrupoProducto'])
+                ->where('modelo', $modelo)
+                ->orWhere('modelo', 'LIKE', '%' . trim($modelo) . '%')
+                ->first();
+            if ($prodLocal) {
+                $nombreProductoLocal = $prodLocal->nombreProducto;
+                if (empty($categoriaLocal) && $prodLocal->GrupoProducto) {
+                    $categoriaLocal = $prodLocal->GrupoProducto->nombreGrupo;
+                }
+            }
+        }
+
         try {
             $terminoBusqueda = $marcaLocal !== '' ? $marcaLocal . ' ' . $modelo : $modelo;
             $url = 'https://www.falabella.com.pe/falabella-pe/search?Ntt=' . urlencode($terminoBusqueda);
@@ -120,6 +134,30 @@ class FalabellaScraperService
 
                         if (!$pasaFiltro1) {
                             continue;
+                        }
+
+                        // Filtro 1.5: Dinámico leyendo el título local
+                        // Extraemos la primera palabra relevante del título de Falabella
+                        if (!empty($nombreProductoLocal)) {
+                            $palabrasTituloFalabella = explode(' ', preg_replace('/[^A-Z0-9 ]/', '', $tituloUpper));
+                            $primeraPalabraFalabella = '';
+                            foreach ($palabrasTituloFalabella as $p) {
+                                if (strlen($p) > 2) { // Buscar la primera palabra real (ej. TINTA, CHIP, IMPRESORA)
+                                    $primeraPalabraFalabella = $p;
+                                    break;
+                                }
+                            }
+
+                            // Verificamos si esa primera palabra existe en el título de nuestro producto
+                            if ($primeraPalabraFalabella !== '') {
+                                $tituloLocalLimpio = preg_replace('/[^A-Z0-9 ]/', '', strtoupper($nombreProductoLocal));
+                                $palabrasTituloLocal = explode(' ', $tituloLocalLimpio);
+                                
+                                // Si la primera palabra de Falabella (el sustantivo principal) NO está en nuestro título, es probable que sea un accesorio
+                                if (!in_array($primeraPalabraFalabella, $palabrasTituloLocal)) {
+                                    continue;
+                                }
+                            }
                         }
 
                         // Filtro 2: Coincidencia flexible para variaciones de modelo

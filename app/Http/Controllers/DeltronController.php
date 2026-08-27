@@ -28,7 +28,7 @@ class DeltronController extends Controller
         // Scraping en tiempo real ordenado por stock descendente
         $productos = $scraperService->scrapeByKeyword($keyword, 'stock_desc', $page);
 
-        $historial = \App\Models\InventarioProveedorDetalle::orderBy('fecha_ejecucion', 'desc')->take(50)->get();
+        $historial = \App\Models\Inventario\InventarioProveedorDetalle::orderBy('fecha_ejecucion', 'desc')->take(50)->get();
 
         return view('compras.deltron_stock', [
             'user' => $userModel,

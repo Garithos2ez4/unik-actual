@@ -45,7 +45,7 @@ class ScrapeDeltron extends Command
             $detalles = $syncResult['detalles'];
             $recomendados = $syncResult['recomendados'] ?? [];
 
-            \App\Models\InventarioProveedorDetalle::create([
+            \App\Models\Inventario\InventarioProveedorDetalle::create([
                 'keyword' => $keyword,
                 'productos_encontrados' => count($scrapedData),
                 'productos_actualizados' => $updatedCount,

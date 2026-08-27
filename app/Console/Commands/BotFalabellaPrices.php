@@ -23,7 +23,10 @@ class BotFalabellaPrices extends Command
         // Convertimos $manuales a formato detallado
         $modelosAEvaluar = [];
         foreach($manuales as $m) {
-            $prod = \App\Models\Catalogo\Producto::with(['GrupoProducto', 'MarcaProducto'])->where('modelo', $m)->first();
+            $prod = \App\Models\Catalogo\Producto::with(['GrupoProducto', 'MarcaProducto'])
+                ->where('modelo', $m)
+                ->orWhere('modelo', 'LIKE', '%' . $m . '%')
+                ->first();
             $modelosAEvaluar[$m] = [
                 'nombre' => $prod ? $prod->nombreProducto : '',
                 'categoria' => ($prod && $prod->GrupoProducto) ? $prod->GrupoProducto->nombreGrupo : '',

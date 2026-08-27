@@ -16,13 +16,19 @@ use App\Http\Controllers\LiquidacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\EgresoController;
+use App\Http\Controllers\EgresoMasivoController;
 use App\Http\Controllers\PlataformaController;
 use App\Http\Controllers\PublicidadController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\CalculadoraController;
 use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\ConfiguracionController;
+use App\Http\Controllers\Configuracion\ConfigWebController;
+use App\Http\Controllers\Configuracion\ConfigCalculosController;
+use App\Http\Controllers\Configuracion\ConfigProductosController;
+use App\Http\Controllers\Configuracion\ConfigInventarioController;
+use App\Http\Controllers\Configuracion\ConfigEspecificacionesController;
+use App\Http\Controllers\Configuracion\ConfigAlertasController;
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\GarantiaController;
 use App\Http\Controllers\PdfController;
@@ -181,15 +187,15 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
     Route::post('/egresos/upgrade', [EgresoController::class, 'upgradeEgreso'])->name('upgradeegreso');
-    Route::get('/egresos/pendientes-envios', [EgresoController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
-    Route::post('/egresos/pendientes-envios/mark', [EgresoController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
+    Route::get('/egresos/pendientes-envios', [\App\Http\Controllers\EnvioProvinciaController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
+    Route::post('/egresos/pendientes-envios/mark', [\App\Http\Controllers\EnvioProvinciaController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');
     Route::get('/egresos/total', [EgresoController::class, 'getTotalEgresos'])->name('egresos.total');
-    Route::post('/egresos/importar', [EgresoController::class, 'importarExcel'])->name('egresos.importar');
-    Route::get('/egresos/descargar-formato', [EgresoController::class, 'descargarFormato'])->name('egresos.formato');
-    Route::get('/egresos/masivos', [EgresoController::class, 'egresosMasivos'])->name('egresos.masivos');
+    Route::post('/egresos/importar', [EgresoMasivoController::class, 'importarExcel'])->name('egresos.importar');
+    Route::get('/egresos/descargar-formato', [EgresoMasivoController::class, 'descargarFormato'])->name('egresos.formato');
+    Route::get('/egresos/masivos', [EgresoMasivoController::class, 'egresosMasivos'])->name('egresos.masivos');
     Route::get('/egresos/search-producto-ajax', [EgresoController::class, 'searchProductoAjax'])->name('egresos.searchproducto');
     Route::get('/egresos/series-disponibles', [EgresoController::class, 'getSeriesDisponibles'])->name('egresos.seriesdisponibles');
     Route::get('/egresos/costo-registro', [EgresoController::class, 'getCostoRegistro'])->name('egresos.costoregistro');
@@ -315,29 +321,29 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/cliente/searchcliente', [ClienteController::class, 'searchCliente'])->name('searchcliente');
     Route::get('/cliente/consultar-ruc/{ruc}', [ClienteController::class, 'consultarRuc'])->name('cliente.consultarRuc');
     Route::get('/cliente/consultar-dni/{dni}', [ClienteController::class, 'consultarDni'])->name('cliente.consultarDni');
-    Route::get('/tipo-cambio', [\App\Http\Controllers\ConfiguracionController::class, 'consultarTipoCambio'])->name('tipo-cambio.consultar');
+    Route::get('/tipo-cambio', [ConfigCalculosController::class, 'consultarTipoCambio'])->name('tipo-cambio.consultar');
     Route::post('/cliente/create', [ClienteController::class, 'createCliente'])->name('createcliente');
     Route::post('/cliente/update/{id}', [ClienteController::class, 'updateCliente'])->name('updatecliente');
 
     //Configuracion-WEB
-    Route::get('/configuracion/web', [ConfiguracionController::class, 'web'])->name('configweb');
-    Route::post('/configuracion/updatecorreos', [ConfiguracionController::class, 'updateCorreos'])->name('updatecorreos');
-    Route::post('/configuracion/updatecuentasbancarias', [ConfiguracionController::class, 'updateCuentasBancarias'])->name('updatecuentasbancarias');
-    Route::post('/configuracion/insertcuentasbancarias', [ConfiguracionController::class, 'insertCuentasBancarias'])->name('insertcuentasbancarias');
-    Route::post('/configuracion/insertmetodopago', [ConfiguracionController::class, 'insertMetodoPago'])->name('insertmetodopago');
-    Route::post('/configuracion/inserttipometodopago', [ConfiguracionController::class, 'insertTipoMetodoPago'])->name('inserttipometodopago');
-    Route::post('/configuracion/updatemetodopago', [ConfiguracionController::class, 'updateMetodoPago'])->name('updatemetodopago');
-    Route::post('/configuracion/updatetipometodopago', [ConfiguracionController::class, 'updateTipoMetodoPago'])->name('updatetipometodopago');
+    Route::get('/configuracion/web', [ConfigWebController::class, 'web'])->name('configweb');
+    Route::post('/configuracion/updatecorreos', [ConfigWebController::class, 'updateCorreos'])->name('updatecorreos');
+    Route::post('/configuracion/updatecuentasbancarias', [ConfigWebController::class, 'updateCuentasBancarias'])->name('updatecuentasbancarias');
+    Route::post('/configuracion/insertcuentasbancarias', [ConfigWebController::class, 'insertCuentasBancarias'])->name('insertcuentasbancarias');
+    Route::post('/configuracion/insertmetodopago', [ConfigWebController::class, 'insertMetodoPago'])->name('insertmetodopago');
+    Route::post('/configuracion/inserttipometodopago', [ConfigWebController::class, 'insertTipoMetodoPago'])->name('inserttipometodopago');
+    Route::post('/configuracion/updatemetodopago', [ConfigWebController::class, 'updateMetodoPago'])->name('updatemetodopago');
+    Route::post('/configuracion/updatetipometodopago', [ConfigWebController::class, 'updateTipoMetodoPago'])->name('updatetipometodopago');
 
     //Configuracion-CALCULOS
-    Route::get('/configuracion/calculos', [ConfiguracionController::class, 'calculos'])->name('configcalculos');
-    Route::post('/configuracion/updatecalculos', [ConfiguracionController::class, 'updateCalculos'])->name('updatecalculos');
-    Route::post('/configuracion/updateCalculosTasaFija', [ConfiguracionController::class, 'updateCalculosTasaFija'])->name('updateCalculosTasaFija');
-    Route::post('/configuracion/updatecomision', [ConfiguracionController::class, 'updateComision'])->name('updatecomision');
-    Route::post('/configuracion/aplicarcomisionuniforme', [ConfiguracionController::class, 'aplicarComisionUniforme'])->name('aplicarcomisionuniforme');
-    Route::post('/configuracion/createcomisionplataforma', [ConfiguracionController::class, 'createComisionPlataforma'])->name('createcomisionplataforma');
-    Route::post('/configuracion/deletecomisionplataforma', [ConfiguracionController::class, 'deleteComisionPlataforma'])->name('deletecomisionplataforma');
-    Route::post('/configuracion/tipo-cambio', [ConfiguracionController::class, 'cambiarTipoCambio'])->name('configuracion.tipoCambio');
+    Route::get('/configuracion/calculos', [ConfigCalculosController::class, 'calculos'])->name('configcalculos');
+    Route::post('/configuracion/updatecalculos', [ConfigCalculosController::class, 'updateCalculos'])->name('updatecalculos');
+    Route::post('/configuracion/updateCalculosTasaFija', [ConfigCalculosController::class, 'updateCalculosTasaFija'])->name('updateCalculosTasaFija');
+    Route::post('/configuracion/updatecomision', [ConfigCalculosController::class, 'updateComision'])->name('updatecomision');
+    Route::post('/configuracion/aplicarcomisionuniforme', [ConfigCalculosController::class, 'aplicarComisionUniforme'])->name('aplicarcomisionuniforme');
+    Route::post('/configuracion/createcomisionplataforma', [ConfigCalculosController::class, 'createComisionPlataforma'])->name('createcomisionplataforma');
+    Route::post('/configuracion/deletecomisionplataforma', [ConfigCalculosController::class, 'deleteComisionPlataforma'])->name('deletecomisionplataforma');
+    Route::post('/configuracion/tipo-cambio', [ConfigCalculosController::class, 'cambiarTipoCambio'])->name('configuracion.tipoCambio');
 
     //Configuracion-COMISIONES PLATAFORMAS (NUEVAS REGLAS)
     Route::get('/configuracion/comisiones', [\App\Http\Controllers\ReglaComisionController::class, 'index'])->name('comisiones.index');
@@ -352,45 +358,46 @@ Route::middleware(['validate.session'])->group(function () {
 
 
     //Configuracion-PRODUCTOS
-    Route::get('/configuracion/productos', [ConfiguracionController::class, 'productos'])->name('configproductos');
+    Route::get('/configuracion/productos', [ConfigProductosController::class, 'productos'])->name('configproductos');
 
-    //Configuracion-PEDIDOS WEB
-    Route::get('/configuracion/pedidos-web', [ConfiguracionController::class, 'pedidosWeb'])->name('configpedidosweb');
-    Route::post('/configuracion/pedidos-web/{id}/estado', [ConfiguracionController::class, 'updatePedidoWebEstado'])->name('updatepedidowebestado');
+    //Configuracion-PEDIDOS WEB y ALERTAS
+    Route::get('/configuracion/pedidos-web', [ConfigAlertasController::class, 'pedidosWeb'])->name('configpedidosweb');
+    Route::post('/configuracion/pedidos-web/{id}/estado', [ConfigAlertasController::class, 'updatePedidoWebEstado'])->name('updatepedidowebestado');
     Route::get('/api/check-new-orders', [HomeController::class, 'checkNewOrders'])->name('checkNewOrders');
-    Route::post('/configuracion/alerta/{id}/estado', [ConfiguracionController::class, 'updateAlertaEstado'])->name('updatealertaestado');
-    Route::post('/configuracion/alerta/crear', [ConfiguracionController::class, 'crearAlertaManual'])->name('crearalertamanual');
-    Route::post('/configuracion/alerta/ejecutar-bot', [ConfiguracionController::class, 'ejecutarBotPrecios'])->name('ejecutarbotprecios');
-    Route::post('/configuracion/vigilado/add', [ConfiguracionController::class, 'addVigilado'])->name('addvigilado');
-    Route::get('/configuracion/vigilado/delete/{id}', [ConfiguracionController::class, 'deleteVigilado'])->name('deletevigilado');
-    Route::post('/configuracion/insertmarca', [ConfiguracionController::class, 'createMarcaProducto'])->name('insertmarca');
-    Route::post('/configuracion/insertgrupo', [ConfiguracionController::class, 'createGrupoProducto'])->name('insertgrupo');
-    Route::post('/configuracion/updategrupo', [ConfiguracionController::class, 'updateGrupoProducto'])->name('updategrupo');
-    Route::post('/configuracion/insertcategoria', [ConfiguracionController::class, 'createCategoriaProducto'])->name('insertcategoria');
-    Route::post('/configuracion/updatecategoria', [ConfiguracionController::class, 'updateCategoriaProducto'])->name('updatecategoria');
+    Route::post('/configuracion/alerta/{id}/estado', [ConfigAlertasController::class, 'updateAlertaEstado'])->name('updatealertaestado');
+    Route::post('/configuracion/alerta/crear', [ConfigAlertasController::class, 'crearAlertaManual'])->name('crearalertamanual');
+    Route::post('/configuracion/alerta/ejecutar-bot', [ConfigAlertasController::class, 'ejecutarBotPrecios'])->name('ejecutarbotprecios');
+    Route::get('/configuracion/alerta/bot-log', [ConfigAlertasController::class, 'verLogBot'])->name('verlogbot');
+    Route::post('/configuracion/vigilado/add', [ConfigAlertasController::class, 'addVigilado'])->name('addvigilado');
+    Route::get('/configuracion/vigilado/delete/{id}', [ConfigAlertasController::class, 'deleteVigilado'])->name('deletevigilado');
+    Route::post('/configuracion/insertmarca', [ConfigProductosController::class, 'createMarcaProducto'])->name('insertmarca');
+    Route::post('/configuracion/insertgrupo', [ConfigProductosController::class, 'createGrupoProducto'])->name('insertgrupo');
+    Route::post('/configuracion/updategrupo', [ConfigProductosController::class, 'updateGrupoProducto'])->name('updategrupo');
+    Route::post('/configuracion/insertcategoria', [ConfigProductosController::class, 'createCategoriaProducto'])->name('insertcategoria');
+    Route::post('/configuracion/updatecategoria', [ConfigProductosController::class, 'updateCategoriaProducto'])->name('updatecategoria');
     
-    Route::post('/configuracion/insertmapper', [ConfiguracionController::class, 'insertMapper'])->name('insert_mapper');
-    Route::delete('/configuracion/deletemapper/{id}', [ConfiguracionController::class, 'deleteMapper'])->name('delete_mapper');
+    Route::post('/configuracion/insertmapper', [ConfigProductosController::class, 'insertMapper'])->name('insert_mapper');
+    Route::delete('/configuracion/deletemapper/{id}', [ConfigProductosController::class, 'deleteMapper'])->name('delete_mapper');
 
     //Configuracion-ESPECIFICACIONES
-    Route::get('/configuracion/especificacionesxgeneral', [ConfiguracionController::class, 'especificacionesGeneral'])->name('configespecificacionesgeneral');
-    Route::get('/configuracion/especificaciones/{idCategoria}', [ConfiguracionController::class, 'especificaciones'])->name('configespecificaciones');
-    Route::get('/configuracion/especificacionesxgrupo/{idCategoria}', [ConfiguracionController::class, 'especificacionesGrupo'])->name('configespecificacionesxgrupo');
-    Route::post('/configuracion/insertcaracteristicaxgrupo', [ConfiguracionController::class, 'insertCaracteristicaXGrupo'])->name('insertcaracteristicaxgrupo');
-    Route::post('/configuracion/deletecaracteristicaxgrupo', [ConfiguracionController::class, 'deleteCaracteristicaXGrupo'])->name('deletecaracteristicaxgrupo');
-    Route::post('/configuracion/createcaracteristica', [ConfiguracionController::class, 'createCaracteristica'])->name('createcaracteristica');
-    Route::post('/configuracion/updatecaracteristica', [ConfiguracionController::class, 'updateCaracteristica'])->name('updatecaracteristica');
-    Route::post('/configuracion/removesugerencia', [ConfiguracionController::class, 'removeSugerencia'])->name('removesugerencia');
+    Route::get('/configuracion/especificacionesxgeneral', [ConfigEspecificacionesController::class, 'especificacionesGeneral'])->name('configespecificacionesgeneral');
+    Route::get('/configuracion/especificaciones/{idCategoria}', [ConfigEspecificacionesController::class, 'especificaciones'])->name('configespecificaciones');
+    Route::get('/configuracion/especificacionesxgrupo/{idCategoria}', [ConfigEspecificacionesController::class, 'especificacionesGrupo'])->name('configespecificacionesxgrupo');
+    Route::post('/configuracion/insertcaracteristicaxgrupo', [ConfigEspecificacionesController::class, 'insertCaracteristicaXGrupo'])->name('insertcaracteristicaxgrupo');
+    Route::post('/configuracion/deletecaracteristicaxgrupo', [ConfigEspecificacionesController::class, 'deleteCaracteristicaXGrupo'])->name('deletecaracteristicaxgrupo');
+    Route::post('/configuracion/createcaracteristica', [ConfigEspecificacionesController::class, 'createCaracteristica'])->name('createcaracteristica');
+    Route::post('/configuracion/updatecaracteristica', [ConfigEspecificacionesController::class, 'updateCaracteristica'])->name('updatecaracteristica');
+    Route::post('/configuracion/removesugerencia', [ConfigEspecificacionesController::class, 'removeSugerencia'])->name('removesugerencia');
 
     //Configuracion-INVENTARIO
-    Route::get('/configuracion/inventario', [ConfiguracionController::class, 'inventario'])->name('configinventario');
-    Route::post('/configuracion/createalamcen', [ConfiguracionController::class, 'createAlmacen'])->name('createalmacen');
-    Route::post('/configuracion/createubicacion', [ConfiguracionController::class, 'createUbicacionAlmacen'])->name('createubicacion');
-    Route::post('/configuracion/updateubicacion/{id}', [ConfiguracionController::class, 'updateUbicacionAlmacen'])->name('updateubicacion');
-    Route::post('/configuracion/deleteubicacion/{id}', [ConfiguracionController::class, 'deleteUbicacionAlmacen'])->name('deleteubicacion');
-    Route::post('/configuracion/addfila', [ConfiguracionController::class, 'addFila'])->name('addfila');
-    Route::get('/configuracion/deletefila/{id}', [ConfiguracionController::class, 'deleteFila'])->name('deletefila');
-    Route::post('/configuracion/createproveedor', [ConfiguracionController::class, 'createProveedor'])->name('createproveedor');
+    Route::get('/configuracion/inventario', [ConfigInventarioController::class, 'inventario'])->name('configinventario');
+    Route::post('/configuracion/createalamcen', [ConfigInventarioController::class, 'createAlmacen'])->name('createalmacen');
+    Route::post('/configuracion/createubicacion', [ConfigInventarioController::class, 'createUbicacionAlmacen'])->name('createubicacion');
+    Route::post('/configuracion/updateubicacion/{id}', [ConfigInventarioController::class, 'updateUbicacionAlmacen'])->name('updateubicacion');
+    Route::post('/configuracion/deleteubicacion/{id}', [ConfigInventarioController::class, 'deleteUbicacionAlmacen'])->name('deleteubicacion');
+    Route::post('/configuracion/addfila', [ConfigInventarioController::class, 'addFila'])->name('addfila');
+    Route::get('/configuracion/deletefila/{id}', [ConfigInventarioController::class, 'deleteFila'])->name('deletefila');
+    Route::post('/configuracion/createproveedor', [ConfigInventarioController::class, 'createProveedor'])->name('createproveedor');
 
     Route::get('/generateSerialPdf/{idDocumento}', [PdfController::class, 'generateSerialPdf'])->name('generarSeriesPdf');
     Route::get('/pdf/serialbyproduct/{idProducto}/{idAlmacen?}', [PdfController::class, 'seriesByProductPdf'])->name('seriesXProducto');

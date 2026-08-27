@@ -12,6 +12,9 @@
                     <button class="btn btn-primary ms-2 my-2 text-nowrap" style="z-index: 10;" onclick="ejecutarBotPrecios(this)">
                         <i class="bi bi-robot"></i> Ejecutar Bot
                     </button>
+                    <button class="btn btn-secondary ms-2 my-2 text-nowrap" style="z-index: 10;" onclick="verLogBot()">
+                        <i class="bi bi-file-earmark-text"></i> Ver Último Reporte
+                    </button>
                     <button class="btn btn-success ms-2 my-2 text-nowrap" style="z-index: 10;" data-bs-toggle="modal" data-bs-target="#modalNuevaAlerta">
                         <i class="bi bi-plus-circle"></i> Nueva Alerta
                     </button>
@@ -128,6 +131,25 @@
 </div>
 
 @include('configuracion.components.logic.alertas_precios_logic')
+
+<!-- Modal Log Bot -->
+<div class="modal fade" id="modalLogBot" tabindex="-1" aria-labelledby="modalLogBotLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalLogBotLabel"><i class="bi bi-file-earmark-text text-secondary"></i> Reporte del Bot de Precios</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-dark text-light">
+                <pre id="logBotContent" style="white-space: pre-wrap; font-size: 0.85rem;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="verLogBot()"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Nueva Alerta -->
 <div class="modal fade" id="modalNuevaAlerta" tabindex="-1" aria-labelledby="modalNuevaAlertaLabel" aria-hidden="true">

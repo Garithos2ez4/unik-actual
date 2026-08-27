@@ -83,6 +83,35 @@
             });
     }
 
+    function verLogBot() {
+        fetch(`/configuracion/alerta/bot-log`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('logBotContent').textContent = data.log;
+                // Auto-scroll to bottom
+                setTimeout(() => {
+                    let pre = document.getElementById('logBotContent');
+                    pre.parentElement.scrollTop = pre.parentElement.scrollHeight;
+                }, 150);
+                
+                // Show modal securely
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalLogBot')).show();
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo obtener el reporte.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error', 'Hubo un error al comunicarse con el servidor', 'error');
+        });
+    }
+
     function guardarAlertaManual(btn) {
         const form = document.getElementById('formNuevaAlerta');
         if (!form.checkValidity()) {

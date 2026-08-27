@@ -129,7 +129,7 @@
             <div class="row g-3">
                 <div class="col-12">
                     <label class="form-label">Agencia <span class="required-star">*</span></label>
-                    <select name="idAgencia" id="select-agencia" class="form-select" required onchange="cargarSubAgencias()">
+                    <select name="idAgencia" id="select-agencia" class="form-select" required onchange="verificarCostoAgencia(); cargarSubAgencias()">
                         <option value="">Seleccione agencia...</option>
                         @foreach($agencias as $agencia)
                         <option value="{{ $agencia->idAgencia }}">{{ $agencia->nombre }}</option>
