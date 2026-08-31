@@ -47,8 +47,8 @@ class AnalyticsController extends Controller
     private function applyInventarioFilter($query, $isVenta = true)
     {
         if ($isVenta) {
-            // No filtramos las ventas por INVENTARIO porque una venta es válida y genera ingresos
-            // sin importar de dónde provino el stock inicial del producto vendido.
+            // Excluir ventas devueltas/anuladas para que no inflen las métricas
+            $query->where('DetalleVenta.estado', '!=', 'DEVUELTO');
             return $query;
         } else {
             // Para compras/gastos, sí filtramos los comprobantes de INVENTARIO para no inflar los costos
@@ -63,6 +63,7 @@ class AnalyticsController extends Controller
         }
         return $query;
     }
+
 
     private function resolveDateRange(Request $request)
     {
@@ -580,12 +581,13 @@ class AnalyticsController extends Controller
                              SUM(((($costoVentaExpr) + ($comisionTiendaExpr)) * DetalleVenta.cantidad + ($costosComponentesSub))) as costos,
                              0 as comision_tienda")
                 ->where('DetalleVenta.precioVenta', '>', 0.10)
+                ->where('DetalleVenta.estado', '!=', 'DEVUELTO')
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
                 ->orderByDesc('Venta.fechaVenta')
                 ->get()
-                ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta));
+                ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta, true));
 
             $pagosTienda = \App\Models\Ventas\PagoVenta::query()
                 ->join('Venta', 'PagoVenta.idVenta', '=', 'Venta.idVenta')
@@ -593,6 +595,13 @@ class AnalyticsController extends Controller
                 ->selectRaw("MetodoPago.nombreMetodo as metodo_pago, SUM(PagoVenta.monto) as total_monto, COUNT(PagoVenta.idPagoVenta) as cantidad_transacciones")
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->whereExists(function ($query) {
+                    $query->select(\Illuminate\Support\Facades\DB::raw(1))
+                          ->from('DetalleVenta')
+                          ->whereColumn('DetalleVenta.idVenta', 'Venta.idVenta')
+                          ->where('DetalleVenta.precioVenta', '>', 0.10)
+                          ->where('DetalleVenta.estado', '!=', 'DEVUELTO');
+                })
                 ->groupBy('MetodoPago.nombreMetodo')
                 ->orderByDesc('total_monto')
                 ->get();
@@ -606,6 +615,13 @@ class AnalyticsController extends Controller
                 ->selectRaw("CASE WHEN UPPER(MetodoPago.nombreMetodo) LIKE '%TRANSFERENCIA%' THEN COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) ELSE MetodoPago.nombreMetodo END as metodo_banco, PagoVenta.idVenta, Venta.fechaVenta, PagoVenta.fechaPago, PagoVenta.monto, PagoVenta.nroOperacion, Usuario.user as vendedor")
                 ->whereRaw("UPPER(Venta.canal) = 'TIENDA'")
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
+                ->whereExists(function ($query) {
+                    $query->select(\Illuminate\Support\Facades\DB::raw(1))
+                          ->from('DetalleVenta')
+                          ->whereColumn('DetalleVenta.idVenta', 'Venta.idVenta')
+                          ->where('DetalleVenta.precioVenta', '>', 0.10)
+                          ->where('DetalleVenta.estado', '!=', 'DEVUELTO');
+                })
                 ->orderByRaw("CASE WHEN UPPER(MetodoPago.nombreMetodo) LIKE '%TRANSFERENCIA%' THEN COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) ELSE MetodoPago.nombreMetodo END")
                 ->orderByDesc('Venta.fechaVenta')
                 ->get()
@@ -647,7 +663,7 @@ class AnalyticsController extends Controller
                     $sku->ingresos = round($sku->ingresos, 2);
                     $sku->costos = round($sku->costos, 2);
                     $sku->ganancia = round($sku->ingresos - $sku->costos, 2);
-                    $sku->margen = $sku->ingresos > 0 ? round(($sku->ganancia / $sku->ingresos) * 100, 2) : 0;
+                    $sku->margen = $sku->costos > 0 ? round(($sku->ganancia / $sku->costos) * 100, 2) : 0;
                     return $sku;
                 });
 
@@ -671,5 +687,57 @@ class AnalyticsController extends Controller
         return view('analytics.components.tienda.components.tienda_venta_data', $data + [
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
+    }
+
+    public function productoHistorialIndex(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        if (!$this->validateAccess($userModel, 13)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+        
+        return view('analytics.producto_historial', [
+            'userModel' => $userModel,
+            'user' => $userModel
+        ]);
+    }
+
+    public function productoHistorialData(Request $request)
+    {
+        $idProducto = $request->input('idProducto');
+        
+        if (!$idProducto) {
+            return response()->json([]);
+        }
+
+        $historial = \Illuminate\Support\Facades\DB::table('DetalleVenta')
+            ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
+            ->select(
+                'Venta.fechaVenta',
+                'Venta.canal',
+                'Venta.numeroOrden',
+                'Venta.idVenta',
+                'DetalleVenta.cantidad',
+                'DetalleVenta.precioVenta',
+                'DetalleVenta.estado'
+            )
+            ->where('DetalleVenta.idProducto', $idProducto)
+            ->orderByDesc('Venta.fechaVenta')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'fecha' => \Carbon\Carbon::parse($item->fechaVenta)->format('d/m/Y H:i'),
+                    'fecha_sort' => \Carbon\Carbon::parse($item->fechaVenta)->timestamp,
+                    'canal' => $item->canal ?? 'Desconocido',
+                    'orden' => $item->numeroOrden ?? 'V-'.$item->idVenta,
+                    'cantidad' => $item->cantidad,
+                    'precio_unitario' => number_format($item->precioVenta, 2),
+                    'total' => number_format($item->precioVenta * $item->cantidad, 2),
+                    'estado' => $item->estado
+                ];
+            });
+
+        return response()->json($historial);
     }
 }

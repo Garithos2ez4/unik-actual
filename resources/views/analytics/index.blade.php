@@ -26,6 +26,9 @@
                 <a href="{{ route('dashboard.analitica.envios') }}" class="btn btn-secondary rounded-pill px-4 shadow-sm text-white">
                     <i class="bi bi-truck me-1"></i> Envíos
                 </a>
+                <a href="{{ route('dashboard.analitica.producto') }}" class="btn btn-dark rounded-pill px-4 shadow-sm text-white">
+                    <i class="bi bi-clock-history me-1"></i> Prod. Historial
+                </a>
                 <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">
                     <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
                 </a>

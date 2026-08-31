@@ -257,22 +257,10 @@
             let tcUsar = (this.id === 'precio-total-sunat') ? TC_SUNAT : getTcEnUso();
             
             let costoBase = window.APP_DATA.lastCalculado || 0;
-            let ganancia = 0;
-
-            let selectMoneda = document.getElementById('select-tipoprecio');
-            let monedaActual = selectMoneda ? selectMoneda.value : 'DOLAR';
-
-            if (monedaActual === 'SOL') {
-                // Si la vista está en SOLES, costoBase (lastCalculado) ya está en SOLES.
-                // precioWeb (lo que digitó) siempre está en SOLES.
-                // Por lo tanto, la ganancia para la vista actual debe ser en SOLES.
-                ganancia = precioWeb - costoBase;
-            } else {
-                // Si la vista está en DÓLARES, costoBase (lastCalculado) está en DÓLARES.
-                // precioWeb está en SOLES, así que hay que pasarlo a DÓLARES.
-                let precioVentaUsd = precioWeb / tcUsar;
-                ganancia = precioVentaUsd - costoBase;
-            }
+            
+            // El valor digitado siempre está en SOLES, lo pasamos a DÓLARES
+            let precioVentaUsd = precioWeb / tcUsar;
+            let ganancia = precioVentaUsd - costoBase;
             
             document.getElementById('precio-product-ganancia').value = ganancia.toFixed(2);
             

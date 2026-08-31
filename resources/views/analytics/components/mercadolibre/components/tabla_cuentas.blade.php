@@ -40,7 +40,7 @@
                     <tr>
                         <td colspan="6" class="text-center py-5 text-muted">
                             <i class="bi bi-inbox fs-2 d-block mb-2 text-light"></i>
-                            No hay información de cuentas de plataforma en este período.
+                            No hay informaciÃ³n de cuentas de plataforma en este perÃ­odo.
                         </td>
                     </tr>
                     @endforelse
@@ -72,3 +72,4 @@
         </div>
     </div>
 </div>
+

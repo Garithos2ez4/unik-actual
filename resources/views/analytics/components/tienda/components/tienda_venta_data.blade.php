@@ -91,8 +91,9 @@
                             <td class="text-center">
                                 @php
                                 $totIngresos = $ventasTienda->sum('ingresos');
+                                $totCostos = $ventasTienda->sum('costos');
                                 $totGanancia = $ventasTienda->sum('ganancia');
-                                $totMargen = $totIngresos > 0 ? ($totGanancia / $totIngresos) * 100 : 0;
+                                $totMargen = $totCostos > 0 ? ($totGanancia / $totCostos) * 100 : 0;
                                 @endphp
                                 @if($totMargen > 20)
                                 <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>

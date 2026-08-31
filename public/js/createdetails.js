@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
     
+    // Inicializar Tom Select en los campos existentes
+    document.querySelectorAll('.tom-select-filtro').forEach(function(el) {
+        new TomSelect(el, {
+            create: true,
+            sortField: {
+                field: "text",
+                direction: "asc"
+            }
+        });
+    });
+
     // Función para actualizar el estado del botón
     function updateButtonState() {
         let selectedCar = select.options[select.selectedIndex];
@@ -50,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if(selectedTipo == 'FILTRO'){
             newInput = document.createElement('select');
-            newInput.className = 'form-select';
+            newInput.className = 'form-select tom-select-filtro';
             let defaultOption = document.createElement('option');
             defaultOption.textContent = '-Elige un valor-';
             defaultOption.value = '';
@@ -100,6 +111,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         newDiv.appendChild(newBtnDelete);
         document.getElementById('containerDivs').appendChild(newDiv);
+        
+        if(selectedTipo == 'FILTRO'){
+            new TomSelect(newInput, {
+                create: true,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                }
+            });
+        }
         
         hiddenSelect(selectedOption);
         

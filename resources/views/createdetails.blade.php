@@ -10,7 +10,7 @@
         <div class="col-8">
             <h2><a href="{{route('producto',[encrypt($producto->idProducto)])}}" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> ESPECIFICACIONES <em class="text-secondary fw-normal">({{$producto->codigoProducto}})</em></h2>
         </div>
-         <div class="col-4 text-end">
+        <div class="col-4 text-end">
             <a class="btn bg-sistema-uno text-light" href="{{route('productos',[encrypt($producto->GrupoProducto->idCategoria),encrypt($producto->idGrupo)])}}">Productos <i class="bi bi-box-fill"></i></a>
         </div>
     </div>
@@ -26,61 +26,70 @@
             <h5>{{$producto->estadoProductoWeb}}</h5>
         </div>
         <div class="col-12 col-md-4 text-md-end">
-                <h5 data-bs-toggle="tooltip" data-bs-placement="bottom" title="Modelo">{{$grupo['nombreGrupo']}}: {{$producto->modelo}}</h4>
+            <h5 data-bs-toggle="tooltip" data-bs-placement="bottom" title="Modelo">{{$grupo['nombreGrupo']}}: {{$producto->modelo}}</h4>
         </div>
-        
+
     </div>
     <br>
-    
+
     <br>
-    <form action="{{route('insertorupdatedetails')}}"  method="POST">
+    <form action="{{route('insertorupdatedetails')}}" method="POST">
         @csrf
-    <input type="hidden" name="idproducto" value="{{$producto->idProducto}}">
-    <div class="row" id="containerDivs">
-        @foreach($producto->Caracteristicas_Producto as $car)
+        <input type="hidden" name="idproducto" value="{{$producto->idProducto}}">
+        <div class="row" id="containerDivs">
+            @foreach($producto->Caracteristicas_Producto as $car)
             @if($car->Caracteristicas->tipo != 'INVALIDO')
-                <div class="input-group mb-3">
-                    <span class="input-group-text update-details label-car bg-sistema-light text-light">{{$car->Caracteristicas->especificacion}}:</span>
-                    @if($car->Caracteristicas->tipo == 'FILTRO')
-                        <select class="form-select" name="updatecaracteristicas[{{ $car->idCaracteristica }}]" value="{{$car->caracteristicaProducto}}">
-                            <option value="">-Elige un valor-</option>
-                            @foreach ($car->Caracteristicas->Caracteristicas_Sugerencias->sortBy('sugerencia') as $sugerencia)
-                                <option value="{{$sugerencia->sugerencia}}" {{$sugerencia->sugerencia == $car->caracteristicaProducto ? 'selected' : ''}}>{{$sugerencia->sugerencia}}</option>
-                            @endforeach
-                        </select>
-                    @else
-                        <input type="text" name="updatecaracteristicas[{{ $car->idCaracteristica }}]" class="form-control" placeholder="Caracteristica" value="{{$car->caracteristicaProducto}}" aria-label="" aria-describedby="" maxlength="100">
-                        @if(stripos($car->Caracteristicas->especificacion, 'peso') !== false)
-                            <span class="input-group-text bg-info text-white" data-bs-toggle="tooltip" title="Ejemplo: Para menos de 1 Kilo digita '0.75' o '750gr'. El sistema lo lee en KG."><i class="bi bi-info-circle"></i></span>
-                        @endif
+            <div class="input-group mb-3">
+                <span class="input-group-text update-details label-car bg-sistema-light text-light">{{$car->Caracteristicas->especificacion}}:</span>
+                @if($car->Caracteristicas->tipo == 'FILTRO')
+                <select class="form-select tom-select-filtro" name="updatecaracteristicas[{{ $car->idCaracteristica }}]">
+                    <option value="">-Elige un valor-</option>
+                    @php
+                    $sugerencias = $car->Caracteristicas->Caracteristicas_Sugerencias->sortBy('sugerencia');
+                    $currentValue = $car->caracteristicaProducto;
+                    $found = false;
+                    @endphp
+                    @foreach ($sugerencias as $sugerencia)
+                    @php if($sugerencia->sugerencia == $currentValue) $found = true; @endphp
+                    <option value="{{$sugerencia->sugerencia}}" {{$sugerencia->sugerencia == $currentValue ? 'selected' : ''}}>{{$sugerencia->sugerencia}}</option>
+                    @endforeach
+                    @if(!$found && !empty($currentValue))
+                    <option value="{{$currentValue}}" selected>{{$currentValue}}</option>
                     @endif
-                    <button class="btn btn-outline-danger" onclick="sendDataToDeleteSpect({{$car->idCaracteristica}},'{{$car->Caracteristicas->especificacion}}')" type="button" data-bs-toggle="modal" data-bs-target="#modalDeleteSpect">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                </select>
+                @else
+                <input type="text" name="updatecaracteristicas[{{ $car->idCaracteristica }}]" class="form-control" placeholder="Caracteristica" value="{{$car->caracteristicaProducto}}" aria-label="" aria-describedby="" maxlength="100">
+                @if(stripos($car->Caracteristicas->especificacion, 'peso') !== false)
+                <span class="input-group-text bg-info text-white" data-bs-toggle="tooltip" title="Ejemplo: Para menos de 1 Kilo digita '0.75' o '750gr'. El sistema lo lee en KG."><i class="bi bi-info-circle"></i></span>
+                @endif
+                @endif
+                <button class="btn btn-outline-danger" onclick="sendDataToDeleteSpect({{$car->idCaracteristica}},'{{$car->Caracteristicas->especificacion}}')" type="button" data-bs-toggle="modal" data-bs-target="#modalDeleteSpect">
+                    <i class="bi bi-trash"></i>
+                </button>
             </div>
             @endif
-        @endforeach
-    </div>
-    <div class="row" >
-        <div class="col-12">
-            <div class="input-group">
-              <select class="form-select" id="caracteristicaSelect" aria-label="">
-                <option value="none" selected>Caracteristica</option>
-                @foreach($options as $car)
-                    <option value="{{$car->idCaracteristica}}" data-tipo="{{$car->Caracteristicas->tipo}}" data-filtros='@json($car->Caracteristicas->Caracteristicas_Sugerencias->sortBy('sugerencia'))'>{{$car->Caracteristicas->especificacion}}</option>
-                @endforeach
-              </select>
-              <button class="btn btn-outline-secondary" onclick="addDiv()" id="btnAddDetail" type="button">Agregar</button>
+            @endforeach
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="input-group">
+                    <select class="form-select" id="caracteristicaSelect" aria-label="">
+                        <option value="none" selected>Caracteristica</option>
+                        @foreach($options as $car)
+                        <option value="{{$car->idCaracteristica}}" data-tipo="{{$car->Caracteristicas->tipo}}" data-filtros='@json($car->Caracteristicas->Caracteristicas_Sugerencias->sortBy(' sugerencia'))'>{{$car->Caracteristicas->especificacion}}</option>
+                        @endforeach
+                    </select>
+                    <button class="btn btn-outline-secondary" onclick="addDiv()" id="btnAddDetail" type="button">Agregar</button>
+                </div>
             </div>
         </div>
-    </div>
-    <br>
-    <br>
-    <div class="row">
-        <div class="col-12 text-center">
-            <button class="btn btn-success" >Guardar <i class="bi bi-floppy"></i></button>
+        <br>
+        <br>
+        <div class="row">
+            <div class="col-12 text-center">
+                <button class="btn btn-success">Guardar <i class="bi bi-floppy"></i></button>
+            </div>
         </div>
-    </div>
     </form>
     <br>
     <br>

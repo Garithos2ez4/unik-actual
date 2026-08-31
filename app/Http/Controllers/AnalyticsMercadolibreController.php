@@ -77,6 +77,7 @@ class AnalyticsMercadolibreController extends Controller
                          SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre")
             ->where('DetalleVenta.precioVenta', '>', 0)
+            ->where('DetalleVenta.estado', '!=', 'DEVUELTO')
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
@@ -114,6 +115,7 @@ class AnalyticsMercadolibreController extends Controller
                          SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
                          SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre")
             ->where('DetalleVenta.precioVenta', '>', 0)
+            ->where('DetalleVenta.estado', '!=', 'DEVUELTO')
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy('Producto.modelo')
@@ -129,6 +131,7 @@ class AnalyticsMercadolibreController extends Controller
             ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
             ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
             ->where('DetalleVenta.precioVenta', '>', 0)
+            ->where('DetalleVenta.estado', '!=', 'DEVUELTO')
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
             ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))

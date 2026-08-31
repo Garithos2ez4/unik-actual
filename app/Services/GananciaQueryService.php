@@ -75,7 +75,7 @@ class GananciaQueryService
     /**
      * Centraliza el formateo, redondeo y cálculos finales de las ventas para la vista.
      */
-    public function formatVentaItem(object $venta): object
+    public function formatVentaItem(object $venta, bool $isTienda = false): object
     {
         if (isset($venta->total_ingresos) && !isset($venta->ingresos)) {
             $venta->ingresos = $venta->total_ingresos;
@@ -131,7 +131,11 @@ class GananciaQueryService
             $venta->ganancia = round($venta->ingresos - $venta->costos - $comisionesArestar, 2);
             
             if (!isset($venta->margen)) {
-                $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                if ($isTienda) {
+                    $venta->margen = $venta->costos > 0 ? round(($venta->ganancia / $venta->costos) * 100, 2) : 0;
+                } else {
+                    $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
+                }
             }
         }
 

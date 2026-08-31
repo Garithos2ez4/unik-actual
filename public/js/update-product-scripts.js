@@ -17,8 +17,14 @@ function calcPrices() {
                     let divTotal = document.getElementById('div-total-price');
 
                     let gananciaVal = parseFloat(ganancia) || 0;
-                    window.APP_DATA.lastCalculado = data[0].calculado;
-                    precioCalculado.value = (data[0].calculado + gananciaVal).toFixed(2);
+                    
+                    let calculadoUsd = data[0].calculado;
+                    if (type === 'SOL') {
+                        calculadoUsd = calculadoUsd / window.APP_DATA.tc;
+                    }
+
+                    window.APP_DATA.lastCalculado = calculadoUsd;
+                    precioCalculado.value = (calculadoUsd + gananciaVal).toFixed(2);
 
                     divTotal.innerHTML = '';
 

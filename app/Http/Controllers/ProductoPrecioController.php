@@ -34,8 +34,10 @@ class ProductoPrecioController extends Controller
             $producto->estadoProductoWeb
         );
 
+        // usar_tc_fijo=1 → toggle "Usar TC SUNAT" está ON → usar TC SUNAT
+        // usar_tc_fijo=0 → toggle está OFF → usar TC Fijo
         $usarTcFijo = $producto->usar_tc_fijo ?? true;
-        if (!$usarTcFijo) {
+        if ($usarTcFijo) {
             $tcUsar = (float)$this->calculadoraService->getTasaCambio();
             $tipoTcLabel = 'SUNAT';
         } else {

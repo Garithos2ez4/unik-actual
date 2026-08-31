@@ -69,7 +69,7 @@ class PdfController extends Controller
             $registros = RegistroProducto::with('DetalleComprobante.Producto')
                 ->whereHas('DetalleComprobante.Producto')
                 ->where('ubicacion_especifica', $fila->idUbicacionExacta)
-                ->whereNotIn('estado', ['INVALIDO', 'ENTREGADO', 'VENDIDO', 'SALIDA'])
+                ->whereNotIn('estado', ['INVALIDO', 'ENTREGADO', 'VENDIDO', 'SALIDA', 'DIVIDIDO', 'REUNIDO'])
                 ->get();
             
             // Agrupar por idProducto y estado, para contar por separado

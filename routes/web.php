@@ -74,6 +74,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
     Route::get('/dashboard/analitica/tienda/data', [AnalyticsController::class, 'tiendaData'])->name('dashboard.analitica.tienda.data');
+    Route::get('/dashboard/analitica/producto', [AnalyticsController::class, 'productoHistorialIndex'])->name('dashboard.analitica.producto');
+    Route::get('/dashboard/analitica/producto/data', [AnalyticsController::class, 'productoHistorialData'])->name('dashboard.analitica.producto.data');
 
     // Rutas de Analítica de Envíos
     Route::get('/dashboard/analitica/envios', [\App\Http\Controllers\AnalyticsEnviosController::class, 'index'])->name('dashboard.analitica.envios');

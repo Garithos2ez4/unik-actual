@@ -29,8 +29,14 @@ function calcPrices() {
                     let precioCalculado = document.getElementById('precio-product-calculado');
                     let divTotal = document.getElementById('div-total-price');
                     let gananciaVal = parseFloat(ganancia) || 0;
-                    window.APP_DATA.lastCalculado = data[0].calculado;
-                    precioCalculado.value = (data[0].calculado + gananciaVal).toFixed(2);
+                    
+                    let calculadoUsd = data[0].calculado;
+                    if (type === 'SOL') {
+                        calculadoUsd = calculadoUsd / window.APP_DATA.tc;
+                    }
+
+                    window.APP_DATA.lastCalculado = calculadoUsd;
+                    precioCalculado.value = (calculadoUsd + gananciaVal).toFixed(2);
                     divTotal.innerHTML = '';
 
 
@@ -702,37 +708,27 @@ function actualizarPrecioTotalFijo() {
         precioFijoInput.value = (precioEnDolares * tasaFijaUsar).toFixed(2);
     }
 
-    // Sync "Precio Web Directo" (Soles) unless it's currently being typed by the user
-    if (!window.APP_DATA.isEditingWebPrice) {
-        const precioWebDirecto = document.getElementById('precio-web-directo');
-        const precioCalculadoInput = document.getElementById('precio-product-calculado');
-
-        if (precioWebDirecto && precioCalculadoInput) {
-            const precioVentaUsd = parseFloat(precioCalculadoInput.value) || 0;
-            precioWebDirecto.value = (precioVentaUsd * getTcEnUso()).toFixed(2);
-        }
-    }
+    // La lógica de "Precio Web Directo" fue eliminada según requerimiento
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    const precioWebDirecto = document.getElementById('precio-web-directo');
-    if (precioWebDirecto) {
-        precioWebDirecto.addEventListener('blur', function () {
-            let precioWeb = parseFloat(this.value) || 0;
-            let tcUsar = getTcEnUso();
-            
-            // Calculate reverse
-            let precioVentaUsd = precioWeb / tcUsar;
-            let costoBase = window.APP_DATA.lastCalculado || 0;
-            let ganancia = precioVentaUsd - costoBase;
-            
-            // Limit to prevent weird negatives if needed, or allow it
-            document.getElementById('precio-product-ganancia').value = ganancia.toFixed(2);
-            
-            // Trigger the calcPrices
-            calcPrices();
-        });
-    }
+    const handlePrecioTotalBlur = function() {
+        let precioWeb = parseFloat(this.value) || 0;
+        let tcUsar = getTcEnUso();
+        
+        let precioVentaUsd = precioWeb / tcUsar;
+        let costoBase = window.APP_DATA.lastCalculado || 0;
+        let ganancia = precioVentaUsd - costoBase;
+        
+        document.getElementById('precio-product-ganancia').value = ganancia.toFixed(2);
+        calcPrices();
+    };
+
+    const precioSunat = document.getElementById('precio-total-sunat');
+    if (precioSunat) precioSunat.addEventListener('blur', handlePrecioTotalBlur);
+
+    const precioFijo = document.getElementById('precio-total-fijo');
+    if (precioFijo) precioFijo.addEventListener('blur', handlePrecioTotalBlur);
 });
 
 function toggleTipoCambio() {
