@@ -31,13 +31,20 @@ class ConfigWebController extends Controller
                 $metodosPago = \App\Models\Ventas\MetodoPago::with('TipoMetodoPago', 'Banco')->get();
                 $tiposMetodoPago = \App\Models\Ventas\TipoMetodoPago::all();
 
+                // Leer clave actual del archivo DeltronScraperService.php
+                $deltronFile = app_path('Services/DeltronScraperService.php');
+                $deltronContent = file_get_contents($deltronFile);
+                preg_match("/protected \\\$password\s*=\s*'(.*?)';/", $deltronContent, $matches);
+                $claveDeltronActual = $matches[1] ?? '';
+
                 return view('configuracion.configweb', [
                     'user' => $userModel,
                     'pagina' => 'web',
                     'empresas' => $empresas,
                     'bancos' => $bancos,
                     'metodosPago' => $metodosPago,
-                    'tiposMetodoPago' => $tiposMetodoPago
+                    'tiposMetodoPago' => $tiposMetodoPago,
+                    'claveDeltronActual' => $claveDeltronActual
                 ]);
             }
         }
@@ -86,6 +93,28 @@ class ConfigWebController extends Controller
             }
         }
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function updateClaveDeltron(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                if ($request->has('claveDeltron')) {
+                    $nuevaClave = $request->input('claveDeltron');
+                    $deltronFile = app_path('Services/DeltronScraperService.php');
+                    $deltronContent = file_get_contents($deltronFile);
+                    $deltronContent = preg_replace("/protected \\\$password\s*=\s*'.*?';/", "protected \$password = '{$nuevaClave}';", $deltronContent);
+                    file_put_contents($deltronFile, $deltronContent);
+                }
+                
+                $this->headerService->sendFlashAlerts('Correcto', 'Contraseña de Deltron actualizada correctamente', 'success', 'btn-success');
+                return redirect()->route('configweb', ['user' => $userModel]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 

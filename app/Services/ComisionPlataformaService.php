@@ -7,8 +7,8 @@ use App\Models\Ecommerce\ReglaComision;
 class ComisionPlataformaService
 {
     /**
-     * Construye la expresión SQL (CASE WHEN) para el cálculo de la comisión (incluye porcentaje y monto fijo)
-     * basándose en las reglas almacenadas en la base de datos.
+     * Construye la expresiÃ³n SQL (CASE WHEN) para el cÃ¡lculo de la comisiÃ³n (incluye porcentaje y monto fijo)
+     * basÃ¡ndose en las reglas almacenadas en la base de datos.
      *
      * @param string $plataforma Nombre de la plataforma (FALABELLA, RIPLEY, etc.)
      * @param string $colCategoria Columna SQL para idCategoria (ej: GrupoProducto.idCategoria)
@@ -107,17 +107,20 @@ class ComisionPlataformaService
         }
 
         if ($regla->tipo_condicion === 'CATEGORIA_IN') {
-            $valores = implode(',', array_map('trim', explode(',', $regla->valor_condicion)));
-            return "{$colCategoria} IN ({$valores})";
+            $valores = array_filter(array_map('trim', explode(',', $regla->valor_condicion)), 'is_numeric');
+            if (empty($valores)) return "1=0"; // Si no hay valores numÃ©ricos, la condiciÃ³n es falsa
+            return "{$colCategoria} IN (" . implode(',', $valores) . ")";
         }
 
         if ($regla->tipo_condicion === 'GRUPO_IN') {
-            $valores = implode(',', array_map('trim', explode(',', $regla->valor_condicion)));
-            return "{$colGrupo} IN ({$valores})";
+            $valores = array_filter(array_map('trim', explode(',', $regla->valor_condicion)), 'is_numeric');
+            if (empty($valores)) return "1=0";
+            return "{$colGrupo} IN (" . implode(',', $valores) . ")";
         }
 
         if ($regla->tipo_condicion === 'PRECIO_MENOR_IGUAL') {
-            return "{$colPrecio} <= {$regla->valor_condicion}";
+            $val = floatval($regla->valor_condicion);
+            return "{$colPrecio} <= {$val}";
         }
 
         return "1=1";

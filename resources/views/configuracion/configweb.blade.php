@@ -43,6 +43,32 @@
         </form>
     </div>
     <br>
+
+    <br>
+    <div class="row border shadow rounded-3 pt-2 pb-2" id="deltron-empresa">
+        <form action="{{route('updateclavedeltron')}}" method="POST">
+            @csrf
+            <div class="col-md-12">
+                <div class="row ">
+                    <div class="col-8 col-md-6">
+                        <h3>Contraseña Deltron</h3>
+                        <p class="text-secondary">Actualiza la contraseña del bot de scraping de Deltron (cada 3 meses).</p>
+                    </div>
+                    <div class="col-4 col-md-6 text-end">
+                        <button class="btn btn-success" type="submit"> <i class="bi bi-floppy"></i></button>
+                        <button class="btn btn-secondary" type="button" onclick="document.querySelectorAll('.input-deltron').forEach(el => el.disabled = false)"> <i class="bi bi-pencil"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="col-md-6 mb-3">
+                    <label>Clave actual:</label>
+                    <input type="text" name="claveDeltron" maxlength="50" class="form-control input-deltron" value="{{$claveDeltronActual}}" disabled>
+                </div>
+            </div>
+        </form>
+    </div>
+    <br>
     <div class="row border shadow rounded-3 pt-2 pb-2">
         <div class="col-md-12">
             <div class="row ">
@@ -430,7 +456,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            
+
                             <div class="col-md-12 mb-2 mt-2">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch" name="estado" id="switch-edit-metodo-estado" value="1">

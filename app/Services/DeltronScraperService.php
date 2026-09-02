@@ -178,8 +178,10 @@ class DeltronScraperService
         preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $sessionResponse, $matches);
         $cookies = [];
         foreach ($matches[1] as $item) {
-            parse_str($item, $cookie);
-            $cookies = array_merge($cookies, $cookie);
+            $parts = explode('=', $item, 2);
+            if (count($parts) == 2) {
+                $cookies[trim($parts[0])] = trim($parts[1]);
+            }
         }
 
         $cookieString = '';
@@ -218,8 +220,10 @@ class DeltronScraperService
 
         preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $res2, $matches2);
         foreach ($matches2[1] as $item) {
-            parse_str($item, $cookie);
-            $cookies = array_merge($cookies, $cookie);
+            $parts = explode('=', $item, 2);
+            if (count($parts) == 2) {
+                $cookies[trim($parts[0])] = trim($parts[1]);
+            }
         }
 
         $cookieStringFinal = '';
@@ -252,6 +256,7 @@ class DeltronScraperService
 
             if ($producto) {
                 // Actualizar o crear registro en Inventario_Proveedor
+                \App\Models\Catalogo\DetalleProducto::where('idProducto', $producto->idProducto)->update(['updated_at' => now()]);
                 Inventario_Proveedor::updateOrCreate(
                     [
                         'idProducto' => $producto->idProducto

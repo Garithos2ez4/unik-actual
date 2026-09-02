@@ -48,7 +48,7 @@ class AnalyticsEnviosController extends Controller
     public function index(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
-        
+
         if (!$this->validateAccess($userModel, 13)) {
             $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
             return redirect()->route('dashboard', ['user' => $userModel]);
@@ -58,9 +58,26 @@ class AnalyticsEnviosController extends Controller
 
         $filtros = compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin];
 
+        $enviosMesRaw = EnvioProvincia::selectRaw('DATE(fecha_envio) as fecha, COUNT(*) as total_envios')
+            ->whereBetween('fecha_envio', [$fechaInicio, $fechaFin])
+            ->groupBy('fecha')
+            ->get();
+
+        $enviosMes = [];
+        for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
+            $dateStr = $date->format('Y-m-d');
+            $found = $enviosMesRaw->firstWhere('fecha', $dateStr);
+            $enviosMes[] = [
+                'fecha' => $date->format('d/m'),
+                'total' => $found ? $found->total_envios : 0,
+                'monto' => $found ? $found->total_envios : 0 // Usamos monto como el total de envíos para reciclar el gráfico de tendencias.
+            ];
+        }
+
         return view('analytics.components.envios.index', [
             'user' => $userModel,
-            'filtros' => $filtros
+            'filtros' => $filtros,
+            'enviosMes' => $enviosMes
         ]);
     }
 
@@ -138,5 +155,32 @@ class AnalyticsEnviosController extends Controller
             });
 
         return response()->json($topAgencias);
+    }
+
+    public function getTopUsuarios(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        if (!$this->validateAccess($userModel, 13)) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+        [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
+
+        // Obtener el top 5 de usuarios (vendedores)
+        $topUsuarios = EnvioProvincia::select('idUser', DB::raw('count(*) as total'))
+            ->whereBetween('fecha_envio', [$fechaInicio, $fechaFin])
+            ->with('Usuario')
+            ->groupBy('idUser')
+            ->orderBy('total', 'desc')
+            ->take(3)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'usuario' => $item->Usuario ? $item->Usuario->user : 'Desconocido',
+                    'estado' => $item->Usuario ? ($item->Usuario->estadoUsuario ? 'Activo' : 'Inactivo') : '-',
+                    'total' => $item->total
+                ];
+            });
+
+        return response()->json($topUsuarios);
     }
 }

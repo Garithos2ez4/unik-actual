@@ -7,7 +7,6 @@ use App\Services\FalabellaOrderSyncService;
 use App\Services\HeaderServiceInterface;
 use App\Services\PlataformaServiceInterface;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -301,8 +300,8 @@ class PlataformaController extends Controller
 
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 4) {
-                @ini_set('max_execution_time', '180');
-                @set_time_limit(180);
+                @ini_set('max_execution_time', '600');
+                @set_time_limit(600);
 
                 $date = $request->input('date', now()->toDateString());
                 $status = trim((string) $request->input('status', ''));
@@ -710,9 +709,9 @@ class PlataformaController extends Controller
 
                 $query = \App\Models\Ecommerce\RipleyOrder::with('items');
                 if ($selectedDate) {
-                    $query->where(function($q) use ($selectedDate) {
+                    $query->where(function ($q) use ($selectedDate) {
                         $q->whereDate('created_at_ripley', $selectedDate)
-                          ->orWhereDate('sync_date', $selectedDate);
+                            ->orWhereDate('sync_date', $selectedDate);
                     });
                 }
 

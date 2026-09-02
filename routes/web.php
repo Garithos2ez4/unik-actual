@@ -82,6 +82,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica/envios/top-provincias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopProvincias'])->name('dashboard.analitica.envios.provincias');
     Route::get('/dashboard/analitica/envios/top-clientes', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopClientes'])->name('dashboard.analitica.envios.clientes');
     Route::get('/dashboard/analitica/envios/top-agencias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopAgencias'])->name('dashboard.analitica.envios.agencias');
+    Route::get('/dashboard/analitica/envios/top-usuarios', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopUsuarios'])->name('dashboard.analitica.envios.usuarios');
 
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
@@ -295,6 +296,15 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/etiquetas/descargar', [PlataformaController::class, 'ripleyEtiquetasDescargar'])->name('etiquetas.descargar');
     });
 
+    // MERCADO LIBRE
+    Route::prefix('plataformas/mercadolibre')->name('plataformas.ml.')->group(function () {
+        Route::get('/orders', [\App\Http\Controllers\MercadoLibreController::class, 'orders'])->name('orders');
+        Route::post('/sync-orders', [\App\Http\Controllers\MercadoLibreController::class, 'syncOrders'])->name('sync-orders');
+        Route::get('/sync-status', [\App\Http\Controllers\MercadoLibreController::class, 'syncStatus'])->name('sync-status');
+    });
+    Route::get('/configuracion/mercadolibre/auth', [\App\Http\Controllers\MercadoLibreController::class, 'authorize'])->name('ml.auth');
+    Route::get('/configuracion/mercadolibre/callback', [\App\Http\Controllers\MercadoLibreController::class, 'callback'])->name('ml.callback');
+
     Route::prefix('reclamos-plataforma')->name('reclamos.')->group(function () {
         Route::get('/', [ReclamoPlataformaController::class, 'index'])->name('index');
         Route::get('/historia', [ReclamoPlataformaController::class, 'historia'])->name('historia');
@@ -330,6 +340,7 @@ Route::middleware(['validate.session'])->group(function () {
     //Configuracion-WEB
     Route::get('/configuracion/web', [ConfigWebController::class, 'web'])->name('configweb');
     Route::post('/configuracion/updatecorreos', [ConfigWebController::class, 'updateCorreos'])->name('updatecorreos');
+    Route::post('/configuracion/updateclavedeltron', [ConfigWebController::class, 'updateClaveDeltron'])->name('updateclavedeltron');
     Route::post('/configuracion/updatecuentasbancarias', [ConfigWebController::class, 'updateCuentasBancarias'])->name('updatecuentasbancarias');
     Route::post('/configuracion/insertcuentasbancarias', [ConfigWebController::class, 'insertCuentasBancarias'])->name('insertcuentasbancarias');
     Route::post('/configuracion/insertmetodopago', [ConfigWebController::class, 'insertMetodoPago'])->name('insertmetodopago');

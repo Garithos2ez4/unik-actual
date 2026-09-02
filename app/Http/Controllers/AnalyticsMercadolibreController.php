@@ -71,11 +71,15 @@ class AnalyticsMercadolibreController extends Controller
             ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
             ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
             ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
+            ->leftJoin('ml_orders', 'Venta.numeroOrden', '=', 'ml_orders.ml_order_id')
+            ->selectRaw("Venta.idVenta, Venta.numeroOrden, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
                          GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
                          SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
                          SUM((($costoVentaExpr) + ($comisionMercadoLibreExpr)) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos,
-                         SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre")
+                         SUM(($comisionMercadoLibreExpr) * DetalleVenta.cantidad) as comision_mercadolibre,
+                         MAX(ml_orders.logistic_label) as logistic_label,
+                         MAX(ml_orders.shipping_status) as shipping_status,
+                         MAX(ml_orders.return_status) as return_status")
             ->where('DetalleVenta.precioVenta', '>', 0)
             ->where('DetalleVenta.estado', '!=', 'DEVUELTO')
             ->whereRaw("(UPPER(Venta.canal) = 'MERCADO LIBRE' OR UPPER(Venta.canal) = 'MERCADOLIBRE')")

@@ -20,97 +20,23 @@
     <!-- Filtros TopControls -->
     @include('analytics.partials.topcontrols')
 
+    @include('analytics.components.envios.components.trendsenvios')
+
     <div class="row">
-        <div class="col-lg-4">
+        <div class="col-lg-3">
             @include('analytics.components.envios.components.top_provincias')
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-3">
             @include('analytics.components.envios.components.top_clientes')
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-3">
             @include('analytics.components.envios.components.top_agencias')
         </div>
-    </div>
+        <div class="col-lg-3">
+            @include('analytics.components.envios.components.top_usuarios')
+        </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // Fetch Top Provincias
-        fetch('{{ route("dashboard.analitica.envios.provincias") }}' + window.location.search)
-            .then(response => response.json())
-            .then(data => {
-                const tbody = document.querySelector('#tabla-top-provincias tbody');
-                tbody.innerHTML = ''; // Limpiar loader
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">No hay datos disponibles</td></tr>';
-                } else {
-                    data.forEach((item, index) => {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td class="ps-4 fw-bold text-secondary">${index + 1}</td>
-                                <td>
-                                    <div class="fw-bold text-dark">${item.provincia}</div>
-                                    <small class="text-muted">${item.destino}</small>
-                                </td>
-                                <td class="text-end pe-4 fw-bold text-primary">${item.total}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching top provincias:', error));
+@include('analytics.components.envios.logic.envios_scripts')
 
-        // Fetch Top Clientes
-        fetch('{{ route("dashboard.analitica.envios.clientes") }}' + window.location.search)
-            .then(response => response.json())
-            .then(data => {
-                const tbody = document.querySelector('#tabla-top-clientes tbody');
-                tbody.innerHTML = ''; // Limpiar loader
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">No hay datos disponibles</td></tr>';
-                } else {
-                    data.forEach((item, index) => {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td class="ps-4 fw-bold text-secondary">${index + 1}</td>
-                                <td>
-                                    <div class="fw-bold text-dark">${item.cliente}</div>
-                                    <small class="text-muted">Doc: ${item.documento}</small>
-                                </td>
-                                <td class="text-end pe-4 fw-bold text-info">${item.total}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching top clientes:', error));
-            
-        // Fetch Top Agencias
-        fetch('{{ route("dashboard.analitica.envios.agencias") }}' + window.location.search)
-            .then(response => response.json())
-            .then(data => {
-                const tbody = document.querySelector('#tabla-top-agencias tbody');
-                tbody.innerHTML = ''; // Limpiar loader
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">No hay datos disponibles</td></tr>';
-                } else {
-                    data.forEach((item, index) => {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td class="ps-4 fw-bold text-secondary">${index + 1}</td>
-                                <td>
-                                    <div class="fw-bold text-dark">${item.agencia}</div>
-                                    <span class="badge ${item.estado === 'Activo' ? 'bg-success' : 'bg-secondary'}">${item.estado}</span>
-                                </td>
-                                <td class="text-end pe-4 fw-bold text-warning">${item.total}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching top agencias:', error));
-            
-    });
-</script>
 @endsection

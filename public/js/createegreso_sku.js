@@ -63,7 +63,7 @@ function searchPublicacion(inputElement) {
                     smallProducto.textContent = item.titulo;
                     smallProducto.style.fontSize = '12px';
                     colProducto.appendChild(smallProducto);
-                    
+
                     if (item.modelo) {
                         let spanModelo = document.createElement('span');
                         spanModelo.classList.add('ms-2', 'badge', 'bg-light', 'text-dark', 'border');

@@ -45,4 +45,10 @@ return [
         'verify_ssl' => (bool) env('FALABELLA_VERIFY_SSL', true),
     ],
 
+    'mercadolibre' => [
+        'client_id'     => env('MELI_CLIENT_ID', ''),
+        'client_secret' => env('MELI_CLIENT_SECRET', ''),
+        'redirect_uri'  => env('MELI_REDIRECT_URI', 'https://log.unikstoreperu.com/configuracion/mercadolibre/callback'),
+    ],
+
 ];

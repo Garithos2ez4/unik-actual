@@ -28,7 +28,8 @@ class DeltronController extends Controller
         // Scraping en tiempo real ordenado por stock descendente
         $productos = $scraperService->scrapeByKeyword($keyword, 'stock_desc', $page);
 
-        $historial = \App\Models\Inventario\InventarioProveedorDetalle::orderBy('fecha_ejecucion', 'desc')->take(50)->get();
+        // Se toman los últimos 11 registros porque el cron sincroniza 11 categorías por ejecución
+        $historial = \App\Models\Inventario\InventarioProveedorDetalle::orderBy('fecha_ejecucion', 'desc')->take(11)->get();
 
         return view('compras.deltron_stock', [
             'user' => $userModel,
@@ -41,6 +42,9 @@ class DeltronController extends Controller
 
     public function syncManual()
     {
+        // Aumentar el tiempo límite a ilimitado ya que sincronizar 10 categorías toma más de 30 segundos
+        set_time_limit(0);
+
         try {
             // Llama al comando artisan internamente
             \Illuminate\Support\Facades\Artisan::call('scrape:deltron');

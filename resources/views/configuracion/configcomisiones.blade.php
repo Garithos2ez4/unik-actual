@@ -152,7 +152,7 @@
                                                                     <option value="DEFAULT" {{ $regla->tipo_condicion == 'DEFAULT' ? 'selected' : '' }}>Por Defecto</option>
                                                                     <option value="PRECIO_MENOR_IGUAL" {{ $regla->tipo_condicion == 'PRECIO_MENOR_IGUAL' ? 'selected' : '' }}>Precio <= X</option>
                                                                     <option value="CATEGORIA_IN" {{ $regla->tipo_condicion == 'CATEGORIA_IN' ? 'selected' : '' }}>Categoría en (IDs)</option>
-                                                                    <option value="GRUPO_IN" {{ $regla->tipo_condicion == 'GRUPO_IN' ? 'selected' : '' }}>Grupo en (Nombres)</option>
+                                                                    <option value="GRUPO_IN" {{ $regla->tipo_condicion == 'GRUPO_IN' ? 'selected' : '' }}>Grupo en (IDs)</option>
                                                                 </select>
                                                             </div>
                                                             <div class="col-6 mb-3">
@@ -177,7 +177,7 @@
                                                                     <select multiple class="form-control tom-select-grupos" name="valor_condicion[]" {{ $isGrupo ? '' : 'disabled' }}>
                                                                         <option value="">Buscar grupos...</option>
                                                                         @foreach($grupos as $grp)
-                                                                            <option value="{{ $grp->nombreGrupo }}" {{ in_array($grp->nombreGrupo, $valoresArray) ? 'selected' : '' }}>{{ $grp->nombreGrupo }}</option>
+                                                                            <option value="{{ $grp->idGrupoProducto }}" {{ in_array($grp->idGrupoProducto, $valoresArray) ? 'selected' : '' }}>{{ $grp->nombreGrupo }}</option>
                                                                         @endforeach
                                                                     </select>
                                                                 </div>
@@ -394,7 +394,7 @@
                                 <option value="DEFAULT">Por Defecto</option>
                                 <option value="PRECIO_MENOR_IGUAL">Precio <= X</option>
                                 <option value="CATEGORIA_IN">Categoría en (IDs)</option>
-                                <option value="GRUPO_IN">Grupo en (Nombres)</option>
+                                <option value="GRUPO_IN">Grupo en (IDs)</option>
                             </select>
                         </div>
                         <div class="col-6 mb-3">
@@ -414,7 +414,7 @@
                                 <select multiple class="form-control tom-select-grupos" name="valor_condicion[]" disabled>
                                     <option value="">Buscar grupos...</option>
                                     @foreach($grupos as $grp)
-                                        <option value="{{ $grp->nombreGrupo }}">{{ $grp->nombreGrupo }}</option>
+                                        <option value="{{ $grp->idGrupoProducto }}">{{ $grp->nombreGrupo }}</option>
                                     @endforeach
                                 </select>
                             </div>

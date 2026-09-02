@@ -11,10 +11,10 @@
             </h2>
             <div class="text-muted mb-3">Consulta los productos con mayor stock disponibles ahora mismo en Deltron.
                 <button type="button" class="btn btn-sm btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#historialModal">
-                    <i class="bi bi-clock-history"></i> Reporte Actualizaciones
+                    <i class="bi bi-clock-history"></i> Última Actualización: {{ $historial->first() ? $historial->first()->fecha_ejecucion->format('d/m h:i A') : 'Ninguna' }}
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#recomendadosModal">
-                    <i class="bi bi-fire"></i> Recomendados (>100 Stock)
+                    <i class="bi bi-fire"></i> Recomendados ({{ $historial->sum(function($log) { return is_array($log->recomendados_json) ? count($log->recomendados_json) : 0; }) }})
                 </button>
                 <form action="{{ route('compras.deltron.sync') }}" method="POST" class="d-inline-block ms-1" onsubmit="document.getElementById('syncSpinner').style.display='inline-block'; this.querySelector('button').disabled=true;">
                     @csrf
