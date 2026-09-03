@@ -199,6 +199,35 @@
                     </div>
                 </div>
             </div>
+            
+            <!--  DETALLE PRODUCTO (WEB & PASE)  -->
+            <div class="col-12 mt-3 mb-2 border-top pt-3">
+                <div class="row">
+                    <div class="col-md-6 col-lg-4">
+                        <label for="precio-pase" class="form-label fw-bold text-primary">
+                            <i class="bi bi-tag"></i> Precio Pase (S/.)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">S/.</span>
+                            <input type="number"
+                                name="precio_pase"
+                                id="precio-pase"
+                                value="{{ old('precio_pase', optional(optional($productoCopiar)->DetalleProducto)->precio_pase ?? '0.00') }}"
+                                class="form-control"
+                                step="0.01"
+                                min="0">
+                        </div>
+                        <small class="text-muted">Precio para otras tiendas.</small>
+                    </div>
+                    <div class="col-md-6 col-lg-4 d-flex align-items-center">
+                        <div class="form-check form-switch fs-5 mt-3">
+                            <input type="hidden" name="mostrarPrecioWeb" value="0">
+                            <input class="form-check-input" type="checkbox" name="mostrarPrecioWeb" id="mostrarPrecioWeb" value="1" {{ old('mostrarPrecioWeb', optional(optional($productoCopiar)->DetalleProducto)->mostrarPrecioWeb ?? 1) ? 'checked' : '' }}>
+                            <label class="form-check-label fs-6 fw-bold" for="mostrarPrecioWeb">Mostrar Precio en Web</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
             <div class="row">

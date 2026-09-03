@@ -200,6 +200,43 @@ function createItem(object, query) {
 
     inputPrecio.addEventListener('input', calculateTotalVenta);
 
+    // ── Validación: Series de SERVICIO (RESETT / EN_USO) ──
+    // Si la serie contiene "RESETT" y su estado es "EN_USO", es una serie de servicio.
+    // Los servicios de reseteo cuestan máximo S/ 30. Si alguien pone un precio mayor,
+    // probablemente está intentando egresar un producto normal con una serie de servicio.
+    const esSerieServicio = (object.numeroSerie || '').toUpperCase().includes('RESETT') && (object.estado || '').toUpperCase() === 'EN_USO';
+
+    if (esSerieServicio) {
+        // Marcar visualmente como serie de servicio
+        divColSerial.innerHTML += '<br><span class="badge bg-info text-dark"><i class="bi bi-gear-fill"></i> Serie de Servicio</span>';
+        inputPrecio.dataset.serieServicio = '1';
+        inputPrecio.dataset.serieNumero = object.numeroSerie;
+    }
+
+    inputPrecio.addEventListener('input', function () {
+        if (esSerieServicio) {
+            let precio = parseFloat(inputPrecio.value);
+            if (!isNaN(precio) && precio > 30) {
+                inputPrecio.classList.remove('border-success');
+                inputPrecio.classList.add('border-danger');
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡Precio no permitido!',
+                    html: `<b>${object.numeroSerie}</b> es una serie de <b>reseteo (servicio)</b>.<br>` +
+                          `El costo máximo de un servicio es <b>S/ 30.00</b>.<br><br>` +
+                          `<b>No se puede registrar el egreso con este precio.</b><br>` +
+                          `Si necesitas egresar un producto normal, busca una serie con estado <b>NUEVO</b>.`,
+                    confirmButtonText: 'Entendido',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                inputPrecio.classList.remove('border-danger');
+                inputPrecio.classList.add('border-success');
+            }
+        }
+        validateSubmit();
+    });
+
     divColPrecio.appendChild(inputPrecio);
 
     let selectedSkuText = document.getElementById('input-sku-egreso').value;
@@ -332,6 +369,14 @@ function validateSubmit() {
     if (inputBody.length < 1) {
         validate = false;
     }
+
+    // ── Bloquear si hay serie de servicio con precio > 30 ──
+    document.querySelectorAll('.input-precio-item[data-serie-servicio="1"]').forEach(function (input) {
+        let precio = parseFloat(input.value);
+        if (!isNaN(precio) && precio > 30) {
+            validate = false;
+        }
+    });
 
     // Validación estricta de pagos (Solo si agregaron al menos 1)
     let checkSku = document.getElementById('check-sku-egreso');

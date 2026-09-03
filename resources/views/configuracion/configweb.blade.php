@@ -45,7 +45,7 @@
     <br>
 
     <br>
-    <div class="row border shadow rounded-3 pt-2 pb-2" id="deltron-empresa">
+    {{-- <div class="row border shadow rounded-3 pt-2 pb-2" id="deltron-empresa">
         <form action="{{route('updateclavedeltron')}}" method="POST">
             @csrf
             <div class="col-md-12">
@@ -67,7 +67,7 @@
                 </div>
             </div>
         </form>
-    </div>
+    </div> --}}
     <br>
     <div class="row border shadow rounded-3 pt-2 pb-2">
         <div class="col-md-12">

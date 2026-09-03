@@ -111,6 +111,20 @@ class EgresoController extends Controller
                         return back();
                     }
 
+                    // ── Validación Backend: Series de Servicio ──
+                    foreach ($items as $item) {
+                        if (isset($item['idregistro']) && isset($item['precioVenta']) && $item['precioVenta'] > 30) {
+                            $registro = \App\Models\Inventario\RegistroProducto::find($item['idregistro']);
+                            if ($registro && stripos($registro->numeroSerie, 'RESETT') !== false && strtoupper($registro->estado) === 'EN_USO') {
+                                if ($request->wantsJson() || $request->ajax()) {
+                                    return response()->json(['success' => false, 'message' => "La serie {$registro->numeroSerie} es de servicio y su precio no puede superar S/ 30.00"]);
+                                }
+                                $this->headerService->sendFlashAlerts('Error de validación', "La serie {$registro->numeroSerie} es de servicio y su precio no puede superar S/ 30.00", 'error', 'btn-danger');
+                                return back();
+                            }
+                        }
+                    }
+
                     \Illuminate\Support\Facades\DB::beginTransaction();
                     try {
 
@@ -403,7 +417,7 @@ class EgresoController extends Controller
                                 'cantidad' => 1
                             ]
                         ];
-                        $this->ventaService->appendVenta($ventaData, $detallesVenta);
+                        $this->ventaService->createVenta($ventaData, $detallesVenta);
                     }
 
                     \Illuminate\Support\Facades\DB::commit();

@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Analytics;
+
+use App\Http\Controllers\Controller;
 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -22,8 +24,8 @@ class AnalyticsController extends Controller
     protected $envioProvinciaService;
 
     public function __construct(
-        HeaderServiceInterface $headerService, 
-        CalculadoraServiceInterface $calculadoraService, 
+        HeaderServiceInterface $headerService,
+        CalculadoraServiceInterface $calculadoraService,
         GananciaQueryService $gananciaQueryService,
         EnvioProvinciaServiceInterface $envioProvinciaService
     ) {
@@ -34,7 +36,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Valida si el usuario tiene acceso a la vista específica.
+     * Valida si el usuario tiene acceso a la vista especÃ­fica.
      */
     private function validateAccess($userModel, int $idVista)
     {
@@ -47,11 +49,11 @@ class AnalyticsController extends Controller
     private function applyInventarioFilter($query, $isVenta = true)
     {
         if ($isVenta) {
-            // Excluir ventas devueltas/anuladas para que no inflen las métricas
+            // Excluir ventas devueltas/anuladas para que no inflen las mÃ©tricas
             $query->where('DetalleVenta.estado', '!=', 'DEVUELTO');
             return $query;
         } else {
-            // Para compras/gastos, sí filtramos los comprobantes de INVENTARIO para no inflar los costos
+            // Para compras/gastos, sÃ­ filtramos los comprobantes de INVENTARIO para no inflar los costos
             $query->whereNotExists(function ($q) {
                 $q->select(\Illuminate\Support\Facades\DB::raw(1))
                     ->from('RegistroProducto')
@@ -91,7 +93,7 @@ class AnalyticsController extends Controller
         $userModel = $this->headerService->getModelUser();
 
         if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
             return redirect()->route('dashboard', ['user' => $userModel]);
         }
 
@@ -99,13 +101,13 @@ class AnalyticsController extends Controller
         [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
         $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
 
-        // ── Helper Variables para la transición de sistema ────────
+        // â”€â”€ Helper Variables para la transiciÃ³n de sistema â”€â”€â”€â”€â”€â”€â”€â”€
         $fechaTransicion = '2026-05-25';
         $ordenesIgnoradas = ['2026', '2026/SN', '2026-SN'];
         $subqueryTipoCambioEgreso = "(SELECT COALESCE((SELECT tasa_cambio FROM historial_tipo_cambio ORDER BY ABS(DATEDIFF(fecha, DATE(EgresoProducto.fechaCompra))) ASC LIMIT 1), $tc))";
         $precioPubExpr = "COALESCE(Publicacion.precioPublicacion, COALESCE(Producto.precioDolar, 0) * $subqueryTipoCambioEgreso * 1.20)";
 
-        // ── 1. Tendencia de ventas (diarias) ──────────────────
+        // â”€â”€ 1. Tendencia de ventas (diarias) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $qVentas1 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->selectRaw('DATE(Venta.fechaVenta) as fecha, DetalleVenta.cantidad as cantidad, (DetalleVenta.precioVenta * DetalleVenta.cantidad) as monto')
@@ -136,7 +138,7 @@ class AnalyticsController extends Controller
             ->orderBy('fecha', 'asc')
             ->get();
 
-        // Rellenar días vacíos
+        // Rellenar dÃ­as vacÃ­os
         $ventasMes = [];
         for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
             $dateStr = $date->format('Y-m-d');
@@ -148,7 +150,7 @@ class AnalyticsController extends Controller
             ];
         }
 
-        // ── 2. Top SKUs más vendidos ──────────────────────────
+        // â”€â”€ 2. Top SKUs mÃ¡s vendidos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $qVentas2 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Publicacion', 'DetalleVenta.idPublicacion', '=', 'Publicacion.idPublicacion')
@@ -179,7 +181,7 @@ class AnalyticsController extends Controller
             ->limit(5)
             ->get();
 
-        // ── 3. Métricas por plataforma ────────────────────────
+        // â”€â”€ 3. MÃ©tricas por plataforma â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $qVentas3 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->leftJoin('Publicacion', 'DetalleVenta.idPublicacion', '=', 'Publicacion.idPublicacion')
@@ -215,7 +217,7 @@ class AnalyticsController extends Controller
             ->orderByDesc('total_monto')
             ->get();
 
-        // ── 4. Top productos por ingreso (monto S/) ──────────
+        // â”€â”€ 4. Top productos por ingreso (monto S/) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $qVentas4 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
@@ -248,7 +250,7 @@ class AnalyticsController extends Controller
             ->limit(5)
             ->get();
 
-        // ── 5. Top productos por cantidad vendida ─────────────
+        // â”€â”€ 5. Top productos por cantidad vendida â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $qVentas5 = DetalleVenta::query()
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
             ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
@@ -285,7 +287,7 @@ class AnalyticsController extends Controller
             ->limit(5)
             ->get();
 
-        // ── 6. Top productos con fallas (solo RegistroProducto)
+        // â”€â”€ 6. Top productos con fallas (solo RegistroProducto)
         $productosConFallas = Producto::query()
             ->join('DetalleComprobante', 'Producto.idProducto', '=', 'DetalleComprobante.idProducto')
             ->join('RegistroProducto', 'DetalleComprobante.idDetalleComprobante', '=', 'RegistroProducto.idDetalleComprobante')
@@ -307,7 +309,7 @@ class AnalyticsController extends Controller
             ->limit(10)
             ->get();
 
-        // ── 7. Top mejores meses históricos (Global) ──────────
+        // â”€â”€ 7. Top mejores meses histÃ³ricos (Global) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $qVentas7 = Venta::query()
             ->selectRaw("DATE_FORMAT(fechaVenta, '%Y-%m') as mes_raw, DATE_FORMAT(fechaVenta, '%M %Y') as mes_nombre, totalVenta as monto")
             ->where('fechaVenta', '>=', $fechaTransicion);
@@ -329,7 +331,7 @@ class AnalyticsController extends Controller
             ->limit(3)
             ->get();
 
-        // ── 8. Cálculos de Costos y Márgenes ──────────────────
+        // â”€â”€ 8. CÃ¡lculos de Costos y MÃ¡rgenes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
         extract($exprs);
 
@@ -407,7 +409,7 @@ class AnalyticsController extends Controller
         $productosMasGananciaUnitaria = $margenesProductos->sortByDesc('ganancia_neta_unitaria')->take(5)->values();
         $productosMenosGananciaUnitaria = $margenesProductos->sortBy('ganancia_neta_unitaria')->take(5)->values();
 
-        // ── 9. Top 5 Productos Más Enviados ───────────────────
+        // â”€â”€ 9. Top 5 Productos MÃ¡s Enviados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $topEnviados = \App\Models\Envios\EnvioProvinciaProducto::query()
             ->join('envio_provincias', 'envio_provincia_productos.idEnvioProvincia', '=', 'envio_provincias.idEnvioProvincia')
             ->join('Producto', 'envio_provincia_productos.idProducto', '=', 'Producto.idProducto')
@@ -418,17 +420,17 @@ class AnalyticsController extends Controller
             ->limit(5)
             ->get();
 
-        // ── 10. Top 5 Provincias Más Solicitadas ───────────────────
+        // â”€â”€ 10. Top 5 Provincias MÃ¡s Solicitadas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $topProvincias = $this->envioProvinciaService->getTopProvincias($fechaInicio, $fechaFin, 5);
 
-        // ── 11. Top 5 Envíos por Monto ───────────────────
+        // â”€â”€ 11. Top 5 EnvÃ­os por Monto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $topEnviosPorMonto = \App\Models\Ventas\Venta::query()
             ->join('Cliente', 'Venta.idCliente', '=', 'Cliente.idCliente')
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
-                      ->from('envio_provincias')
-                      ->whereColumn('envio_provincias.idCliente', 'Venta.idCliente')
-                      ->whereColumn(DB::raw('DATE(envio_provincias.fecha_envio)'), DB::raw('DATE(Venta.fechaVenta)'));
+                    ->from('envio_provincias')
+                    ->whereColumn('envio_provincias.idCliente', 'Venta.idCliente')
+                    ->whereColumn(DB::raw('DATE(envio_provincias.fecha_envio)'), DB::raw('DATE(Venta.fechaVenta)'));
             })
             ->selectRaw('MAX(Venta.idVenta) as idEnvioProvincia, MAX(DATE(Venta.fechaVenta)) as fecha_envio, Cliente.numeroDocumento, Cliente.nombre, Cliente.apellidoPaterno, SUM(Venta.totalVenta) as monto_total')
             ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
@@ -457,82 +459,6 @@ class AnalyticsController extends Controller
         ]);
     }
 
-    public function ripley(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-            return redirect()->route('dashboard', ['user' => $userModel]);
-        }
-
-        $tc = $this->calculadoraService->getTasaCambio();
-        [$fechaInicio, $fechaFin, $anio, $mes] = $this->resolveDateRange($request);
-        $gruposCostoBajo = $this->calculadoraService->getGruposCostoExcepcion();
-
-        $exprs = $this->gananciaQueryService->getSqlExpressions($tc);
-        extract($exprs);
-
-        // Usamos el Modelo Venta para iniciar la consulta
-        $ventasRipley = Venta::query()
-            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
-            ->leftJoin('Usuario', 'Venta.idUser', '=', 'Usuario.idUser')
-            ->leftJoin('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
-            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
-            ->selectRaw("Venta.idVenta, Venta.fechaVenta, Venta.idUser, Usuario.user as nombre_usuario,
-                         GROUP_CONCAT(Producto.modelo SEPARATOR ', ') as modelo,
-                         SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as ingresos,
-                         
-                         /* SOLO el costo del producto */
-                         SUM(({$costoVentaExpr}) * DetalleVenta.cantidad + ($costosComponentesSub)) as costos_base,
-                         
-                         /* Comisión limpia de Ripley */
-                         SUM(({$ripleyExpr}) * DetalleVenta.cantidad) as comision_ripley,
-                         
-                         /* Tarifa de peso separada */
-                         SUM(({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1) * DetalleVenta.cantidad) as tarifa_peso_ripley")
-            ->where('DetalleVenta.precioVenta', '>', 0)
-            ->where(function ($q) {
-                $this->applyInventarioFilter($q, true);
-            })
-            ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy('Venta.idVenta', 'Venta.fechaVenta', 'Venta.idUser', 'Usuario.user')
-            ->orderByDesc('Venta.fechaVenta')
-            ->get()
-            ->map(fn($venta) => $this->gananciaQueryService->formatVentaItem($venta));
-        // ── Consulta para tendencia de ventas por mes (Gráfico) ────────
-        $ventasMesRaw = Venta::query()
-            ->join('DetalleVenta', 'Venta.idVenta', '=', 'DetalleVenta.idVenta')
-            ->selectRaw('DATE(Venta.fechaVenta) as fecha, SUM(DetalleVenta.cantidad) as total_unidades, SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto')
-            ->where('DetalleVenta.precioVenta', '>', 0.10)
-            ->where(function ($q) {
-                $this->applyInventarioFilter($q, true);
-            })
-            ->whereRaw("UPPER(Venta.canal) = 'RIPLEY'")
-            ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
-            ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(Venta.fechaVenta)'))
-            ->orderBy('fecha', 'asc')
-            ->get();
-
-        $ventasMes = [];
-        for ($date = $fechaInicio->copy(); $date->lte($fechaFin); $date->addDay()) {
-            $dateStr = $date->format('Y-m-d');
-            $found = $ventasMesRaw->firstWhere('fecha', $dateStr);
-            $ventasMes[] = [
-                'fecha' => $date->format('d/m'),
-                'total' => $found ? $found->total_unidades : 0,
-                'monto' => $found ? round($found->total_monto, 2) : 0
-            ];
-        }
-
-        return view('analytics.components.ripley.index', [
-            'user' => $userModel,
-            'ventasRipley' => $ventasRipley,
-            'ventasMes' => $ventasMes,
-            'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
-        ]);
-    }
 
 
     public function tienda(Request $request)
@@ -540,7 +466,7 @@ class AnalyticsController extends Controller
         $userModel = $this->headerService->getModelUser();
 
         if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
             return redirect()->route('dashboard', ['user' => $userModel]);
         }
 
@@ -597,10 +523,10 @@ class AnalyticsController extends Controller
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->whereExists(function ($query) {
                     $query->select(\Illuminate\Support\Facades\DB::raw(1))
-                          ->from('DetalleVenta')
-                          ->whereColumn('DetalleVenta.idVenta', 'Venta.idVenta')
-                          ->where('DetalleVenta.precioVenta', '>', 0.10)
-                          ->where('DetalleVenta.estado', '!=', 'DEVUELTO');
+                        ->from('DetalleVenta')
+                        ->whereColumn('DetalleVenta.idVenta', 'Venta.idVenta')
+                        ->where('DetalleVenta.precioVenta', '>', 0.10)
+                        ->where('DetalleVenta.estado', '!=', 'DEVUELTO');
                 })
                 ->groupBy('MetodoPago.nombreMetodo')
                 ->orderByDesc('total_monto')
@@ -617,10 +543,10 @@ class AnalyticsController extends Controller
                 ->whereBetween('Venta.fechaVenta', [$fechaInicio, $fechaFin])
                 ->whereExists(function ($query) {
                     $query->select(\Illuminate\Support\Facades\DB::raw(1))
-                          ->from('DetalleVenta')
-                          ->whereColumn('DetalleVenta.idVenta', 'Venta.idVenta')
-                          ->where('DetalleVenta.precioVenta', '>', 0.10)
-                          ->where('DetalleVenta.estado', '!=', 'DEVUELTO');
+                        ->from('DetalleVenta')
+                        ->whereColumn('DetalleVenta.idVenta', 'Venta.idVenta')
+                        ->where('DetalleVenta.precioVenta', '>', 0.10)
+                        ->where('DetalleVenta.estado', '!=', 'DEVUELTO');
                 })
                 ->orderByRaw("CASE WHEN UPPER(MetodoPago.nombreMetodo) LIKE '%TRANSFERENCIA%' THEN COALESCE(Banco.nombreBanco, MetodoPago.nombreMetodo) ELSE MetodoPago.nombreMetodo END")
                 ->orderByDesc('Venta.fechaVenta')
@@ -640,7 +566,7 @@ class AnalyticsController extends Controller
                 ->orderBy('fecha', 'asc')
                 ->get();
 
-            // ── Consulta para agrupar por SKU (Modelo) ───────────────────
+            // â”€â”€ Consulta para agrupar por SKU (Modelo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             $skusTienda = \App\Models\Ventas\DetalleVenta::query()
                 ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
                 ->join('Producto', 'DetalleVenta.idProducto', '=', 'Producto.idProducto')
@@ -693,10 +619,10 @@ class AnalyticsController extends Controller
     {
         $userModel = $this->headerService->getModelUser();
         if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
             return redirect()->route('dashboard', ['user' => $userModel]);
         }
-        
+
         return view('analytics.producto_historial', [
             'userModel' => $userModel,
             'user' => $userModel
@@ -706,7 +632,7 @@ class AnalyticsController extends Controller
     public function productoHistorialData(Request $request)
     {
         $idProducto = $request->input('idProducto');
-        
+
         if (!$idProducto) {
             return response()->json([]);
         }
@@ -730,7 +656,7 @@ class AnalyticsController extends Controller
                     'fecha' => \Carbon\Carbon::parse($item->fechaVenta)->format('d/m/Y H:i'),
                     'fecha_sort' => \Carbon\Carbon::parse($item->fechaVenta)->timestamp,
                     'canal' => $item->canal ?? 'Desconocido',
-                    'orden' => $item->numeroOrden ?? 'V-'.$item->idVenta,
+                    'orden' => $item->numeroOrden ?? 'V-' . $item->idVenta,
                     'cantidad' => $item->cantidad,
                     'precio_unitario' => number_format($item->precioVenta, 2),
                     'total' => number_format($item->precioVenta * $item->cantidad, 2),

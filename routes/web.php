@@ -34,8 +34,11 @@ use App\Http\Controllers\GarantiaController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\LicenciaController;
 use App\Http\Controllers\ReclamoPlataformaController;
-use App\Http\Controllers\AnalyticsController;
-use App\Http\Controllers\AnalyticsFallabellaController;
+use App\Http\Controllers\Analytics\AnalyticsController;
+use App\Http\Controllers\Analytics\AnalyticsFallabellaController;
+use App\Http\Controllers\Analytics\AnalyticsMercadolibreController;
+use App\Http\Controllers\Analytics\AnalyticsRipleyController;
+use App\Http\Controllers\Analytics\AnalyticsEnviosController;
 use App\Http\Controllers\GananciaController;
 use App\Http\Controllers\ReviewController;
 
@@ -70,19 +73,19 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
-    Route::get('/dashboard/analitica/mercadolibre', [\App\Http\Controllers\AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
-    Route::get('/dashboard/analitica/ripley', [AnalyticsController::class, 'ripley'])->name('dashboard.analitica.ripley');
+    Route::get('/dashboard/analitica/mercadolibre', [AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
+    Route::get('/dashboard/analitica/ripley', [AnalyticsRipleyController::class, 'index'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
     Route::get('/dashboard/analitica/tienda/data', [AnalyticsController::class, 'tiendaData'])->name('dashboard.analitica.tienda.data');
     Route::get('/dashboard/analitica/producto', [AnalyticsController::class, 'productoHistorialIndex'])->name('dashboard.analitica.producto');
     Route::get('/dashboard/analitica/producto/data', [AnalyticsController::class, 'productoHistorialData'])->name('dashboard.analitica.producto.data');
 
     // Rutas de Analítica de Envíos
-    Route::get('/dashboard/analitica/envios', [\App\Http\Controllers\AnalyticsEnviosController::class, 'index'])->name('dashboard.analitica.envios');
-    Route::get('/dashboard/analitica/envios/top-provincias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopProvincias'])->name('dashboard.analitica.envios.provincias');
-    Route::get('/dashboard/analitica/envios/top-clientes', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopClientes'])->name('dashboard.analitica.envios.clientes');
-    Route::get('/dashboard/analitica/envios/top-agencias', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopAgencias'])->name('dashboard.analitica.envios.agencias');
-    Route::get('/dashboard/analitica/envios/top-usuarios', [\App\Http\Controllers\AnalyticsEnviosController::class, 'getTopUsuarios'])->name('dashboard.analitica.envios.usuarios');
+    Route::get('/dashboard/analitica/envios', [AnalyticsEnviosController::class, 'index'])->name('dashboard.analitica.envios');
+    Route::get('/dashboard/analitica/envios/top-provincias', [AnalyticsEnviosController::class, 'getTopProvincias'])->name('dashboard.analitica.envios.provincias');
+    Route::get('/dashboard/analitica/envios/top-clientes', [AnalyticsEnviosController::class, 'getTopClientes'])->name('dashboard.analitica.envios.clientes');
+    Route::get('/dashboard/analitica/envios/top-agencias', [AnalyticsEnviosController::class, 'getTopAgencias'])->name('dashboard.analitica.envios.agencias');
+    Route::get('/dashboard/analitica/envios/top-usuarios', [AnalyticsEnviosController::class, 'getTopUsuarios'])->name('dashboard.analitica.envios.usuarios');
 
     // Ganancias
     Route::get('/ganancias/all', [GananciaController::class, 'getAllGanancias'])->name('ganancias.all');
@@ -190,8 +193,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
     Route::post('/egresos/upgrade', [EgresoController::class, 'upgradeEgreso'])->name('upgradeegreso');
-    Route::get('/egresos/pendientes-envios', [\App\Http\Controllers\EnvioProvinciaController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
-    Route::post('/egresos/pendientes-envios/mark', [\App\Http\Controllers\EnvioProvinciaController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
+    Route::get('/egresos/pendientes-envios', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
+    Route::post('/egresos/pendientes-envios/mark', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');
@@ -233,40 +236,40 @@ Route::middleware(['validate.session'])->group(function () {
 
     // Envios a Provincias
     Route::prefix('envios-provincias')->name('envios.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\EnvioProvinciaController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\EnvioProvinciaController::class, 'create'])->name('create');
-        Route::post('/store', [\App\Http\Controllers\EnvioProvinciaController::class, 'store'])->name('store');
-        Route::get('/edit/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'edit'])->name('edit');
-        Route::put('/update/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'update'])->name('update');
-        Route::post('/toggle-despachado', [\App\Http\Controllers\EnvioProvinciaController::class, 'toggleDespachado'])->name('toggle-despachado');
-        Route::get('/pdf', [\App\Http\Controllers\EnvioProvinciaController::class, 'pdf'])->name('pdf');
-        Route::get('/excel', [\App\Http\Controllers\EnvioProvinciaController::class, 'excel'])->name('excel');
-        Route::get('/etiquetas', [\App\Http\Controllers\EnvioProvinciaController::class, 'etiquetas'])->name('etiquetas');
-        Route::get('/lista-productos', [\App\Http\Controllers\EnvioProvinciaController::class, 'listaProductos'])->name('listaProductos');
-        Route::get('/solicitudes', [\App\Http\Controllers\EnvioProvinciaController::class, 'obtenerSolicitudes'])->name('solicitudes');
+        Route::get('/', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'create'])->name('create');
+        Route::post('/store', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'edit'])->name('edit');
+        Route::put('/update/{id}', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'update'])->name('update');
+        Route::post('/toggle-despachado', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'toggleDespachado'])->name('toggle-despachado');
+        Route::get('/pdf', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'pdf'])->name('pdf');
+        Route::get('/excel', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'excel'])->name('excel');
+        Route::get('/etiquetas', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'etiquetas'])->name('etiquetas');
+        Route::get('/lista-productos', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'listaProductos'])->name('listaProductos');
+        Route::get('/solicitudes', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'obtenerSolicitudes'])->name('solicitudes');
         Route::get('/sync-marvisur', [\App\Http\Controllers\Api\MarvisurSyncController::class, 'sync']);
         Route::get('/sync-emtrafesa', [\App\Http\Controllers\Api\EmtrafesaSyncController::class, 'sync']);
         Route::get('/sync-olva', [\App\Http\Controllers\Api\OlvaSyncController::class, 'sync']);
         Route::get('/sync-shalom', [\App\Http\Controllers\Api\ShalomSyncController::class, 'sync']);
-        Route::get('/sync-all', [\App\Http\Controllers\EnvioProvinciaController::class, 'syncAllAgencias']);
+        Route::get('/sync-all', [\App\Http\Controllers\Envios\EnvioProvinciaDictionaryController::class, 'syncAllAgencias']);
         Route::get('/shalom-terminals', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getTerminals']);
         Route::post('/shalom-cotizar', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'calculate']);
         Route::get('/shalom-restricciones', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getRestricciones']);
         Route::get('/olva-cajas', [\App\Http\Controllers\Api\OlvaTarifaController::class, 'getCajas']);
 
         // AJAX Endpoints
-        Route::get('/buscar-registro', [\App\Http\Controllers\EnvioProvinciaController::class, 'buscarRegistro'])->name('buscar-registro');
-        Route::get('/ultimo-envio-cliente/{idCliente}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getUltimoEnvioCliente'])->name('ultimo-envio-cliente');
-        Route::get('/provincias-por-departamento/{idDepartamento}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getProvinciasPorDepartamento'])->name('provincias-por-departamento');
-        Route::get('/destinos-por-provincia/{idProvincia}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getDestinosPorProvincia'])->name('destinos-por-provincia');
-        Route::get('/subagencias-por-agencia-y-destino/{idAgencia}/{idDestino}', [\App\Http\Controllers\EnvioProvinciaController::class, 'getSubAgenciasPorAgenciaYDestino'])->name('subagencias-por-agencia-y-destino');
-        Route::post('/agencia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeAgencia'])->name('agencia.store');
-        Route::post('/sub-agencia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeSubAgencia'])->name('subagencia.store');
-        Route::post('/provincia', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeProvincia'])->name('provincia.store');
-        Route::post('/destino', [\App\Http\Controllers\EnvioProvinciaController::class, 'storeDestino'])->name('destino.store');
-        Route::post('/generar-link', [\App\Http\Controllers\EnvioProvinciaController::class, 'generarLinkPublico'])->name('generar-link');
-        Route::post('/regenerar-link/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'regenerarLink'])->name('regenerar-link');
-        Route::get('/tracking-flores/{id}', [\App\Http\Controllers\EnvioProvinciaController::class, 'trackFlores'])->name('tracking-flores');
+        Route::get('/buscar-registro', [\App\Http\Controllers\Envios\EnvioProvinciaApiController::class, 'buscarRegistro'])->name('buscar-registro');
+        Route::get('/ultimo-envio-cliente/{idCliente}', [\App\Http\Controllers\Envios\EnvioProvinciaApiController::class, 'getUltimoEnvioCliente'])->name('ultimo-envio-cliente');
+        Route::get('/provincias-por-departamento/{idDepartamento}', [\App\Http\Controllers\Envios\EnvioProvinciaApiController::class, 'getProvinciasPorDepartamento'])->name('provincias-por-departamento');
+        Route::get('/destinos-por-provincia/{idProvincia}', [\App\Http\Controllers\Envios\EnvioProvinciaApiController::class, 'getDestinosPorProvincia'])->name('destinos-por-provincia');
+        Route::get('/subagencias-por-agencia-y-destino/{idAgencia}/{idDestino}', [\App\Http\Controllers\Envios\EnvioProvinciaApiController::class, 'getSubAgenciasPorAgenciaYDestino'])->name('subagencias-por-agencia-y-destino');
+        Route::post('/agencia', [\App\Http\Controllers\Envios\EnvioProvinciaDictionaryController::class, 'storeAgencia'])->name('agencia.store');
+        Route::post('/sub-agencia', [\App\Http\Controllers\Envios\EnvioProvinciaDictionaryController::class, 'storeSubAgencia'])->name('subagencia.store');
+        Route::post('/provincia', [\App\Http\Controllers\Envios\EnvioProvinciaDictionaryController::class, 'storeProvincia'])->name('provincia.store');
+        Route::post('/destino', [\App\Http\Controllers\Envios\EnvioProvinciaDictionaryController::class, 'storeDestino'])->name('destino.store');
+        Route::post('/generar-link', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'generarLinkPublico'])->name('generar-link');
+        Route::post('/regenerar-link/{id}', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'regenerarLink'])->name('regenerar-link');
+        Route::get('/tracking-flores/{id}', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'trackFlores'])->name('tracking-flores');
     });
     // REVIEWS
     Route::get('/dashboard/reviews', [ReviewController::class, 'index'])->name('reviews.index');
@@ -301,6 +304,8 @@ Route::middleware(['validate.session'])->group(function () {
         Route::get('/orders', [\App\Http\Controllers\MercadoLibreController::class, 'orders'])->name('orders');
         Route::post('/sync-orders', [\App\Http\Controllers\MercadoLibreController::class, 'syncOrders'])->name('sync-orders');
         Route::get('/sync-status', [\App\Http\Controllers\MercadoLibreController::class, 'syncStatus'])->name('sync-status');
+        Route::get('/notifications', [\App\Http\Controllers\MercadoLibreController::class, 'getNotifications'])->name('notifications');
+        Route::post('/answer', [\App\Http\Controllers\MercadoLibreController::class, 'answerQuestion'])->name('answer');
     });
     Route::get('/configuracion/mercadolibre/auth', [\App\Http\Controllers\MercadoLibreController::class, 'authorize'])->name('ml.auth');
     Route::get('/configuracion/mercadolibre/callback', [\App\Http\Controllers\MercadoLibreController::class, 'callback'])->name('ml.callback');
@@ -493,3 +498,5 @@ Route::middleware(['validate.session'])->prefix('licencias')->name('licencias.')
     //Licencias Recuperadas
     Route::get('/recuperadas', [LicenciaController::class, 'recuperadas'])->name('recuperadas');
 });
+
+

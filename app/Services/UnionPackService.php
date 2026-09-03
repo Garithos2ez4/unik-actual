@@ -198,7 +198,6 @@ class UnionPackService implements UnionPackServiceInterface
                 'message' => "Componentes reunidos exitosamente en pack",
                 'division' => $division
             ];
-
         } catch (Exception $e) {
             DB::rollBack();
             throw $e;
@@ -330,7 +329,7 @@ class UnionPackService implements UnionPackServiceInterface
 
             // Determinar serie: si todos los hijos comparten serie, se hereda; si no, se genera con formato UNK-
             $series = array_unique(array_map(fn($r) => $r->numeroSerie, $registrosHijos));
-            
+
             if (count($series) === 1) {
                 $serieResultante = $series[0];
             } else {
@@ -338,14 +337,14 @@ class UnionPackService implements UnionPackServiceInterface
                 $modelOrCode = !empty($productoPadre->modelo) ? $productoPadre->modelo : $productoPadre->codigoProducto;
                 $cleanedModel = preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($modelOrCode));
                 $parcialCode = 'UNK-' . $cleanedModel;
-                
+
                 $validateCode = \App\Models\Inventario\RegistroProducto::where('numeroSerie', 'like', "%{$parcialCode}%")->count();
                 $serieResultante = $parcialCode . '-' . (100000 + $validateCode + 1);
             }
 
             $registroPack = RegistroProducto::create([
                 'idRegistro'          => $newIdRegistro,
-                'idDetalleComprobante'=> $newIdDc,
+                'idDetalleComprobante' => $newIdDc,
                 'idAlmacen'           => $idAlmacenDestino,
                 'numeroSerie'         => $serieResultante,
                 'estado'              => 'NUEVO',
@@ -361,7 +360,7 @@ class UnionPackService implements UnionPackServiceInterface
                 'idIngreso'   => $newIdIngreso,
                 'idRegistro'  => $newIdRegistro,
                 'idUser'      => $idUser,
-                'fechaIngreso'=> now(),
+                'fechaIngreso' => now(),
             ]);
 
             // 8. Sumar stock del pack en inventario
@@ -380,9 +379,9 @@ class UnionPackService implements UnionPackServiceInterface
             foreach ($registrosHijos as $regHijo) {
                 DivisionPackDetalle::create([
                     'idDivision'    => $division->idDivision,
-                    'idRegistroHijo'=> $regHijo->idRegistro,
-                    'idProductoHijo'=> $regHijo->DetalleComprobante->idProducto,
-                    'costo_asignado'=> $regHijo->DetalleComprobante->precioUnitario ?? 0,
+                    'idRegistroHijo' => $regHijo->idRegistro,
+                    'idProductoHijo' => $regHijo->DetalleComprobante->idProducto,
+                    'costo_asignado' => $regHijo->DetalleComprobante->precioUnitario ?? 0,
                 ]);
 
                 $regHijo->estado           = 'REUNIDO';
@@ -409,7 +408,6 @@ class UnionPackService implements UnionPackServiceInterface
                 'division' => $division,
                 'serie'    => $serieResultante,
             ];
-
         } catch (Exception $e) {
             DB::rollBack();
             throw $e;
@@ -446,7 +444,7 @@ class UnionPackService implements UnionPackServiceInterface
                     'idProductoHijo'   => $comp->idProductoHijo,
                     'nombreProducto'   => $productoHijo->nombreProducto ?? '',
                     'modelo'           => $productoHijo->modelo ?? '',
-                    'cantidadNecesaria'=> $comp->cantidad,
+                    'cantidadNecesaria' => $comp->cantidad,
                     'disponible'       => $stockDisponible,
                 ];
             }
@@ -455,7 +453,7 @@ class UnionPackService implements UnionPackServiceInterface
                 $productoPadre = $componentes->first()->ProductoPadre;
                 $disponibles[] = [
                     'idProducto'    => $idProductoPack,
-                    'nombreProducto'=> $productoPadre->nombreProducto ?? '',
+                    'nombreProducto' => $productoPadre->nombreProducto ?? '',
                     'modelo'        => $productoPadre->modelo ?? '',
                     'componentes'   => $componentesInfo,
                 ];
@@ -490,12 +488,12 @@ class UnionPackService implements UnionPackServiceInterface
                 'idProductoHijo'   => $pack->idProductoHijo,
                 'nombreProducto'   => $productoHijo->nombreProducto ?? '',
                 'modelo'           => $productoHijo->modelo ?? '',
-                'cantidadNecesaria'=> $pack->cantidad,
+                'cantidadNecesaria' => $pack->cantidad,
                 'disponibles'      => $registros->map(function ($r) {
                     return [
                         'idRegistro'  => $r->idRegistro,
                         'numeroSerie' => $r->numeroSerie,
-                        'almacen'     => $r->Almacen->nombreAlmacen ?? 'Sin almacén',
+                        'almacen'     => $r->Almacen->descripcion ?? 'Sin almacén',
                         'costo'       => $r->DetalleComprobante->precioUnitario ?? 0,
                     ];
                 })->values()->toArray(),

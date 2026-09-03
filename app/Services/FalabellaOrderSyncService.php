@@ -79,7 +79,7 @@ class FalabellaOrderSyncService
                 $sellerSku = $item['seller_sku'] ?? null;
                 $falabellaSku = $item['falabella_sku'] ?? null;
 
-                // Intento de rescate de SKU numÃ©rico si no viene
+                // Intento de rescate de SKU numerico si no viene
                 if ($sellerSku && (!is_numeric($falabellaSku) || blank($falabellaSku) || $falabellaSku === '-')) {
                     try {
                         $productResponse = $this->falabellaApiService->getProducts([
@@ -183,7 +183,7 @@ class FalabellaOrderSyncService
             $totalCount += $result['count'];
         }
 
-        // Paso 2: Re-verificar Ã³rdenes locales que siguen como pending/ready_to_ship
+        // Paso 2: Re-verificar  ordenes locales que siguen como pending/ready_to_ship
         // pero que podrÃ­an haber cambiado a shipped/canceled en Falabella
         $staleRefreshed = $this->refreshStaleOrders();
         $orderIds = array_merge($orderIds, $staleRefreshed);
@@ -205,40 +205,40 @@ class FalabellaOrderSyncService
 
         if (filled($status) && $status === 'pending') {
             // "Pendientes" agrupa todo lo que falta despachar (igual que Falabella)
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->whereIn('status', ['pending', 'ready_to_ship'])
-                  ->orWhere(function($sub) {
-                      $sub->where(function($s) {
-                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
-                          })
-                          ->whereHas('items', function($iq) {
-                              $iq->whereIn('status', ['pending', 'ready_to_ship']);
-                          });
-                  });
+                    ->orWhere(function ($sub) {
+                        $sub->where(function ($s) {
+                            $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                        })
+                            ->whereHas('items', function ($iq) {
+                                $iq->whereIn('status', ['pending', 'ready_to_ship']);
+                            });
+                    });
             });
         } elseif (filled($status) && $status !== 'all') {
-            $query->where(function($q) use ($status) {
+            $query->where(function ($q) use ($status) {
                 $q->where('status', $status)
-                  ->orWhere(function($sub) use ($status) {
-                      $sub->where(function($s) {
-                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
-                          })
-                          ->whereHas('items', function($iq) use ($status) {
-                              $iq->where('status', $status);
-                          });
-                  });
+                    ->orWhere(function ($sub) use ($status) {
+                        $sub->where(function ($s) {
+                            $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                        })
+                            ->whereHas('items', function ($iq) use ($status) {
+                                $iq->where('status', $status);
+                            });
+                    });
             });
         } elseif (!filled($status)) {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->whereIn('status', ['pending', 'ready_to_ship'])
-                  ->orWhere(function($sub) {
-                      $sub->where(function($s) {
-                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
-                          })
-                          ->whereHas('items', function($iq) {
-                              $iq->whereIn('status', ['pending', 'ready_to_ship']);
-                          });
-                  });
+                    ->orWhere(function ($sub) {
+                        $sub->where(function ($s) {
+                            $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                        })
+                            ->whereHas('items', function ($iq) {
+                                $iq->whereIn('status', ['pending', 'ready_to_ship']);
+                            });
+                    });
             });
         }
         // Si $status === 'all', no filtramos por estado
@@ -247,16 +247,16 @@ class FalabellaOrderSyncService
     }
 
     /**
-     * Re-consulta Ã³rdenes locales que siguen como pending/ready_to_ship
-     * pero que estÃ¡n FUERA del lookback window (ya que el lookback las habrÃ­a
+     * Re-consulta ordenes  que siguen como pending/ready_to_ship
+     * pero que estan FUERA del lookback window (ya que el lookback las habria
      * actualizado si estuvieran dentro del rango). Solo hace 1 llamada API
-     * por fecha Ãºnica de creaciÃ³n, agrupando Ã³rdenes del mismo dÃ­a.
+     * por fecha unica de creacion, agrupando ordenes del mismo dia.
      */
     private function refreshStaleOrders(int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS): array
     {
         $lookbackCutoff = now()->subDays($lookbackDays)->startOfDay();
 
-        // Verificar TODAS las Ã³rdenes locales que siguen como pending/ready_to_ship para evitar que se queden atascadas
+        // Verificar TODAS las ordenes locales que siguen como pending/ready_to_ship para evitar que se queden atascadas
         $staleOrders = FalabellaOrder::whereIn('status', ['pending', 'ready_to_ship'])
             ->whereNotNull('created_at_falabella')
             ->get();
@@ -267,8 +267,8 @@ class FalabellaOrderSyncService
 
         $refreshedIds = [];
 
-        // Agrupar por fecha de creaciÃ³n (YYYY-MM-DD) para minimizar llamadas API
-        $byDate = $staleOrders->groupBy(fn ($o) => Carbon::parse($o->created_at_falabella)->toDateString());
+        // Agrupar por fecha de creacion (YYYY-MM-DD) para minimizar llamadas API
+        $byDate = $staleOrders->groupBy(fn($o) => Carbon::parse($o->created_at_falabella)->toDateString());
 
         foreach ($byDate as $dateStr => $ordersOnDate) {
             try {
@@ -281,8 +281,8 @@ class FalabellaOrderSyncService
 
                 $apiOrders = $this->falabellaApiService->extractOrders($response);
 
-                // Indexar por order_id para bÃºsqueda O(1)
-                $apiIndexed = collect($apiOrders)->keyBy(fn ($o) => (string)($o['_normalized']['order_id'] ?? ''));
+                // Indexar por order_id para busqueda O(1)
+                $apiIndexed = collect($apiOrders)->keyBy(fn($o) => (string)($o['_normalized']['order_id'] ?? ''));
 
                 foreach ($ordersOnDate as $localOrder) {
                     $apiOrder = $apiIndexed->get((string)$localOrder->order_id);
@@ -295,7 +295,7 @@ class FalabellaOrderSyncService
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning(
-                    "Error refrescando Ã³rdenes del {$dateStr}: " . $e->getMessage()
+                    "Error refrescando ordenes del {$dateStr}: " . $e->getMessage()
                 );
             }
         }
@@ -306,7 +306,7 @@ class FalabellaOrderSyncService
 
     /**
      * Sincroniza devoluciones desde la API de Falabella para un rango de fechas.
-     * Hace 1 llamada por estado (rango completo) en lugar de 1 por dÃ­a por estado.
+     * Hace 1 llamada por estado (rango completo)
      */
     public function syncReturnsByDateRange(string $dateFrom, string $dateTo): array
     {
@@ -317,7 +317,7 @@ class FalabellaOrderSyncService
 
         foreach (self::RETURN_STATUSES as $returnStatus) {
             try {
-                // Usar UpdatedAfter porque devoluciones se inician despuÃ©s de la creaciÃ³n de la orden
+                // Usar UpdatedAfter porque devoluciones se inician despues de la creacion de la orden
                 $response  = $this->falabellaApiService->getOrders([
                     'UpdatedAfter'  => $createdAfter,
                     'UpdatedBefore' => $createdBefore,
@@ -363,28 +363,28 @@ class FalabellaOrderSyncService
             });
 
         if (filled($status)) {
-            $query->where(function($q) use ($status) {
+            $query->where(function ($q) use ($status) {
                 $q->where('status', $status)
-                  ->orWhere(function($sub) use ($status) {
-                      $sub->where(function($s) {
-                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
-                          })
-                          ->whereHas('items', function($iq) use ($status) {
-                              $iq->where('status', $status);
-                          });
-                  });
+                    ->orWhere(function ($sub) use ($status) {
+                        $sub->where(function ($s) {
+                            $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                        })
+                            ->whereHas('items', function ($iq) use ($status) {
+                                $iq->where('status', $status);
+                            });
+                    });
             });
         } else {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->whereIn('status', self::RETURN_STATUSES)
-                  ->orWhere(function($sub) {
-                      $sub->where(function($s) {
-                              $s->whereNull('status')->orWhereIn('status', ['-', '']);
-                          })
-                          ->whereHas('items', function($iq) {
-                              $iq->whereIn('status', self::RETURN_STATUSES);
-                          });
-                  });
+                    ->orWhere(function ($sub) {
+                        $sub->where(function ($s) {
+                            $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                        })
+                            ->whereHas('items', function ($iq) {
+                                $iq->whereIn('status', self::RETURN_STATUSES);
+                            });
+                    });
             });
         }
 

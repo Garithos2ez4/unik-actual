@@ -37,6 +37,10 @@ class HeaderService implements HeaderServiceInterface
             throw new InvalidArgumentException('Se requieren cuatro variables para las alertas flas.');
         }
 
+        if ($icon === 'danger') {
+            $icon = 'error';
+        }
+
         if (!in_array($icon, $acceptedIcons)) {
             throw new InvalidArgumentException('El icono proporcionado no es válido.');
         }

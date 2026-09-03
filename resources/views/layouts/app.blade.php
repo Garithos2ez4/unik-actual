@@ -64,7 +64,27 @@
                         <h5 class="d-none d-lg-flex justify-content-start align-items-center mb-0 h-100">Unik Technology
                             &nbsp;<span class="text-secondary"> </span></h5>
                     </div>
-                    <div class="col-6 col-lg-2" style="position:relative;z-index:9000">
+                    <div class="col-6 col-lg-2 d-flex align-items-center justify-content-end" style="position:relative;z-index:9000">
+                        {{-- Campana ML Notificaciones --}}
+                        @if ($user->Accesos->contains('idVista', 4))
+                        <div class="position-relative me-3" id="mlBellWrapper" style="cursor:pointer;">
+                            <i class="bi bi-bell-fill text-warning" style="font-size:1.4rem;" onclick="toggleMlNotifications()"></i>
+                            <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size:0.6rem; display:none;" id="mlBadgeCount">0</span>
+                            {{-- Dropdown de notificaciones --}}
+                            <div id="mlNotifDropdown" class="border shadow rounded-3 bg-white text-dark p-0" style="display:none; position:absolute; right:0; top:2.2rem; width:400px; max-height:500px; overflow-y:auto; z-index:9999;">
+                                <div class="p-3 bg-warning bg-opacity-10 border-bottom d-flex justify-content-between align-items-center">
+                                    <strong><i class="bi bi-bell-fill text-warning me-1"></i> Notificaciones ML</strong>
+                                    <span class="badge bg-danger" id="mlNotifTotalBadge">0</span>
+                                </div>
+                                <div id="mlNotifContent" class="p-2">
+                                    <div class="text-center text-muted py-3">
+                                        <div class="spinner-border spinner-border-sm"></div> Cargando...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+
                         <div class="row h-100 d-flex align-items-center text-end pt-2" id="header-user-nav"
                             style="cursor:pointer">
                             @php
@@ -241,18 +261,8 @@
                                 </button>
                                 <ul class="collapse list-unstyled ps-3 mt-1" id="collapseML">
                                     <li>
-                                        <a href="{{ route('ml.auth') }}" class="btn btn-sm text-info py-0">
-                                            <i class="bi bi-link-45deg"></i> Conectar
-                                        </a>
-                                    </li>
-                                    <li>
                                         <a href="{{ route('plataformas.ml.orders') }}" class="btn btn-sm text-info py-0">
                                             <i class="bi bi-chevron-right"></i> Órdenes y Envíos
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('dashboard.analitica.mercadolibre') }}" class="btn btn-sm text-info py-0">
-                                            <i class="bi bi-chevron-right"></i> Analítica
                                         </a>
                                     </li>
                                 </ul>
@@ -366,6 +376,15 @@
     @stack('scripts')
     <script src="{{ asset('js/app.js') }}?v=1.03"></script>
     <script src="{{ asset('js/check-orders.js') }}?v=1.4"></script>
+
+    {{-- ML Notifications --}}
+    @if ($user->Accesos->contains('idVista', 4))
+    <script>
+        window.mlNotificationsUrl = '{{ route("plataformas.ml.notifications") }}';
+        window.mlAnswerUrl = '{{ route("plataformas.ml.answer") }}';
+    </script>
+    <script src="{{ asset('js/ml-notifications.js') }}?v=1.00"></script>
+    @endif
 </body>
 
 </html>

@@ -30,6 +30,7 @@ class MercadoLibreApiService
             'response_type' => 'code',
             'client_id'     => $this->clientId,
             'redirect_uri'  => $this->redirectUri,
+            'scope'         => 'offline_access',
         ]);
     }
 
@@ -186,5 +187,76 @@ class MercadoLibreApiService
             'custom'        => 'Acuerdo de entrega',
             default         => 'Sin especificar',
         };
+    }
+
+    // ─── Preguntas y Respuestas ───────────────────────────────────────
+
+    /**
+     * Obtiene preguntas sin responder del seller.
+     */
+    public function getUnansweredQuestions(string $sellerId, int $limit = 20): array
+    {
+        try {
+            return $this->get($sellerId, '/my/received_questions/search', [
+                'status' => 'UNANSWERED',
+                'api_version' => '4',
+                'limit' => $limit,
+                'sort_fields' => 'date_created',
+                'sort_types'  => 'DESC',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning("ML Questions error: " . $e->getMessage());
+            return ['total' => 0, 'questions' => []];
+        }
+    }
+
+    /**
+     * Responde una pregunta.
+     */
+    public function answerQuestion(string $sellerId, int $questionId, string $text): array
+    {
+        $token = $this->getToken($sellerId);
+
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->post($this->baseUrl . '/answers', [
+                'question_id' => $questionId,
+                'text'        => $text,
+            ]);
+
+        if ($response->failed()) {
+            throw new RuntimeException("ML Answer error: " . $response->body());
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Obtiene info de un item de ML (para obtener el título del producto).
+     */
+    public function getItem(string $itemId): array
+    {
+        try {
+            $response = Http::timeout(10)->get($this->baseUrl . "/items/{$itemId}");
+            return $response->json() ?? [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Busca reclamos/mediaciones abiertas del seller.
+     */
+    public function getOpenClaims(string $sellerId): array
+    {
+        try {
+            return $this->get($sellerId, '/post-purchase/v1/claims/search', [
+                'status' => 'opened',
+                'role'   => 'defendant',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning("ML Claims search error: " . $e->getMessage());
+            return ['data' => [], 'paging' => ['total' => 0]];
+        }
     }
 }

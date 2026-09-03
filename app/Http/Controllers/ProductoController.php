@@ -441,6 +441,19 @@ class ProductoController extends Controller
                                 $idProducto = $success;
 
                                 $this->productoService->validateState($idProducto);
+
+                                if ($request->has('mostrarPrecioWeb') || $request->has('precio_pase')) {
+                                    $mostrarWeb = $request->input('mostrarPrecioWeb') == '1' ? true : false;
+                                    $precioPase = $request->input('precio_pase') ? floatval($request->input('precio_pase')) : null;
+            
+                                    \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+                                        ['idProducto' => $idProducto],
+                                        [
+                                            'mostrarPrecioWeb' => $mostrarWeb,
+                                            'precio_pase' => $precioPase
+                                        ]
+                                    );
+                                }
                             } catch (Exception $e) {
                                 \Log::error('Error en insert/validate: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
                                 $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error en la transaccion', 'error', 'btn-danger');

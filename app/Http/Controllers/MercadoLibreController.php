@@ -9,6 +9,7 @@ use App\Services\MercadoLibreApiService;
 use App\Services\HeaderServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class MercadoLibreController extends Controller
 {
@@ -43,7 +44,7 @@ class MercadoLibreController extends Controller
         if ($error || !$code) {
             $this->headerService->sendFlashAlerts(
                 'Error ML', 'Autorización cancelada o fallida: ' . ($error ?? 'sin code'),
-                'danger', 'btn-danger'
+                'error', 'btn-danger'
             );
             return redirect()->route('configweb');
         }
@@ -51,9 +52,13 @@ class MercadoLibreController extends Controller
         try {
             $tokenData = $this->mlApi->exchangeCodeForToken($code);
 
-            $accessToken  = $tokenData['access_token'];
-            $refreshToken = $tokenData['refresh_token'];
+            $accessToken  = $tokenData['access_token'] ?? null;
+            $refreshToken = $tokenData['refresh_token'] ?? null;
             $expiresIn    = $tokenData['expires_in'] ?? 21600;
+
+            if (!$accessToken) {
+                throw new \RuntimeException('No se recibió el access_token de Mercado Libre.');
+            }
 
             // Obtener info del seller
             $meData   = $this->mlApi->getMe($accessToken);
@@ -75,9 +80,12 @@ class MercadoLibreController extends Controller
                 'success', 'btn-success'
             );
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error en callback de Mercado Libre: ' . $e->getMessage(), [
+                'exception' => $e
+            ]);
             $this->headerService->sendFlashAlerts(
                 'Error ML', 'No se pudo conectar: ' . $e->getMessage(),
-                'danger', 'btn-danger'
+                'error', 'btn-danger'
             );
         }
 
@@ -123,7 +131,7 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $query = MercadoLibreOrder::query()->orderByDesc('created_at_ml');
+        $query = MercadoLibreOrder::with('items')->orderByDesc('created_at_ml');
 
         if ($request->filled('logistic_type')) {
             $query->where('logistic_type', $request->input('logistic_type'));
@@ -147,5 +155,89 @@ class MercadoLibreController extends Controller
             'credentials' => $credentials,
             'filtros'     => $request->only('logistic_type', 'status', 'from', 'to'),
         ]);
+    }
+
+    /**
+     * Retorna JSON con preguntas sin responder + reclamos abiertos de ML.
+     */
+    public function getNotifications()
+    {
+        $credentials = MercadoLibreCredential::all();
+
+        if ($credentials->isEmpty()) {
+            return response()->json([
+                'questions_count' => 0,
+                'claims_count'    => 0,
+                'total'           => 0,
+                'questions'       => [],
+                'claims'          => [],
+            ]);
+        }
+
+        $allQuestions = [];
+        $allClaims    = [];
+
+        foreach ($credentials as $credential) {
+            // Preguntas sin responder
+            $qData = $this->mlApi->getUnansweredQuestions($credential->seller_id, 10);
+            $questions = $qData['questions'] ?? [];
+
+            // Enriquecer con título del producto
+            $itemCache = [];
+            foreach ($questions as &$q) {
+                $itemId = $q['item_id'] ?? '';
+                if ($itemId && !isset($itemCache[$itemId])) {
+                    $itemCache[$itemId] = $this->mlApi->getItem($itemId);
+                }
+                $q['item_title'] = $itemCache[$itemId]['title'] ?? 'Producto';
+                $q['item_thumbnail'] = $itemCache[$itemId]['thumbnail'] ?? '';
+            }
+            unset($q);
+
+            $allQuestions = array_merge($allQuestions, $questions);
+
+            // Reclamos abiertos
+            $claimsData = $this->mlApi->getOpenClaims($credential->seller_id);
+            $claims = $claimsData['data'] ?? [];
+            $allClaims = array_merge($allClaims, $claims);
+        }
+
+        return response()->json([
+            'questions_count' => count($allQuestions),
+            'claims_count'    => count($allClaims),
+            'total'           => count($allQuestions) + count($allClaims),
+            'questions'       => $allQuestions,
+            'claims'          => $allClaims,
+        ]);
+    }
+
+    /**
+     * Responde una pregunta de ML.
+     */
+    public function answerQuestion(Request $request)
+    {
+        $request->validate([
+            'question_id' => 'required|integer',
+            'text'        => 'required|string|max:2000',
+        ]);
+
+        $credential = MercadoLibreCredential::first();
+
+        if (!$credential) {
+            return response()->json(['error' => 'No hay cuenta de ML conectada'], 400);
+        }
+
+        try {
+            $result = $this->mlApi->answerQuestion(
+                $credential->seller_id,
+                $request->input('question_id'),
+                $request->input('text')
+            );
+
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Throwable $e) {
+            Log::error('Error respondiendo pregunta ML: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

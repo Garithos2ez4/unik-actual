@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Analytics;
+
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
@@ -50,7 +52,7 @@ class AnalyticsEnviosController extends Controller
         $userModel = $this->headerService->getModelUser();
 
         if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
             return redirect()->route('dashboard', ['user' => $userModel]);
         }
 
@@ -70,7 +72,7 @@ class AnalyticsEnviosController extends Controller
             $enviosMes[] = [
                 'fecha' => $date->format('d/m'),
                 'total' => $found ? $found->total_envios : 0,
-                'monto' => $found ? $found->total_envios : 0 // Usamos monto como el total de envíos para reciclar el gráfico de tendencias.
+                'monto' => $found ? $found->total_envios : 0 // Usamos monto como el total de envÃ­os para reciclar el grÃ¡fico de tendencias.
             ];
         }
 
@@ -89,7 +91,7 @@ class AnalyticsEnviosController extends Controller
         }
         [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
 
-        // Obtener el top 5 de provincias usando el método unificado del servicio
+        // Obtener el top 5 de provincias usando el mÃ©todo unificado del servicio
         $topProvincias = $this->envioProvinciaService->getTopProvincias($fechaInicio, $fechaFin, 5)
             ->map(function ($item) {
                 return [
@@ -111,7 +113,7 @@ class AnalyticsEnviosController extends Controller
 
         [$fechaInicio, $fechaFin] = $this->resolveDateRange($request);
 
-        // Obtener el top 5 de clientes con más envíos
+        // Obtener el top 5 de clientes con mÃ¡s envÃ­os
         $topClientes = EnvioProvincia::select('idCliente', DB::raw('count(*) as total'))
             ->whereBetween('fecha_envio', [$fechaInicio, $fechaFin])
             ->with('Cliente')
@@ -184,3 +186,4 @@ class AnalyticsEnviosController extends Controller
         return response()->json($topUsuarios);
     }
 }
+
