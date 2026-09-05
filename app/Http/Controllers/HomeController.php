@@ -45,10 +45,17 @@ class HomeController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
+        // 3. Mercado Libre Orders
+        $mlOrders = \App\Models\Ecommerce\MercadoLibreOrder::where('status', 'paid')
+            ->where('created_at_ml', '>=', now()->subDays(5))
+            ->orderBy('id', 'asc')
+            ->get();
+
         return response()->json([
             'success' => true,
             'new_orders' => $newOrders,
-            'ripley_orders' => $ripleyOrders
+            'ripley_orders' => $ripleyOrders,
+            'ml_orders' => $mlOrders
         ]);
     }
 

@@ -143,6 +143,27 @@ class MercadoLibreApiService
         return $this->get($sellerId, "/shipments/{$shippingId}");
     }
 
+    public function downloadShipmentLabel(string $sellerId, $shipmentIds): string
+    {
+        $token = $this->getToken($sellerId);
+
+        // ML permite hasta 50 ids separados por coma
+        $idsParam = is_array($shipmentIds) ? implode(',', $shipmentIds) : $shipmentIds;
+
+        $response = Http::withToken($token)
+            ->timeout(30)
+            ->get($this->baseUrl . "/shipment_labels?shipment_ids={$idsParam}&response_type=pdf");
+
+        if ($response->failed()) {
+            $errorBody = $response->body();
+            $errorJson = json_decode($errorBody, true);
+            $message = $errorJson['message'] ?? $errorBody;
+            throw new RuntimeException("Error al descargar etiqueta(s): " . $message);
+        }
+
+        return $response->body();
+    }
+
     /**
      * Busca reclamos/devoluciones vinculados a una orden.
      */
@@ -150,8 +171,8 @@ class MercadoLibreApiService
     {
         try {
             return $this->get($sellerId, '/post-purchase/v1/claims/search', [
-                'resource_id'   => $orderId,
-                'resource_type' => 'order',
+                'resource'    => 'order',
+                'resource_id' => $orderId,
             ]);
         } catch (\Throwable $e) {
             Log::warning("ML Claims error para orden {$orderId}: " . $e->getMessage());
@@ -251,12 +272,373 @@ class MercadoLibreApiService
     {
         try {
             return $this->get($sellerId, '/post-purchase/v1/claims/search', [
-                'status' => 'opened',
-                'role'   => 'defendant',
+                'status'         => 'opened',
+                'player_role'    => 'defendant',
+                'player_user_id' => $sellerId,
             ]);
         } catch (\Throwable $e) {
             Log::warning("ML Claims search error: " . $e->getMessage());
             return ['data' => [], 'paging' => ['total' => 0]];
+        }
+    }
+    /**
+     * Actualiza el estado de un envío personalizado (ME1) en Mercado Libre (API V2).
+     */
+    public function updateCustomShipmentStatus(string $sellerId, string $shipmentId, string $status, ?string $substatus = null, array $payloadData = [], ?string $trackingNumber = null, ?string $trackingUrl = null): array
+    {
+        $body = [
+            'status' => $status,
+            'substatus' => $substatus,
+            'payload' => array_merge([
+                'service_id' => 361180, // Por defecto MPE (Perú)
+                'date' => now()->toISOString(),
+            ], $payloadData)
+        ];
+
+        if ($trackingNumber && $trackingUrl) {
+            $body['tracking_number'] = $trackingNumber;
+            $body['tracking_url'] = $trackingUrl;
+        }
+
+        $token = $this->getToken($sellerId);
+
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->post($this->baseUrl . "/v2/shipments/{$shipmentId}/seller_notifications", $body);
+
+        if ($response->failed()) {
+            throw new \Exception("ML Update Shipment Status error: " . $response->body());
+        }
+
+        return $response->json();
+    }
+    /**
+     * Obtiene las suscripciones de Flex/Turbo de un usuario.
+     */
+    public function getFlexSubscriptions(string $sellerId, string $siteId = 'MPE'): array
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->get($this->baseUrl . "/flex/sites/{$siteId}/users/{$sellerId}/subscriptions/v1");
+
+        if ($response->failed()) {
+            Log::error("Error obteniendo suscripciones Flex: " . $response->body());
+            return [];
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Extrae dinámicamente el service_id para la modalidad FLEX.
+     */
+    public function getFlexServiceId(string $sellerId, string $siteId = 'MPE'): ?string
+    {
+        $subscriptions = $this->getFlexSubscriptions($sellerId, $siteId);
+        foreach ($subscriptions as $sub) {
+            if (isset($sub['mode']) && $sub['mode'] === 'FLEX' && isset($sub['service_id'])) {
+                return (string) $sub['service_id'];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Actualiza los rangos de entrega de Flex.
+     */
+    public function updateFlexDeliveryRanges(string $sellerId, string $siteId, string $serviceId, array $payload): array
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->put($this->baseUrl . "/flex/sites/{$siteId}/users/{$sellerId}/services/{$serviceId}/configurations/delivery-ranges/v1", $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("ML Update Flex Delivery Ranges error: " . $response->body());
+        }
+
+        return $response->status() === 204 ? [] : ($response->json() ?? []);
+    }
+
+    /**
+     * Consulta los rangos de entrega Flex.
+     */
+    public function getFlexDeliveryRanges(string $sellerId, string $siteId, string $serviceId, bool $showAvailables = false): array
+    {
+        $token = $this->getToken($sellerId);
+        $query = $showAvailables ? '?show_availables=true' : '';
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->get($this->baseUrl . "/flex/sites/{$siteId}/users/{$sellerId}/services/{$serviceId}/configurations/delivery-ranges/v1" . $query);
+
+        if ($response->failed()) {
+            Log::error("Error obteniendo rangos de entrega Flex ML: " . $response->body());
+            return [];
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Actualiza las zonas de cobertura Flex.
+     */
+    public function updateFlexCoverageZones(string $sellerId, string $siteId, string $serviceId, array $payload): array
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->put($this->baseUrl . "/flex/sites/{$siteId}/users/{$sellerId}/services/{$serviceId}/configurations/coverage/zones/v1", $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("ML Update Flex Coverage Zones error: " . $response->body());
+        }
+
+        return $response->status() === 204 ? [] : ($response->json() ?? []);
+    }
+
+    /**
+     * Consulta los días festivos configurados para Flex.
+     */
+    public function getFlexHolidays(string $sellerId, string $siteId, string $serviceId): array
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->get($this->baseUrl . "/flex/sites/{$siteId}/users/{$sellerId}/services/{$serviceId}/configurations/holidays/v1");
+
+        if ($response->failed()) {
+            Log::error("Error obteniendo feriados Flex ML: " . $response->body());
+            return [];
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Actualiza los días festivos de Flex.
+     */
+    public function updateFlexHolidays(string $sellerId, string $siteId, string $serviceId, array $payload): array
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->put($this->baseUrl . "/flex/sites/{$siteId}/users/{$sellerId}/services/{$serviceId}/configurations/holidays/v1", $payload);
+
+        if ($response->failed()) {
+            throw new \Exception("ML Update Flex Holidays error: " . $response->body());
+        }
+
+        return $response->status() === 204 ? [] : ($response->json() ?? []);
+    }
+
+    /**
+     * Verifica si una categoría soporta envíos Flex.
+     */
+    public function categoryAllowsFlex(string $sellerId, string $categoryId): bool
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(10)
+            ->get($this->baseUrl . "/categories/{$categoryId}/shipping_preferences");
+
+        if ($response->failed()) {
+            Log::warning("No se pudo obtener las preferencias de envío de la categoría {$categoryId}: " . $response->body());
+            return false;
+        }
+
+        $data = $response->json();
+        $logistics = $data['logistics'] ?? [];
+
+        foreach ($logistics as $logistic) {
+            if (isset($logistic['types']) && in_array('self_service', $logistic['types'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Consulta si el ítem actualmente se está ofreciendo con Envíos Flex o no.
+     */
+    public function checkItemHasFlex(string $sellerId, string $siteId, string $itemId): bool
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(10)
+            ->get($this->baseUrl . "/flex/sites/{$siteId}/items/{$itemId}/v2");
+
+        if ($response->failed()) {
+            Log::warning("Error verificando Flex en ítem {$itemId}: " . $response->body());
+            return false;
+        }
+
+        $data = $response->json();
+        return $data['has_flex'] ?? false;
+    }
+
+    /**
+     * Permite activar la opción de Envíos Flex al ítem.
+     */
+    public function enableFlexForItem(string $sellerId, string $siteId, string $itemId): bool
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->withoutVerifying()
+            ->timeout(10)
+            ->post($this->baseUrl . "/flex/sites/{$siteId}/items/{$itemId}/v2");
+
+        if ($response->failed()) {
+            Log::error("Error activando Flex en ítem {$itemId}: " . $response->body());
+            return false;
+        }
+
+        return $response->status() === 204;
+    }
+
+    /**
+     * Permite desactivar la opción de Envíos Flex al ítem.
+     */
+    public function disableFlexForItem(string $sellerId, string $siteId, string $itemId): bool
+    {
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->withoutVerifying()
+            ->timeout(10)
+            ->delete($this->baseUrl . "/flex/sites/{$siteId}/items/{$itemId}/v2");
+
+        if ($response->failed()) {
+            Log::error("Error desactivando Flex en ítem {$itemId}: " . $response->body());
+            return false;
+        }
+
+        return $response->status() === 204;
+    }
+
+    /**
+     * Permite que las mensajerías envíen los shipments que gestionan.
+     */
+    public function registerCourierShipment(string $courierToken, string $siteId, string $courierUserId, string $shipmentId): bool
+    {
+        // NOTA: Para este endpoint, el access_token provisto es el de la cuenta de la mensajería,
+        // obtenido vía OAuth. Por ende, usamos directamente el token que nos envíen.
+        $response = Http::withToken($courierToken)
+            ->timeout(10)
+            ->post($this->baseUrl . "/flex/sites/{$siteId}/users/{$courierUserId}/courier-shipment/v1", [
+                'shipment_id' => (int) $shipmentId
+            ]);
+
+        if ($response->failed()) {
+            Log::error("Error registrando envío courier para {$shipmentId}: " . $response->body());
+            return false;
+        }
+
+        return $response->status() === 204;
+    }
+
+    /**
+     * Consulta el listado de publicaciones (ítems) del vendedor
+     */
+    /**
+     * Obtiene los IDs de las publicaciones del vendedor (Soporta paginación y búsqueda).
+     */
+    public function getSellerItemsSearch(string $sellerId, int $offset = 0, int $limit = 20, ?string $searchQuery = null): array
+    {
+        try {
+            $token = $this->getToken($sellerId);
+
+            $params = [
+                'offset' => $offset,
+                'limit'  => $limit
+            ];
+
+            // Si el usuario escribió algo en el buscador, lo enviamos a ML
+            if (!empty($searchQuery)) {
+                $params['query'] = $searchQuery;
+            }
+
+            $response = Http::withToken($token)
+                ->withoutVerifying()
+                ->timeout(30)
+                ->get("{$this->baseUrl}/users/{$sellerId}/items/search", $params);
+
+            if ($response->failed()) {
+                Log::warning("Error obteniendo ítems del seller {$sellerId}: " . $response->body());
+                return ['results' => [], 'paging' => ['total' => 0]];
+            }
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error("Excepción en getSellerItemsSearch: " . $e->getMessage());
+            return ['results' => [], 'paging' => ['total' => 0]];
+        }
+    }
+    /**
+     * Consulta los detalles (multiget) de un listado de IDs de ítems.
+     * Mercado Libre soporta hasta 20 IDs separados por coma.
+     */
+    public function getItemsDetails(string $sellerId, array $itemIds): array
+    {
+        if (empty($itemIds)) {
+            return [];
+        }
+
+        try {
+            $token = $this->getToken($sellerId);
+            $idsString = implode(',', $itemIds);
+
+            $response = Http::withToken($token)
+                ->withoutVerifying()
+                ->timeout(30)
+                ->get($this->baseUrl . "/items", [
+                    'ids' => $idsString
+                ]);
+
+            if ($response->failed()) {
+                Log::error("Error obteniendo detalles de items: " . $response->body());
+                return [];
+            }
+
+            $results = $response->json();
+            $items = [];
+
+            // El multiget devuelve un array de objetos con formato: { code: 200, body: { ... } }
+            foreach ($results as $result) {
+                if (isset($result['code']) && $result['code'] === 200 && isset($result['body'])) {
+                    $items[] = $result['body'];
+                }
+            }
+
+            return $items;
+        } catch (\Exception $e) {
+            Log::error("Excepción en getItemsDetails: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Consulta el ID del transportista (Driver) para envíos Flex
+     */
+    public function getShipmentAssignment(string $sellerId, string $shipmentId, string $siteId = 'MPE'): array
+    {
+        try {
+            $token = $this->getToken($sellerId);
+            $response = Http::withToken($token)
+                ->withoutVerifying()
+                ->timeout(15)
+                ->get("{$this->baseUrl}/flex/sites/{$siteId}/shipments/{$shipmentId}/assignment/v2");
+
+            if ($response->failed()) {
+                if ($response->status() !== 404) {
+                    Log::warning("Error obteniendo asignación de envío {$shipmentId}: " . $response->body());
+                }
+                return [];
+            }
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error("Excepción en getShipmentAssignment: " . $e->getMessage());
+            return [];
         }
     }
 }

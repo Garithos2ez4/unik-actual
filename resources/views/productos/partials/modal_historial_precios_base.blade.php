@@ -56,4 +56,22 @@
         }
     });
 })();
+
+window.loadHistorialYear = function(year, idProducto) {
+    const modalBody = document.getElementById('modalHistorialPreciosBody');
+    if(!modalBody) return;
+    
+    modalBody.style.opacity = '0.5';
+    
+    fetch(`/producto/${idProducto}/historial-precios-html?year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            modalBody.innerHTML = data.html;
+            modalBody.style.opacity = '1';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            modalBody.style.opacity = '1';
+        });
+};
 </script>

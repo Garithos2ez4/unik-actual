@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 let showWebAlert = false;
                 let showRipleyAlert = false;
                 
+                // ML: Solo 1 vez por orden y nunca más (persistente)
+                let notifiedMlOrders = JSON.parse(localStorage.getItem('notifiedMlOrders_v2')) || [];
+
                 let webHtml = '';
                 if (data.new_orders && data.new_orders.length > 0) {
                     data.new_orders.forEach(order => {
@@ -54,11 +57,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
                 
-                if (showWebAlert || showRipleyAlert) {
+                let mlHtml = '';
+                let showMlAlert = false;
+                if (data.ml_orders && data.ml_orders.length > 0) {
+                    data.ml_orders.forEach(order => {
+                        if (!notifiedMlOrders.includes(order.ml_order_id)) {
+                            showMlAlert = true;
+                            let buyerName = order.buyer_name || '';
+                            let buyerNick = order.buyer_nickname || '';
+                            let displayClient = buyerName ? buyerName : buyerNick;
+                            
+                            mlHtml += `<div style="text-align: left; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                                <b>Orden #${order.ml_order_id}</b> (Mercado Libre) - S/ ${parseFloat(order.total_amount).toFixed(2)}<br>
+                                <small style="color: #666;">Cliente: ${displayClient} ${buyerNick && buyerName ? '(' + buyerNick + ')' : ''}</small>
+                            </div>`;
+                            notifiedMlOrders.push(order.ml_order_id);
+                        }
+                    });
+                }
+                
+                if (showWebAlert || showRipleyAlert || showMlAlert) {
                     Swal.fire({
                         icon: 'info',
                         title: '¡Tienes pedidos pendientes!',
-                        html: `<div style="max-height: 300px; overflow-y: auto;">${webHtml}${ripleyHtml}</div>`,
+                        html: `<div style="max-height: 300px; overflow-y: auto;">${webHtml}${ripleyHtml}${mlHtml}</div>`,
                         showConfirmButton: true,
                         confirmButtonText: 'Entendido',
                         confirmButtonColor: '#0dcaf0',
@@ -72,6 +94,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Guardar Ripley (Persistente)
                 localStorage.setItem('notifiedRipleyOrders_v2', JSON.stringify(notifiedRipleyOrders));
+                
+                // Guardar ML (Persistente)
+                localStorage.setItem('notifiedMlOrders_v2', JSON.stringify(notifiedMlOrders));
             }
         })
         .catch(error => console.error('Error verificando nuevos pedidos:', error));

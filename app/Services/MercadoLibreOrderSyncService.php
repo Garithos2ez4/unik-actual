@@ -89,6 +89,8 @@ class MercadoLibreOrderSyncService
         $logisticType  = '';
         $logisticLabel = '';
         $shippingStatus = '';
+        $shippingSubstatus = null;
+        $driverId = null;
         $shippingMode  = '';
         $carrierName   = '';
         $trackingNumber = '';
@@ -102,9 +104,19 @@ class MercadoLibreOrderSyncService
                 $logisticType  = $shipment['logistic_type'] ?? '';
                 $logisticLabel = MercadoLibreApiService::mapLogisticLabel($logisticType);
                 $shippingStatus = $shipment['status'] ?? '';
-                $shippingMode  = $shipment['shipping_mode'] ?? '';
+                $shippingSubstatus = $shipment['substatus'] ?? '';
+                $shippingMode  = $shipment['mode'] ?? $shipment['shipping_mode'] ?? '';
                 $carrierName   = $shipment['service_id'] ?? $shipment['carrier'] ?? '';
                 $trackingNumber = $shipment['tracking_number'] ?? '';
+
+                // Si es un envío Flex (self_service), consultamos el Driver ID
+                if ($logisticType === 'self_service' && !empty($shippingId)) {
+                    $assignment = $this->mlApi->getShipmentAssignment($sellerId, $shippingId);
+                    $driverId = $assignment['driver_id'] ?? null;
+                }
+
+                // Añadir el shipment al payload para guardar receiver_address y otros datos
+                $orderPayload['shipment'] = $shipment;
 
                 $history       = $shipment['status_history'] ?? [];
                 $dateHandled   = $this->parseDate($history['date_handling'] ?? null);
@@ -127,7 +139,7 @@ class MercadoLibreOrderSyncService
                 $returnReason = $claim['reason_id'] ?? '';
             }
         } catch (\Throwable $e) {
-            // Silencioso, no siempre hay reclamos
+            Log::warning("ML: No se pudieron obtener reclamos para orden {$orderId}: " . $e->getMessage());
         }
 
         $attributes = ['ml_order_id' => $orderId];
@@ -142,6 +154,8 @@ class MercadoLibreOrderSyncService
             'logistic_type'  => $logisticType ?: null,
             'logistic_label' => $logisticLabel ?: null,
             'shipping_status' => $shippingStatus ?: null,
+            'shipping_substatus' => $shippingSubstatus ?: null,
+            'driver_id'      => $driverId ?: null,
             'shipping_mode'  => $shippingMode ?: null,
             'carrier_name'   => $carrierName ?: null,
             'tracking_number' => $trackingNumber ?: null,

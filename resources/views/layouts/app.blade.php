@@ -261,8 +261,23 @@
                                 </button>
                                 <ul class="collapse list-unstyled ps-3 mt-1" id="collapseML">
                                     <li>
+                                        <a href="{{ route('plataformas.ml.publicaciones') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Catálogo y Flex
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a href="{{ route('plataformas.ml.orders') }}" class="btn btn-sm text-info py-0">
                                             <i class="bi bi-chevron-right"></i> Órdenes y Envíos
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.ml.etiquetas') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Etiquetas
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('plataformas.ml.flex') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Envíos Flex
                                         </a>
                                     </li>
                                 </ul>

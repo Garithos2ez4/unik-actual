@@ -157,6 +157,30 @@ class ProductoPrecioController extends Controller
         try {
             $producto = Producto::findOrFail($id);
 
+            $requestYear = request()->query('year', date('Y'));
+
+            // Obtener los años disponibles para este producto
+            $aniosDisponibles = \Illuminate\Support\Facades\DB::select("
+                SELECT DISTINCT YEAR(c.fechaRegistro) as anio
+                FROM DetalleComprobante dc
+                INNER JOIN Comprobante c ON c.idComprobante = dc.idComprobante
+                WHERE dc.idProducto = ? AND c.estado != 'INVALIDO'
+                ORDER BY anio DESC
+            ", [$id]);
+
+            $anios = collect($aniosDisponibles)->pluck('anio')->toArray();
+
+            // Si el año solicitado no tiene compras, pero hay otros años, usar el más reciente
+            if (!in_array($requestYear, $anios) && !empty($anios)) {
+                $requestYear = $anios[0];
+            }
+
+            // Si no hay compras en absoluto, asegurarnos de tener al menos el año actual para no romper la UI
+            if (empty($anios)) {
+                $anios = [date('Y')];
+                $requestYear = date('Y');
+            }
+
             $historial = \Illuminate\Support\Facades\DB::select("
                 SELECT
                     c.fechaRegistro,
@@ -174,10 +198,11 @@ class ProductoPrecioController extends Controller
                 LEFT JOIN historial_tipo_cambio htc ON htc.fecha = c.fechaRegistro
                 WHERE dc.idProducto = ?
                 AND c.estado != 'INVALIDO'
+                AND YEAR(c.fechaRegistro) = ?
                 ORDER BY c.fechaRegistro DESC
-            ", [$id]);
+            ", [$id, $requestYear]);
 
-            $html = view('productos.partials.modal_historial_precios_body', compact('producto', 'historial'))->render();
+            $html = view('productos.partials.modal_historial_precios_body', compact('producto', 'historial', 'anios', 'requestYear'))->render();
             $html = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
 
             return response()->json(['html' => $html]);

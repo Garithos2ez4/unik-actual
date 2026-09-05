@@ -21,6 +21,8 @@ class MercadoLibreOrder extends Model
         'logistic_type',
         'logistic_label',
         'shipping_status',
+        'shipping_substatus',
+        'driver_id',
         'shipping_mode',
         'carrier_name',
         'tracking_number',

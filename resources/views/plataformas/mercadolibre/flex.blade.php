@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Mercado Libre - Órdenes')
+@section('title', 'Mercado Libre - Envíos Flex')
 
 @section('content')
 <div class="container-fluid">
@@ -9,60 +9,35 @@
                 {{-- Título --}}
                 <div class="col-xl-3 col-lg-12">
                     <h1 class="h4 mb-0 text-dark fw-bold">
-                        <i class="bi bi-cart-check-fill me-2" style="color:#FFE600"></i>Ordenes Mercado Libre
+                        <i class="bi bi-rocket-takeoff-fill me-2" style="color:#FFE600"></i>Envíos Flex (ML)
                     </h1>
                 </div>
 
                 {{-- Barra de Herramientas --}}
                 <div class="col-xl-9 col-lg-12">
-                    <div class="d-flex flex-wrap flex-xl-nowrap gap-2 justify-content-xl-end align-items-center w-100">
-                        {{-- Filtro Estado Envío y Buscador --}}
-                        <form method="GET" class="d-flex flex-wrap flex-xl-nowrap gap-2 m-0">
-                            {{-- Filtro Estado Envío --}}
-                            <div class="input-group shadow-sm flex-nowrap" style="max-width: 240px;">
-                                <span class="input-group-text bg-white fw-bold text-muted border-end-0">
-                                    <i class="bi bi-box-seam"></i>
-                                </span>
-                                <select name="shipping_status" class="form-select border-start-0 bg-white ps-0">
-                                    <option value="pending_only" {{ request('shipping_status', 'pending_only') === 'pending_only' ? 'selected' : '' }}>Pendientes (No entregados)</option>
-                                    <option value="" {{ request('shipping_status') === '' ? 'selected' : '' }}>Todos los estados</option>
-                                    <option value="ready_to_ship" {{ request('shipping_status') === 'ready_to_ship' ? 'selected' : '' }}>Listo para enviar</option>
-                                    <option value="shipped" {{ request('shipping_status') === 'shipped' ? 'selected' : '' }}>En tránsito (Shipped)</option>
-                                    <option value="delivered" {{ request('shipping_status') === 'delivered' ? 'selected' : '' }}>Entregado (Delivered)</option>
-                                    <option value="not_delivered" {{ request('shipping_status') === 'not_delivered' ? 'selected' : '' }}>No Entregado (Rechazado/Devuelto)</option>
-                                    <option value="cancelled" {{ request('shipping_status') === 'cancelled' ? 'selected' : '' }}>Cancelado</option>
-                                </select>
-                            </div>
-
-                            {{-- Buscador --}}
-                            <div class="input-group shadow-sm flex-nowrap" style="max-width: 250px;">
-                                <span class="input-group-text bg-white text-muted border-end-0">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" name="search" class="form-control border-start-0 bg-white ps-0" placeholder="N° de orden o comprador..." value="{{ request('search') }}">
-                                @if(request('search'))
-                                <a href="{{ route('plataformas.ml.orders') }}" class="btn btn-outline-secondary border-start-0 border-end-0 bg-white text-danger d-flex align-items-center px-2" title="Limpiar">
-                                    <i class="bi bi-x-lg"></i>
-                                </a>
-                                @endif
-                            </div>
-
-                            <button type="submit" class="btn btn-dark px-3 fw-bold shadow-sm">
-                                <i class="bi bi-funnel"></i> <span class="d-none d-md-inline">Filtrar</span>
-                            </button>
-                        </form>
-
-                        {{-- Botón Sincronizar --}}
-                        <div class="input-group shadow-sm flex-nowrap m-0" style="max-width: 300px;">
+                    <form method="GET" class="d-flex flex-wrap flex-xl-nowrap gap-2 justify-content-xl-end align-items-center w-100">
+                        {{-- Filtro Estado Envío --}}
+                        <div class="input-group shadow-sm flex-nowrap" style="max-width: 240px;">
                             <span class="input-group-text bg-white fw-bold text-muted border-end-0">
-                                Fecha:
+                                <i class="bi bi-box-seam"></i>
                             </span>
-                            <input type="date" id="sync_from_date" class="form-control border-start-0 bg-white ps-0" value="{{ now()->subDays(3)->format('Y-m-d') }}" style="min-width: 130px;">
-                            <button type="button" class="btn btn-warning fw-bold text-dark" id="btnSyncML" onclick="syncML()">
-                                <i class="bi bi-arrow-repeat"></i> <span class="d-none d-md-inline">Sync</span>
-                            </button>
+                            <select name="shipping_status" class="form-select border-start-0 bg-white ps-0">
+                                <option value="" {{ request('shipping_status') === '' ? 'selected' : '' }}>Todos los estados</option>
+                                <option value="pending" {{ request('shipping_status') === 'pending' ? 'selected' : '' }}>Pendiente</option>
+                                <option value="ready_to_ship" {{ request('shipping_status') === 'ready_to_ship' ? 'selected' : '' }}>Listo para enviar</option>
+                                <option value="shipped" {{ request('shipping_status') === 'shipped' ? 'selected' : '' }}>En tránsito (Shipped)</option>
+                                <option value="delivered" {{ request('shipping_status') === 'delivered' ? 'selected' : '' }}>Entregado (Delivered)</option>
+                                <option value="not_delivered" {{ request('shipping_status') === 'not_delivered' ? 'selected' : '' }}>No Entregado / Rechazado</option>
+                            </select>
                         </div>
-                    </div>
+
+                        <button type="submit" class="btn btn-dark fw-bold shadow-sm px-4">
+                            Filtrar
+                        </button>
+                        <a href="{{ route('plataformas.ml.flex') }}" class="btn btn-outline-secondary fw-bold shadow-sm">
+                            <i class="bi bi-eraser-fill"></i>
+                        </a>
+                    </form>
                 </div>
             </div>
         </div>
@@ -71,15 +46,19 @@
     {{-- Tabla --}}
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
+            <div class="d-flex justify-content-end p-2">
+                <button type="button" class="btn btn-warning px-3 fw-bold shadow-sm" id="btnSyncML" onclick="syncML()">
+                    <i class="bi bi-arrow-repeat"></i> <span class="d-none d-md-inline">Sincronizar Órdenes</span>
+                </button>
+            </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light text-muted small text-uppercase">
                         <tr>
                             <th class="ps-4">Orden</th>
                             <th>Comprador</th>
-                            <th>Monto</th>
+                            <th style="min-width: 250px;">Dirección de Entrega (Flex)</th>
                             <th>Productos</th>
-                            <th>Método de Despacho</th>
                             <th>Estado Envío</th>
                             <th>Fecha Creación</th>
                         </tr>
@@ -93,7 +72,21 @@
                             <td>
                                 <div class="text-dark">{{ $order->buyer_name ?? $order->buyer_nickname ?? '—' }}</div>
                             </td>
-                            <td>{{ $order->currency }} {{ number_format($order->total_amount, 2) }}</td>
+                            <td>
+                                @php
+                                    $address = $order->payload['shipment']['receiver_address'] ?? null;
+                                    $addressLine = $address['address_line'] ?? $address['street_name'] ?? '—';
+                                    $city = $address['city']['name'] ?? '';
+                                    $state = $address['state']['name'] ?? '';
+                                    $zip = $address['zip_code'] ?? '';
+                                @endphp
+                                @if($address)
+                                    <div class="fw-bold text-dark" style="font-size: 14px;">{{ $addressLine }}</div>
+                                    <div class="text-muted" style="font-size: 12px;">{{ $city }}{{ $state ? ', ' . $state : '' }}{{ $zip ? ' (' . $zip . ')' : '' }}</div>
+                                @else
+                                    <span class="text-muted fst-italic">Dirección no sincronizada <br><small>(Sincroniza nuevamente para obtenerla)</small></span>
+                                @endif
+                            </td>
                             <td>
                                 <div class="small">
                                     @forelse($order->items->take(3) as $item)
@@ -108,25 +101,6 @@
                                     <span class="text-primary" style="font-size: 10px;">+{{ $order->items->count() - 3 }} más</span>
                                     @endif
                                 </div>
-                            </td>
-                            <td>
-                                @php
-                                $badges = [
-                                'self_service' => ['label' => 'Flex', 'color' => 'primary'],
-                                'xd_drop_off' => ['label' => 'Urbano', 'color' => 'warning'],
-                                'fulfillment' => ['label' => 'ME Full', 'color' => 'success'],
-                                'custom' => ['label' => 'Acuerdo', 'color' => 'secondary'],
-                                'drop_off' => ['label' => 'Punto de entrega', 'color' => 'info'],
-                                ];
-                                $info = $badges[$order->logistic_type] ?? null;
-                                @endphp
-                                @if($info)
-                                <span class="badge rounded-pill px-3 bg-{{ $info['color'] }}">
-                                    {{ $order->logistic_label ?? $info['label'] }}
-                                </span>
-                                @else
-                                <span class="text-muted">—</span>
-                                @endif
                             </td>
                             <td>
                                 @php
@@ -148,21 +122,46 @@
                                 'pending' => 'warning',
                                 'cancelled' => 'danger',
                                 ];
+                                
+                                $substatusMap = [
+                                    'out_for_delivery' => 'Salida a ruta',
+                                    'receiver_absent' => 'Nadie en domicilio',
+                                    'bad_address' => 'Domicilio incorrecto',
+                                    'buyer_rescheduled' => 'Reprogramado',
+                                    'delivery_blocked' => 'Entregado lejos',
+                                    'waiting_for_confirmation' => 'Esperando confirmación',
+                                    'refused_delivery' => 'Rechazado'
+                                ];
+
                                 $ss = $order->shipping_status ?? '';
+                                $sub = $order->shipping_substatus ?? '';
+                                
                                 $displayStatus = $statusMap[$ss] ?? ucfirst($ss ?: '—');
+                                $displaySubstatus = $substatusMap[$sub] ?? ucfirst($sub);
                                 $color = $statusColor[$ss] ?? 'secondary';
                                 @endphp
-                                <span class="badge rounded-pill px-3 bg-{{ $color }}">
+                                <span class="badge rounded-pill px-3 mb-1 bg-{{ $color }}">
                                     {{ $displayStatus }}
                                 </span>
+                                @if($sub)
+                                <div class="text-muted fw-bold" style="font-size: 11px;">
+                                    <i class="bi bi-info-circle me-1"></i>{{ $displaySubstatus }}
+                                </div>
+                                @endif
+                                
+                                @if($order->driver_id)
+                                <div class="text-primary mt-1" style="font-size: 11px;" title="ID Transportista (Driver)">
+                                    <i class="bi bi-truck me-1"></i>Driver: {{ $order->driver_id }}
+                                </div>
+                                @endif
                             </td>
                             <td>{{ $order->created_at_ml?->format('d/m/Y H:i') ?? '—' }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="6" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
-                                No hay órdenes sincronizadas aún. Usa el botón <strong>Sincronizar</strong>.
+                                No se encontraron envíos Flex.
                             </td>
                         </tr>
                         @endforelse
@@ -192,11 +191,8 @@
 <script>
     function syncML() {
         const btn = document.getElementById('btnSyncML');
-        const dateInput = document.getElementById('sync_from_date');
-        const fromDate = dateInput ? dateInput.value : '';
-        
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sync...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sincronizando...';
 
         fetch('{{ route("plataformas.ml.sync-orders") }}', {
                 method: 'POST',
@@ -204,9 +200,7 @@
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    from_date: fromDate ? fromDate + 'T00:00:00.000-05:00' : null
-                })
+                body: JSON.stringify({})
             })
             .then(r => r.json())
             .then(data => {
@@ -214,7 +208,7 @@
             })
             .catch(() => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Sync';
+                btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Sincronizar Órdenes';
             });
     }
 

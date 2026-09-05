@@ -61,9 +61,9 @@ class AnalyticsFallabellaController extends Controller
     {
         $userModel = $this->headerService->getModelUser();
 
-        // PodrÃ­as validar acceso aquÃ­ si es necesario, usar 13 como analitica falabella
-        if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        // PodrÃ­as validar acceso aquÃ­ si es necesario, usar 4 como plataformas
+        if (!$this->validateAccess($userModel, 4)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta seccion', 'warning', 'btn-danger');
             return redirect()->route('dashboard');
         }
 

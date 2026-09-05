@@ -1,6 +1,24 @@
-<p class="mb-3 text-secondary">
-    <strong>Producto:</strong> {{ $producto->modelo }} &mdash; <span class="text-dark">{{ $producto->nombreProducto }}</span>
-</p>
+<div id="historial-wrapper-{{$producto->idProducto}}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="mb-0 text-secondary">
+            <strong>Producto:</strong> {{ $producto->modelo }} 
+            @if(!empty(optional($producto->DetalleProducto)->modelo_anterior))
+                <span class="badge bg-secondary ms-1 text-decoration-line-through" title="Modelo Anterior">{{ $producto->DetalleProducto->modelo_anterior }}</span>
+            @endif
+            &mdash; <span class="text-dark">{{ $producto->nombreProducto }}</span>
+        </p>
+        
+        @if(isset($anios) && count($anios) > 0)
+        <div class="d-flex align-items-center">
+            <label for="yearSelect" class="me-2 fw-bold text-secondary mb-0">Año:</label>
+            <select id="yearSelect" class="form-select form-select-sm" style="width: auto;" onchange="window.loadHistorialYear(this.value, {{ $producto->idProducto }})">
+                @foreach($anios as $anio)
+                    <option value="{{ $anio }}" {{ $requestYear == $anio ? 'selected' : '' }}>{{ $anio }}</option>
+                @endforeach
+            </select>
+        </div>
+        @endif
+    </div>
 
 @if(count($historial) === 0)
     <div class="alert alert-warning">
@@ -84,3 +102,4 @@
     Las filas con "—" en la columna TC corresponden a fechas anteriores al inicio del registro (solo ~1 mes disponible actualmente).
 </p>
 @endif
+</div>

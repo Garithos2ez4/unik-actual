@@ -302,10 +302,16 @@ Route::middleware(['validate.session'])->group(function () {
     // MERCADO LIBRE
     Route::prefix('plataformas/mercadolibre')->name('plataformas.ml.')->group(function () {
         Route::get('/orders', [\App\Http\Controllers\MercadoLibreController::class, 'orders'])->name('orders');
+        Route::get('/flex', [\App\Http\Controllers\MercadoLibreController::class, 'flexOrders'])->name('flex');
+        Route::get('/catalogo', [\App\Http\Controllers\MercadoLibreController::class, 'publicaciones'])->name('publicaciones');
+        Route::get('/etiquetas', [\App\Http\Controllers\MercadoLibreController::class, 'etiquetas'])->name('etiquetas');
+        Route::post('/shipment-labels-bulk', [\App\Http\Controllers\MercadoLibreController::class, 'downloadLabelsBulk'])->name('labels.bulk');
         Route::post('/sync-orders', [\App\Http\Controllers\MercadoLibreController::class, 'syncOrders'])->name('sync-orders');
         Route::get('/sync-status', [\App\Http\Controllers\MercadoLibreController::class, 'syncStatus'])->name('sync-status');
         Route::get('/notifications', [\App\Http\Controllers\MercadoLibreController::class, 'getNotifications'])->name('notifications');
         Route::post('/answer', [\App\Http\Controllers\MercadoLibreController::class, 'answerQuestion'])->name('answer');
+        Route::get('/shipment-label/{order_id}', [\App\Http\Controllers\MercadoLibreController::class, 'downloadLabel'])->name('label');
+        Route::post('/toggle-flex', [\App\Http\Controllers\MercadoLibreController::class, 'toggleFlexForItem'])->name('toggle-flex');
     });
     Route::get('/configuracion/mercadolibre/auth', [\App\Http\Controllers\MercadoLibreController::class, 'authorize'])->name('ml.auth');
     Route::get('/configuracion/mercadolibre/callback', [\App\Http\Controllers\MercadoLibreController::class, 'callback'])->name('ml.callback');
