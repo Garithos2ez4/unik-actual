@@ -128,6 +128,54 @@ class MercadoLibreApiService
     }
 
     /**
+     * Busca productos en todo el catálogo de ML.
+     */
+    public function searchListings(string $sellerId, array $params = []): array
+    {
+        return $this->get($sellerId, '/sites/MPE/search', $params);
+    }
+
+    /**
+     * Busca productos específicos dentro del catálogo del seller.
+     */
+    public function searchSellerItems(string $sellerId, string $query): array
+    {
+        return $this->get($sellerId, "/users/{$sellerId}/items/search", ['query' => $query]);
+    }
+
+    /**
+     * Obtiene los IDs de ítems con referencias de precios para un seller.
+     */
+    public function getSuggestionItems(string $sellerId): array
+    {
+        return $this->get($sellerId, "/suggestions/user/{$sellerId}/items");
+    }
+
+    /**
+     * Obtiene el detalle de referencia de precios para un ítem específico.
+     * Retorna null si el ítem no tiene referencia (404).
+     */
+    public function getSuggestionDetail(string $sellerId, string $itemId): ?array
+    {
+        $token = $this->getToken($sellerId);
+
+        $response = Http::withToken($token)
+            ->timeout(10)
+            ->get($this->baseUrl . "/suggestions/items/{$itemId}/details");
+
+        if ($response->status() === 404) {
+            return null; // Normal: ítem sin vecinos o eliminado
+        }
+
+        if ($response->failed()) {
+            Log::warning("ML Suggestion Error [{$itemId}]: {$response->status()}");
+            return null;
+        }
+
+        return $response->json() ?? null;
+    }
+
+    /**
      * Detalle de una orden específica.
      */
     public function getOrder(string $sellerId, string $orderId): array

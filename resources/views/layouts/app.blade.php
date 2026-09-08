@@ -261,6 +261,11 @@
                                 </button>
                                 <ul class="collapse list-unstyled ps-3 mt-1" id="collapseML">
                                     <li>
+                                        <a href="{{ route('dashboard.herramientas.scraper_mercadolibre') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-search me-1"></i> Verificador de Precios
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a href="{{ route('plataformas.ml.publicaciones') }}" class="btn btn-sm text-info py-0">
                                             <i class="bi bi-chevron-right"></i> Catálogo y Flex
                                         </a>

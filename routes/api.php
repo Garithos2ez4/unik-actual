@@ -4,9 +4,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FalabellaScraperController;
+use App\Http\Controllers\Api\MercadoLibreScraperApiController;
 
 // Rutas Públicas de Búsqueda
 Route::get('/verificar-precio-falabella', [FalabellaScraperController::class, 'verificarPrecio']);
+Route::get('/verificar-precio-mercadolibre', [MercadoLibreScraperApiController::class, 'verificarPrecio']);
 
 // Rutas Públicas de Autenticación
 Route::post('/login', [AuthController::class, 'login']);
