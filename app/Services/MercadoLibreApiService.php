@@ -143,6 +143,14 @@ class MercadoLibreApiService
         return $this->get($sellerId, "/shipments/{$shippingId}");
     }
 
+    /**
+     * Costos de un envío (seller, receiver, promoted).
+     */
+    public function getShipmentCosts(string $sellerId, string $shippingId): array
+    {
+        return $this->get($sellerId, "/shipments/{$shippingId}/costs");
+    }
+
     public function downloadShipmentLabel(string $sellerId, $shipmentIds): string
     {
         $token = $this->getToken($sellerId);
@@ -255,11 +263,10 @@ class MercadoLibreApiService
     /**
      * Obtiene info de un item de ML (para obtener el título del producto).
      */
-    public function getItem(string $itemId): array
+    public function getItem(string $sellerId, string $itemId): array
     {
         try {
-            $response = Http::timeout(10)->get($this->baseUrl . "/items/{$itemId}");
-            return $response->json() ?? [];
+            return $this->get($sellerId, "/items/{$itemId}");
         } catch (\Throwable $e) {
             return [];
         }

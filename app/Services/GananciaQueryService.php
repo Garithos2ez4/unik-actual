@@ -51,7 +51,7 @@ class GananciaQueryService
              FROM Caracteristicas_Producto cp10
              WHERE cp10.idProducto = Producto.idProducto AND cp10.idCaracteristica = 10 LIMIT 1)
         )";
-        
+
         $tarifaLogisticaRipleyExpr = $this->comisionPlataformaService->getTarifaEnvioExpr('RIPLEY', $pesoRipleySubquery);
         $ripleyExpr = $this->comisionPlataformaService->getComisionExpr('RIPLEY', 'GrupoProducto.idCategoria', 'GrupoProducto.idGrupoProducto', 'DetalleVenta.precioVenta');
         $comisionRipleyExpr = "CASE WHEN UPPER(Venta.canal) = 'RIPLEY' THEN {$ripleyExpr} + (({$tarifaLogisticaRipleyExpr}) / GREATEST(DetalleVenta.cantidad, 1)) ELSE 0 END";
@@ -97,7 +97,7 @@ class GananciaQueryService
         if (isset($venta->costos_base)) {
             $venta->costos_base = round((float)$venta->costos_base, 2);
             $venta->costos = $venta->costos_base;
-            
+
             // Ripley desglose
             if (isset($venta->comision_ripley_base)) {
                 $venta->comision_ripley = round((float)$venta->comision_ripley_base, 2);
@@ -106,7 +106,7 @@ class GananciaQueryService
                 $venta->comision_ripley = round((float)$venta->comision_ripley, 2);
                 $comisionesArestar += $venta->comision_ripley;
             }
-            
+
             if (isset($venta->tarifa_peso_ripley)) {
                 $venta->tarifa_peso_ripley = round((float)$venta->tarifa_peso_ripley, 2);
                 $comisionesArestar += $venta->tarifa_peso_ripley;
@@ -117,9 +117,13 @@ class GananciaQueryService
 
         // Otras comisiones o variables para redondear
         $commissions = [
-            'comision_falabella', 'comision_ripley', 'comision_mercadolibre', 'comision_tienda', 'tc_dia'
+            'comision_falabella',
+            'comision_ripley',
+            'comision_mercadolibre',
+            'comision_tienda',
+            'tc_dia'
         ];
-        
+
         foreach ($commissions as $comm) {
             if (isset($venta->$comm)) {
                 $venta->$comm = round((float)$venta->$comm, $comm === 'tc_dia' ? 3 : 2);
@@ -129,10 +133,14 @@ class GananciaQueryService
         // Calculamos la ganancia y el margen
         if (isset($venta->ingresos) && isset($venta->costos)) {
             $venta->ganancia = round($venta->ingresos - $venta->costos - $comisionesArestar, 2);
-            
+
             if (!isset($venta->margen)) {
                 if ($isTienda) {
-                    $venta->margen = $venta->costos > 0 ? round(($venta->ganancia / $venta->costos) * 100, 2) : 0;
+                    if ($venta->costos > 0) {
+                        $venta->margen = round(($venta->ganancia / $venta->costos) * 100, 2);
+                    } else {
+                        $venta->margen = $venta->ganancia > 0 ? 100 : 0;
+                    }
                 } else {
                     $venta->margen = $venta->ingresos > 0 ? round(($venta->ganancia / $venta->ingresos) * 100, 2) : 0;
                 }
@@ -150,7 +158,7 @@ class GananciaQueryService
             }
             $venta->modelo = implode(', ', $parts);
         }
-        
+
         if (isset($venta->modelo_raw)) {
             unset($venta->modelo_raw);
         }

@@ -35,16 +35,16 @@
                             </td>
                             <td>
                                 @if($venta->logistic_label)
-                                    <span class="badge bg-info text-dark border">{{ $venta->logistic_label }}</span>
+                                <span class="badge bg-info text-dark border">{{ $venta->logistic_label }}</span>
                                 @else
-                                    <span class="text-muted small">—</span>
+                                <span class="text-muted small">—</span>
                                 @endif
                             </td>
                             <td>
                                 @if($venta->shipping_status)
-                                    <span class="badge bg-secondary border">{{ $venta->shipping_status }}</span>
+                                <span class="badge bg-secondary border">{{ $venta->shipping_status }}</span>
                                 @else
-                                    <span class="text-muted small">—</span>
+                                <span class="text-muted small">—</span>
                                 @endif
                             </td>
                             <td class="text-end fw-semibold text-dark">S/ {{ number_format($venta->ingresos, 2) }}</td>
@@ -52,11 +52,11 @@
                             <td class="text-end fw-bold text-success">S/ {{ number_format($venta->ganancia, 2) }}</td>
                             <td class="text-center">
                                 @if($venta->margen > 20)
-                                    <span class="badge bg-success rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
                                 @elseif($venta->margen > 0)
-                                    <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
                                 @else
-                                    <span class="badge bg-danger rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
                                 @endif
                             </td>
                         </tr>
@@ -77,16 +77,16 @@
                             <td class="text-end text-success">S/ {{ number_format($ventasMercadoLibre->sum('ganancia'), 2) }}</td>
                             <td class="text-center">
                                 @php
-                                    $totIngresos = $ventasMercadoLibre->sum('ingresos');
-                                    $totGanancia = $ventasMercadoLibre->sum('ganancia');
-                                    $totMargen = $totIngresos > 0 ? ($totGanancia / $totIngresos) * 100 : 0;
+                                $totIngresos = $ventasMercadoLibre->sum('ingresos');
+                                $totGanancia = $ventasMercadoLibre->sum('ganancia');
+                                $totMargen = $totIngresos > 0 ? ($totGanancia / $totIngresos) * 100 : 0;
                                 @endphp
                                 @if($totMargen > 20)
-                                    <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
                                 @elseif($totMargen > 0)
-                                    <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
                                 @else
-                                    <span class="badge bg-danger rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
                                 @endif
                             </td>
                         </tr>
@@ -95,4 +95,4 @@
             </div>
         </div>
     </div>
-</div>
+    </div>

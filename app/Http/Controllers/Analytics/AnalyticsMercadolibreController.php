@@ -167,4 +167,3 @@ class AnalyticsMercadolibreController extends Controller
         ]);
     }
 }
-

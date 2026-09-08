@@ -26,6 +26,9 @@ class MercadoLibreOrder extends Model
         'shipping_mode',
         'carrier_name',
         'tracking_number',
+        'seller_shipping_cost',
+        'receiver_shipping_cost',
+        'promoted_shipping_amount',
         'date_handled',
         'date_shipped',
         'date_delivered',
@@ -51,4 +54,5 @@ class MercadoLibreOrder extends Model
     {
         return $this->hasMany(MercadoLibreOrderItem::class, 'ml_order_id', 'ml_order_id');
     }
+
 }

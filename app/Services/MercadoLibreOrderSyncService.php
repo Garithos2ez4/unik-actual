@@ -97,6 +97,9 @@ class MercadoLibreOrderSyncService
         $dateHandled   = null;
         $dateShipped   = null;
         $dateDelivered = null;
+        $sellerShippingCost = null;
+        $receiverShippingCost = null;
+        $promotedShippingAmount = null;
 
         if (!empty($shippingId)) {
             try {
@@ -113,6 +116,20 @@ class MercadoLibreOrderSyncService
                 if ($logisticType === 'self_service' && !empty($shippingId)) {
                     $assignment = $this->mlApi->getShipmentAssignment($sellerId, $shippingId);
                     $driverId = $assignment['driver_id'] ?? null;
+                }
+
+                // Costos de envío
+                try {
+                    $costs = $this->mlApi->getShipmentCosts($sellerId, $shippingId);
+                    if (isset($costs['senders']) && is_array($costs['senders']) && count($costs['senders']) > 0) {
+                        $sellerShippingCost = $costs['senders'][0]['cost'] ?? null;
+                    }
+                    if (isset($costs['receiver'])) {
+                        $receiverShippingCost = $costs['receiver']['cost'] ?? null;
+                    }
+                    $promotedShippingAmount = $costs['promoted_amount'] ?? null;
+                } catch (\Throwable $e) {
+                    Log::warning("ML: No se pudieron obtener costos de envío {$shippingId}: " . $e->getMessage());
                 }
 
                 // Añadir el shipment al payload para guardar receiver_address y otros datos
@@ -159,6 +176,9 @@ class MercadoLibreOrderSyncService
             'shipping_mode'  => $shippingMode ?: null,
             'carrier_name'   => $carrierName ?: null,
             'tracking_number' => $trackingNumber ?: null,
+            'seller_shipping_cost' => $sellerShippingCost,
+            'receiver_shipping_cost' => $receiverShippingCost,
+            'promoted_shipping_amount' => $promotedShippingAmount,
             'date_handled'   => $dateHandled,
             'date_shipped'   => $dateShipped,
             'date_delivered' => $dateDelivered,

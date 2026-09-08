@@ -25,9 +25,7 @@ class AnalyticsFallabellaController extends Controller
         $this->gananciaQueryService = $gananciaQueryService;
     }
 
-    /**
-     * Valida si el usuario tiene acceso a la vista especÃ­fica.
-     */
+
     private function validateAccess($userModel, int $idVista)
     {
         return $userModel->Accesos->contains('idVista', $idVista);
@@ -61,7 +59,6 @@ class AnalyticsFallabellaController extends Controller
     {
         $userModel = $this->headerService->getModelUser();
 
-        // PodrÃ­as validar acceso aquÃ­ si es necesario, usar 4 como plataformas
         if (!$this->validateAccess($userModel, 4)) {
             $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta seccion', 'warning', 'btn-danger');
             return redirect()->route('dashboard');
@@ -164,4 +161,3 @@ class AnalyticsFallabellaController extends Controller
         ]);
     }
 }
-

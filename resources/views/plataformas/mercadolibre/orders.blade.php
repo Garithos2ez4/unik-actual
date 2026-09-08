@@ -149,12 +149,16 @@
                                 'cancelled' => 'danger',
                                 ];
                                 $ss = $order->shipping_status ?? '';
-                                $displayStatus = $statusMap[$ss] ?? ucfirst($ss ?: '—');
+                                $displayStatus = $statusMap[$ss] ?? ucfirst($ss ?: '');
                                 $color = $statusColor[$ss] ?? 'secondary';
                                 @endphp
+                                @if($displayStatus)
                                 <span class="badge rounded-pill px-3 bg-{{ $color }}">
                                     {{ $displayStatus }}
                                 </span>
+                                @else
+                                <span class="text-muted small">—</span>
+                                @endif
                             </td>
                             <td>{{ $order->created_at_ml?->format('d/m/Y H:i') ?? '—' }}</td>
                         </tr>

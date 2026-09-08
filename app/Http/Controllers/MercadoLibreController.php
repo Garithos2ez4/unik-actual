@@ -272,7 +272,7 @@ class MercadoLibreController extends Controller
             foreach ($questions as &$q) {
                 $itemId = $q['item_id'] ?? '';
                 if ($itemId && !isset($itemCache[$itemId])) {
-                    $itemCache[$itemId] = $this->mlApi->getItem($itemId);
+                    $itemCache[$itemId] = $this->mlApi->getItem($credential->seller_id, $itemId);
                 }
                 $q['item_title'] = $itemCache[$itemId]['title'] ?? 'Producto';
                 $q['item_thumbnail'] = $itemCache[$itemId]['thumbnail'] ?? '';
