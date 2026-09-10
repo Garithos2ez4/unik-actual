@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\MercadoLibreScraperApiController;
 // Rutas Públicas de Búsqueda
 Route::get('/verificar-precio-falabella', [FalabellaScraperController::class, 'verificarPrecio']);
 Route::get('/verificar-precio-mercadolibre', [MercadoLibreScraperApiController::class, 'verificarPrecio']);
+Route::get('/verificar-precio-ripley', [\App\Http\Controllers\Api\RipleyScraperApiController::class, 'verificarPrecio']);
 
 // Rutas Públicas de Autenticación
 Route::post('/login', [AuthController::class, 'login']);

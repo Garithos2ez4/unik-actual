@@ -74,6 +74,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
     Route::get('/dashboard/herramientas/scraper-mercadolibre', [AnalyticsMercadolibreController::class, 'scraperMercadolibre'])->name('dashboard.herramientas.scraper_mercadolibre');
+    Route::get('/dashboard/herramientas/scraper-ripley', [AnalyticsRipleyController::class, 'scraperRipley'])->name('dashboard.herramientas.scraper_ripley');
     Route::get('/dashboard/analitica/mercadolibre', [AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
     Route::get('/dashboard/analitica/ripley', [AnalyticsRipleyController::class, 'index'])->name('dashboard.analitica.ripley');
     Route::get('/dashboard/analitica/tienda', [AnalyticsController::class, 'tienda'])->name('dashboard.analitica.tienda');
@@ -398,9 +399,10 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/configuracion/insertmarca', [ConfigProductosController::class, 'createMarcaProducto'])->name('insertmarca');
     Route::post('/configuracion/insertgrupo', [ConfigProductosController::class, 'createGrupoProducto'])->name('insertgrupo');
     Route::post('/configuracion/updategrupo', [ConfigProductosController::class, 'updateGrupoProducto'])->name('updategrupo');
+    Route::patch('/configuracion/grupo/{id}/toggle-pack', [ConfigProductosController::class, 'toggleEsPack'])->name('grupo.toggle.pack');
     Route::post('/configuracion/insertcategoria', [ConfigProductosController::class, 'createCategoriaProducto'])->name('insertcategoria');
     Route::post('/configuracion/updatecategoria', [ConfigProductosController::class, 'updateCategoriaProducto'])->name('updatecategoria');
-    
+
     Route::post('/configuracion/insertmapper', [ConfigProductosController::class, 'insertMapper'])->name('insert_mapper');
     Route::delete('/configuracion/deletemapper/{id}', [ConfigProductosController::class, 'deleteMapper'])->name('delete_mapper');
 
@@ -505,5 +507,3 @@ Route::middleware(['validate.session'])->prefix('licencias')->name('licencias.')
     //Licencias Recuperadas
     Route::get('/recuperadas', [LicenciaController::class, 'recuperadas'])->name('recuperadas');
 });
-
-

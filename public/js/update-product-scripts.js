@@ -114,7 +114,7 @@ function calcIgv() {
 function changeTC() {
     let selectPrice = document.getElementById('select-tipoprecio').value;
     // Excluir explícitamente el precio total fijo
-    let priceProduct = document.querySelectorAll('.price-product:not(#precio-total-fijo)');
+    let priceProduct = document.querySelectorAll('.price-product:not(#precio-product-ganancia):not(#precio-product-calculado):not(#precio-total-fijo)');
 
     priceProduct.forEach(function (x) {
         if (selectPrice == 'SOL') {

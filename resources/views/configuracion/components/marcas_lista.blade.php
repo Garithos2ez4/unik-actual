@@ -18,7 +18,7 @@
                                 <div class="row bg-light text-center border rounded-3 ms-2 me-2 pt-2 h-100 align-items-center">
                                     <h5 class="mb-2">{{$marca->nombreMarca}}</h5>
                                     @if($marca->imagenMarca)
-                                        <img src="{{asset('storage/'. $marca->imagenMarca)}}" alt="{{$marca->nombreMarca}}" class="border ps-0 pe-0 mb-2" style="max-height: 80px; object-fit: contain;">
+                                        <img src="{{asset('storage/'. $marca->imagenMarca)}}" alt="{{$marca->nombreMarca}}" loading="lazy" class="border ps-0 pe-0 mb-2" style="max-height: 80px; object-fit: contain;">
                                     @else
                                         <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
                                     @endif

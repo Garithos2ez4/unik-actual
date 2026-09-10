@@ -34,7 +34,7 @@ use App\Services\Falabella\Contracts\FalabellaCategoryMapper;
  */
 class SuministrosMapper implements FalabellaCategoryMapper
 {
-    const CATEGORIA = '418 - Electrónica / Computación / Impresoras y Escáneres / Suministros de Impresión';
+    const CATEGORIA = '79 - Electrónica / Computación / Periféricos de computador / Tintas|consumibles para impresora';
 
     public function getTemplateFile(): string
     {
@@ -91,7 +91,7 @@ class SuministrosMapper implements FalabellaCategoryMapper
     public function getVariaciones(Producto $producto, callable $buildSku, ?object $user, array $titulos = []): array
     {
         $variaciones = [];
-        
+
         $t1 = !empty($titulos['titulo1']) ? $titulos['titulo1'] : $producto->nombreProducto;
         $variaciones[] = ['titulo' => $t1, 'sku' => $buildSku($producto->codigoProducto, $producto->modelo ?? '', $user, 1), 'variacion' => 1];
 
@@ -108,7 +108,8 @@ class SuministrosMapper implements FalabellaCategoryMapper
 
     public function buildColumnData(array $var, array $d, Producto $producto, array $context): array
     {
-        $compatible = $d['caractMap']['Compatible con'] ?? $d['caractMap']['Compatibilidad'] ?? 'Epson';
+        $compatibleInput = ($d['caractMap']['Compatible con'] ?? '') . ' ' . ($d['caractMap']['Compatibilidad'] ?? '') . ' ' . $var['titulo'];
+        $compatible = $this->resolveCompatibleCon($compatibleInput);
         $tipo = $this->resolveTipoConsumible($var['titulo'], $d['caractMap']['Tipo'] ?? '');
         $rendimiento = $d['caractMap']['Rendimiento'] ?? '';
 
@@ -165,5 +166,63 @@ class SuministrosMapper implements FalabellaCategoryMapper
             $titulo .= ' ' . trim(str_repeat('Modelo ', ceil(($minimo - strlen($titulo)) / 7)));
         }
         return trim($titulo);
+    }
+
+    private function resolveCompatibleCon(string $texto): string
+    {
+        $opciones = [
+            'Adobe Creative Cloud',
+            'Adobe Photoshop',
+            'Alexa',
+            'Amazon Fire OS',
+            'Android Auto',
+            'Android',
+            'Apple CarPlay',
+            'Apple HomeKit',
+            'Apple',
+            'Brother',
+            'ChromeOS',
+            'Chrome',
+            'Discord',
+            'Epson',
+            'Google Assistant',
+            'Google Home',
+            'GoPro',
+            'HarmonyOS',
+            'Huawei',
+            'Insta360',
+            'iOS',
+            'iPad',
+            'iPhone',
+            'Kodak',
+            'Linux',
+            'Mac OS',
+            'Microsoft Office',
+            'Microsoft Windows',
+            'Motorola',
+            'Nintendo',
+            'PlayStation',
+            'Polaroid',
+            'Samsung',
+            'SmartThings',
+            'Steam',
+            'Tizen',
+            'TTLock App',
+            'Tuya Smart',
+            'Universal',
+            'Windows',
+            'Xbox',
+            'Xiaomi',
+            'Zoom',
+            'No aplica'
+        ];
+
+        foreach ($opciones as $opcion) {
+            if (stripos($texto, $opcion) !== false) {
+                return $opcion;
+            }
+        }
+
+        return 'No aplica';
     }
 }

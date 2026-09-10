@@ -1,66 +1,79 @@
-<div class="row bg-light rounded-4 border pt-3 pb-3 mt-4">
-    <div class="col-md-10">
-        <h3><i class="bi bi-file-earmark-excel"></i> Mappers de Plataforma (Plantillas Excel)</h3>
-        <p class="text-secondary">Configura qué categorías o grupos tienen acceso a descargar plantillas Excel (mappers) para cada plataforma.</p>
-    </div>
-    <div class="col-md-2 text-end">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mapperModal"><i class="bi bi-plus-lg"></i> Nuevo</button>
-    </div>
-    <div class="col-md-12 mt-3" style="max-height: 400px; overflow-y: auto;">
-        <table class="table table-striped table-hover text-center align-middle">
-            <thead class="bg-sistema-uno text-light" style="position: sticky; top: 0; z-index: 1;">
-                <tr>
-                    <th>Plataforma</th>
-                    <th>Categoría</th>
-                    <th>Grupo Producto</th>
-                    <th>Tipo Template</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($mappers as $mapper)
-                <tr>
-                    <td class="fw-bold">{{ optional($mapper->plataforma)->nombrePlataforma ?? 'N/A' }}</td>
-                    <td>
-                        @if($mapper->idCategoria)
-                        <span class="badge bg-info text-dark">{{ optional($mapper->categoria)->nombreCategoria ?? 'ID: '.$mapper->idCategoria }}</span>
-                        @else
-                        -
-                        @endif
-                    </td>
-                    <td>
-                        @if($mapper->idGrupoProducto)
-                        <span class="badge bg-secondary">{{ optional($mapper->grupoProducto)->nombreGrupo ?? 'ID: '.$mapper->idGrupoProducto }}</span>
-                        @else
-                        -
-                        @endif
-                    </td>
-                    <td>
-                        @if($mapper->tipo_template == 'express')
-                        <span class="badge bg-warning text-dark"><i class="bi bi-lightning-fill"></i> Express</span>
-                        @else
-                        <span class="badge bg-success"><i class="bi bi-file-earmark-excel-fill"></i> Completo</span>
-                        @endif
-                    </td>
-                    <td>
-                        <form action="{{ route('delete_mapper', $mapper->id) }}" method="POST" class="d-inline">
-                            @csrf
-                            @method('DELETE')
-                            <button type="button" class="btn btn-sm btn-danger" onclick="if(confirm('¿Eliminar este mapper?')) this.form.submit();" title="Eliminar">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="5" class="text-secondary">No hay mappers configurados.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+<div class="row border shadow rounded-3 pt-2 mb-4 mt-4">
+    <div class="col-md-12 pb-2">
+        <div class="accordion accordion-flush" id="accordionMainMappers">
+            <div class="accordion-item">
+                <h2 class="accordion-header d-flex" id="flush-headingMainMappers">
+                    <button class="accordion-button collapsed fs-5 fw-bold flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseMainMappers" aria-expanded="false" aria-controls="flush-collapseMainMappers">
+                        <i class="bi bi-file-earmark-excel text-success me-2"></i> Mappers de Plataforma (Plantillas Excel)
+                    </button>
+                    <button class="btn btn-primary ms-2 me-3 my-2" style="z-index: 10;" data-bs-toggle="modal" data-bs-target="#mapperModal">
+                        <i class="bi bi-plus-lg"></i> Nuevo
+                    </button>
+                </h2>
+                <div id="flush-collapseMainMappers" class="accordion-collapse collapse" aria-labelledby="flush-headingMainMappers" data-bs-parent="#accordionMainMappers">
+                    <div class="accordion-body">
+                        <p class="text-secondary mb-3">Configura qué categorías o grupos tienen acceso a descargar plantillas Excel (mappers) para cada plataforma.</p>
+                        <div class="col-md-12" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-striped table-hover text-center align-middle">
+                                <thead class="bg-sistema-uno text-light" style="position: sticky; top: 0; z-index: 1;">
+                                    <tr>
+                                        <th>Plataforma</th>
+                                        <th>Categoría</th>
+                                        <th>Grupo Producto</th>
+                                        <th>Tipo Template</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($mappers as $mapper)
+                                    <tr>
+                                        <td class="fw-bold">{{ optional($mapper->plataforma)->nombrePlataforma ?? 'N/A' }}</td>
+                                        <td>
+                                            @if($mapper->idCategoria)
+                                            <span class="badge bg-info text-dark">{{ optional($mapper->categoria)->nombreCategoria ?? 'ID: '.$mapper->idCategoria }}</span>
+                                            @else
+                                            -
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($mapper->idGrupoProducto)
+                                            <span class="badge bg-secondary">{{ optional($mapper->grupoProducto)->nombreGrupo ?? 'ID: '.$mapper->idGrupoProducto }}</span>
+                                            @else
+                                            -
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($mapper->tipo_template == 'express')
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-lightning-fill"></i> Express</span>
+                                            @else
+                                            <span class="badge bg-success"><i class="bi bi-file-earmark-excel-fill"></i> Completo</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <form action="{{ route('delete_mapper', $mapper->id) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-sm btn-danger" onclick="if(confirm('¿Eliminar este mapper?')) this.form.submit();" title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="5" class="text-secondary">No hay mappers configurados.</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
 
 <!-- Modal para Nuevo Mapper -->
 <div class="modal fade" id="mapperModal" tabindex="-1" aria-labelledby="mapperModalLabel" aria-hidden="true">

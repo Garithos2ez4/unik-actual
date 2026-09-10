@@ -44,7 +44,7 @@
                                 <input class="d-none" id="file-modal-grupo" name="img" type="file" accept="image/*">
                                 <img src="https://placehold.co/300x300"  alt="Click to upload" id="img-modal-grupo" class="w-100 border border-secondary rounded-3" style="cursor: pointer; object-fit: cover;">
                             </div>
-                            <div class="col-md-8 mb-3">
+                                <div class="col-md-8 mb-3">
                                 <div class="row">
                                     <div class="col-md-12">
                                         <label class="form-label">Nombre del Grupo:</label>
@@ -58,6 +58,15 @@
                                             <option value="{{$tipo->idTipoProducto}}">{{$tipo->tipoProducto}}</option>
                                             @endforeach
                                         </select>
+                                    </div>
+                                    <div class="col-md-12 mt-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" name="es_pack" id="check-es-pack-crear" value="1">
+                                            <label class="form-check-label" for="check-es-pack-crear">
+                                                <i class="bi bi-box-seam text-warning"></i> Este grupo es un <strong>Pack</strong>
+                                                <small class="d-block text-muted">Los productos de este grupo podrán dividirse en componentes.</small>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -195,6 +204,15 @@
                                             <option value="{{$tipo->idTipoProducto}}">{{$tipo->tipoProducto}}</option>
                                             @endforeach
                                         </select>
+                                    </div>
+                                    <div class="col-md-12 mt-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" name="es_pack" id="check-es-pack-editar" value="1">
+                                            <label class="form-check-label" for="check-es-pack-editar">
+                                                <i class="bi bi-box-seam text-warning"></i> Este grupo es un <strong>Pack</strong>
+                                                <small class="d-block text-muted">Los productos de este grupo podrán dividirse en componentes.</small>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 

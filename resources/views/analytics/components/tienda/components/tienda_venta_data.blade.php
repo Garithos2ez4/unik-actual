@@ -1,6 +1,5 @@
     <!-- Tendencia de Ventas -->
     @include('analytics.components.tienda.components.trends')
-
     <!-- Resumen por Métodos de Pago -->
     <div class="row mt-4">
         <div class="col-12">
@@ -65,11 +64,11 @@
                             <td class="text-end fw-bold text-success">S/ {{ number_format($venta->ganancia, 2) }}</td>
                             <td class="text-center">
                                 @if($venta->margen > 20)
-                                <span class="badge bg-success rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ number_format($venta->margen, 0) }}%</span>
                                 @elseif($venta->margen > 0)
-                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($venta->margen, 0) }}%</span>
                                 @else
-                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($venta->margen, 1) }}%</span>
+                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($venta->margen, 0) }}%</span>
                                 @endif
                             </td>
                         </tr>
@@ -96,11 +95,11 @@
                                 $totMargen = $totCostos > 0 ? ($totGanancia / $totCostos) * 100 : 0;
                                 @endphp
                                 @if($totMargen > 20)
-                                <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ number_format($totMargen, 2) }}%</span>
                                 @elseif($totMargen > 0)
-                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-warning text-dark rounded-pill px-3">{{ number_format($totMargen, 2) }}%</span>
                                 @else
-                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($totMargen, 1) }}%</span>
+                                <span class="badge bg-danger rounded-pill px-3">{{ number_format($totMargen, 2) }}%</span>
                                 @endif
                             </td>
                         </tr>
@@ -109,12 +108,9 @@
             </div>
         </div>
     </div>
-
     <!-- Desglose de Transferencias por Banco / Método de Pago -->
     @include('analytics.components.tienda.components.desglose_pagos')
-
     <!-- Rendimiento por SKU / Producto -->
     @include('analytics.components.tienda.components.tienda_sku')
-
     <!-- Scripts del gráfico -->
     @include('analytics.components.tienda.logic.scripts')

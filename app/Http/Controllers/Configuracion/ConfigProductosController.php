@@ -122,10 +122,11 @@ class ConfigProductosController extends Controller
         $grupo = $request->input('grupo');
         $img = $request->file('img');
         $tipo = $request->input('tipo');
+        $esPack = $request->boolean('es_pack', false);
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 if (isset($categoria) && isset($grupo) && isset($img) && isset($tipo)) {
-                    $this->configuracionService->createGrupoProducto($categoria, $grupo, $tipo, $img);
+                    $this->configuracionService->createGrupoProducto($categoria, $grupo, $tipo, $img, $esPack);
                 }
                 return back();
             }
@@ -141,10 +142,11 @@ class ConfigProductosController extends Controller
         $nombre = $request->input('grupo');
         $tipo = $request->input('tipo');
         $img = $request->file('img');
+        $esPack = $request->boolean('es_pack', false);
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 7) {
                 if (isset($id) && isset($nombre) && isset($tipo)) {
-                    $this->configuracionService->updateGrupoProducto($id, $nombre, $tipo, $img);
+                    $this->configuracionService->updateGrupoProducto($id, $nombre, $tipo, $img, $esPack);
                 }
                 return back();
             }
@@ -186,5 +188,30 @@ class ConfigProductosController extends Controller
         }
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para realizar esta operacion', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function toggleEsPack(Request $request, $id)
+    {
+        $userModel = $this->headerService->getModelUser();
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 7) {
+                $grupo = \App\Models\Catalogo\GrupoProducto::with('ProductoPackDetalle')->findOrFail($id);
+                
+                if ($grupo->ProductoPackDetalle) {
+                    $grupo->ProductoPackDetalle->delete();
+                    $esPack = false;
+                } else {
+                    \App\Models\Catalogo\ProductoPackDetalle::create(['idGrupoProducto' => $id]);
+                    $esPack = true;
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'es_pack' => $esPack,
+                    'message' => $esPack ? 'Grupo marcado como Pack' : 'Grupo desmarcado como Pack'
+                ]);
+            }
+        }
+        return response()->json(['success' => false, 'message' => 'Sin permiso'], 403);
     }
 }

@@ -52,10 +52,19 @@ class PreciosService
     public function getPrecioTotal($precio,$grupo,$tipo,$estado,$ganancia){
         $totales = array();
         $empresas = Empresa::select('idEmpresa','nombreComercial','comision')->get();
+        $calculadora = $this->getCalculadora();
+
+        // Convertir ganancia a SOLES si el tipo de moneda es SOL
+        // ya que $ganancia siempre viene en dólares desde el frontend
+        $gananciaConvertida = $ganancia;
+        if($tipo == 'SOL'){
+            $gananciaConvertida = $ganancia * $calculadora->tasaCambio;
+        }
+
         foreach($empresas as $empresa){
             $totales[] = ['id' => $empresa->idEmpresa,
                         'empresa' => $empresa->nombreComercial,
-                        'precio' => ($this->getPrecioCalculado($precio,$grupo,$tipo,$estado) * $this->porcent($empresa->comision)) + $ganancia];
+                        'precio' => ($this->getPrecioCalculado($precio,$grupo,$tipo,$estado) * $this->porcent($empresa->comision)) + $gananciaConvertida];
         }
         return $totales;
     }

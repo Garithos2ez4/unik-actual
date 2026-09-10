@@ -148,5 +148,20 @@ class AnalyticsRipleyController extends Controller
             'filtros' => compact('anio', 'mes') + $request->only('dia_inicio', 'dia_fin') + ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin],
         ]);
     }
+
+    public function scraperRipley(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        // Validar acceso a la Vista 4 (Plataformas / Analítica)
+        if (!$this->validateAccess($userModel, 4)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        return view('analytics.scraper_ripley', [
+            'user' => $userModel,
+        ]);
+    }
 }
 

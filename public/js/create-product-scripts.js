@@ -108,7 +108,7 @@ function calcIgv() {
 
 function changeTC() {
     let selectPrice = document.getElementById('select-tipoprecio').value;
-    let priceProduct = document.querySelectorAll('.price-product');
+    let priceProduct = document.querySelectorAll('.price-product:not(#precio-product-ganancia):not(#precio-product-calculado):not(#precio-total-fijo)');
 
     priceProduct.forEach(function (x) {
         if (selectPrice == 'SOL') {
@@ -714,7 +714,14 @@ function actualizarPrecioTotalFijo() {
 document.addEventListener('DOMContentLoaded', function () {
     const handlePrecioTotalBlur = function() {
         let precioWeb = parseFloat(this.value) || 0;
-        let tcUsar = getTcEnUso();
+        let tcUsar = TC_SUNAT;
+        if (this.id === 'precio-total-fijo') {
+            tcUsar = TC_FIJO;
+            const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
+            if (tcFijoPersonalizado && tcFijoPersonalizado.value && parseFloat(tcFijoPersonalizado.value) > 0) {
+                tcUsar = parseFloat(tcFijoPersonalizado.value);
+            }
+        }
         
         let precioVentaUsd = precioWeb / tcUsar;
         let costoBase = window.APP_DATA.lastCalculado || 0;

@@ -147,7 +147,9 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $query = MercadoLibreOrder::with('items')->orderByDesc('created_at_ml');
+        $query = MercadoLibreOrder::with('items')
+            ->where('created_at_ml', '>=', now()->subDays(3)->startOfDay())
+            ->orderByDesc('created_at_ml');
 
         if ($request->filled('logistic_type')) {
             $logType = $request->input('logistic_type');

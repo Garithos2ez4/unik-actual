@@ -1,5 +1,5 @@
 {{-- Modo Pack --}}
-@if($producto->idGrupo && in_array($producto->idGrupo, [124, 155, 156, 157, 158, 159, 44, 78, 79]))
+@if($producto->idGrupo && optional($producto->GrupoProducto)->ProductoPackDetalle)
 
 <div class="row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
     <div class="col-12 mb-2">

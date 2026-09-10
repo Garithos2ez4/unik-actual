@@ -74,4 +74,12 @@ class GrupoProducto extends Model
     public function Caracteristicas_Grupo(){
         return $this->hasMany(Caracteristicas_Grupo::class,'idGrupoProducto','idGrupoProducto');
     }
+
+    /**
+     * Relación con la tabla que indica si el grupo es un pack
+     */
+    public function ProductoPackDetalle()
+    {
+        return $this->hasOne(ProductoPackDetalle::class, 'idGrupoProducto', 'idGrupoProducto');
+    }
 }

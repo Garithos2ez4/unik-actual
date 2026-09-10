@@ -253,8 +253,14 @@
             window.APP_DATA.isEditingTotalPrice = false;
             let precioWeb = parseFloat(this.value) || 0;
             
-            // Determinar qué TC usar basándonos en qué input se editó
-            let tcUsar = (this.id === 'precio-total-sunat') ? TC_SUNAT : getTcEnUso();
+            let tcUsar = TC_SUNAT;
+            if (this.id === 'precio-total-fijo') {
+                tcUsar = TC_FIJO;
+                const tcFijoPersonalizado = document.getElementById('tc_fijo_personalizado');
+                if (tcFijoPersonalizado && tcFijoPersonalizado.value && parseFloat(tcFijoPersonalizado.value) > 0) {
+                    tcUsar = parseFloat(tcFijoPersonalizado.value);
+                }
+            }
             
             let costoBase = window.APP_DATA.lastCalculado || 0;
             

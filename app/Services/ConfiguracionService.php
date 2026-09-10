@@ -401,7 +401,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         }
     }
 
-    public function createGrupoProducto($categoria, $grupo, $tipo, $img)
+    public function createGrupoProducto($categoria, $grupo, $tipo, $img, $esPack = false)
     {
         $imgService = new ImageService();
         $rangos = $this->rangoRepository->all();
@@ -427,6 +427,13 @@ class ConfiguracionService implements ConfiguracionServiceInterface
             $updateData = ['imagenGrupo' => 'grupos/IMGPRO' . $newGrupo->slugGrupo . '.webp'];
             $imgService->createImage($img, $newGrupo->slugGrupo, $this->pathGrupo);
             $this->grupoRepository->update($newGrupo->idGrupoProducto, $updateData);
+            
+            if ($esPack) {
+                \App\Models\Catalogo\ProductoPackDetalle::create([
+                    'idGrupoProducto' => $data['idGrupoProducto']
+                ]);
+            }
+
             \Illuminate\Support\Facades\DB::commit();
         } catch (Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
@@ -434,7 +441,7 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         }
     }
 
-    public function updateGrupoProducto($id, $nombre, $tipo, $img)
+    public function updateGrupoProducto($id, $nombre, $tipo, $img, $esPack = false)
     {
         $data = [
             'nombreGrupo' => $nombre,
@@ -450,6 +457,13 @@ class ConfiguracionService implements ConfiguracionServiceInterface
                 $imgService->createImage($img, $grupo->slugGrupo, $this->pathGrupo);
             }
             $this->grupoRepository->update($id, $data);
+
+            if ($esPack) {
+                \App\Models\Catalogo\ProductoPackDetalle::firstOrCreate(['idGrupoProducto' => $id]);
+            } else {
+                \App\Models\Catalogo\ProductoPackDetalle::where('idGrupoProducto', $id)->delete();
+            }
+
             \Illuminate\Support\Facades\DB::commit();
         } catch (Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();

@@ -33,16 +33,31 @@
                                             @foreach ($categoria->GrupoProducto as $grupo)
                                             <div class="col-md-3 pb-2">
                                                 <div class="row bg-light text-center border rounded-3 ms-2 me-2 position-relative h-100">
-                                                    <button class="btn btn-warning btn-sm position-absolute top-0 end-0" style="width: auto; z-index: 5;" data-bs-toggle="modal" data-bs-target="#editGrupoModal" onclick="populateEditGrupo({{$grupo->idGrupoProducto}}, '{{$grupo->nombreGrupo}}', '{{$grupo->idTipoProducto}}', '{{$grupo->imagenGrupo ? asset('storage/' . $grupo->imagenGrupo) : ''}}')">
+                                                    <button class="btn btn-warning btn-sm position-absolute top-0 end-0" style="width: auto; z-index: 5;" data-bs-toggle="modal" data-bs-target="#editGrupoModal" onclick="populateEditGrupo({{$grupo->idGrupoProducto}}, '{{$grupo->nombreGrupo}}', '{{$grupo->idTipoProducto}}', '{{$grupo->imagenGrupo ? asset('storage/' . $grupo->imagenGrupo) : ''}}', {{$grupo->ProductoPackDetalle ? 'true' : 'false'}})">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
-                                                    <div class="col-md-12 pt-4 pb-2">
+                                                    <div class="col-md-12 pt-4 pb-1">
                                                         <h6>{{$grupo->nombreGrupo}}</h6>
                                                         @if($grupo->imagenGrupo)
-                                                            <img src="{{asset('storage/'. $grupo->imagenGrupo)}}" alt="" class="border rounded img-fluid mt-2" style="max-height: 100px; object-fit: contain;">
+                                                            <img src="{{asset('storage/'. $grupo->imagenGrupo)}}" alt="" loading="lazy" class="border rounded img-fluid mt-1" style="max-height: 80px; object-fit: contain;">
                                                         @else
                                                             <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
                                                         @endif
+                                                    </div>
+                                                    {{-- Toggle Pack directo --}}
+                                                    <div class="col-md-12 pb-2 pt-1 border-top mt-1">
+                                                        <div class="form-check form-switch d-flex align-items-center justify-content-center gap-1 mb-0">
+                                                            <input class="form-check-input mt-0"
+                                                                   type="checkbox"
+                                                                   role="switch"
+                                                                   id="toggle-pack-{{$grupo->idGrupoProducto}}"
+                                                                   {{ $grupo->ProductoPackDetalle ? 'checked' : '' }}
+                                                                   onchange="toggleGrupoPack({{$grupo->idGrupoProducto}}, this)"
+                                                                   style="cursor:pointer;">
+                                                            <label class="form-check-label small fw-semibold" for="toggle-pack-{{$grupo->idGrupoProducto}}" style="cursor:pointer;">
+                                                                <i class="bi bi-box-seam text-warning"></i> Pack
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

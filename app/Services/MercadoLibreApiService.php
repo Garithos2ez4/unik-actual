@@ -679,21 +679,30 @@ class MercadoLibreApiService
     {
         try {
             $token = $this->getToken($sellerId);
-            $response = Http::withToken($token)
-                ->withoutVerifying()
-                ->timeout(15)
-                ->get("{$this->baseUrl}/flex/sites/{$siteId}/shipments/{$shipmentId}/assignment/v2");
+            $maxRetries = 3;
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                $response = Http::withToken($token)
+                    ->withoutVerifying()
+                    ->timeout(15)
+                    ->get("{$this->baseUrl}/flex/sites/{$siteId}/shipments/{$shipmentId}/assignment/v2");
 
-            if ($response->failed()) {
-                if ($response->status() !== 404) {
-                    Log::warning("Error obteniendo asignación de envío {$shipmentId}: " . $response->body());
+                if ($response->status() === 429 && $attempt < $maxRetries) {
+                    sleep(2); // Wait 2 seconds before retrying
+                    continue;
                 }
-                return [];
+
+                if ($response->failed()) {
+                    if ($response->status() !== 404) {
+                        Log::warning("Error obteniendo asignación de envío {$shipmentId}: " . $response->body());
+                    }
+                    return [];
+                }
+                return $response->json();
             }
-            return $response->json();
         } catch (\Exception $e) {
             Log::error("Excepción en getShipmentAssignment: " . $e->getMessage());
             return [];
         }
+        return [];
     }
 }

@@ -9,6 +9,51 @@ document.addEventListener('DOMContentLoaded', function() {
     validateButtonEdit('btn-modal-edit-grupo','body-modal-edit-grupo');
 });
 
+function toggleGrupoPack(idGrupo, checkbox) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') 
+        ? document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        : document.querySelector('input[name="_token"]')?.value;
+
+    checkbox.disabled = true;
+
+    fetch(`/configuracion/grupo/${idGrupo}/toggle-pack`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        checkbox.disabled = false;
+        if (data.success) {
+            checkbox.checked = data.es_pack;
+            // Actualizar también el checkbox del modal de edición si está abierto para este grupo
+            const checkEditar = document.getElementById('check-es-pack-editar');
+            const hiddenId = document.getElementById('edit-id-grupo');
+            if (checkEditar && hiddenId && hiddenId.value == idGrupo) {
+                checkEditar.checked = data.es_pack;
+            }
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: data.es_pack ? 'success' : 'info',
+                    title: data.message, showConfirmButton: false, timer: 1800
+                });
+            }
+        } else {
+            // Revertir si falla
+            checkbox.checked = !checkbox.checked;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', data.message, 'error');
+            }
+        }
+    })
+    .catch(() => {
+        checkbox.disabled = false;
+        checkbox.checked = !checkbox.checked;
+    });
+}
+
 function populateEditCategoria(id, nombre, icon) {
     document.getElementById('edit-id-categoria').value = id;
     document.getElementById('edit-nombre-categoria').value = nombre;
@@ -16,10 +61,13 @@ function populateEditCategoria(id, nombre, icon) {
     document.getElementById('btn-modal-edit-categoria').disabled = false;
 }
 
-function populateEditGrupo(id, nombre, tipo, image_url) {
+function populateEditGrupo(id, nombre, tipo, image_url, esPack) {
     document.getElementById('edit-id-grupo').value = id;
     document.getElementById('edit-nombre-grupo').value = nombre;
     document.getElementById('edit-tipo-grupo').value = tipo;
+
+    const checkPack = document.getElementById('check-es-pack-editar');
+    if (checkPack) checkPack.checked = esPack === true;
     
     const imgModal = document.getElementById('img-modal-edit-grupo');
     if (image_url) {
