@@ -705,4 +705,26 @@ class MercadoLibreApiService
         }
         return [];
     }
+    // ─── Peticiones Públicas (Sin Token) ───────────────────────────────
+
+    protected function getPublic(string $path, array $params = []): array
+    {
+        $response = Http::timeout(30)
+            ->get($this->baseUrl . $path, $params);
+
+        if ($response->failed()) {
+            Log::warning("ML API Error Público [{$path}]: " . $response->status() . ' - ' . $response->body());
+            throw new \RuntimeException("ML API Error Público {$response->status()}: " . $response->body());
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Busca productos en todo el catálogo de ML sin usar OAuth.
+     */
+    public function searchPublicListings(array $params = []): array
+    {
+        return $this->getPublic('/sites/MPE/search', $params);
+    }
 }

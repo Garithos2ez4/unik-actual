@@ -9,6 +9,11 @@
             <h2 class="fw-bold text-dark"><i class="bi bi-graph-up-arrow text-warning"></i> Monitor de Precios Mercado Libre</h2>
             <p class="text-muted">Consulta las referencias de precios de la competencia para tus productos publicados en Mercado Libre usando la API oficial.</p>
         </div>
+        <div class="col-12 col-md-4 text-md-end">
+            <a href="{{ route('dashboard.herramientas.scraper_mercadolibre_v2') }}" class="btn btn-outline-warning fw-bold shadow-sm">
+                <i class="bi bi-lightning-charge-fill"></i> Usar Versión Avanzada (V2)
+            </a>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0 mb-4 rounded-4">

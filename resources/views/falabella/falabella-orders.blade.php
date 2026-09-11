@@ -54,6 +54,10 @@
 
                         <!-- Etiquetas -->
                         <div class="input-group shadow-sm flex-nowrap" style="width: auto;">
+                            <span class="input-group-text bg-white border-success text-success" title="Tamaño (Zoom)" style="min-width: 90px;" id="zoomLabel">
+                                <i class="bi bi-zoom-in me-1"></i> 100%
+                            </span>
+                            <input type="range" id="zoomEtiqueta" class="form-control border-success" style="max-width: 80px; padding: 10px;" min="0.5" max="1.5" step="0.05" value="1" title="Ajustar tamaño de etiqueta" oninput="document.getElementById('zoomLabel').innerHTML = '<i class=\'bi bi-zoom-in me-1\'></i> ' + Math.round(this.value * 100) + '%'">
                             <select id="formatoEtiqueta" class="form-select border-success text-success bg-white fw-bold" style="min-width: 130px;" title="Formato de Etiqueta">
                                 <option value="a4_100">A4 - 4 por hoja</option>
                                 <option value="a4_1">A4 - 1 por hoja</option>
@@ -224,6 +228,9 @@
 
                 const formatSelect = document.getElementById('formatoEtiqueta');
                 const formato = formatSelect ? formatSelect.value : 'a4_100';
+                
+                const zoomInput = document.getElementById('zoomEtiqueta');
+                const userZoom = zoomInput ? parseFloat(zoomInput.value) : 1;
 
                 let currentPage = null;
                 let labelCount = 0;
@@ -242,14 +249,18 @@
                         const sourcePage = labelPdf.getPages()[0];
 
                         // La API de Falabella envía una hoja A4 completa, pero la etiqueta solo ocupa la esquina superior izquierda (10x15cm).
-                        // Recortamos (Crop) la hoja original a solo el área de la etiqueta para evitar los enormes espacios en blanco.
                         const spHeight = sourcePage.getHeight();
                         const cropWidth = 283.46; // 100mm
                         const cropHeight = 425.20; // 150mm
-                        // x, y (desde abajo), width, height
+                        
+                        // Recortamos la hoja original a solo el área de la etiqueta
                         sourcePage.setCropBox(0, spHeight - cropHeight, cropWidth, cropHeight);
+                        
+                        // FIX: Para que pdf-lib respete el cropBox al incrustar, debemos serializar y recargar el PDF
+                        const savedBytes = await labelPdf.save();
+                        const croppedPdf = await PDFDocument.load(savedBytes);
 
-                        const [embeddedPage] = await outPdf.embedPdf(labelPdf, [0]);
+                        const [embeddedPage] = await outPdf.embedPdf(croppedPdf, [0]);
 
                         if (formato === 'termica') {
                             // 10x15cm (Aprox 4x6 pulgadas = 288x432 puntos)
@@ -258,13 +269,15 @@
 
                             currentPage = outPdf.addPage([pageWidth, pageHeight]);
 
-                            const scaleFactor = Math.min(pageWidth / embeddedPage.width, pageHeight / embeddedPage.height);
+                            const scaleFactor = Math.min(pageWidth / embeddedPage.width, pageHeight / embeddedPage.height) * userZoom;
+                            const drawW = embeddedPage.width * scaleFactor;
+                            const drawH = embeddedPage.height * scaleFactor;
 
                             currentPage.drawPage(embeddedPage, {
-                                x: (pageWidth - embeddedPage.width * scaleFactor) / 2,
-                                y: (pageHeight - embeddedPage.height * scaleFactor) / 2,
-                                width: embeddedPage.width * scaleFactor,
-                                height: embeddedPage.height * scaleFactor
+                                x: 10, // Margen izquierdo
+                                y: pageHeight - drawH - 10, // Anclado arriba
+                                width: drawW,
+                                height: drawH
                             });
                         } else {
                             // Formato A4
@@ -283,19 +296,17 @@
                             const quadHeight = pageHeight / 2;
 
                             const baseScale = Math.min(quadWidth / embeddedPage.width, quadHeight / embeddedPage.height);
-                            // Aplicamos un margen automático del 6% (94% scale) para que no toquen los bordes físicos de la hoja
-                            const safeScale = 0.94; 
+                            // Aplicamos el margen seguro + el zoom interactivo del usuario
+                            const safeScale = 0.94 * userZoom; 
                             const finalScale = baseScale * safeScale;
 
                             const drawWidth = embeddedPage.width * finalScale;
                             const drawHeight = embeddedPage.height * finalScale;
 
-                            // Esto centra la etiqueta perfectamente dentro de su cuadrante
-                            const offsetX = (quadWidth - drawWidth) / 2;
-                            const offsetY = (quadHeight - drawHeight) / 2;
-
-                            const x = (col * quadWidth) + offsetX;
-                            const y = (pageHeight - ((row + 1) * quadHeight)) + offsetY;
+                            // Anclamos la etiqueta a la esquina superior izquierda de su cuadrante
+                            const margin = 15;
+                            const x = (col * quadWidth) + margin;
+                            const y = (pageHeight - (row * quadHeight)) - drawHeight - margin;
 
                             currentPage.drawPage(embeddedPage, {
                                 x,

@@ -74,6 +74,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
     Route::get('/dashboard/herramientas/scraper-mercadolibre', [AnalyticsMercadolibreController::class, 'scraperMercadolibre'])->name('dashboard.herramientas.scraper_mercadolibre');
+    Route::get('/dashboard/herramientas/scraper-mercadolibre-v2', [AnalyticsMercadolibreController::class, 'scraperMercadolibreV2'])->name('dashboard.herramientas.scraper_mercadolibre_v2');
     Route::get('/dashboard/herramientas/scraper-ripley', [AnalyticsRipleyController::class, 'scraperRipley'])->name('dashboard.herramientas.scraper_ripley');
     Route::get('/dashboard/analitica/mercadolibre', [AnalyticsMercadolibreController::class, 'index'])->name('dashboard.analitica.mercadolibre');
     Route::get('/dashboard/analitica/ripley', [AnalyticsRipleyController::class, 'index'])->name('dashboard.analitica.ripley');

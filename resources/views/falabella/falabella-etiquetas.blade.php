@@ -242,7 +242,20 @@
         for (const base64 of data.labels) {
             try {
                 const labelPdf = await PDFDocument.load(base64);
-                const [embeddedPage] = await outPdf.embedPdf(labelPdf, [0]);
+                const sourcePage = labelPdf.getPages()[0];
+
+                const spHeight = sourcePage.getHeight();
+                const cropWidth = 283.46; // 100mm
+                const cropHeight = 425.20; // 150mm
+                
+                // Recortamos la hoja original a solo el área de la etiqueta
+                sourcePage.setCropBox(0, spHeight - cropHeight, cropWidth, cropHeight);
+                
+                // FIX: Guardar y recargar para que el embedPdf respete el CropBox
+                const savedBytes = await labelPdf.save();
+                const croppedPdf = await PDFDocument.load(savedBytes);
+
+                const [embeddedPage] = await outPdf.embedPdf(croppedPdf, [0]);
 
                 if (labelCount % 4 === 0) {
                     currentPage = outPdf.addPage([pageWidth, pageHeight]);
@@ -251,12 +264,23 @@
                 const indexOnPage = labelCount % 4;
                 const col = indexOnPage % 2;
                 const row = Math.floor(indexOnPage / 2);
-                const width = pageWidth / 2;
-                const height = pageHeight / 2;
-                const x = col * width;
-                const y = pageHeight - ((row + 1) * height);
+                
+                const quadWidth = pageWidth / 2;
+                const quadHeight = pageHeight / 2;
+                
+                const safeScale = 0.94; // 94% scale para márgenes
+                const finalScale = Math.min(quadWidth / embeddedPage.width, quadHeight / embeddedPage.height) * safeScale;
+                
+                const drawWidth = embeddedPage.width * finalScale;
+                const drawHeight = embeddedPage.height * finalScale;
 
-                currentPage.drawPage(embeddedPage, { x, y, width, height });
+                const offsetX = (quadWidth - drawWidth) / 2;
+                const offsetY = (quadHeight - drawHeight) / 2;
+
+                const x = (col * quadWidth) + offsetX;
+                const y = (pageHeight - ((row + 1) * quadHeight)) + offsetY;
+
+                currentPage.drawPage(embeddedPage, { x, y, width: drawWidth, height: drawHeight });
                 labelCount++;
             } catch (err) {
                 console.error('Error al incrustar etiqueta:', err);

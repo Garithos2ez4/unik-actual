@@ -7,8 +7,6 @@
     <div class="container">
         <br>
         
-        @include('productos.partials.alertas_reabastecimiento')
-
         <div class="row">
             <div class="col-9 col-lg-4">
                 <x-buscador_producto />

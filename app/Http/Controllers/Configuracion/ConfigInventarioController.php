@@ -32,12 +32,26 @@ class ConfigInventarioController extends Controller
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
                 $proveedores = $this->configuracionService->getAllProveedores();
 
+                $alertasReabastecimiento = collect();
+                if ($hasEditAccess) {
+                    $alertasReabastecimiento = \App\Models\Catalogo\Producto::query()
+                        ->select('Producto.idProducto', 'Producto.nombreProducto', 'Producto.modelo', 'Producto.codigoProducto', 'Producto.imagenProducto1')
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 1 LIMIT 1), 0) as stock_tienda")
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 2 LIMIT 1), 0) as stock_alm2")
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 3 LIMIT 1), 0) as stock_alm3")
+                        ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 4 LIMIT 1), 0) as stock_alm4")
+                        ->havingRaw('stock_tienda <= 2 AND (stock_alm2 > 0 OR stock_alm3 > 0 OR stock_alm4 > 0)')
+                        ->orderBy('stock_tienda', 'asc')
+                        ->get();
+                }
+
                 return view('configuracion.configinventario', [
                     'user' => $userModel,
                     'pagina' => 'inventario',
                     'almacenes' => $almacenes,
                     'proveedores' => $proveedores,
-                    'hasEditAccess' => $hasEditAccess
+                    'hasEditAccess' => $hasEditAccess,
+                    'alertasReabastecimiento' => $alertasReabastecimiento
                 ]);
             }
         }

@@ -15,6 +15,9 @@
         <x-nav_config :pag="$pagina" />
     </div>
     <br>
+
+    @include('productos.partials.alertas_reabastecimiento')
+
     <div class="row border shadow rounded-3 pt-2 mb-4">
         <div class="col-9 col-md-8 border-bottom border-secondary">
             <h3>Almacenes</h3>
@@ -116,30 +119,7 @@
         </div>
     </div>
 
-    <div class="row border shadow rounded-3 pt-2  mb-4">
-        <div class="col-9 col-md-8 border-bottom border-secondary">
-            <h3>Proveedores</h3>
-            <small class="text-secondary">Configuracion de proveedores para los ingresos y seguimiento de stock.</small>
-        </div>
-        <div class="col-3 col-md-4 border-bottom border-secondary text-end">
-            @if(isset($hasEditAccess) && $hasEditAccess)
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#proveedorModal"><i class="bi bi-plus-lg"></i> <i class="bi bi-truck"></i></button>
-            @endif
-        </div>
-        <div class="col-md-12 pt-2 pb-2 bg-list">
-            <div class="row">
-                @foreach ($proveedores as $proveedor)
-                <div class="col-md-3 pb-2">
-                    <div class="row bg-light border ms-2 me-2 pt-2 h-100">
-                        <h5>{{$proveedor->nombreProveedor}}</h5>
-                        <small class="text-secondary">{{$proveedor->razSocialProveedor}}</small>
-                        <small>{{$proveedor->rucProveedor}}</small>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
+    @include('configuracion.components.proveedores_lista')
     <!--Modals -->
     <form action="{{route('createalmacen')}}" id="form-almacen" method="POST">
         @csrf

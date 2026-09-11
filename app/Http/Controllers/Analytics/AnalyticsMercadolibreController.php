@@ -181,4 +181,18 @@ class AnalyticsMercadolibreController extends Controller
             'user' => $userModel,
         ]);
     }
+
+    public function scraperMercadolibreV2(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        if (!$this->validateAccess($userModel, 4)) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        return view('analytics.scraper_mercadolibre_v2', [
+            'user' => $userModel,
+        ]);
+    }
 }
