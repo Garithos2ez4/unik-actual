@@ -39,6 +39,7 @@
                             <th class="text-uppercase small fw-bold text-secondary">Fecha</th>
                             <th class="text-uppercase small fw-bold text-secondary">Canal</th>
                             <th class="text-uppercase small fw-bold text-secondary">Nro Orden / Factura</th>
+                            <th class="text-uppercase small fw-bold text-secondary text-center">Nro Serie</th>
                             <th class="text-uppercase small fw-bold text-secondary text-center">Cantidad</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Precio Unit.</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Total</th>
@@ -122,6 +123,7 @@
                     }
                 },
                 { data: 'orden', className: 'text-primary fw-bold' },
+                { data: 'serie', className: 'text-center text-muted fw-semibold' },
                 { data: 'cantidad', className: 'text-center fw-bold' },
                 { data: 'precio_unitario', className: 'text-end text-muted' },
                 { 

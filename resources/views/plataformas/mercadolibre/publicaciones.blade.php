@@ -35,9 +35,11 @@
                             <th>Stock</th>
                             <th>Estado</th>
                             <th class="text-center">Envíos Flex</th>
+                            <th class="text-end pe-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
+                        @php $encryptedId = encrypt(2); @endphp
                         @forelse($publicaciones as $item)
                         <tr>
                             <td class="ps-4 py-3">
@@ -95,10 +97,36 @@
                                         style="width: 3em; height: 1.5em; cursor: pointer;">
                                 </div>
                             </td>
+                            <td class="text-end pe-4">
+                                @php
+                                    $skuNumeric = preg_replace('/[^0-9]/', '', $item['id'] ?? '');
+                                    $localProd = \App\Models\Catalogo\Producto::whereHas('Publicacion', function($q) use ($skuNumeric) {
+                                        $q->where('sku', $skuNumeric)->where('idCuentaPlataforma', 3);
+                                    })->first();
+
+                                    $createParams = [
+                                        'titulo' => $item['title'] ?? '',
+                                        'sku'    => $skuNumeric,
+                                        'precio' => $item['price'] ?? 0,
+                                        'fecha'  => isset($item['date_created']) ? \Carbon\Carbon::parse($item['date_created'])->format('Y-m-d') : date('Y-m-d'),
+                                        'cuenta' => 3
+                                    ];
+                                    
+                                    if ($localProd) {
+                                        $createParams['producto']   = $localProd->modeloProducto;
+                                        $createParams['idproducto'] = $localProd->idProducto;
+                                    }
+                                @endphp
+                                <a href="{{ route('createpublicacion', [$encryptedId]) . '?' . http_build_query($createParams) }}"
+                                   class="btn btn-sm btn-outline-success rounded-pill shadow-sm"
+                                   title="Pre-rellenar Publicación">
+                                    <i class="bi bi-megaphone-fill"></i> Crear Publicación
+                                </a>
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                                     No se encontraron publicaciones en esta cuenta.

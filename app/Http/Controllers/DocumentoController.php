@@ -30,6 +30,10 @@ class DocumentoController extends Controller
             return strpos($register->numeroSerie, 'UNK-') !== false;
         });
         
+        $conteoEstados = $registros->groupBy('estado')->map->count();
+        $totalItems = $registros->count();
+        
+        
         $estados = [['value' => 'NUEVO', 'name' => 'Nuevo'],
                     ['value' => 'ABIERTO', 'name' => 'Abierto'],
                     ['value' => 'DEFECTUOSO', 'name' => 'Defectuoso']
@@ -53,7 +57,9 @@ class DocumentoController extends Controller
                 'estados' => $estados,
                 'medidas' => $medidas,
                 'adquisiciones' => $adquisiciones,
-                'validate' => $bool
+                'validate' => $bool,
+                'conteoEstados' => $conteoEstados,
+                'totalItems' => $totalItems
                 ]);
             }
 
@@ -65,7 +71,9 @@ class DocumentoController extends Controller
                 'medidas' => $medidas,
                 'adquisiciones' => $adquisiciones,
                 'validate' => $bool,
-                'pdf' => $registrosFiltrados
+                'pdf' => $registrosFiltrados,
+                'conteoEstados' => $conteoEstados,
+                'totalItems' => $totalItems
                 ]);
             }
         }

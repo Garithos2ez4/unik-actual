@@ -639,6 +639,8 @@ class AnalyticsController extends Controller
 
         $historial = \Illuminate\Support\Facades\DB::table('DetalleVenta')
             ->join('Venta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
+            ->leftJoin('EgresoProducto', 'DetalleVenta.idEgreso', '=', 'EgresoProducto.idEgreso')
+            ->leftJoin('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->select(
                 'Venta.fechaVenta',
                 'Venta.canal',
@@ -646,7 +648,8 @@ class AnalyticsController extends Controller
                 'Venta.idVenta',
                 'DetalleVenta.cantidad',
                 'DetalleVenta.precioVenta',
-                'DetalleVenta.estado'
+                'DetalleVenta.estado',
+                'RegistroProducto.numeroSerie'
             )
             ->where('DetalleVenta.idProducto', $idProducto)
             ->orderByDesc('Venta.fechaVenta')
@@ -660,7 +663,8 @@ class AnalyticsController extends Controller
                     'cantidad' => $item->cantidad,
                     'precio_unitario' => number_format($item->precioVenta, 2),
                     'total' => number_format($item->precioVenta * $item->cantidad, 2),
-                    'estado' => $item->estado
+                    'estado' => $item->estado,
+                    'serie' => $item->numeroSerie ?? 'N/A'
                 ];
             });
 

@@ -135,6 +135,7 @@
                 <th>Almacén</th>
                 <th>Nro. Serie</th>
                 <th>Ubicación Específica</th>
+                <th>Estado</th>
             </tr>
         </thead>
         <tbody>
@@ -148,6 +149,13 @@
                     <span class="badge bg-info text-dark">{{ $serie->UbicacionExacta->nombre_completo }}</span>
                     @else
                     <span class="text-muted fst-italic">Sin asignar</span>
+                    @endif
+                </td>
+                <td>
+                    @if(strtoupper($serie->estado) === 'DEFECTUOSO')
+                        <span class="badge bg-danger">Defectuoso</span>
+                    @else
+                        <span class="badge bg-success">Bueno</span>
                     @endif
                 </td>
             </tr>

@@ -98,6 +98,27 @@
         </div>
         @endif
 
+        @if(isset($totalItems) && $totalItems > 0 && !$validate)
+        <div class="card shadow-sm border-0 mb-4 bg-light">
+            <div class="card-body p-3">
+                <h6 class="fw-bold mb-2 text-secondary"><i class="bi bi-info-circle me-1"></i> Resumen de Estado de Productos (Total: {{ $totalItems }})</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach($conteoEstados as $estado => $cantidad)
+                        @php
+                            $badgeColor = 'bg-secondary';
+                            if ($estado === 'NUEVO') $badgeColor = 'bg-primary';
+                            elseif ($estado === 'ENTREGADO' || $estado === 'EGRESADO') $badgeColor = 'bg-success';
+                            elseif ($estado === 'DEVUELTO' || $estado === 'DEFECTUOSO' || $estado === 'GARANTIA') $badgeColor = 'bg-danger';
+                        @endphp
+                        <span class="badge {{ $badgeColor }} fs-6 px-3 py-2">
+                            {{ $estado }}: <span class="fw-bold fs-5">{{ $cantidad }}</span>
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Lista de Productos (Tabla Estilizada) -->
         <div class="card shadow-sm border-0">
             <ul class="list-group list-group-flush" id="ul-ingreso" style="max-height: 60vh; overflow-x: hidden; overflow-y: auto;">

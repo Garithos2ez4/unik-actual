@@ -14,9 +14,9 @@ class ShalomTarifaController extends Controller
      */
     public function getTerminals()
     {
-        $path = storage_path('app/shalom_agencias.json');
+        $path = storage_path('app/agencias_shalom.json');
         if (!file_exists($path)) {
-            return response()->json(['success' => false, 'message' => 'Archivo shalom_agencias.json no encontrado. Ejecuta sync:shalom primero.']);
+            return response()->json(['success' => false, 'message' => 'Archivo agencias_shalom.json no encontrado. Ejecuta sync:shalom primero.']);
         }
 
         $json = json_decode(file_get_contents($path), true);

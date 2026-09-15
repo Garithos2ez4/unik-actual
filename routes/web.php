@@ -70,8 +70,16 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/alertas/{id}/ignorar', [HomeController::class, 'ignorarAlerta'])->name('alertas.ignorar');
+    // Rutas de analítica y herramientas
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
+    
+    // Egresos Pendientes
+    Route::get('/dashboard/herramientas/egresos-pendientes', [\App\Http\Controllers\EgresoPendienteController::class, 'index'])->name('egresos.pendientes');
+    
+    // Delivery Flex
+    Route::get('/dashboard/logistica/delivery-flex', [\App\Http\Controllers\DeliveryFlexController::class, 'index'])->name('delivery.flex');
+
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
     Route::get('/dashboard/herramientas/scraper-mercadolibre', [AnalyticsMercadolibreController::class, 'scraperMercadolibre'])->name('dashboard.herramientas.scraper_mercadolibre');
     Route::get('/dashboard/herramientas/scraper-mercadolibre-v2', [AnalyticsMercadolibreController::class, 'scraperMercadolibreV2'])->name('dashboard.herramientas.scraper_mercadolibre_v2');

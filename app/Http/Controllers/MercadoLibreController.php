@@ -215,6 +215,7 @@ class MercadoLibreController extends Controller
 
         $query = MercadoLibreOrder::with('items')
             ->where('logistic_type', 'self_service')
+            ->where('created_at_ml', '>=', now()->subDays(3))
             ->orderByDesc('created_at_ml');
 
         if ($request->filled('shipping_status')) {

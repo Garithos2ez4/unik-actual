@@ -46,7 +46,10 @@
     {{-- Tabla --}}
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
-            <div class="d-flex justify-content-end p-2">
+            <div class="d-flex justify-content-end gap-2 p-2">
+                <a href="{{ route('delivery.flex') }}" class="btn btn-info text-white px-3 fw-bold shadow-sm">
+                    <i class="bi bi-map-fill"></i> <span class="d-none d-md-inline">Rutas de Delivery</span>
+                </a>
                 <button type="button" class="btn btn-warning px-3 fw-bold shadow-sm" id="btnSyncML" onclick="syncML()">
                     <i class="bi bi-arrow-repeat"></i> <span class="d-none d-md-inline">Sincronizar Órdenes</span>
                 </button>

@@ -81,6 +81,11 @@ class MercadoLibreScraperService
                 }
 
                 $intentos++;
+                
+                // SOLUCIÓN AL ERROR DE CONEXIONES SQL (Too many connections):
+                // Pausamos medio segundo entre cada petición a Mercado Libre para no acaparar
+                // la memoria ni mantener la conexión a base de datos en estado ocupado continuo.
+                usleep(500000); 
 
                 // Llamar al detalle (devuelve null si 404 — no tira excepción)
                 $detail = $this->apiService->getSuggestionDetail($sellerId, $itemId);
