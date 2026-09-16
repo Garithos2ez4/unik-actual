@@ -15,7 +15,9 @@ class PedidoWeb extends Model
         'codigoTransaccion',
         'pasarela',
         'total',
-        'estado'
+        'estado',
+        'tipo_entrega',
+        'costo_envio'
     ];
 
     public function cliente()
@@ -26,5 +28,10 @@ class PedidoWeb extends Model
     public function detalles()
     {
         return $this->hasMany(DetallePedidoWeb::class, 'idPedidoWeb', 'idPedidoWeb');
+    }
+
+    public function direccion()
+    {
+        return $this->hasOne(DireccionPedidoWeb::class, 'pedido_web_id', 'idPedidoWeb');
     }
 }

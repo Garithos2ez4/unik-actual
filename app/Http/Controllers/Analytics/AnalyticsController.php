@@ -618,10 +618,12 @@ class AnalyticsController extends Controller
     public function productoHistorialIndex(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
-        if (!$this->validateAccess($userModel, 13)) {
-            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
-            return redirect()->route('dashboard', ['user' => $userModel]);
-        }
+        
+        // Vista libre sin restricciones (solicitado)
+        // if (!$this->validateAccess($userModel, 13)) {
+        //     $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        //     return redirect()->route('dashboard', ['user' => $userModel]);
+        // }
 
         return view('analytics.producto_historial', [
             'userModel' => $userModel,

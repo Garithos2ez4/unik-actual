@@ -45,7 +45,7 @@ class OpenRouteService
 
             if ($response->successful()) {
                 $data = $response->json();
-                
+
                 // La distancia viene en metros en rutas[0]['summary']['distance']
                 if (isset($data['routes'][0]['summary']['distance'])) {
                     $metros = $data['routes'][0]['summary']['distance'];
@@ -55,7 +55,6 @@ class OpenRouteService
             } else {
                 Log::error('OpenRouteService Error: ' . $response->body());
             }
-
         } catch (\Throwable $th) {
             Log::error('OpenRouteService Exception: ' . $th->getMessage());
         }
@@ -73,18 +72,18 @@ class OpenRouteService
         if ($distanciaKm === null) {
             return 10.00;
         }
-        
+
         $distanceKmRounded = round($distanciaKm);
-        
+
         if ($distanceKmRounded <= 2) {
             $costoEnvio = 10;
         } else {
-            $costoEnvio = $distanceKmRounded * 3;
+            $costoEnvio = $distanceKmRounded * 2;
             if ($costoEnvio < 10) {
                 $costoEnvio = 10;
             }
         }
-        
+
         return (float) $costoEnvio;
     }
 }

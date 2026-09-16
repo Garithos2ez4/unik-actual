@@ -13,19 +13,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('Venta', function (Blueprint $table) {
-            $sm = Schema::getConnection()->getDoctrineSchemaManager();
-            $indexesFound = $sm->listTableIndexes('Venta');
+            $indexesFound = collect(Schema::getIndexes('Venta'))->pluck('name')->toArray();
 
-            if (!array_key_exists('idx_venta_numeroorden', $indexesFound)) {
+            if (!in_array('idx_venta_numeroorden', $indexesFound)) {
                 $table->index('numeroOrden', 'idx_venta_numeroorden');
             }
         });
 
         Schema::table('EgresoProducto', function (Blueprint $table) {
-            $sm = Schema::getConnection()->getDoctrineSchemaManager();
-            $indexesFound = $sm->listTableIndexes('EgresoProducto');
+            $indexesFound = collect(Schema::getIndexes('EgresoProducto'))->pluck('name')->toArray();
 
-            if (!array_key_exists('idx_egresoproducto_numeroorden', $indexesFound)) {
+            if (!in_array('idx_egresoproducto_numeroorden', $indexesFound)) {
                 $table->index('numeroOrden', 'idx_egresoproducto_numeroorden');
             }
         });

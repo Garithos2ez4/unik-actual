@@ -66,7 +66,6 @@ class MercadoLibreOrderSyncService
             $paging = $response['paging'] ?? [];
             $total  = $paging['total'] ?? 0;
             $offset += $limit;
-
         } while ($offset < $total);
 
         return $synced;
