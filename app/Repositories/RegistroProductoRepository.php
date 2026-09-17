@@ -74,6 +74,7 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
             ->where('RegistroProducto.estado', '!=', 'INVALIDO')
             ->where('RegistroProducto.estado', '!=', 'DIVIDIDO')
             ->where('RegistroProducto.estado', '!=', 'REUNIDO')
+            ->where('RegistroProducto.estado', '!=', 'ELIMINADO')
             ->where('RegistroProducto.numeroSerie', 'LIKE', "%{$serial}%");
 
         if (!empty($excludeArray)) {
@@ -163,6 +164,7 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
             ->where('RegistroProducto.estado', '<>', 'ENTREGADO')
             ->where('RegistroProducto.estado', '<>', 'GARANTIA')
             ->where('RegistroProducto.estado', '<>', 'DIVIDIDO')
+            ->where('RegistroProducto.estado', '<>', 'ELIMINADO')
             ->when($idAlmacen, function ($query) use ($idAlmacen) { // Filtro dinámico
                 $query->where('RegistroProducto.idAlmacen', $idAlmacen);
             })
