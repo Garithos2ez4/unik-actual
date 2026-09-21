@@ -130,16 +130,36 @@
                                 'xd_drop_off' => ['label' => 'Urbano', 'color' => 'warning'],
                                 'fulfillment' => ['label' => 'ME Full', 'color' => 'success'],
                                 'custom' => ['label' => 'Acuerdo', 'color' => 'secondary'],
-                                'drop_off' => ['label' => 'Punto de entrega', 'color' => 'info'],
+                                'drop_off' => ['label' => 'Punto de entrega', 'color' => 'success'],
                                 ];
                                 $info = $badges[$order->logistic_type] ?? null;
                                 @endphp
                                 @if($info)
-                                <span class="badge rounded-pill px-3 bg-{{ $info['color'] }}">
-                                    {{ $order->logistic_label ?? $info['label'] }}
-                                </span>
+                                <div class="mb-1">
+                                    <span class="badge rounded-pill px-3 bg-{{ $info['color'] }}">
+                                        {{ $order->logistic_label ?? $info['label'] }}
+                                    </span>
+                                </div>
                                 @else
-                                <span class="text-muted">—</span>
+                                <div class="mb-1">
+                                    <span class="text-muted">—</span>
+                                </div>
+                                @endif
+                                
+                                @if($order->carrier_name)
+                                @php
+                                $carrierNames = [
+                                    '301273' => 'Urbano',
+                                    '302093' => 'Olva Courier',
+                                    '1390020' => 'Scharff',
+                                    '952082' => 'Flex (Mensajería)',
+                                    '658142' => 'Agencia / Punto',
+                                ];
+                                $displayCarrier = $carrierNames[$order->carrier_name] ?? $order->carrier_name;
+                                @endphp
+                                <div class="small fw-semibold text-muted">
+                                    <i class="bi bi-truck me-1"></i>{{ $displayCarrier }}
+                                </div>
                                 @endif
                             </td>
                             <td>
