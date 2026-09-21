@@ -38,12 +38,17 @@ class RipleyOrderSyncService
         $customer = $orderPayload['customer'] ?? [];
         $customerName = trim(($customer['firstname'] ?? '') . ' ' . ($customer['lastname'] ?? ''));
 
+        $status = $orderPayload['order_state'] ?? null;
+        if (isset($orderPayload['fully_refunded']) && $orderPayload['fully_refunded'] === true) {
+            $status = 'CANCELED';
+        }
+
         $attributes = ['order_id' => $orderId];
         $values = [
             'order_number' => $orderId,
             'customer_name' => $customerName ?: null,
             'customer_email' => null, // Mirakl usually hides customer email unless explicit
-            'status' => $orderPayload['order_state'] ?? null,
+            'status' => $status,
             'statuses' => [$orderPayload['order_state'] ?? ''],
             'price' => $orderPayload['total_price'] ?? 0,
             'payment_method' => $orderPayload['paymentType'] ?? null,

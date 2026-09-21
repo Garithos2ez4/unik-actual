@@ -281,13 +281,15 @@ function aplicarDestinoGlobal() {
     let value = selectGlobal.value;
     if(!value) return;
 
-    let selectsIndividuales = document.querySelectorAll('.item-traslado select[name^="traslado"]');
+    let selectsIndividuales = document.querySelectorAll('.item-traslado .select-destino-almacen');
     selectsIndividuales.forEach(select => {
         let origenAlmacenId = select.getAttribute('data-origen-id');
         if(origenAlmacenId != value) {
             select.value = value;
+            select.dispatchEvent(new Event('change'));
         } else {
             select.value = ''; // Si el destino global es igual al origen, dejar vacío
+            select.dispatchEvent(new Event('change'));
         }
     });
     habilitarBotonReubicar();
@@ -334,36 +336,75 @@ function addProductoSerial(object) {
     let divColOrigen = createDiv(['col-6', 'col-md-2'], null);
     divColOrigen.innerHTML = '<small class="form-label d-md-none">Origen</small>' + "<select class='form-select form-select-sm' disabled><option selected>" + origen + "</option></select>";
 
-    let divColDestino = createDiv(['col-6', 'col-md-2'], null);
+    let divColDestino = createDiv(['col-6', 'col-md-2', 'd-flex', 'flex-column', 'gap-1'], null);
+    
     let selectDestino = document.createElement('select');
-    selectDestino.name = 'traslado[' + object.idRegistro + ']';
-    selectDestino.classList.add('form-select', 'form-select-sm');
+    selectDestino.name = 'traslado[' + object.idRegistro + '][idAlmacen]';
+    selectDestino.classList.add('form-select', 'form-select-sm', 'select-destino-almacen');
     selectDestino.setAttribute('data-origen-id', origenId);
     let defaultOption = document.createElement('option');
     defaultOption.value = '';
-    defaultOption.textContent = '-elige un destino-';
+    defaultOption.textContent = '-elige almacén-';
     selectDestino.appendChild(defaultOption);
+    
+    let selectUbicacion = document.createElement('select');
+    selectUbicacion.name = 'traslado[' + object.idRegistro + '][idUbicacionExacta]';
+    selectUbicacion.classList.add('form-select', 'form-select-sm');
+    let defaultUbicacion = document.createElement('option');
+    defaultUbicacion.value = '';
+    defaultUbicacion.textContent = '-ubicación estante-';
+    selectUbicacion.appendChild(defaultUbicacion);
+    selectUbicacion.style.display = 'none';
     
     // almacenes viene de la variable window.almacenes definida en blade
     if(typeof almacenes !== 'undefined') {
         almacenes.forEach(almacen => {
-            if (origenId != almacen.idAlmacen) {
-                let optionDestino = document.createElement('option');
-                optionDestino.value = almacen.idAlmacen;
-                optionDestino.textContent = almacen.descripcion;
-                selectDestino.appendChild(optionDestino);
+            let optionDestino = document.createElement('option');
+            optionDestino.value = almacen.idAlmacen;
+            optionDestino.textContent = almacen.descripcion;
+            
+            // Adjuntar las filas (ubicaciones) al select para usarlas luego
+            if (almacen.filas) {
+                optionDestino.dataset.filas = JSON.stringify(almacen.filas);
             }
+            selectDestino.appendChild(optionDestino);
         });
     }
     
+    selectDestino.addEventListener('change', function() {
+        let opt = this.options[this.selectedIndex];
+        selectUbicacion.innerHTML = '';
+        selectUbicacion.appendChild(defaultUbicacion);
+        
+        if (opt.value && opt.dataset.filas) {
+            let filas = JSON.parse(opt.dataset.filas);
+            if (filas.length > 0) {
+                filas.forEach(fila => {
+                    let o = document.createElement('option');
+                    o.value = fila.idUbicacionExacta;
+                    o.textContent = (fila.nombre_rack || '') + ' - Fila ' + (fila.fila_estante || '');
+                    selectUbicacion.appendChild(o);
+                });
+                selectUbicacion.style.display = 'block';
+            } else {
+                selectUbicacion.style.display = 'none';
+            }
+        } else {
+            selectUbicacion.style.display = 'none';
+        }
+        habilitarBotonReubicar();
+    });
+
     // Aplicar destino global si ya está seleccionado
     let selectGlobal = document.getElementById('destino-global');
-    if(selectGlobal && selectGlobal.value && selectGlobal.value != origenId) {
+    if(selectGlobal && selectGlobal.value) {
         selectDestino.value = selectGlobal.value;
+        selectDestino.dispatchEvent(new Event('change'));
     }
 
     divColDestino.innerHTML = '<small class="form-label d-md-none">Destino</small>';
     divColDestino.appendChild(selectDestino);
+    divColDestino.appendChild(selectUbicacion);
 
     let divColBtnDelete = createDiv(['col-md-1', 'text-start', 'text-md-center', 'd-none', 'd-md-block'], null);
     let btnDelete = createButton(['btn', 'btn-danger', 'btn-sm'], null, '<i class="bi bi-trash-fill"></i>', 'button', [() => {
@@ -389,7 +430,7 @@ function addProductoSerial(object) {
 
 function habilitarBotonReubicar() {
     const btnReubicar = document.getElementById('btn-reubicar-submit');
-    const selectsDestino = document.querySelectorAll('.item-traslado select[name^="traslado"]');
+    const selectsDestino = document.querySelectorAll('.item-traslado .select-destino-almacen');
     
     let habilitado = true;
     if(selectsDestino.length === 0) habilitado = false;
@@ -400,12 +441,6 @@ function habilitarBotonReubicar() {
     });
     if(btnReubicar) btnReubicar.disabled = !habilitado;
 }
-
-document.addEventListener('change', function (event) {
-    if (event.target.matches('.item-traslado select[name^="traslado"]')) {
-        habilitarBotonReubicar();
-    }
-});
 
 function mostrarModalConfirmacion(event) {
     event.preventDefault();

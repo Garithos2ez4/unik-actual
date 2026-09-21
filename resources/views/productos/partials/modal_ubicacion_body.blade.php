@@ -154,8 +154,12 @@
                 <td>
                     @if(strtoupper($serie->estado) === 'DEFECTUOSO')
                         <span class="badge bg-danger">Defectuoso</span>
+                    @elseif(strtoupper($serie->estado) === 'NUEVO')
+                        <span class="badge bg-success">Nuevo</span>
+                    @elseif(strtoupper($serie->estado) === 'DEVOLUCION')
+                        <span class="badge bg-warning text-dark">Devolución</span>
                     @else
-                        <span class="badge bg-success">Bueno</span>
+                        <span class="badge bg-secondary">{{ ucfirst(strtolower($serie->estado)) }}</span>
                     @endif
                 </td>
             </tr>

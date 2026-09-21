@@ -147,7 +147,7 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $query = MercadoLibreOrder::with('items')
+        $query = MercadoLibreOrder::with(['items', 'credential'])
             ->where('created_at_ml', '>=', now()->subDays(3)->startOfDay())
             ->orderByDesc('created_at_ml');
 
@@ -175,10 +175,10 @@ class MercadoLibreController extends Controller
         }
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('ml_order_id', 'LIKE', "%{$search}%")
-                  ->orWhere('buyer_name', 'LIKE', "%{$search}%")
-                  ->orWhere('buyer_nickname', 'LIKE', "%{$search}%");
+                    ->orWhere('buyer_name', 'LIKE', "%{$search}%")
+                    ->orWhere('buyer_nickname', 'LIKE', "%{$search}%");
             });
         }
 
@@ -198,6 +198,10 @@ class MercadoLibreController extends Controller
      */
     public function flexOrders(Request $request)
     {
+        if (!$request->has('shipping_status')) {
+            return redirect()->route('plataformas.ml.flex', array_merge($request->query(), ['shipping_status' => 'shipped']));
+        }
+
         $userModel = $this->headerService->getModelUser();
 
         $hasAccess = false;
@@ -213,7 +217,7 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $query = MercadoLibreOrder::with('items')
+        $query = MercadoLibreOrder::with(['items', 'credential'])
             ->where('logistic_type', 'self_service')
             ->where('created_at_ml', '>=', now()->subDays(3))
             ->orderByDesc('created_at_ml');
@@ -400,16 +404,22 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        // Obtener órdenes listas para enviar, excluyendo fulfillment y asegurando me2
-        $orders = MercadoLibreOrder::where('shipping_mode', 'me2')
+        $query = MercadoLibreOrder::where('shipping_mode', 'me2')
             ->where('logistic_type', '!=', 'fulfillment')
-            ->whereIn('shipping_status', ['ready_to_ship'])
-            ->orderBy('created_at_ml', 'desc')
-            ->paginate(50);
+            ->whereIn('shipping_status', ['ready_to_ship']);
+
+        if ($request->filled('seller_id')) {
+            $query->where('seller_id', $request->input('seller_id'));
+        }
+
+        $orders = $query->orderBy('created_at_ml', 'desc')->paginate(50)->appends($request->all());
+        $credentials = MercadoLibreCredential::all();
 
         return view('plataformas.mercadolibre.etiquetas', [
             'orders' => $orders,
-            'user' => $userModel
+            'user' => $userModel,
+            'credentials' => $credentials,
+            'filtros' => $request->only('seller_id')
         ]);
     }
 
@@ -441,20 +451,29 @@ class MercadoLibreController extends Controller
             return redirect()->back();
         }
 
-        // Obtener el seller_id del primer envío (asumiendo que todos son de la misma cuenta conectada)
-        $order = MercadoLibreOrder::whereIn('shipping_id', $shippingIds)->first();
+        // Agrupar órdenes por seller_id
+        $orders = MercadoLibreOrder::whereIn('shipping_id', $shippingIds)->get();
 
-        if (!$order) {
+        if ($orders->isEmpty()) {
             $this->headerService->sendFlashAlerts('Error', 'Órdenes no encontradas.', 'error', 'btn-danger');
             return redirect()->back();
         }
 
+        $groupedBySeller = $orders->groupBy('seller_id');
+
+        if (count($groupedBySeller) > 1) {
+            $this->headerService->sendFlashAlerts('Error', 'Has seleccionado órdenes de múltiples cuentas. Filtra por cuenta e imprime una por una.', 'error', 'btn-danger');
+            return redirect()->back();
+        }
+
+        $sellerId = $groupedBySeller->keys()->first();
+
         try {
-            $pdfContent = $this->mlApi->downloadShipmentLabel($order->seller_id, $shippingIds);
+            $pdfContent = $this->mlApi->downloadShipmentLabel($sellerId, $shippingIds);
 
             return response($pdfContent, 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="etiquetas_ml_bulk_' . date('YmdHis') . '.pdf"',
+                'Content-Disposition' => 'inline; filename="etiquetas_ml_' . $sellerId . '_' . date('YmdHis') . '.pdf"',
             ]);
         } catch (\Exception $e) {
             Log::error('Error al descargar etiquetas bulk ML: ' . $e->getMessage());

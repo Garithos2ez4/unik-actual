@@ -70,13 +70,20 @@
 
     {{-- Tabla --}}
     <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light text-muted small text-uppercase">
-                        <tr>
+        <div class="card-header bg-white border-bottom-0 p-2 d-flex justify-content-between align-items-center">
+            <button class="btn btn-sm btn-outline-secondary fw-bold shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTablaOrders" aria-expanded="true" aria-controls="collapseTablaOrders">
+                <i class="bi bi-arrows-collapse"></i> Ocultar / Mostrar Tabla
+            </button>
+        </div>
+        <div class="collapse show" id="collapseTablaOrders">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small text-uppercase">
+                            <tr>
                             <th class="ps-4">Orden</th>
                             <th>Comprador</th>
+                            <th>Cuenta</th>
                             <th>Monto</th>
                             <th>Productos</th>
                             <th>Método de Despacho</th>
@@ -93,19 +100,26 @@
                             <td>
                                 <div class="text-dark">{{ $order->buyer_name ?? $order->buyer_nickname ?? '—' }}</div>
                             </td>
+                            <td class="align-middle text-center">
+                                <span class="badge" style="background-color: #FFE600; color: #2D3277;">
+                                    <i class="bi bi-bag-fill me-1"></i>{{ $order->credential->seller_nickname ?? 'N/A' }}
+                                </span>
+                            </td>
                             <td>{{ $order->currency }} {{ number_format($order->total_amount, 2) }}</td>
                             <td>
-                                <div class="small">
+                                <div class="d-flex flex-column gap-2">
                                     @forelse($order->items->take(3) as $item)
-                                    <div class="mb-1">
-                                        <span class="d-block text-dark fw-bold" title="{{ $item->title }}">{{ $item->title }}</span>
-                                        <span class="d-block text-muted" style="font-size: 10px;">x{{ $item->quantity }}</span>
+                                    <div class="border-start border-3 border-primary ps-2">
+                                        <div class="text-dark fw-bold" style="font-size: 0.85rem; line-height: 1.2;">{{ $item->title }}</div>
+                                        <div class="text-muted mt-1" style="font-size: 0.75rem;"><i class="bi bi-box-seam me-1"></i>Cant: <strong>{{ $item->quantity }}</strong></div>
                                     </div>
                                     @empty
                                     <span class="text-muted">—</span>
                                     @endforelse
                                     @if($order->items->count() > 3)
-                                    <span class="text-primary" style="font-size: 10px;">+{{ $order->items->count() - 3 }} más</span>
+                                    <div class="text-primary fw-bold" style="font-size: 0.8rem;">
+                                        +{{ $order->items->count() - 3 }} producto(s) más
+                                    </div>
                                     @endif
                                 </div>
                             </td>
@@ -174,6 +188,7 @@
                 </table>
             </div>
         </div>
+    </div>
     </div>
 
     <div class="mt-3">

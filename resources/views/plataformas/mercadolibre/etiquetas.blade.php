@@ -12,6 +12,21 @@
                         <i class="bi bi-tags-fill me-2" style="color:#FFE600"></i>Impresión de Etiquetas ML
                     </h1>
                     <p class="text-muted small mb-0 mt-1">Selecciona hasta 50 órdenes listas para enviar y genera un solo PDF con todas las etiquetas.</p>
+                <div class="col-xl-6 col-lg-12">
+                    <form action="{{ route('plataformas.ml.etiquetas') }}" method="GET" class="d-flex align-items-center gap-2">
+                        <label class="fw-bold text-muted text-nowrap mb-0">Filtrar por Cuenta:</label>
+                        <select name="seller_id" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            <option value="">Todas las cuentas (Mezcladas)</option>
+                            @foreach($credentials as $cred)
+                                <option value="{{ $cred->seller_id }}" {{ request('seller_id') == $cred->seller_id ? 'selected' : '' }}>
+                                    {{ $cred->seller_nickname }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @if(request('seller_id'))
+                            <a href="{{ route('plataformas.ml.etiquetas') }}" class="btn btn-sm btn-outline-secondary" title="Limpiar filtro"><i class="bi bi-x"></i></a>
+                        @endif
+                    </form>
                 </div>
             </div>
         </div>
@@ -60,6 +75,7 @@
                                 </td>
                                 <td>
                                     <div class="text-dark">{{ $order->buyer_name ?? $order->buyer_nickname ?? '—' }}</div>
+                                    <span class="badge bg-secondary" style="font-size: 10px;">{{ $order->credential->seller_nickname ?? 'N/A' }}</span>
                                 </td>
                                 <td>
                                     <div class="small">
