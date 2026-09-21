@@ -65,21 +65,21 @@
                             <div class="row text-center">
 
                                 @foreach($almacenes as $almacen)
-                                    @php
-                                        $inventario = $pro->Inventario
-                                            ->where('idAlmacen', $almacen->idAlmacen)
-                                            ->first();
+                                @php
+                                $inventario = $pro->Inventario
+                                ->where('idAlmacen', $almacen->idAlmacen)
+                                ->first();
 
-                                        $stock = $inventario ? $inventario->stock : 0;
+                                $stock = $inventario ? $inventario->stock : 0;
 
 
-                                    @endphp
+                                @endphp
 
-                                    <div class="col-6 {{ $stock < $pro->stockMin ? 'text-danger' : '' }}">
-                                        <small>{{ $almacen->descripcion }}</small>
-                                        <br>
-                                        <small>{{ $stock }}</small>
-                                    </div>
+                                <div class="col-6 {{ $stock < $pro->stockMin ? 'text-danger' : '' }}">
+                                    <small>{{ $almacen->descripcion }}</small>
+                                    <br>
+                                    <small>{{ $stock }}</small>
+                                </div>
                                 @endforeach
 
                             </div>
@@ -106,25 +106,55 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="d-none d-lg-block col-md-1 text-center d-flex justify-content-center align-items-center">
+                        <div class="d-none d-lg-block col-md-1 text-center d-flex flex-column justify-content-center align-items-center">
                             <div class="form-check form-switch m-0 p-0 d-flex flex-column align-items-center">
                                 <input class="form-check-input toggle-status-btn m-0 mb-1" type="checkbox" role="switch" id="switch-status-{{$pro->idProducto}}" data-id="{{$pro->idProducto}}" {{ !in_array($pro->estadoProductoWeb, ['AGOTADO', 'DESCONTINUADO']) ? 'checked' : '' }} style="margin-left: 0 !important;">
                                 <label class="form-check-label toggle-status-label-{{$pro->idProducto}} small fw-bold" for="switch-status-{{$pro->idProducto}}" style="font-size: 0.70rem; cursor: pointer;">
                                     @if($pro->estadoProductoWeb === 'AGOTADO')
-                                        Agotado
+                                    Agotado
                                     @elseif($pro->estadoProductoWeb === 'LIQUIDACION')
-                                        Liquidación
+                                    Liquidación
                                     @elseif($pro->estadoProductoWeb === 'OFERTA')
-                                        Oferta
+                                    Oferta
                                     @elseif($pro->estadoProductoWeb === 'EXCLUSIVO')
-                                        Exclusivo
+                                    Exclusivo
                                     @elseif($pro->estadoProductoWeb === 'DESCONTINUADO')
-                                        Descontinuado
+                                    Descontinuado
                                     @else
-                                        Disponible
+                                    Disponible
                                     @endif
                                 </label>
                             </div>
+                            @php
+                            $seriesNoNuevas = \Illuminate\Support\Facades\DB::table('RegistroProducto as rp')
+                            ->join('DetalleComprobante as dc', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                            ->where('dc.idProducto', $pro->idProducto)
+                            ->where('rp.estado', '!=', 'NUEVO')
+                            ->whereNotIn('rp.estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO'])
+                            ->select('rp.numeroSerie', 'rp.estado', 'rp.observacion')
+                            ->get();
+                            @endphp
+
+                            @if($seriesNoNuevas->count() > 0)
+                            <div class="text-center mt-1">
+                                <button type="button" class="btn btn-sm btn-link text-warning p-0" onclick="verObservacionesSeries({{ $pro->idProducto }})" title="Ver series con observaciones">
+                                    <i class="bi bi-eye-fill fs-5"></i>
+                                </button>
+                                <div style="font-size: 0.65rem; margin-top: -5px;" class="text-warning fw-bold cursor-pointer" onclick="verObservacionesSeries({{ $pro->idProducto }})">Series</br>Defectuosos</div>
+                            </div>
+
+                            <div id="observaciones-series-{{ $pro->idProducto }}" class="d-none">
+                                <ul class="list-group text-start">
+                                    @foreach($seriesNoNuevas as $serieNN)
+                                    <li class="list-group-item p-2">
+                                        <strong>{{ $serieNN->numeroSerie }}</strong> <span class="badge bg-secondary ms-1">{{ $serieNN->estado }}</span><br>
+                                        <small class="text-muted">{{ $serieNN->observacion ?: 'Sin observación' }}</small>
+                                    </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                            @endif
+
                         </div>
 
                     </div>
@@ -140,7 +170,7 @@
         <x-aviso_no_encontrado :mensaje="''" />
     </div>
     @endif
-    <x-paginacion :justify="'end'" :coleccion="$productos" :container="$container"/>
+    <x-paginacion :justify="'end'" :coleccion="$productos" :container="$container" />
     <script>
         window.APP_DATA = window.APP_DATA || {};
         window.APP_DATA.tc = {{ $tc ?? '0' }};
@@ -148,4 +178,15 @@
         window.APP_DATA.csrfToken = '{{ csrf_token() }}';
     </script>
     <script src="{{ asset('js/list-products-scripts.js') }}?v=1.01"></script>
+    <script>
+        function verObservacionesSeries(idProducto) {
+            const content = document.getElementById('observaciones-series-' + idProducto).innerHTML;
+            Swal.fire({
+                title: 'Series con Observaciones',
+                html: content,
+                icon: 'info',
+                confirmButtonText: 'Cerrar'
+            });
+        }
+    </script>
 </div>

@@ -80,12 +80,15 @@ Route::middleware(['validate.session'])->group(function () {
     // Delivery Flex
     Route::get('/dashboard/logistica/delivery-flex', [\App\Http\Controllers\DeliveryFlexController::class, 'index'])->name('delivery.flex');
     Route::post('/dashboard/logistica/delivery-flex/reorder', [\App\Http\Controllers\DeliveryFlexController::class, 'reorder'])->name('delivery.flex.reorder');
+    Route::post('/dashboard/logistica/delivery-flex/manual-complete/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'completeManual'])->name('delivery.flex.completeManual');
     Route::post('/dashboard/logistica/delivery-flex/manual', [\App\Http\Controllers\DeliveryFlexController::class, 'storeManual'])->name('delivery.flex.store');
     Route::put('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'updateManual'])->name('delivery.flex.update');
     Route::delete('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'destroyManual'])->name('delivery.flex.destroy');
     Route::get('/dashboard/logistica/delivery-flex/buscar-productos', [\App\Http\Controllers\DeliveryFlexController::class, 'searchProductos'])->name('delivery.flex.searchProductos');
     Route::get('/dashboard/logistica/delivery-flex/buscar-clientes', [\App\Http\Controllers\DeliveryFlexController::class, 'searchClientes'])->name('delivery.flex.searchClientes');
     Route::get('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'getManual'])->name('delivery.flex.getManual');
+    Route::post('/dashboard/logistica/delivery-flex/update-phone/{orderId}', [\App\Http\Controllers\DeliveryFlexController::class, 'updatePhone'])->name('delivery.flex.updatePhone');
+    Route::get('/dashboard/logistica/delivery-flex/pdf/{zona}', [\App\Http\Controllers\DeliveryFlexController::class, 'downloadPdf'])->name('delivery.flex.pdf');
 
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
     Route::get('/dashboard/herramientas/scraper-mercadolibre', [AnalyticsMercadolibreController::class, 'scraperMercadolibre'])->name('dashboard.herramientas.scraper_mercadolibre');

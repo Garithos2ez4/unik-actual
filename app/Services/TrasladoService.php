@@ -28,20 +28,36 @@ class TrasladoService implements TrasladoServiceInterface
     }
 
     public function getAllAlmacenes(){
-        return $this->almacenRepository->all();
+        return \App\Models\Inventario\Almacen::with('Filas')->get();
     }
 
     public function updateRegistros(array $array){
-        foreach($array as $idRegistro => $idAlmacen){
-            if(isset($idAlmacen)){
+        foreach($array as $idRegistro => $dataInput){
+            $idAlmacen = is_array($dataInput) ? ($dataInput['idAlmacen'] ?? null) : $dataInput;
+            $idUbicacionExacta = is_array($dataInput) ? ($dataInput['idUbicacionExacta'] ?? null) : null;
+            
+            if(isset($idAlmacen) && $idAlmacen != ''){
                 $registro = $this->registroRepository->getOne('idRegistro', $idRegistro);
-                if ($registro && $registro->idAlmacen != $idAlmacen) {
-                    $data = [
-                        'idAlmacen' => $idAlmacen,
-                        'ubicacion_especifica' => null
-                    ];
-                    $this->updateStock($idRegistro, $idAlmacen);
-                    $this->registroRepository->update($idRegistro, $data);
+                if ($registro) {
+                    if ($registro->idAlmacen != $idAlmacen) {
+                        $data = [
+                            'idAlmacen' => $idAlmacen,
+                            'ubicacion_especifica' => $idUbicacionExacta
+                        ];
+                        $this->updateStock($idRegistro, $idAlmacen);
+                        $this->registroRepository->update($idRegistro, $data);
+                    } else if ($idUbicacionExacta && $registro->ubicacion_especifica != $idUbicacionExacta) {
+                        $this->registroRepository->update($idRegistro, ['ubicacion_especifica' => $idUbicacionExacta]);
+                    }
+                    
+                    if ($idUbicacionExacta) {
+                        $inventario = \App\Models\Inventario\Inventario::where('idProducto', $registro->DetalleComprobante->idProducto)
+                            ->where('idAlmacen', $idAlmacen)
+                            ->first();
+                        if ($inventario) {
+                            $inventario->update(['idUbicacionExacta' => $idUbicacionExacta]);
+                        }
+                    }
                 }
             }
         }

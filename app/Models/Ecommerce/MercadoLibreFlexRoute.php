@@ -14,6 +14,7 @@ class MercadoLibreFlexRoute extends Model
     protected $fillable = [
         'ml_order_id',
         'zona',
-        'route_order'
+        'route_order',
+        'distancia_km'
     ];
 }

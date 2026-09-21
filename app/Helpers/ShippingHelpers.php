@@ -75,3 +75,18 @@ if (!function_exists('calcular_fecha_real_legible')) {
         return $fecha->locale('es')->isoFormat('D [de] MMMM [de] YYYY');
     }
 }
+
+if (!function_exists('get_store_coordinates')) {
+    /**
+     * Obtiene las coordenadas geográficas de la tienda matriz (Av. Bolivia).
+     *
+     * @return array
+     */
+    function get_store_coordinates(): array
+    {
+        return [
+            'lat' => -12.055775793937439,
+            'lng' => -77.03773311047287
+        ];
+    }
+}

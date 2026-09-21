@@ -25,6 +25,7 @@ class SyncMercadoLibreOrdersJob implements ShouldQueue
 
     public function handle(MercadoLibreOrderSyncService $syncService): void
     {
+        set_time_limit(0);
         try {
             Cache::put('ml_sync_orders_status', 'processing', 300);
             Log::info('Iniciando sync ML' . ($this->sellerId ? " seller={$this->sellerId}" : ' (todos los sellers)'));

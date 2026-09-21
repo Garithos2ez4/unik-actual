@@ -38,8 +38,8 @@
                             <input type="text" name="apematerno" placeholder="Tello" maxlength="50" class="form-control">
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Telefono:</label>
-                            <input type="tel" name="numerotelf" placeholder="+51 999 999 999" maxlength="20" class="form-control" oninput="validateNumericInput(this)">
+                            <label class="form-label">Telefono: <span class="text-danger">*</span></label>
+                            <input type="tel" name="numerotelf" placeholder="+51 999 999 999" maxlength="20" class="form-control" oninput="validateNumericInput(this)" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Correo Electronico:</label>

@@ -46,7 +46,7 @@ class MercadoLibreOrderSyncService
 
         do {
             $response = $this->mlApi->getOrders($sellerId, [
-                'order.date_created.from' => $fromDate,
+                'order.date_last_updated.from' => $fromDate,
                 'limit'  => $limit,
                 'offset' => $offset,
             ]);
@@ -122,11 +122,11 @@ class MercadoLibreOrderSyncService
                     $costs = $this->mlApi->getShipmentCosts($sellerId, $shippingId);
                     if (isset($costs['senders']) && is_array($costs['senders']) && count($costs['senders']) > 0) {
                         $sellerShippingCost = $costs['senders'][0]['cost'] ?? null;
+                        $promotedShippingAmount = $costs['senders'][0]['save'] ?? null;
                     }
                     if (isset($costs['receiver'])) {
                         $receiverShippingCost = $costs['receiver']['cost'] ?? null;
                     }
-                    $promotedShippingAmount = $costs['promoted_amount'] ?? null;
                 } catch (\Throwable $e) {
                     Log::warning("ML: No se pudieron obtener costos de envío {$shippingId}: " . $e->getMessage());
                 }
@@ -218,7 +218,7 @@ class MercadoLibreOrderSyncService
     {
         if (empty($date)) return null;
         try {
-            return Carbon::parse($date);
+            return Carbon::parse($date)->setTimezone(config('app.timezone'));
         } catch (\Throwable $e) {
             return null;
         }

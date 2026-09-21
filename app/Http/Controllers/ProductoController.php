@@ -318,8 +318,21 @@ class ProductoController extends Controller
                     $inputGanancia = $request->input('ganancia') ?? 0;
 
                     if ($tipoprecio == 'SOL') {
-                        $precio = $inputPrecio / $this->calculadoraService->getTasaCambio();
-                        $ganancia = $inputGanancia / $this->calculadoraService->getTasaCambio();
+                        $usar_tc_fijo_submit = $request->boolean('usar_tc_fijo');
+                        $tc_fijo_submit = $request->input('tc_fijo');
+
+                        if ($usar_tc_fijo_submit) {
+                            $tcAUsar = $this->calculadoraService->getTasaCambio(); // SUNAT
+                        } else {
+                            if (!empty($tc_fijo_submit) && $tc_fijo_submit > 0) {
+                                $tcAUsar = $tc_fijo_submit; // Personalizado
+                            } else {
+                                $tcAUsar = $this->calculadoraService->getTasaFija()->tasaCambio; // Global Fijo
+                            }
+                        }
+
+                        $precio = $inputPrecio / $tcAUsar;
+                        $ganancia = $inputGanancia;
                     } else {
                         $precio = $inputPrecio;
                         $ganancia = $inputGanancia;
@@ -535,7 +548,7 @@ class ProductoController extends Controller
                             }
 
                             $precio = $request->input('precio') / $tcAUsar;
-                            $ganancia = $request->input('ganancia') / $tcAUsar;
+                            $ganancia = $request->input('ganancia');
                         } else {
                             $precio = $request->input('precio');
                             $ganancia = $request->input('ganancia');

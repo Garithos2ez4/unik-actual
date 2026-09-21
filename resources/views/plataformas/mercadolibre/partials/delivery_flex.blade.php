@@ -45,33 +45,56 @@
         @forelse($entregasAgrupadas as $zona => $listaEntregas)
         <div class="mb-4">
             <div class="d-flex align-items-center mb-2 px-2">
+                <button class="btn btn-sm btn-outline-secondary rounded-circle me-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseZona{{ \Illuminate\Support\Str::slug($zona) }}" aria-expanded="true" aria-controls="collapseZona{{ \Illuminate\Support\Str::slug($zona) }}" title="Contraer / Expandir">
+                    <i class="bi bi-arrows-collapse"></i>
+                </button>
                 <h5 class="fw-bold mb-0 text-dark">
                     {{ $iconosZona[$zona] ?? '📍' }} Zona {{ $zona }}
                 </h5>
                 <span class="badge bg-{{ $coloresZona[$zona] ?? 'dark' }} ms-2 rounded-pill">
                     {{ count($listaEntregas) }} pedido(s)
                 </span>
-                <button class="btn btn-sm btn-outline-primary ms-auto" onclick="openMapModal('{{ $zona }}')">
-                    <i class="bi bi-map"></i> Ver Mapa
-                </button>
+                <div class="ms-auto d-flex gap-2">
+                    <div class="btn-group">
+                        <a href="{{ route('delivery.flex.pdf', $zona) }}" class="btn btn-sm btn-danger" target="_blank" title="Descargar Hoja de Ruta PDF">
+                            <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+                        </a>
+                        <button type="button" class="btn btn-sm btn-danger dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Más opciones de PDF">
+                            <span class="visually-hidden">Más opciones</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('delivery.flex.pdf', 'todas') }}" target="_blank">
+                                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>Descargar Todas las Zonas
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="openMapModal('{{ $zona }}')">
+                        <i class="bi bi-map"></i> Ver Mapa
+                    </button>
+                </div>
             </div>
 
-            <div class="table-responsive rounded-3 border border-light shadow-sm">
-                @php
-                    $tieneWsp = collect($listaEntregas)->contains(function($entrega) {
-                        return ($entrega['tipo'] ?? 'ml') === 'wsp';
-                    });
-                @endphp
+            <div class="collapse show" id="collapseZona{{ \Illuminate\Support\Str::slug($zona) }}">
+                <div class="table-responsive rounded-3 border border-light shadow-sm">
+                    @php
+                        $tieneWsp = collect($listaEntregas)->contains(function($entrega) {
+                            return ($entrega['tipo'] ?? 'ml') === 'wsp';
+                        });
+                    @endphp
                 <table class="table table-custom table-hover m-0 text-center">
                     <thead>
                         <tr>
                             <th class="bg-sistema-uno ps-4" style="width: 60px;">Ruta</th>
                             <th class="bg-sistema-uno">Orden</th>
                             <th class="bg-sistema-uno">Cliente</th>
+                            <th class="bg-sistema-uno">Cuenta</th>
                             <th class="bg-sistema-uno" style="min-width: 200px;">Producto(s)</th>
                             <th class="bg-sistema-uno">Dirección Destino</th>
                             <th class="bg-sistema-uno">Distancia</th>
-                            <th class="bg-sistema-uno">Costo Delivery</br>Aproximado</th>
+                            <th class="bg-sistema-uno">Balance Envío ML</th>
+                            <th class="bg-sistema-uno" style="width: 120px;">Plazo Máx.</br>de Entrega</th>
                             @if($tieneWsp)
                             <th class="bg-sistema-uno" style="width: 80px;">Acciones</th>
                             @endif
@@ -96,6 +119,25 @@
                             </td>
                             <td>
                                 <div class="fw-semibold text-dark">{{ $entrega['buyer_name'] }}</div>
+                                @if(($entrega['tipo'] ?? 'ml') === 'ml')
+                                    <div class="mt-1 d-flex align-items-center justify-content-center">
+                                        <small class="text-muted" id="phone-text-{{ $entrega['order_id'] }}">
+                                            <i class="bi bi-telephone-fill me-1"></i>{{ $entrega['telefono'] ?? 'Sin teléfono' }}
+                                        </small>
+                                        <button class="btn btn-sm btn-link p-0 ms-2 text-primary" onclick="editPhone('{{ $entrega['order_id'] }}', '{{ $entrega['telefono'] ?? '' }}')" title="Editar Teléfono">
+                                            <i class="bi bi-pencil-square" style="font-size: 0.9rem;"></i>
+                                        </button>
+                                    </div>
+                                @endif
+                            </td>
+                            <td class="align-middle text-center">
+                                @if(($entrega['tipo'] ?? 'ml') === 'wsp')
+                                    <span class="badge bg-success"><i class="bi bi-whatsapp me-1"></i>WhatsApp</span>
+                                @else
+                                    <span class="badge" style="background-color: #FFE600; color: #2D3277;">
+                                        <i class="bi bi-bag-fill me-1"></i>{{ $entrega['cuenta'] ?? 'N/A' }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="text-start">
                                 @if(is_array($entrega['items']) || $entrega['items'] instanceof \Traversable)
@@ -122,14 +164,34 @@
                                 @endif
                             </td>
                             <td>
-                                <span class="fw-bold text-success" style="font-size: 1.1em;">
-                                    S/ {{ number_format($entrega['costo'], 2) }}
-                                </span>
+                                @if(isset($entrega['balance_envio']) && ($entrega['tipo'] ?? 'ml') === 'ml')
+                                    @if($entrega['balance_envio'] > 0)
+                                        <span class="badge bg-success shadow-sm p-2" style="font-size: 13px;">+ S/ {{ number_format($entrega['balance_envio'], 2) }}</span>
+                                    @elseif($entrega['balance_envio'] < 0)
+                                        <span class="badge bg-danger shadow-sm p-2" style="font-size: 13px;">- S/ {{ number_format(abs($entrega['balance_envio']), 2) }}</span>
+                                    @else
+                                        <span class="badge bg-secondary shadow-sm p-2" style="font-size: 13px;">S/ 0.00</span>
+                                    @endif
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td class="align-middle fw-bold">
+                                @if(($entrega['plazo_maximo'] ?? '') === 'Hoy')
+                                    <span class="text-success"><i class="bi bi-calendar-check me-1"></i>Hoy</span>
+                                @elseif(($entrega['plazo_maximo'] ?? '') === 'Mañana')
+                                    <span class="text-warning"><i class="bi bi-calendar-event me-1"></i>Mañana</span>
+                                @else
+                                    <span class="text-secondary"><i class="bi bi-calendar me-1"></i>{{ $entrega['plazo_maximo'] ?? '—' }}</span>
+                                @endif
                             </td>
                             @if($tieneWsp)
                             <td>
                                 @if(($entrega['tipo'] ?? 'ml') === 'wsp')
                                 <div class="d-flex gap-1 justify-content-center">
+                                    <button class="btn btn-sm btn-outline-success" onclick="completeManual({{ $entrega['pedido_web_id'] }})" title="Despachar">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
                                     <button class="btn btn-sm btn-outline-primary" onclick="editManual({{ $entrega['pedido_web_id'] }})" title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -147,6 +209,7 @@
                     </tbody>
                 </table>
             </div>
+            </div>
         </div>
         @empty
         <div class="text-center text-muted py-5">
@@ -163,7 +226,10 @@
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header bg-sistema-uno text-white border-0">
                 <h5 class="modal-title fw-bold" id="mapModalTitle">Mapa de Ruta</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn btn-sm btn-light text-primary ms-3 fw-bold" id="copyMapUrlBtn" style="display: none;">
+                    <i class="bi bi-link-45deg"></i> Copiar Enlace
+                </button>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
                 <div id="flexMap" style="width: 100%; height: 500px;"></div>

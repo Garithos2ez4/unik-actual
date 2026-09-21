@@ -32,31 +32,46 @@ class OpenRouteService
     public function calcularDistancia(float $destinoLat, float $destinoLon): ?float
     {
         try {
-            $response = Http::withHeaders([
-                'Authorization' => $this->apiKey,
-                'Content-Type'  => 'application/json; charset=utf-8',
-                'Accept'        => 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8'
-            ])->post($this->baseUrl, [
-                'coordinates' => [
-                    [$this->origenLon, $this->origenLat],
-                    [$destinoLon, $destinoLat]
-                ]
+            // Redondear a 5 decimales (aprox 1 metro de precisión) para agrupar coordenadas casi idénticas
+            $latKey = str_replace('.', '_', (string) round($destinoLat, 5));
+            $lonKey = str_replace('.', '_', (string) round($destinoLon, 5));
+            $cacheKey = "gmaps_distancia_{$latKey}_{$lonKey}";
+
+            // Verificar si ya tenemos almacenada la distancia en nuestros archivos locales (Caché persistente)
+            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+                return \Illuminate\Support\Facades\Cache::get($cacheKey);
+            }
+
+            $apiKey = env('GOOGLE_MAPS_API_KEY');
+            if (!$apiKey) {
+                return null;
+            }
+
+            $response = Http::get('https://maps.googleapis.com/maps/api/distancematrix/json', [
+                'origins' => "{$this->origenLat},{$this->origenLon}",
+                'destinations' => "{$destinoLat},{$destinoLon}",
+                'key' => $apiKey
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
 
-                // La distancia viene en metros en rutas[0]['summary']['distance']
-                if (isset($data['routes'][0]['summary']['distance'])) {
-                    $metros = $data['routes'][0]['summary']['distance'];
-                    $kilometros = $metros / 1000;
-                    return round($kilometros, 2);
+                if ($data['status'] === 'OK' && isset($data['rows'][0]['elements'][0]['distance']['value'])) {
+                    $metros = $data['rows'][0]['elements'][0]['distance']['value'];
+                    $kilometros = round($metros / 1000, 2);
+                    
+                    // Si todo fue exitoso, ALMACENAR el dato localmente de forma permanente (ej. 365 días)
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, $kilometros, now()->addDays(365));
+
+                    return $kilometros;
+                } else {
+                    Log::error('Google Maps API Error: ' . json_encode($data));
                 }
             } else {
-                Log::error('OpenRouteService Error: ' . $response->body());
+                Log::error('Google Maps HTTP Error: ' . $response->body());
             }
         } catch (\Throwable $th) {
-            Log::error('OpenRouteService Exception: ' . $th->getMessage());
+            Log::error('Google Maps API Exception: ' . $th->getMessage());
         }
 
         return null;

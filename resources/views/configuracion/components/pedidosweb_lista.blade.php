@@ -105,6 +105,25 @@
                     </div>
                 </div>
 
+                @if($pedido->direccion)
+                <div class="row mb-3 bg-light p-2 rounded">
+                    <div class="col-12">
+                        <p class="mb-1 text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> Dirección de Entrega:</p>
+                        <p class="fw-bold mb-0">{{ $pedido->direccion->direccion }}</p>
+                        @if($pedido->tipo_entrega)
+                        <small class="text-primary fw-bold">Tipo: {{ $pedido->tipo_entrega }}</small>
+                        @endif
+                    </div>
+                </div>
+                @elseif($pedido->tipo_entrega)
+                <div class="row mb-3 bg-light p-2 rounded">
+                    <div class="col-12">
+                        <p class="mb-1 text-muted"><i class="bi bi-truck text-primary"></i> Tipo de Entrega:</p>
+                        <p class="fw-bold mb-0 text-primary">{{ $pedido->tipo_entrega }}</p>
+                    </div>
+                </div>
+                @endif
+
                 <h6 class="fw-bold mt-4 mb-3 border-bottom pb-2">Productos</h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
@@ -132,6 +151,16 @@
                             @endforeach
                         </tbody>
                         <tfoot>
+                            @if($pedido->tipo_entrega || ($pedido->costo_envio ?? 0) > 0)
+                            <tr>
+                                <th colspan="3" class="text-end text-muted">Subtotal Productos</th>
+                                <th class="text-end text-muted">S/ {{ number_format($pedido->detalles->sum(function($d){ return $d->precio * $d->cantidad; }), 2) }}</th>
+                            </tr>
+                            <tr>
+                                <th colspan="3" class="text-end text-muted">Costo de Envío <small>({{ $pedido->tipo_entrega ?? 'Envío' }})</small></th>
+                                <th class="text-end text-muted">S/ {{ number_format($pedido->costo_envio ?? 0, 2) }}</th>
+                            </tr>
+                            @endif
                             <tr>
                                 <th colspan="3" class="text-end">TOTAL</th>
                                 <th class="text-end fs-5 text-primary">S/ {{ number_format($pedido->total, 2) }}</th>

@@ -26,14 +26,15 @@ class DeliveryFlexController extends Controller
     public function index(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
+        $savedRoutes = \App\Models\Ecommerce\MercadoLibreFlexRoute::all()->keyBy('ml_order_id');
 
         // 1. Órdenes Flex de Mercado Libre
-        $flexOrders = MercadoLibreOrder::with('items')
+        $flexOrders = MercadoLibreOrder::with(['items', 'credential'])
             ->where('logistic_type', 'self_service')
             ->whereNotIn('status', ['cancelled'])
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('shipping_status', '!=', 'delivered')
-                  ->orWhereNull('shipping_status');
+                    ->orWhereNull('shipping_status');
             })
             ->orderBy('created_at_ml', 'desc')
             ->get();
@@ -43,7 +44,7 @@ class DeliveryFlexController extends Controller
         foreach ($flexOrders as $order) {
             $payload = $order->payload;
             $receiverAddress = $payload['shipment']['receiver_address'] ?? null;
-            
+
             $distanciaKm = null;
             $costo = null;
             $destinoTxt = 'Sin dirección';
@@ -51,11 +52,23 @@ class DeliveryFlexController extends Controller
             if ($receiverAddress && isset($receiverAddress['latitude']) && isset($receiverAddress['longitude'])) {
                 $lat = $receiverAddress['latitude'];
                 $lon = $receiverAddress['longitude'];
-                
+
                 if ($lat != 0 && $lon != 0) {
-                    $distanciaKm = $this->openRouteService->calcularDistancia($lat, $lon);
+                    if (isset($savedRoutes[$order->ml_order_id]) && $savedRoutes[$order->ml_order_id]->distancia_km !== null) {
+                        $distanciaKm = $savedRoutes[$order->ml_order_id]->distancia_km;
+                    } else {
+                        $distanciaKm = $this->openRouteService->calcularDistancia($lat, $lon);
+                        if ($distanciaKm !== null) {
+                            $route = \App\Models\Ecommerce\MercadoLibreFlexRoute::firstOrNew(['ml_order_id' => $order->ml_order_id]);
+                            if (!$route->exists) {
+                                $route->zona = $this->determinarZona((float)$lat, (float)$lon);
+                            }
+                            $route->distancia_km = $distanciaKm;
+                            $route->save();
+                        }
+                    }
                 }
-                
+
                 $costo = $this->openRouteService->calcularCosto($distanciaKm);
                 $destinoTxt = $receiverAddress['address_line'] . ', ' . ($receiverAddress['city']['name'] ?? '');
             } else if ($receiverAddress) {
@@ -68,6 +81,23 @@ class DeliveryFlexController extends Controller
                 $zona = $this->determinarZona($lat, $lon);
             }
 
+            $plazoMaximo = '—';
+            if (isset($payload['shipment']['shipping_option']['estimated_delivery_limit']['date'])) {
+                $fechaLimiteStr = $payload['shipment']['shipping_option']['estimated_delivery_limit']['date'];
+                try {
+                    $fechaLimite = \Carbon\Carbon::parse($fechaLimiteStr)->timezone('America/Lima');
+                    if ($fechaLimite->isToday()) {
+                        $plazoMaximo = 'Hoy';
+                    } elseif ($fechaLimite->isTomorrow()) {
+                        $plazoMaximo = 'Mañana';
+                    } else {
+                        $plazoMaximo = $fechaLimite->format('d/m/Y');
+                    }
+                } catch (\Exception $e) {
+                    $plazoMaximo = '—';
+                }
+            }
+
             $entregas[] = [
                 'order_id' => $order->ml_order_id,
                 'buyer_name' => $order->buyer_name ?? $order->buyer_nickname,
@@ -75,13 +105,16 @@ class DeliveryFlexController extends Controller
                 'items' => $order->items,
                 'destino' => $destinoTxt,
                 'distancia_km' => $distanciaKm,
-                'costo' => $costo,
+                'plazo_maximo' => $plazoMaximo,
                 'fecha_venta' => $order->created_at_ml ? $order->created_at_ml->format('d/m/Y H:i') : 'N/A',
                 'zona' => $zona,
                 'lat' => $lat ?? null,
                 'lng' => $lon ?? null,
                 'tipo' => 'ml',
-                'pedido_web_id' => null
+                'pedido_web_id' => null,
+                'telefono' => $order->buyer_phone,
+                'cuenta' => $order->credential->seller_nickname ?? 'N/A',
+                'balance_envio' => ($order->receiver_shipping_cost ?? 0) + ($order->promoted_shipping_amount ?? 0)
             ];
         }
 
@@ -101,7 +134,20 @@ class DeliveryFlexController extends Controller
             $costo = null;
 
             if ($lat && $lon && $lat != 0 && $lon != 0) {
-                $distanciaKm = $this->openRouteService->calcularDistancia((float)$lat, (float)$lon);
+                $orderIdWsp = 'WSP-' . $pedido->idPedidoWeb;
+                if (isset($savedRoutes[$orderIdWsp]) && $savedRoutes[$orderIdWsp]->distancia_km !== null) {
+                    $distanciaKm = $savedRoutes[$orderIdWsp]->distancia_km;
+                } else {
+                    $distanciaKm = $this->openRouteService->calcularDistancia((float)$lat, (float)$lon);
+                    if ($distanciaKm !== null) {
+                        $route = \App\Models\Ecommerce\MercadoLibreFlexRoute::firstOrNew(['ml_order_id' => $orderIdWsp]);
+                        if (!$route->exists) {
+                            $route->zona = $this->determinarZona((float)$lat, (float)$lon);
+                        }
+                        $route->distancia_km = $distanciaKm;
+                        $route->save();
+                    }
+                }
             }
             $costo = $this->openRouteService->calcularCosto($distanciaKm);
 
@@ -113,6 +159,8 @@ class DeliveryFlexController extends Controller
             $clienteNombre = $pedido->cliente
                 ? trim($pedido->cliente->nombre . ' ' . ($pedido->cliente->apellidoPaterno ?? ''))
                 : 'Cliente WSP';
+
+            $clienteTelefono = $pedido->cliente ? $pedido->cliente->telefono : null;
 
             // Construir items como objetos simples para mantener compatibilidad con la vista
             $itemsWsp = [];
@@ -133,15 +181,27 @@ class DeliveryFlexController extends Controller
                 'items' => $itemsWsp,
                 'destino' => $dir->direccion ?? 'Sin dirección',
                 'distancia_km' => $distanciaKm,
-                'costo' => $costo,
+                'plazo_maximo' => 'Hoy', // WSP usualmente es hoy
                 'fecha_venta' => $pedido->created_at ? $pedido->created_at->format('d/m/Y H:i') : 'N/A',
                 'zona' => $zona,
                 'lat' => $lat,
                 'lng' => $lon,
                 'tipo' => 'wsp',
-                'pedido_web_id' => $pedido->idPedidoWeb
+                'pedido_web_id' => $pedido->idPedidoWeb,
+                'telefono' => $clienteTelefono,
+                'cuenta' => 'WhatsApp',
+                'balance_envio' => 0
             ];
         }
+
+        // 3. Ya obtuvimos las zonas guardadas al inicio, solo aplicamos
+
+        foreach ($entregas as &$entregaItem) {
+            if (isset($savedRoutes[$entregaItem['order_id']])) {
+                $entregaItem['zona'] = $savedRoutes[$entregaItem['order_id']]->zona;
+            }
+        }
+        unset($entregaItem); // Romper la referencia
 
         // Agrupar por zona
         $entregasAgrupadas = collect($entregas)->groupBy('zona')->toArray();
@@ -208,7 +268,6 @@ class DeliveryFlexController extends Controller
             'productos' => 'nullable|array',
             'productos.*.idProducto' => 'required|integer',
             'productos.*.cantidad' => 'required|integer|min:1',
-            'productos.*.precio' => 'required|numeric|min:0',
         ]);
 
         // 1. Calcular costo de envío
@@ -244,7 +303,7 @@ class DeliveryFlexController extends Controller
                     'idPedidoWeb' => $pedido->idPedidoWeb,
                     'idProducto' => $prod['idProducto'],
                     'cantidad' => $prod['cantidad'],
-                    'precio' => $prod['precio']
+                    'precio' => 0 // Always 0 since total is in Monto Total
                 ]);
             }
         }
@@ -259,13 +318,12 @@ class DeliveryFlexController extends Controller
     {
         try {
             $pedido = PedidoWeb::with(['detalles.producto', 'direccion', 'cliente'])->findOrFail($id);
-            
-            $productos = $pedido->detalles->map(function($d) {
+
+            $productos = $pedido->detalles->map(function ($d) {
                 return [
                     'idProducto' => $d->idProducto,
                     'nombre' => optional($d->producto)->nombreProducto ?? 'Producto desconocido',
                     'cantidad' => $d->cantidad,
-                    'precio' => $d->precio,
                 ];
             });
 
@@ -332,7 +390,7 @@ class DeliveryFlexController extends Controller
                     'idPedidoWeb' => $pedido->idPedidoWeb,
                     'idProducto' => $prod['idProducto'],
                     'cantidad' => $prod['cantidad'],
-                    'precio' => $prod['precio']
+                    'precio' => 0
                 ]);
             }
         }
@@ -352,13 +410,28 @@ class DeliveryFlexController extends Controller
         // Eliminar dependencias
         DetallePedidoWeb::where('idPedidoWeb', $pedido->idPedidoWeb)->delete();
         DireccionPedidoWeb::where('pedido_web_id', $pedido->idPedidoWeb)->delete();
-        
+
         // Eliminar rutas asociadas
         \App\Models\Ecommerce\MercadoLibreFlexRoute::where('ml_order_id', 'WSP-' . $pedido->idPedidoWeb)->delete();
 
         $pedido->delete();
 
         return response()->json(['success' => true, 'message' => 'Entrega eliminada correctamente.']);
+    }
+
+    /**
+     * Marca un pedido manual como completado/despachado para que ya no aparezca en Flex
+     */
+    public function completeManual($id)
+    {
+        $pedido = PedidoWeb::where('idPedidoWeb', $id)
+            ->where('pasarela', 'whatsapp')
+            ->firstOrFail();
+
+        $pedido->estado = 'despachado';
+        $pedido->save();
+
+        return response()->json(['success' => true, 'message' => 'Pedido marcado como despachado.']);
     }
 
     /**
@@ -370,7 +443,7 @@ class DeliveryFlexController extends Controller
         if (empty($entregas)) return [];
 
         $orderIds = array_column($entregas, 'order_id');
-        
+
         $savedRoutes = \App\Models\Ecommerce\MercadoLibreFlexRoute::whereIn('ml_order_id', $orderIds)
             ->where('zona', $zona)
             ->get()
@@ -391,8 +464,9 @@ class DeliveryFlexController extends Controller
         $pendientes = $entregas;
 
         // Coordenadas de origen (La tienda)
-        $currentLat = -12.0545;
-        $currentLng = -77.0388;
+        $storeCoords = get_store_coordinates();
+        $currentLat = $storeCoords['lat'];
+        $currentLng = $storeCoords['lng'];
 
         while (!empty($pendientes)) {
             $closestIndex = -1;
@@ -459,7 +533,7 @@ class DeliveryFlexController extends Controller
     private function haversineGreatCircleDistance($lat1, $lon1, $lat2, $lon2)
     {
         $earthRadius = 6371; // Radio de la tierra en km
-        
+
         $latFrom = deg2rad($lat1);
         $lonFrom = deg2rad($lon1);
         $latTo = deg2rad($lat2);
@@ -469,8 +543,8 @@ class DeliveryFlexController extends Controller
         $lonDelta = $lonTo - $lonFrom;
 
         $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
-          cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
-          
+            cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+
         return $angle * $earthRadius;
     }
 
@@ -479,8 +553,9 @@ class DeliveryFlexController extends Controller
      */
     private function determinarZona($latDestino, $lngDestino)
     {
-        $latOrigen = -12.0545; // Av Bolivia 180 (Aproximado, mismo que webunik)
-        $lngOrigen = -77.0388;
+        $storeCoords = get_store_coordinates();
+        $latOrigen = $storeCoords['lat']; // Av Bolivia 180 (Aproximado, mismo que webunik)
+        $lngOrigen = $storeCoords['lng'];
 
         $deltaLat = $latDestino - $latOrigen;
         $deltaLng = $lngDestino - $lngOrigen;
@@ -497,5 +572,218 @@ class DeliveryFlexController extends Controller
         } else {
             return 'Oeste';
         }
+    }
+    /**
+     * Descarga la hoja de ruta en PDF para una zona específica
+     */
+    public function downloadPdf($zonaBuscada)
+    {
+        // 1. Obtener todas las órdenes de la misma manera que en index()
+        $userModel = auth()->user();
+
+        $flexOrders = \App\Models\Ecommerce\MercadoLibreOrder::with('items')
+            ->where('logistic_type', 'self_service')
+            ->whereNotIn('status', ['cancelled'])
+            ->where(function ($q) {
+                $q->where('shipping_status', '!=', 'delivered')
+                    ->orWhereNull('shipping_status');
+            })
+            ->orderBy('created_at_ml', 'desc')
+            ->get();
+
+        $entregas = [];
+
+        foreach ($flexOrders as $order) {
+            $payload = $order->payload;
+            $receiverAddress = $payload['shipment']['receiver_address'] ?? null;
+
+            $distanciaKm = null;
+            $costo = null;
+            $destinoTxt = 'Sin dirección';
+
+            if ($receiverAddress && isset($receiverAddress['latitude']) && isset($receiverAddress['longitude'])) {
+                $lat = $receiverAddress['latitude'];
+                $lon = $receiverAddress['longitude'];
+
+                if ($lat != 0 && $lon != 0) {
+                    $distanciaKm = $this->openRouteService->calcularDistancia($lat, $lon);
+                }
+
+                $costo = $this->openRouteService->calcularCosto($distanciaKm);
+                $destinoTxt = $receiverAddress['address_line'] . ', ' . ($receiverAddress['city']['name'] ?? '');
+            } else if ($receiverAddress) {
+                $destinoTxt = $receiverAddress['address_line'] . ', ' . ($receiverAddress['city']['name'] ?? '');
+                $costo = $this->openRouteService->calcularCosto(null);
+            }
+
+            $zona = 'Centro / Sin Asignar';
+            if ($distanciaKm !== null && isset($lat) && isset($lon) && $lat != 0 && $lon != 0) {
+                $zona = $this->determinarZona($lat, $lon);
+            }
+
+            $entregas[] = [
+                'order_id' => $order->ml_order_id,
+                'buyer_name' => $order->buyer_name ?? $order->buyer_nickname,
+                'status' => $order->status,
+                'items' => $order->items,
+                'destino' => $destinoTxt,
+                'distancia_km' => $distanciaKm,
+                'costo' => $costo,
+                'fecha_venta' => $order->created_at_ml ? $order->created_at_ml->format('d/m/Y H:i') : 'N/A',
+                'zona' => $zona,
+                'lat' => $lat ?? null,
+                'lng' => $lon ?? null,
+                'tipo' => 'ml',
+                'pedido_web_id' => null,
+                'telefono' => $order->buyer_phone,
+                'cuenta' => $order->credential->seller_nickname ?? 'N/A',
+                'balance_envio' => ($order->receiver_shipping_cost ?? 0) + ($order->promoted_shipping_amount ?? 0)
+            ];
+        }
+
+        // 2. Obtener Pedidos Web (WSP)
+        $pedidosWeb = \App\Models\web\PedidoWeb::with(['direccion', 'detalles.producto', 'cliente'])
+            ->where('tipo_entrega', 'domicilio')
+            ->where('estado', 'pendiente')
+            ->whereHas('direccion')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        foreach ($pedidosWeb as $pedido) {
+            $dir = $pedido->direccion;
+            $lat = $dir->latitud ?? null;
+            $lon = $dir->longitud ?? null;
+            $distanciaKm = null;
+            $costo = null;
+
+            if ($lat && $lon && $lat != 0 && $lon != 0) {
+                $distanciaKm = $this->openRouteService->calcularDistancia((float)$lat, (float)$lon);
+            }
+            $costo = $this->openRouteService->calcularCosto($distanciaKm);
+
+            $zona = 'Centro / Sin Asignar';
+            if ($distanciaKm !== null && $lat != 0 && $lon != 0) {
+                $zona = $this->determinarZona((float)$lat, (float)$lon);
+            }
+
+            $clienteNombre = $pedido->cliente
+                ? trim($pedido->cliente->nombre . ' ' . ($pedido->cliente->apellidoPaterno ?? ''))
+                : 'Cliente WSP';
+
+            $clienteTelefono = $pedido->cliente ? $pedido->cliente->telefono : null;
+
+            $itemsWsp = [];
+            foreach ($pedido->detalles as $det) {
+                $itemsWsp[] = (object)[
+                    'title' => $det->producto ? $det->producto->nombreProducto : 'Producto #' . $det->idProducto,
+                    'quantity' => $det->cantidad
+                ];
+            }
+            if (empty($itemsWsp)) {
+                $itemsWsp[] = (object)['title' => 'Pedido WSP #' . $pedido->idPedidoWeb, 'quantity' => 1];
+            }
+
+            $entregas[] = [
+                'order_id' => 'WSP-' . $pedido->idPedidoWeb,
+                'buyer_name' => $clienteNombre,
+                'status' => $pedido->estado,
+                'items' => $itemsWsp,
+                'destino' => $dir->direccion ?? 'Sin dirección',
+                'distancia_km' => $distanciaKm,
+                'costo' => $costo,
+                'fecha_venta' => $pedido->created_at ? $pedido->created_at->format('d/m/Y H:i') : 'N/A',
+                'zona' => $zona,
+                'lat' => $lat,
+                'lng' => $lon,
+                'tipo' => 'wsp',
+                'pedido_web_id' => $pedido->idPedidoWeb,
+                'telefono' => $clienteTelefono,
+                'cuenta' => 'WhatsApp',
+                'balance_envio' => 0
+            ];
+        }
+
+        // 3. Aplicar las zonas sobreescritas por reorden manual
+        $savedRoutes = \App\Models\Ecommerce\MercadoLibreFlexRoute::all()->keyBy('ml_order_id');
+
+        foreach ($entregas as &$entregaItem) {
+            if (isset($savedRoutes[$entregaItem['order_id']])) {
+                $entregaItem['zona'] = $savedRoutes[$entregaItem['order_id']]->zona;
+            }
+        }
+        unset($entregaItem);
+
+        // Agrupar y buscar la zona solicitada
+        $entregasAgrupadas = collect($entregas)->groupBy('zona')->toArray();
+
+        // Lógica para TODAS las zonas
+        if ($zonaBuscada === 'todas') {
+            $zonasParaPdf = [];
+            foreach ($entregasAgrupadas as $z => $lista) {
+                // Solo incluimos zonas que tengan entregas
+                if (count($lista) > 0) {
+                    $zonasParaPdf[$z] = $this->ordenarRutaOptima($lista, $z);
+                }
+            }
+
+            if (empty($zonasParaPdf)) {
+                return redirect()->back()->with([
+                    'title' => 'Sin pedidos',
+                    'message' => 'No hay pedidos en ninguna zona',
+                    'icon' => 'warning',
+                    'button' => 'btn-primary'
+                ]);
+            }
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('plataformas.mercadolibre.pdf.hoja_ruta_pdf', [
+                'is_multiple' => true,
+                'zonas_entregas' => $zonasParaPdf
+            ]);
+
+            $pdf->setPaper('a4', 'landscape');
+
+            return $pdf->stream("hoja_de_ruta_todas_las_zonas.pdf");
+        }
+
+        // Lógica para una sola zona
+        if (!isset($entregasAgrupadas[$zonaBuscada])) {
+            return redirect()->back()->with([
+                'title' => 'Zona vacía',
+                'message' => 'No hay pedidos en la zona ' . $zonaBuscada,
+                'icon' => 'warning',
+                'button' => 'btn-primary'
+            ]);
+        }
+
+        // Ordenar la ruta óptima o según lo que guardó el usuario
+        $listaEntregas = $this->ordenarRutaOptima($entregasAgrupadas[$zonaBuscada], $zonaBuscada);
+
+        // Generar PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('plataformas.mercadolibre.pdf.hoja_ruta_pdf', [
+            'is_multiple' => false,
+            'zona' => $zonaBuscada,
+            'entregas' => $listaEntregas
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('Hoja_Ruta_Zona_' . str_replace(' ', '_', $zonaBuscada) . '.pdf');
+    }
+
+    public function updatePhone(Request $request, $orderId)
+    {
+        $request->validate([
+            'buyer_phone' => 'nullable|string|max:20'
+        ]);
+
+        $order = \App\Models\Ecommerce\MercadoLibreOrder::where('ml_order_id', $orderId)->firstOrFail();
+        $order->update([
+            'buyer_phone' => $request->buyer_phone
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'buyer_phone' => $order->buyer_phone
+        ]);
     }
 }
