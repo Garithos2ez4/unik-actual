@@ -571,8 +571,16 @@
     window.APP_DATA = {
         tc: parseFloat("{{ $tc ?? '0' }}"),
         productoIdEncriptado: "{{ encrypt($producto->idProducto) }}",
-        isLiquidacion: {{ $producto->estadoProductoWeb === 'LIQUIDACION' ? 'true' : 'false' }},
-        precioLiquidacionSoles: {{ ($producto->estadoProductoWeb === 'LIQUIDACION' && $producto->liquidacion) ? $producto->liquidacion->precio_liquidacion : 'null' }}
+        isLiquidacion: {
+            {
+                $producto - > estadoProductoWeb === 'LIQUIDACION' ? 'true' : 'false'
+            }
+        },
+        precioLiquidacionSoles: {
+            {
+                ($producto - > estadoProductoWeb === 'LIQUIDACION' && $producto - > liquidacion) ? $producto - > liquidacion - > precio_liquidacion: 'null'
+            }
+        }
     };
 </script>
 <script src="{{ asset('js/update-product-scripts.js') }}?v=1.03"></script>

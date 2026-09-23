@@ -25,7 +25,7 @@ class GarantiaController extends Controller
         $month = Carbon::createFromFormat('Y-m', $date);
         $garantias = $this->garantiaService->getGarantiasByMonth($month,50);
 
-        return view('garantias',['user' => $userModel,
+        return view('garantia.garantias',['user' => $userModel,
                                 'garantias' => $garantias]);
     }
 
@@ -34,7 +34,7 @@ class GarantiaController extends Controller
 
         $tipoDocumentos = $this->garantiaService->getAllTipoDocumentos();
 
-        return view('creategarantia',['user' => $userModel,
+        return view('garantia.creategarantia',['user' => $userModel,
                                     'tipoDocumentos' => $tipoDocumentos]);
     }
 

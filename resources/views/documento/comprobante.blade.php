@@ -341,7 +341,7 @@
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text bg-white">$ / S/</span>
                                 <input type="number" step="0.01" class="form-control text-end" id="modal-input-price-sin-igv" placeholder="0.00" 
-                                    oninput="if(this.value){ document.getElementById('modal-input-price').value = (this.value * 1.18).toFixed(2); } else { document.getElementById('modal-input-price').value = ''; }">
+                                    oninput="if(this.value){ document.getElementById('modal-input-price').value = (this.value * 1.18).toFixed(2); } else { document.getElementById('modal-input-price').value = ''; } if(typeof validateDisabledRegistro === 'function') validateDisabledRegistro();">
                             </div>
                         </div>
                         

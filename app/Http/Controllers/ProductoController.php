@@ -138,7 +138,7 @@ class ProductoController extends Controller
                     $productoCopiar = $this->productoService->getOneProductByColumn('idProducto', $request->copy_from);
                 }
 
-                return view('createproducto', [
+                return view('productos.partials.createproducto', [
                     'user' => $userModel,
                     'marcas' => $marcas,
                     'grupos' => $grupos,
@@ -291,6 +291,10 @@ class ProductoController extends Controller
                 $arrayProveedor = array();
 
                 $nombre = $request->input('name');
+                if ($nombre && str_starts_with($nombre, 'B64:')) {
+                    $nombre = base64_decode(substr($nombre, 4));
+                }
+                
                 $upc = $request->input('upc');
                 $modelo = $request->input('modelo');
                 $partnumber = $request->input('partnumber');
@@ -300,7 +304,12 @@ class ProductoController extends Controller
                 $estado = $request->input('estado');
                 $stockproveedor = $request->input('stockproveedor');
                 $proveedor = $request->input('proveedor');
+                
                 $descripcion = $request->input('desc');
+                if ($descripcion && str_starts_with($descripcion, 'B64:')) {
+                    $descripcion = base64_decode(substr($descripcion, 4));
+                }
+                
                 $codigo = $request->input('codigo');
                 $tipoprecio = $request->input('tipoprecio');
                 $stockminimo = $request->input('stockminimo');
@@ -509,6 +518,9 @@ class ProductoController extends Controller
             if ($acceso->idVista == 2) {
                 $arrayProduct = array();
                 $titulo = $request->input('titulo');
+                if ($titulo && str_starts_with($titulo, 'B64:')) {
+                    $titulo = base64_decode(substr($titulo, 4));
+                }
                 $marca = $request->input('marca');
                 $precio = 0;
                 $estado = $request->input('estado');
@@ -519,7 +531,12 @@ class ProductoController extends Controller
                 $stock = $request->input('stock');
                 $stockproveedor = $request->input('stockproveedor');
                 $proveedor = $request->input('proveedor');
+                
                 $descripcion = $request->input('descripcion');
+                if ($descripcion && str_starts_with($descripcion, 'B64:')) {
+                    $descripcion = base64_decode(substr($descripcion, 4));
+                }
+                
                 $tipoprecio = $request->input('tipoprecio');
                 $stockminimo = $request->input('stockminimo');
                 //videos
