@@ -66,6 +66,7 @@
                             <tr>
                             <th class="ps-4">Orden</th>
                             <th>Comprador</th>
+                            <th>Contacto</th>
                             <th style="min-width: 250px;">Dirección de Entrega (Flex)</th>
                             <th>Cuenta</th>
                             <th>Productos</th>
@@ -80,7 +81,19 @@
                                 <div class="fw-bold text-dark">{{ $order->ml_order_id }}</div>
                             </td>
                             <td>
-                                <div class="text-dark">{{ $order->buyer_name ?? $order->buyer_nickname ?? '—' }}</div>
+                                <div class="text-dark">{{ $order->buyer_name ?? ($order->payload['shipment']['receiver_address']['receiver_name'] ?? $order->buyer_nickname) ?? '—' }}</div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <span class="d-block text-muted">
+                                        <i class="bi bi-telephone-fill me-1"></i>{{ $order->flexRoute->buyer_phone ?? 'Sin teléfono' }}
+                                    </span>
+                                    @if($order->flexRoute && $order->flexRoute->note)
+                                        <span class="d-block mt-1 text-warning" title="{{ $order->flexRoute->note }}">
+                                            <i class="bi bi-chat-left-text-fill me-1"></i>Nota asignada
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td>
                                 @php

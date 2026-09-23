@@ -158,6 +158,11 @@ class MercadoLibreOrderSyncService
             Log::warning("ML: No se pudieron obtener reclamos para orden {$orderId}: " . $e->getMessage());
         }
 
+        // Si la orden está cancelada, forzar que el envío figure como cancelado
+        if (($orderPayload['status'] ?? '') === 'cancelled') {
+            $shippingStatus = 'cancelled';
+        }
+
         $attributes = ['ml_order_id' => $orderId];
         $values = [
             'seller_id'      => $sellerId,

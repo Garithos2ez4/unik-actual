@@ -100,7 +100,7 @@ class DeliveryFlexController extends Controller
 
             $entregas[] = [
                 'order_id' => $order->ml_order_id,
-                'buyer_name' => $order->buyer_name ?? $order->buyer_nickname,
+                'buyer_name' => $order->buyer_name ?? ($order->payload['shipment']['receiver_address']['receiver_name'] ?? $order->buyer_nickname),
                 'status' => $order->status,
                 'items' => $order->items,
                 'destino' => $destinoTxt,
@@ -112,9 +112,10 @@ class DeliveryFlexController extends Controller
                 'lng' => $lon ?? null,
                 'tipo' => 'ml',
                 'pedido_web_id' => null,
-                'telefono' => $order->buyer_phone,
+                'telefono' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->buyer_phone : null,
                 'cuenta' => $order->credential->seller_nickname ?? 'N/A',
-                'balance_envio' => ($order->receiver_shipping_cost ?? 0) + ($order->promoted_shipping_amount ?? 0)
+                'balance_envio' => ($order->receiver_shipping_cost ?? 0) + ($order->promoted_shipping_amount ?? 0),
+                'nota' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->note : null
             ];
         }
 
@@ -190,7 +191,8 @@ class DeliveryFlexController extends Controller
                 'pedido_web_id' => $pedido->idPedidoWeb,
                 'telefono' => $clienteTelefono,
                 'cuenta' => 'WhatsApp',
-                'balance_envio' => 0
+                'balance_envio' => 0,
+                'nota' => isset($savedRoutes['WSP-' . $pedido->idPedidoWeb]) ? $savedRoutes['WSP-' . $pedido->idPedidoWeb]->note : null
             ];
         }
 
@@ -591,6 +593,7 @@ class DeliveryFlexController extends Controller
             ->orderBy('created_at_ml', 'desc')
             ->get();
 
+        $savedRoutes = \App\Models\Ecommerce\MercadoLibreFlexRoute::all()->keyBy('ml_order_id');
         $entregas = [];
 
         foreach ($flexOrders as $order) {
@@ -623,7 +626,7 @@ class DeliveryFlexController extends Controller
 
             $entregas[] = [
                 'order_id' => $order->ml_order_id,
-                'buyer_name' => $order->buyer_name ?? $order->buyer_nickname,
+                'buyer_name' => $order->buyer_name ?? ($order->payload['shipment']['receiver_address']['receiver_name'] ?? $order->buyer_nickname),
                 'status' => $order->status,
                 'items' => $order->items,
                 'destino' => $destinoTxt,
@@ -635,7 +638,7 @@ class DeliveryFlexController extends Controller
                 'lng' => $lon ?? null,
                 'tipo' => 'ml',
                 'pedido_web_id' => null,
-                'telefono' => $order->buyer_phone,
+                'telefono' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->buyer_phone : null,
                 'cuenta' => $order->credential->seller_nickname ?? 'N/A',
                 'balance_envio' => ($order->receiver_shipping_cost ?? 0) + ($order->promoted_shipping_amount ?? 0)
             ];
@@ -704,8 +707,6 @@ class DeliveryFlexController extends Controller
         }
 
         // 3. Aplicar las zonas sobreescritas por reorden manual
-        $savedRoutes = \App\Models\Ecommerce\MercadoLibreFlexRoute::all()->keyBy('ml_order_id');
-
         foreach ($entregas as &$entregaItem) {
             if (isset($savedRoutes[$entregaItem['order_id']])) {
                 $entregaItem['zona'] = $savedRoutes[$entregaItem['order_id']]->zona;
@@ -770,20 +771,27 @@ class DeliveryFlexController extends Controller
         return $pdf->stream('Hoja_Ruta_Zona_' . str_replace(' ', '_', $zonaBuscada) . '.pdf');
     }
 
-    public function updatePhone(Request $request, $orderId)
+    public function updateDeliveryInfo(Request $request, $orderId)
     {
         $request->validate([
-            'buyer_phone' => 'nullable|string|max:20'
+            'buyer_phone' => 'nullable|string|max:20',
+            'note' => 'nullable|string|max:255'
         ]);
 
-        $order = \App\Models\Ecommerce\MercadoLibreOrder::where('ml_order_id', $orderId)->firstOrFail();
-        $order->update([
+        $flexRoute = \App\Models\Ecommerce\MercadoLibreFlexRoute::firstOrCreate(
+            ['ml_order_id' => $orderId],
+            ['zona' => 'Sin Asignar', 'route_order' => 0]
+        );
+        
+        $flexRoute->update([
+            'note' => $request->note,
             'buyer_phone' => $request->buyer_phone
         ]);
 
         return response()->json([
             'success' => true,
-            'buyer_phone' => $order->buyer_phone
+            'buyer_phone' => $flexRoute->buyer_phone,
+            'note' => $flexRoute->note
         ]);
     }
 }

@@ -103,7 +103,7 @@
                     <tbody class="sortable-list" data-zona="{{ $zona }}">
                         @foreach($listaEntregas as $index => $entrega)
                         <tr data-id="{{ $entrega['order_id'] }}" data-lat="{{ $entrega['lat'] }}" data-lng="{{ $entrega['lng'] }}" data-destino="{{ $entrega['destino'] }}" data-tipo="{{ $entrega['tipo'] ?? 'ml' }}" data-pedido-web-id="{{ $entrega['pedido_web_id'] ?? '' }}" class="flex-row-draggable">
-                            <td class="ps-4 align-middle" style="cursor: grab;">
+                            <td class="ps-4 align-middle drag-handle" style="cursor: grab;">
                                 <div class="d-flex flex-column align-items-center">
                                     <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm route-badge" style="width: 32px; height: 32px; font-size: 15px;">{{ $index + 1 }}</span>
                                     <small class="text-muted mt-1" style="font-size: 10px; font-weight: 600;">DESTINO</small>
@@ -124,9 +124,10 @@
                                         <small class="text-muted" id="phone-text-{{ $entrega['order_id'] }}">
                                             <i class="bi bi-telephone-fill me-1"></i>{{ $entrega['telefono'] ?? 'Sin teléfono' }}
                                         </small>
-                                        <button class="btn btn-sm btn-link p-0 ms-2 text-primary" onclick="editPhone('{{ $entrega['order_id'] }}', '{{ $entrega['telefono'] ?? '' }}')" title="Editar Teléfono">
+                                        <button class="btn btn-sm btn-link p-0 ms-2 text-primary" onclick="editPhone('{{ $entrega['order_id'] }}', '{{ $entrega['telefono'] ?? '' }}', '{{ $entrega['nota'] ?? '' }}')" title="Editar Información">
                                             <i class="bi bi-pencil-square" style="font-size: 0.9rem;"></i>
                                         </button>
+                                        <i class="bi bi-chat-left-text-fill text-warning ms-2 {{ empty($entrega['nota']) ? 'd-none' : '' }}" id="note-icon-{{ $entrega['order_id'] }}" title="{{ $entrega['nota'] ?? '' }}" style="font-size: 0.9rem;"></i>
                                     </div>
                                 @endif
                             </td>
@@ -308,6 +309,37 @@
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn text-white fw-bold" style="background: linear-gradient(135deg, #25d366, #128c7e);" onclick="saveManual()">
                     <i class="bi bi-check-circle me-1"></i> Guardar Entrega
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar teléfono y nota -->
+<div class="modal fade" id="modalEditDeliveryInfo" tabindex="-1" aria-labelledby="modalEditDeliveryInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title" id="modalEditDeliveryInfoLabel">
+                    <i class="bi bi-info-circle me-2"></i>Editar Información de Entrega
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editDeliveryOrderId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark">Teléfono del Comprador</label>
+                    <input type="text" class="form-control" id="editDeliveryPhone" placeholder="Ej: 999999999" pattern="[0-9]{9}" maxlength="9" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark">Palabra Clave (Nota)</label>
+                    <input type="text" class="form-control" id="editDeliveryNote" placeholder="Ej: Manzana, Casa Azul, etc.">
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary fw-bold" onclick="saveDeliveryInfo()">
+                    <i class="bi bi-save me-1"></i>Guardar
                 </button>
             </div>
         </div>

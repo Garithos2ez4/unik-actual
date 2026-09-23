@@ -75,7 +75,7 @@ class PlataformaController extends Controller
                     $error = $e->getMessage();
                 }
 
-                return view('falabella.falabella-productos', [
+                return view('plataformas.falabella.falabella-productos', [
                     'user' => $userModel,
                     'products' => $products,
                     'response' => $response,
@@ -122,7 +122,7 @@ class PlataformaController extends Controller
                     $encryptedId = encrypt(0);
                 }
 
-                return view('falabella.falabella-publicaciones', [
+                return view('plataformas.falabella.falabella-publicaciones', [
                     'user'     => $userModel,
                     'products' => $products,
                     'search'   => $search ?? '',
@@ -193,7 +193,7 @@ class PlataformaController extends Controller
                     ],
                 ];
 
-                return view('falabella.seller-falabella', [
+                return view('plataformas.falabella.seller-falabella', [
                     'user' => $userModel,
                     'modules' => $modules,
                 ]);
@@ -280,7 +280,7 @@ class PlataformaController extends Controller
                     );
                 }
 
-                return view('falabella.falabella-orders', [
+                return view('plataformas.falabella.falabella-orders', [
                     'user'           => $userModel,
                     'selectedDate'   => $selectedDate,
                     'selectedStatus' => $selectedStatus,
@@ -307,12 +307,12 @@ class PlataformaController extends Controller
                 $status = trim((string) $request->input('status', ''));
 
                 try {
-                    // syncDispatchQueue: incluye lookback de días pasados + refresca estados de órdenes obsoletas
-                    $result = $this->falabellaOrderSyncService->syncDispatchQueue($date);
+                    // Sincronizar solo el día exacto y no refrescar obsoletos para que sea rápido
+                    $result = $this->falabellaOrderSyncService->syncDispatchQueue($date, $status ?: null, 0, false);
 
                     $this->headerService->sendFlashAlerts(
                         'Sincronizacion completada',
-                        'Se sincronizaron ' . $result['count'] . ' ordenes (incluye ultimos ' . $result['lookback_days'] . ' dias)',
+                        'Se sincronizaron ' . $result['count'] . ' ordenes (solo del día seleccionado)',
                         'success',
                         'btn-success'
                     );
@@ -384,7 +384,7 @@ class PlataformaController extends Controller
 
                 usort($pickingItems, fn($a, $b) => $b['total_qty'] <=> $a['total_qty']);
 
-                return view('falabella.falabella-picking', [
+                return view('plataformas.falabella.falabella-picking', [
                     'user'           => $userModel,
                     'selectedDate'   => $selectedDate,
                     'selectedStatus' => $selectedStatus,
@@ -412,7 +412,7 @@ class PlataformaController extends Controller
                     $selectedStatus !== '' ? $selectedStatus : null
                 );
 
-                return view('falabella.falabella-etiquetas', [
+                return view('plataformas.falabella.falabella-etiquetas', [
                     'user'           => $userModel,
                     'selectedDate'   => $selectedDate,
                     'selectedStatus' => $selectedStatus,
@@ -532,7 +532,7 @@ class PlataformaController extends Controller
                     $selectedStatus !== '' ? $selectedStatus : null
                 );
 
-                return view('falabella.falabella-devoluciones', [
+                return view('plataformas.falabella.falabella-devoluciones', [
                     'user'           => $userModel,
                     'dateFrom'       => $dateFrom,
                     'dateTo'         => $dateTo,
@@ -595,7 +595,7 @@ class PlataformaController extends Controller
             if ($acceso->idVista == 4) {
                 $order = \App\Models\Ecommerce\FalabellaOrder::with('items')->where('order_id', $order_id)->firstOrFail();
 
-                return view('falabella.falabella-order-details', [
+                return view('plataformas.falabella.falabella-order-details', [
                     'order' => $order,
                     'user'  => $userModel,
                 ]);
@@ -727,7 +727,7 @@ class PlataformaController extends Controller
 
                 $orders = $query->orderByDesc('created_at_ripley')->get();
 
-                return view('ripley.ripley-orders', [
+                return view('plataformas.ripley.ripley-orders', [
                     'user'           => $userModel,
                     'selectedDate'   => $selectedDate,
                     'selectedStatus' => $selectedStatus,
@@ -763,7 +763,7 @@ class PlataformaController extends Controller
 
                 $orders = $query->orderByDesc('promised_shipping_time')->get();
 
-                return view('ripley.ripley-etiquetas', [
+                return view('plataformas.ripley.ripley-etiquetas', [
                     'user'           => $userModel,
                     'selectedDate'   => $selectedDate,
                     'selectedStatus' => $selectedStatus,

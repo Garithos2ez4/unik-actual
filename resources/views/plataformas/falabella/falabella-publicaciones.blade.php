@@ -3,7 +3,7 @@
 @section('title', 'Publicaciones Falabella')
 
 @section('content')
-@include('falabella.partials.productos-table', [
+@include('plataformas.falabella.partials.productos-table', [
     'pageTitle'         => 'Publicaciones Falabella Seller Center',
     'clearRoute'        => 'plataformas.falabella.publicaciones',
     'paginationRoute'   => 'plataformas.falabella.publicaciones',

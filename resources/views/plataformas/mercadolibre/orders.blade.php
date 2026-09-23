@@ -82,7 +82,7 @@
                         <thead class="bg-light text-muted small text-uppercase">
                             <tr>
                             <th class="ps-4">Orden</th>
-                            <th>Comprador</th>
+                            <th>SKU Seller</th>
                             <th>Cuenta</th>
                             <th>Monto</th>
                             <th>Productos</th>
@@ -98,7 +98,13 @@
                                 <div class="fw-bold text-dark">{{ $order->ml_order_id }}</div>
                             </td>
                             <td>
-                                <div class="text-dark">{{ $order->buyer_name ?? $order->buyer_nickname ?? '—' }}</div>
+                                <div class="d-flex flex-column gap-1">
+                                    @forelse($order->items as $item)
+                                        <div class="text-dark fw-bold" style="font-size: 0.85rem;">{{ $item->seller_sku ?: 'N/A' }}</div>
+                                    @empty
+                                        <span class="text-muted">—</span>
+                                    @endforelse
+                                </div>
                             </td>
                             <td class="align-middle text-center">
                                 <span class="badge" style="background-color: #FFE600; color: #2D3277;">

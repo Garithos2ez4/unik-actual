@@ -167,7 +167,7 @@ class FalabellaOrderSyncService
         ];
     }
 
-    public function syncDispatchQueue(string $date, ?string $status = null, int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS): array
+    public function syncDispatchQueue(string $date, ?string $status = null, int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS, bool $refreshStale = true): array
     {
 
         $lookbackDays = max(0, config('services.falabella.sync_lookback_days', $lookbackDays));
@@ -184,9 +184,10 @@ class FalabellaOrderSyncService
         }
 
         // Paso 2: Re-verificar  ordenes locales que siguen como pending/ready_to_ship
-        // pero que podrÃ­an haber cambiado a shipped/canceled en Falabella
-        $staleRefreshed = $this->refreshStaleOrders();
-        $orderIds = array_merge($orderIds, $staleRefreshed);
+        if ($refreshStale) {
+            $staleRefreshed = $this->refreshStaleOrders();
+            $orderIds = array_merge($orderIds, $staleRefreshed);
+        }
 
         return [
             'count' => count(array_unique($orderIds)),

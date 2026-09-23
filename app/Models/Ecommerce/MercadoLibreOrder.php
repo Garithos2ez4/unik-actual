@@ -14,7 +14,6 @@ class MercadoLibreOrder extends Model
         'seller_id',
         'buyer_name',
         'buyer_nickname',
-        'buyer_phone',
         'status',
         'total_amount',
         'currency',
@@ -59,5 +58,10 @@ class MercadoLibreOrder extends Model
     public function credential()
     {
         return $this->belongsTo(MercadoLibreCredential::class, 'seller_id', 'seller_id');
+    }
+
+    public function flexRoute()
+    {
+        return $this->hasOne(MercadoLibreFlexRoute::class, 'ml_order_id', 'ml_order_id');
     }
 }

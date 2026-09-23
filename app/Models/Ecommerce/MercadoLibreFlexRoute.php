@@ -15,6 +15,8 @@ class MercadoLibreFlexRoute extends Model
         'ml_order_id',
         'zona',
         'route_order',
-        'distancia_km'
+        'distancia_km',
+        'note',
+        'buyer_phone'
     ];
 }

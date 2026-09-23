@@ -81,6 +81,8 @@ function fetchMlNotifications() {
 
             if (!html) {
                 html = '<div class="text-center text-muted py-4"><i class="bi bi-check-circle fs-3 d-block mb-2 text-success"></i>No hay notificaciones pendientes</div>';
+            } else {
+                html += '<div class="p-2 border-top bg-light text-center"><a href="' + window.mlPreguntasUrl + '" class="btn btn-outline-primary btn-sm fw-bold w-100">Ver todas las preguntas a detalle</a></div>';
             }
 
             content.innerHTML = html;

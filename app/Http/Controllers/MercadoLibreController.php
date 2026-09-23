@@ -162,8 +162,9 @@ class MercadoLibreController extends Controller
 
         $shippingStatus = $request->input('shipping_status', 'pending_only');
         if ($shippingStatus === 'pending_only') {
-            // Ocultar los finalizados
-            $query->whereNotIn('shipping_status', ['delivered', 'not_delivered', 'cancelled']);
+            // Ocultar los finalizados, cancelados y enviados
+            $query->whereNotIn('shipping_status', ['delivered', 'not_delivered', 'cancelled', 'shipped'])
+                  ->where('status', '!=', 'cancelled');
         } elseif ($shippingStatus !== '') {
             $query->where('shipping_status', $shippingStatus);
         }
@@ -199,7 +200,7 @@ class MercadoLibreController extends Controller
     public function flexOrders(Request $request)
     {
         if (!$request->has('shipping_status')) {
-            return redirect()->route('plataformas.ml.flex', array_merge($request->query(), ['shipping_status' => 'shipped']));
+            return redirect()->route('plataformas.ml.flex', array_merge($request->query(), ['shipping_status' => 'ready_to_ship']));
         }
 
         $userModel = $this->headerService->getModelUser();
@@ -217,7 +218,7 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $query = MercadoLibreOrder::with(['items', 'credential'])
+        $query = MercadoLibreOrder::with(['items', 'credential', 'flexRoute'])
             ->where('logistic_type', 'self_service')
             ->where('created_at_ml', '>=', now()->subDays(3))
             ->orderByDesc('created_at_ml');
@@ -231,6 +232,31 @@ class MercadoLibreController extends Controller
         return view('plataformas.mercadolibre.flex', [
             'user'   => $userModel,
             'orders' => $orders,
+        ]);
+    }
+
+    /**
+     * Retorna la vista detallada de preguntas sin responder.
+     */
+    public function viewPreguntas()
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        $hasAccess = false;
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 4) { // 4 es Plataformas
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta seccion', 'warning', 'btn-danger');
+            return redirect()->route('dashboard');
+        }
+
+        return view('plataformas.mercadolibre.preguntas', [
+            'user' => $userModel,
         ]);
     }
 
@@ -283,6 +309,9 @@ class MercadoLibreController extends Controller
                 }
                 $q['item_title'] = $itemCache[$itemId]['title'] ?? 'Producto';
                 $q['item_thumbnail'] = $itemCache[$itemId]['thumbnail'] ?? '';
+                $q['item_price'] = $itemCache[$itemId]['price'] ?? null;
+                $q['item_permalink'] = $itemCache[$itemId]['permalink'] ?? '#';
+                $q['item_available_quantity'] = $itemCache[$itemId]['available_quantity'] ?? 0;
             }
             unset($q);
 
@@ -405,8 +434,9 @@ class MercadoLibreController extends Controller
         }
 
         $query = MercadoLibreOrder::where('shipping_mode', 'me2')
-            ->where('logistic_type', '!=', 'fulfillment')
-            ->whereIn('shipping_status', ['ready_to_ship']);
+            ->whereNotIn('logistic_type', ['fulfillment', 'self_service', 'custom'])
+            ->where('shipping_status', 'ready_to_ship')
+            ->where('status', '!=', 'cancelled');
 
         if ($request->filled('seller_id')) {
             $query->where('seller_id', $request->input('seller_id'));

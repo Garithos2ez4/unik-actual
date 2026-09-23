@@ -520,31 +520,57 @@
     // ========================
     // Editar Teléfono ML
     // ========================
-    function editPhone(orderId, currentPhone) {
-        const newPhone = prompt('Ingrese el número de teléfono para el cliente:', currentPhone || '');
-        if (newPhone !== null) {
-            fetch('{{ url("dashboard/logistica/delivery-flex/update-phone") }}/' + orderId, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ buyer_phone: newPhone })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const phoneText = data.buyer_phone || 'Sin teléfono';
-                    document.getElementById('phone-text-' + orderId).innerHTML = '<i class="bi bi-telephone-fill me-1"></i>' + phoneText;
+    function editPhone(orderId, currentPhone, currentNote) {
+        document.getElementById('editDeliveryOrderId').value = orderId;
+        document.getElementById('editDeliveryPhone').value = currentPhone || '';
+        document.getElementById('editDeliveryNote').value = currentNote || '';
+        const modal = new bootstrap.Modal(document.getElementById('modalEditDeliveryInfo'));
+        modal.show();
+    }
+
+    function saveDeliveryInfo() {
+        const orderId = document.getElementById('editDeliveryOrderId').value;
+        const newPhone = document.getElementById('editDeliveryPhone').value;
+        const newNote = document.getElementById('editDeliveryNote').value;
+
+        fetch('{{ url("dashboard/logistica/delivery-flex/update-delivery-info") }}/' + orderId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ buyer_phone: newPhone, note: newNote })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const phoneText = data.buyer_phone || 'Sin teléfono';
+                document.getElementById('phone-text-' + orderId).innerHTML = '<i class="bi bi-telephone-fill me-1"></i>' + phoneText;
+                
+                // Update note icon if exists
+                const noteIcon = document.getElementById('note-icon-' + orderId);
+                if (data.note) {
+                    if (noteIcon) {
+                        noteIcon.setAttribute('title', data.note);
+                        noteIcon.classList.remove('d-none');
+                    }
                 } else {
-                    alert('Error al guardar el teléfono');
+                    if (noteIcon) {
+                        noteIcon.classList.add('d-none');
+                    }
                 }
-            })
-            .catch(err => {
-                console.error(err);
-                alert('Ocurrió un error al intentar guardar el teléfono.');
-            });
-        }
+
+                bootstrap.Modal.getInstance(document.getElementById('modalEditDeliveryInfo')).hide();
+                // Optionally reload to update onclick arguments, but doing this dynamically is fine until refresh.
+                window.location.reload(); 
+            } else {
+                alert('Error al guardar la información');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Ocurrió un error al intentar guardar la información.');
+        });
     }
 
     // ========================
@@ -586,7 +612,7 @@
             new Sortable(tbody, {
                 group: 'zonas-flex', // Permite arrastrar entre distintas zonas
                 animation: 150,
-                handle: '.align-middle',
+                handle: '.drag-handle',
                 onEnd: function(evt) {
                     // Actualizamos la zona destino (o la misma si no cambió)
                     saveZoneOrder(evt.to);

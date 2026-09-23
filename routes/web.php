@@ -87,7 +87,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/logistica/delivery-flex/buscar-productos', [\App\Http\Controllers\DeliveryFlexController::class, 'searchProductos'])->name('delivery.flex.searchProductos');
     Route::get('/dashboard/logistica/delivery-flex/buscar-clientes', [\App\Http\Controllers\DeliveryFlexController::class, 'searchClientes'])->name('delivery.flex.searchClientes');
     Route::get('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'getManual'])->name('delivery.flex.getManual');
-    Route::post('/dashboard/logistica/delivery-flex/update-phone/{orderId}', [\App\Http\Controllers\DeliveryFlexController::class, 'updatePhone'])->name('delivery.flex.updatePhone');
+    Route::post('/dashboard/logistica/delivery-flex/update-delivery-info/{orderId}', [\App\Http\Controllers\DeliveryFlexController::class, 'updateDeliveryInfo'])->name('delivery.flex.updateDeliveryInfo');
     Route::get('/dashboard/logistica/delivery-flex/pdf/{zona}', [\App\Http\Controllers\DeliveryFlexController::class, 'downloadPdf'])->name('delivery.flex.pdf');
 
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
@@ -323,6 +323,7 @@ Route::middleware(['validate.session'])->group(function () {
     // MERCADO LIBRE
     Route::prefix('plataformas/mercadolibre')->name('plataformas.ml.')->group(function () {
         Route::get('/orders', [\App\Http\Controllers\MercadoLibreController::class, 'orders'])->name('orders');
+        Route::get('/preguntas', [\App\Http\Controllers\MercadoLibreController::class, 'viewPreguntas'])->name('preguntas');
         Route::get('/flex', [\App\Http\Controllers\MercadoLibreController::class, 'flexOrders'])->name('flex');
         Route::get('/catalogo', [\App\Http\Controllers\MercadoLibreController::class, 'publicaciones'])->name('publicaciones');
         Route::get('/etiquetas', [\App\Http\Controllers\MercadoLibreController::class, 'etiquetas'])->name('etiquetas');

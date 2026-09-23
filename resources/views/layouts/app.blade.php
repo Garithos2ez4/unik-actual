@@ -411,9 +411,10 @@
     @if ($user->Accesos->contains('idVista', 4))
     <script>
         window.mlNotificationsUrl = '{{ route("plataformas.ml.notifications") }}';
+        window.mlPreguntasUrl = '{{ route("plataformas.ml.preguntas") }}';
         window.mlAnswerUrl = '{{ route("plataformas.ml.answer") }}';
     </script>
-    <script src="{{ asset('js/ml-notifications.js') }}?v=1.00"></script>
+    <script src="{{ asset('js/ml-notifications.js') }}?v=1.01"></script>
     @endif
 </body>
 
