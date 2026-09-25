@@ -8,16 +8,29 @@
             <p class="text-muted mb-0">Gestiona tus publicaciones y opciones de envío (Flex)</p>
         </div>
 
-        <!-- Buscador -->
-        <form action="{{ route('plataformas.ml.publicaciones') }}" method="GET" class="d-flex align-items-center">
+        <!-- Buscador y Selector -->
+        <form action="{{ route('plataformas.ml.publicaciones') }}" method="GET" class="d-flex align-items-center gap-2">
+
+            @if(isset($allCredentials) && count($allCredentials) > 1)
+            <div class="shadow-sm">
+                <select name="seller_id" class="form-select" onchange="this.form.submit()" style="max-width: 200px;">
+                    @foreach($allCredentials as $cred)
+                    <option value="{{ $cred->seller_id }}" {{ (isset($currentSellerId) && $currentSellerId == $cred->seller_id) ? 'selected' : '' }}>
+                        Cuenta: {{ $cred->seller_nickname }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+
             <div class="input-group shadow-sm">
                 <input type="text" name="q" class="form-control" placeholder="Buscar por título o ID..." value="{{ request('q') }}" style="width: 250px;">
                 <button class="btn btn-primary" type="submit">
                     <i class="bi bi-search"></i>
                 </button>
             </div>
-            @if(request('q'))
-            <a href="{{ route('plataformas.ml.publicaciones') }}" class="btn btn-outline-secondary ms-2 shadow-sm" title="Limpiar búsqueda">
+            @if(request('q') || request('seller_id'))
+            <a href="{{ route('plataformas.ml.publicaciones') }}" class="btn btn-outline-secondary shadow-sm" title="Limpiar búsqueda">
                 <i class="bi bi-x-lg"></i>
             </a>
             @endif
@@ -59,16 +72,16 @@
                                 <div class="fw-bold text-success">
                                     {{ $item['currency_id'] ?? '' }} {{ number_format($item['price'] ?? 0, 2) }}
                                 </div>
-                                
+
                                 {{-- Aquí leemos si Mercado Libre le otorgó Envío Gratis --}}
                                 @if(isset($item['shipping']['free_shipping']) && $item['shipping']['free_shipping'] === true)
-                                    <span class="badge bg-success mt-1" style="font-size: 0.7rem;">
-                                        <i class="bi bi-truck"></i> Envío Gratis
-                                    </span>
+                                <span class="badge bg-success mt-1" style="font-size: 0.7rem;">
+                                    <i class="bi bi-truck"></i> Envío Gratis
+                                </span>
                                 @else
-                                    <span class="badge bg-light text-secondary border mt-1" style="font-size: 0.7rem;">
-                                        Envío a cargo del comprador
-                                    </span>
+                                <span class="badge bg-light text-secondary border mt-1" style="font-size: 0.7rem;">
+                                    Envío a cargo del comprador
+                                </span>
                                 @endif
                             </td>
                             <td>
@@ -99,27 +112,27 @@
                             </td>
                             <td class="text-end pe-4">
                                 @php
-                                    $skuNumeric = preg_replace('/[^0-9]/', '', $item['id'] ?? '');
-                                    $localProd = \App\Models\Catalogo\Producto::whereHas('Publicacion', function($q) use ($skuNumeric) {
-                                        $q->where('sku', $skuNumeric)->where('idCuentaPlataforma', 3);
-                                    })->first();
+                                $skuNumeric = preg_replace('/[^0-9]/', '', $item['id'] ?? '');
+                                $localProd = \App\Models\Catalogo\Producto::whereHas('Publicacion', function($q) use ($skuNumeric) {
+                                $q->where('sku', $skuNumeric)->where('idCuentaPlataforma', 3);
+                                })->first();
 
-                                    $createParams = [
-                                        'titulo' => $item['title'] ?? '',
-                                        'sku'    => $skuNumeric,
-                                        'precio' => $item['price'] ?? 0,
-                                        'fecha'  => isset($item['date_created']) ? \Carbon\Carbon::parse($item['date_created'])->format('Y-m-d') : date('Y-m-d'),
-                                        'cuenta' => 3
-                                    ];
-                                    
-                                    if ($localProd) {
-                                        $createParams['producto']   = $localProd->modeloProducto;
-                                        $createParams['idproducto'] = $localProd->idProducto;
-                                    }
+                                $createParams = [
+                                'titulo' => $item['title'] ?? '',
+                                'sku' => $skuNumeric,
+                                'precio' => $item['price'] ?? 0,
+                                'fecha' => isset($item['date_created']) ? \Carbon\Carbon::parse($item['date_created'])->format('Y-m-d') : date('Y-m-d'),
+                                'cuenta' => 3
+                                ];
+
+                                if ($localProd) {
+                                $createParams['producto'] = $localProd->modeloProducto;
+                                $createParams['idproducto'] = $localProd->idProducto;
+                                }
                                 @endphp
                                 <a href="{{ route('createpublicacion', [$encryptedId]) . '?' . http_build_query($createParams) }}"
-                                   class="btn btn-sm btn-outline-success rounded-pill shadow-sm"
-                                   title="Pre-rellenar Publicación">
+                                    class="btn btn-sm btn-outline-success rounded-pill shadow-sm"
+                                    title="Pre-rellenar Publicación">
                                     <i class="bi bi-megaphone-fill"></i> Crear Publicación
                                 </a>
                             </td>

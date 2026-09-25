@@ -30,32 +30,45 @@
             <div class="col-2 col-lg-6 text-end pt-2">
                 @php
                 $hasFalabella = $producto->hasMapper('falabella');
+                $hasMercadoLibre = $producto->hasMapper('Mercado');
+                $hasCompleto = $producto->hasTemplateCompleto('falabella');
                 @endphp
-                @if($hasFalabella)
-                @php $hasCompleto = $producto->hasTemplateCompleto('falabella'); @endphp
+                
+                @if($hasFalabella || $hasMercadoLibre)
                 <div class="btn-group me-2">
-                    <a href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;"
-                        class="btn btn-success" title="Descargar plantilla Falabella Express">
+                    <button type="button" class="btn btn-success dropdown-toggle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false" title="Descargar plantillas Excel">
                         <i class="bi bi-file-earmark-excel-fill"></i>
-                        <span class="d-none d-lg-inline"> Falabella</span>
-                    </a>
-                    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Toggle</span>
+                        <span class="d-none d-lg-inline"> Plantillas</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        @if($hasCompleto) {{-- Template Completo --}}
-                        <li>
-                            <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
-                                <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo
-                            </a>
-                        </li>
+                        @if($hasFalabella)
+                            <li><h6 class="dropdown-header text-success fw-bold"><i class="bi bi-bag"></i> Falabella</h6></li>
+                            @if($hasCompleto)
+                            <li>
+                                <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
+                                    <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo
+                                </a>
+                            </li>
+                            @endif
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;">
+                                    <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express
+                                </a>
+                            </li>
                         @endif
-                        <li>
-                            <a class="dropdown-item" href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;">
-                                <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express
-                            </a>
-                        </li>
+
+                        @if($hasFalabella && $hasMercadoLibre)
+                            <li><hr class="dropdown-divider"></li>
+                        @endif
+
+                        @if($hasMercadoLibre)
+                            <li><h6 class="dropdown-header text-primary fw-bold"><i class="bi bi-shop"></i> Mercado Libre</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('producto.mercadolibre.template', $producto->idProducto) }}">
+                                    <i class="bi bi-file-earmark-excel-fill text-primary me-1"></i> Template MercadoLibre
+                                </a>
+                            </li>
+                        @endif
                     </ul>
                 </div>
                 @endif
@@ -568,19 +581,14 @@
 </div>
 
 <script>
+    // Usamos strings para las variables de Blade así el formateador (Prettier) no las destruye al guardar el archivo.
     window.APP_DATA = {
         tc: parseFloat("{{ $tc ?? '0' }}"),
         productoIdEncriptado: "{{ encrypt($producto->idProducto) }}",
-        isLiquidacion: {
-            {
-                $producto - > estadoProductoWeb === 'LIQUIDACION' ? 'true' : 'false'
-            }
-        },
-        precioLiquidacionSoles: {
-            {
-                ($producto - > estadoProductoWeb === 'LIQUIDACION' && $producto - > liquidacion) ? $producto - > liquidacion - > precio_liquidacion: 'null'
-            }
-        }
+        isLiquidacion: ("{{ $producto->estadoProductoWeb }}" === "LIQUIDACION"),
+        precioLiquidacionSoles: ("{{ $producto->estadoProductoWeb }}" === "LIQUIDACION" && "{{ optional($producto->liquidacion)->precio_liquidacion ?? 'null' }}" !== "null") 
+                                ? parseFloat("{{ optional($producto->liquidacion)->precio_liquidacion }}") 
+                                : null
     };
 </script>
 <script src="{{ asset('js/update-product-scripts.js') }}?v=1.03"></script>

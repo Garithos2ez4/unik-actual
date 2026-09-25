@@ -34,20 +34,31 @@
     function loadPreguntasDetalle() {
         const container = document.getElementById('preguntas-container');
         container.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted fw-bold">Cargando preguntas de Mercado Libre...</div></div>';
-        
+
         fetch('{{ route("plataformas.ml.notifications") }}')
             .then(r => r.json())
             .then(data => {
                 let html = '';
                 if (data.questions && data.questions.length > 0) {
                     data.questions.forEach(q => {
-                        const date = new Date(q.date_created).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                        
+                        const date = new Date(q.date_created).toLocaleDateString('es-PE', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
                         // Extra info
                         const priceHtml = q.item_price ? `<strong>S/ ${q.item_price}</strong>` : 'S/ N/A';
                         const stockHtml = `Stock: <strong>${q.item_available_quantity}</strong>`;
                         const linkHtml = `<a href="${q.item_permalink}" target="_blank" class="btn btn-sm btn-outline-secondary px-2 py-0"><i class="bi bi-box-arrow-up-right me-1"></i>Ver en ML</a>`;
-                        
+
+                        let isInactive = (q.item_status && q.item_status !== "active");
+                        let disabledAttr = isInactive ? "disabled" : "";
+                        let placeholderText = isInactive ? "Artículo pausado/inactivo. No se puede responder." : "Escribe aquí tu respuesta detallada...";
+                        let alertHtml = isInactive ? `<div class="alert alert-warning py-1 px-2 mb-2" style="font-size:0.8rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Artículo inactivo en ML. No se permite enviar respuestas.</div>` : "";
+
                         html += `
                         <div class="col-12 mb-3" id="q-detail-${q.id}">
                             <div class="card shadow-sm border-0 border-start border-4 border-warning">
@@ -78,12 +89,13 @@
                                                 <div class="p-3 bg-light rounded-3 mb-3 border text-dark fs-5 shadow-sm" style="font-style: italic;">
                                                     "${q.text}"
                                                 </div>
+                                                ${alertHtml}
                                             </div>
                                             
                                             <div class="input-group">
                                                 <span class="input-group-text bg-primary text-white border-primary"><i class="bi bi-chat-left-text-fill"></i></span>
-                                                <textarea class="form-control border-primary shadow-sm" id="ans-detail-${q.id}" rows="2" placeholder="Escribe aquí tu respuesta detallada..."></textarea>
-                                                <button class="btn btn-primary fw-bold px-4 shadow-sm" type="button" onclick="sendAnswerDetalle(${q.id})">
+                                                <textarea class="form-control border-primary shadow-sm" id="ans-detail-${q.id}" rows="2" placeholder="${placeholderText}" ${disabledAttr}></textarea>
+                                                <button class="btn btn-primary fw-bold px-4 shadow-sm" type="button" onclick="sendAnswerDetalle(${q.id}, ${q.seller_id})" ${disabledAttr}>
                                                     Enviar <i class="bi bi-send-fill ms-1"></i>
                                                 </button>
                                             </div>
@@ -109,7 +121,7 @@
             });
     }
 
-    function sendAnswerDetalle(questionId) {
+    function sendAnswerDetalle(questionId, sellerId) {
         const input = document.getElementById('ans-detail-' + questionId);
         const text = input.value.trim();
         if (!text) {
@@ -124,30 +136,36 @@
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
 
         fetch('{{ route("plataformas.ml.answer") }}', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ question_id: questionId, text: text })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                const qDiv = document.getElementById('q-detail-' + questionId);
-                qDiv.innerHTML = '<div class="card border-0 bg-success text-white text-center py-4 rounded-3 shadow-sm"><i class="bi bi-check-circle-fill fs-2 mb-2"></i><div class="fw-bold fs-5">Respuesta enviada correctamente</div></div>';
-                setTimeout(() => { qDiv.remove(); }, 2000);
-            } else {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    question_id: questionId,
+                    text: text,
+                    seller_id: sellerId
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const qDiv = document.getElementById('q-detail-' + questionId);
+                    qDiv.innerHTML = '<div class="card border-0 bg-success text-white text-center py-4 rounded-3 shadow-sm"><i class="bi bi-check-circle-fill fs-2 mb-2"></i><div class="fw-bold fs-5">Respuesta enviada correctamente</div></div>';
+                    setTimeout(() => {
+                        qDiv.remove();
+                    }, 2000);
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                    alert('Error: ' + (data.error || 'No se pudo responder'));
+                }
+            })
+            .catch(() => {
                 btn.disabled = false;
                 btn.innerHTML = originalBtnHtml;
-                alert('Error: ' + (data.error || 'No se pudo responder'));
-            }
-        })
-        .catch(() => {
-            btn.disabled = false;
-            btn.innerHTML = originalBtnHtml;
-            alert('Error de conexión al enviar la respuesta.');
-        });
+                alert('Error de conexiÃ³n al enviar la respuesta.');
+            });
     }
 
     document.addEventListener('DOMContentLoaded', function() {

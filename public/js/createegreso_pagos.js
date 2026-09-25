@@ -19,6 +19,20 @@ function checkSku() {
         applySkuToUnassignedItems('NULO', 'No aplica', '', true);
         if (divCliente) divCliente.style.display = 'block';
         if (seccionPagos) seccionPagos.style.display = 'flex';
+
+        if (window.location.pathname.includes('/egresos/nuevosegresos')) {
+            let today = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
+            let fechaPedido = document.getElementById('fechapedido');
+            let fechaDespacho = document.getElementById('fechadespacho');
+            if (fechaPedido) {
+                fechaPedido.value = today;
+                fechaPedido.dispatchEvent(new Event('input'));
+            }
+            if (fechaDespacho) {
+                fechaDespacho.value = today;
+                fechaDespacho.dispatchEvent(new Event('input'));
+            }
+        }
     } else {
         inputEgreso.disabled = false;
         inputEgreso.value = '';

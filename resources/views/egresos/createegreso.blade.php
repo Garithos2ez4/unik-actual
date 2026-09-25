@@ -330,6 +330,6 @@
 </script>
 <script src="{{asset('js/createegreso.js')}}?v=1.18"></script>
 <script src="{{asset('js/createegreso_sku.js')}}?v=1.00"></script>
-<script src="{{asset('js/createegreso_pagos.js')}}?v=1.00"></script>
+<script src="{{asset('js/createegreso_pagos.js')}}?v=1.01"></script>
 @include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

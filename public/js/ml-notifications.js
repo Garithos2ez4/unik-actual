@@ -52,7 +52,7 @@ function fetchMlNotifications() {
                                 <div class="mt-2">
                                     <div class="input-group input-group-sm">
                                         <input type="text" class="form-control" id="ml-answer-${q.id}" placeholder="Escribe tu respuesta...">
-                                        <button class="btn btn-sm btn-primary" onclick="answerMlQuestion(${q.id})">
+                                        <button class="btn btn-sm btn-primary" onclick="answerMlQuestion(${q.id}, ${q.seller_id})">
                                             <i class="bi bi-send-fill"></i>
                                         </button>
                                     </div>
@@ -92,7 +92,7 @@ function fetchMlNotifications() {
         });
 }
 
-function answerMlQuestion(questionId) {
+function answerMlQuestion(questionId, sellerId) {
     const input = document.getElementById('ml-answer-' + questionId);
     const text = input.value.trim();
     if (!text) return;
@@ -107,7 +107,7 @@ function answerMlQuestion(questionId) {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ question_id: questionId, text: text })
+        body: JSON.stringify({ question_id: questionId, text: text, seller_id: sellerId })
     })
         .then(r => r.json())
         .then(data => {

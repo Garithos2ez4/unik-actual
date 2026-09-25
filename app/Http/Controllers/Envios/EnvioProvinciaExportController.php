@@ -290,10 +290,22 @@ class EnvioProvinciaExportController extends Controller
             $sheet->setCellValue('F' . $row, 'JR. RAYMONDI'); // ORIGEN
             $sheet->setCellValue('G' . $row, $destino); // DESTINO
             $sheet->setCellValue('H' . $row, $mercaderia); // MERCADERIA
-            $sheet->setCellValue('I' . $row, floatval(optional($envio->Dimension)->alto_final ?? optional($envio->Detalle)->alto ?? 0.1));
-            $sheet->setCellValue('J' . $row, floatval(optional($envio->Dimension)->ancho_final ?? optional($envio->Detalle)->ancho ?? 0.1));
-            $sheet->setCellValue('K' . $row, floatval(optional($envio->Dimension)->largo_final ?? optional($envio->Detalle)->largo ?? 0.1));
-            $sheet->setCellValue('L' . $row, floatval(optional($envio->Dimension)->peso_final ?? optional($envio->Detalle)->peso ?? 7));
+            $alto  = optional($envio->Dimension)->alto_final ?? optional($envio->Detalle)->alto;
+            $ancho = optional($envio->Dimension)->ancho_final ?? optional($envio->Detalle)->ancho;
+            $largo = optional($envio->Dimension)->largo_final ?? optional($envio->Detalle)->largo;
+            $peso  = optional($envio->Dimension)->peso_final ?? optional($envio->Detalle)->peso;
+
+            if ($alto !== null && $ancho !== null && $largo !== null && $peso !== null) {
+                $sheet->setCellValue('I' . $row, floatval($alto));
+                $sheet->setCellValue('J' . $row, floatval($ancho));
+                $sheet->setCellValue('K' . $row, floatval($largo));
+                $sheet->setCellValue('L' . $row, floatval($peso));
+            } else {
+                $sheet->setCellValue('I' . $row, '=IF(H'.$row.'="SOBRE",0.2,IF(H'.$row.'="PAQUETE XXS",0.15,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.25,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.4,0.1))))))');
+                $sheet->setCellValue('J' . $row, '=IF(H'.$row.'="SOBRE",0.15,IF(H'.$row.'="PAQUETE XXS",0.2,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.25,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.4,0.1))))))');
+                $sheet->setCellValue('K' . $row, '=IF(H'.$row.'="SOBRE",0.2,IF(H'.$row.'="PAQUETE XXS",0.2,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.25,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.4,0.1))))))');
+                $sheet->setCellValue('L' . $row, '=IF(H'.$row.'="SOBRE",0.5,IF(H'.$row.'="PAQUETE XXS",2,IF(H'.$row.'="PAQUETE XS",3,IF(H'.$row.'="PAQUETE S",5,IF(H'.$row.'="PAQUETE M",10,IF(H'.$row.'="PAQUETE L",15,7))))))');
+            }
             $sheet->setCellValue('M' . $row, intval($cantidad));
 
             $row++;

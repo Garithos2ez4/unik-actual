@@ -414,7 +414,7 @@
         window.mlPreguntasUrl = '{{ route("plataformas.ml.preguntas") }}';
         window.mlAnswerUrl = '{{ route("plataformas.ml.answer") }}';
     </script>
-    <script src="{{ asset('js/ml-notifications.js') }}?v=1.01"></script>
+    <script src="{{ asset('js/ml-notifications.js') }}?v=1.02"></script>
     @endif
 </body>
 

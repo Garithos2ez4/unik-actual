@@ -57,7 +57,7 @@ class ConfigProductosController extends Controller
             'idPlataforma' => 'required|integer',
             'idCategoria' => 'nullable|integer',
             'idGrupoProducto' => 'nullable|integer',
-            'tipo_template' => 'required|string|in:express,completo',
+            'tipo_template' => 'required|string|in:express,completo,mercadolibre',
             'mapper_class' => 'nullable|string'
         ]);
 

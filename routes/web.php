@@ -10,6 +10,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProductoPackController;
 use App\Http\Controllers\ProductoFalabellaController;
+use App\Http\Controllers\ProductoMercadoLibreController;
 use App\Http\Controllers\ProductoPrecioController;
 use App\Http\Controllers\ProductoHerramientaController;
 use App\Http\Controllers\LiquidacionController;
@@ -196,6 +197,9 @@ Route::middleware(['validate.session'])->group(function () {
     // Sugerencias de títulos (AJAX) y descarga con títulos personalizados (POST)
     Route::get('/producto/{idProducto}/falabella-titulos-sugeridos', [ProductoFalabellaController::class, 'sugerirTitulosFalabella'])->name('producto.falabella.titulos');
     Route::post('/producto/{idProducto}/falabella-template-express', [ProductoFalabellaController::class, 'descargarTemplateFalabellaExpressPost'])->name('producto.falabella.template.express.post');
+
+    // Template MercadoLibre pre-llenado
+    Route::get('/producto/{idProducto}/mercadolibre-template', [ProductoMercadoLibreController::class, 'descargarTemplateMercadoLibre'])->name('producto.mercadolibre.template');
 
 
     Route::get('/traslado', [TrasladoController::class, 'index'])->name('traslados');
@@ -468,35 +472,37 @@ Route::middleware(['validate.session'])->group(function () {
         '/licencias/importar-excel',
         [LicenciaController::class, 'importarExcel']
     )->name('licencias.importar.excel');
+    // Ruta para verificar clave duplicada
+    Route::post('/verificar-serial-recuperada', function (Request $request) {
+        $serial = $request->input('serial_recuperada');
+
+        // Buscar en la tabla correcta
+        $existe = DB::table('licencias_recuperadas')
+            ->where('serial_recuperada', $serial)
+            ->exists();
+
+        return response()->json([
+            'existe' => $existe
+        ]);
+    });
+
+    // Ruta para verificar clave duplicada
+    Route::post('/verificar-clave-duplicada', function (Request $request) {
+        $claveKey = $request->input('clave_key');
+
+        // Verificar si la clave ya existe en la tabla licencias_usadas
+        $existe = DB::table('licencias_usadas')
+            ->where('clave_key', $claveKey)
+            ->exists();
+
+        return response()->json([
+            'existe' => $existe,
+            'clave' => $claveKey
+        ]);
+    })->name('verificar.clave.duplicada');
+
 });
-// Ruta para verificar clave duplicada
 
-Route::post('/verificar-serial-recuperada', function (Request $request) {
-    $serial = $request->input('serial_recuperada');
-
-    // Buscar en la tabla correcta
-    $existe = DB::table('licencias_recuperadas')
-        ->where('serial_recuperada', $serial)
-        ->exists();
-
-    return response()->json([
-        'existe' => $existe
-    ]);
-});
-// Ruta para verificar clave duplicada
-Route::post('/verificar-clave-duplicada', function (Request $request) {
-    $claveKey = $request->input('clave_key');
-
-    // Verificar si la clave ya existe en la tabla licencias_usadas
-    $existe = DB::table('licencias_usadas')
-        ->where('clave_key', $claveKey)
-        ->exists();
-
-    return response()->json([
-        'existe' => $existe,
-        'clave' => $claveKey
-    ]);
-})->name('verificar.clave.duplicada');
 Route::middleware(['validate.session'])->prefix('licencias')->name('licencias.')->group(function () {
 
     // Mostrar listado

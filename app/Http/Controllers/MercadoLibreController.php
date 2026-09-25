@@ -312,6 +312,8 @@ class MercadoLibreController extends Controller
                 $q['item_price'] = $itemCache[$itemId]['price'] ?? null;
                 $q['item_permalink'] = $itemCache[$itemId]['permalink'] ?? '#';
                 $q['item_available_quantity'] = $itemCache[$itemId]['available_quantity'] ?? 0;
+                $q['item_status'] = $itemCache[$itemId]['status'] ?? 'unknown';
+                $q['seller_id'] = $credential->seller_id;
             }
             unset($q);
 
@@ -340,12 +342,13 @@ class MercadoLibreController extends Controller
         $request->validate([
             'question_id' => 'required|integer',
             'text'        => 'required|string|max:2000',
+            'seller_id'   => 'required|integer'
         ]);
 
-        $credential = MercadoLibreCredential::first();
+        $credential = MercadoLibreCredential::where('seller_id', $request->input('seller_id'))->first();
 
         if (!$credential) {
-            return response()->json(['error' => 'No hay cuenta de ML conectada'], 400);
+            return response()->json(['error' => 'No hay cuenta de ML conectada para este vendedor'], 400);
         }
 
         try {
@@ -653,8 +656,16 @@ class MercadoLibreController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $credential = \App\Models\Ecommerce\MercadoLibreCredential::first();
-        $sellerId   = $credential ? $credential->seller_id : null;
+        $allCredentials = \App\Models\Ecommerce\MercadoLibreCredential::all();
+        
+        $sellerId = $request->input('seller_id');
+        
+        if ($sellerId) {
+            $credential = $allCredentials->where('seller_id', $sellerId)->first();
+        } else {
+            $credential = $allCredentials->first();
+            $sellerId = $credential ? $credential->seller_id : null;
+        }
 
         if (!$sellerId) {
             $this->headerService->sendFlashAlerts('Sin cuenta', 'No hay cuenta de Mercado Libre conectada.', 'warning', 'btn-warning');
@@ -696,7 +707,9 @@ class MercadoLibreController extends Controller
 
         return view('plataformas.mercadolibre.publicaciones', [
             'publicaciones' => $publicaciones,
-            'user' => $userModel
+            'user' => $userModel,
+            'allCredentials' => $allCredentials,
+            'currentSellerId' => $sellerId
         ]);
     }
 }

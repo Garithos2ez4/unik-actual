@@ -45,6 +45,8 @@
                                         <td>
                                             @if($mapper->tipo_template == 'express')
                                             <span class="badge bg-warning text-dark"><i class="bi bi-lightning-fill"></i> Express</span>
+                                            @elseif($mapper->tipo_template == 'mercadolibre')
+                                            <span class="badge bg-primary text-white"><i class="bi bi-shop"></i> MercadoLibre</span>
                                             @else
                                             <span class="badge bg-success"><i class="bi bi-file-earmark-excel-fill"></i> Completo</span>
                                             @endif
@@ -125,8 +127,9 @@
                     <div class="mb-3">
                         <label class="form-label">Tipo de Plantilla (Template)</label>
                         <select name="tipo_template" class="form-select" required>
-                            <option value="express">Express</option>
-                            <option value="completo">Completo</option>
+                            <option value="express">Express (Falabella)</option>
+                            <option value="completo">Completo (Falabella)</option>
+                            <option value="mercadolibre">MercadoLibre</option>
                         </select>
                     </div>
 
