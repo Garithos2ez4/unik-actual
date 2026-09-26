@@ -179,12 +179,10 @@
         const selectAgencia = document.getElementById('select-agencia');
         const selectDoc = document.getElementById('idTipoDocumento');
 
-        // Shalom = idAgencia 1, RUC = idTipoDocumento 3
-        const esShalom = selectAgencia && selectAgencia.value === '1';
         const esRuc = selectDoc && selectDoc.value === '3';
 
-        // 1. Mostrar/Ocultar sección receptor (Shalom + RUC)
-        if (esShalom && esRuc) {
+        // 1. Mostrar/Ocultar sección receptor (RUC - para todas las agencias)
+        if (esRuc) {
             seccion.style.display = 'block';
         } else {
             seccion.style.display = 'none';
@@ -481,7 +479,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Datos del receptor incompletos',
-                    html: 'Shalom requiere los datos de quien recibirá el paquete:<br><b>' + faltantesReceptor.join(', ') + '</b>',
+                    html: 'Se requieren los datos de quien recibirá el paquete:<br><b>' + faltantesReceptor.join(', ') + '</b>',
                     confirmButtonColor: '#00b1b9'
                 });
                 return;

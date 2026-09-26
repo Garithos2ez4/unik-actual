@@ -160,6 +160,15 @@ class MercadoLibreController extends Controller
             }
         }
 
+        if ($request->filled('carrier_name')) {
+            $carrier = $request->input('carrier_name');
+            if ($carrier === 'urbano_all') {
+                $query->whereIn('carrier_name', ['301273', '658142']);
+            } else {
+                $query->where('carrier_name', $carrier);
+            }
+        }
+
         $shippingStatus = $request->input('shipping_status', 'pending_only');
         if ($shippingStatus === 'pending_only') {
             // Ocultar los finalizados, cancelados y enviados
@@ -190,7 +199,7 @@ class MercadoLibreController extends Controller
             'user'        => $userModel,
             'orders'      => $orders,
             'credentials' => $credentials,
-            'filtros'     => $request->only('logistic_type', 'status', 'from', 'to'),
+            'filtros'     => $request->only('logistic_type', 'status', 'from', 'to', 'carrier_name'),
         ]);
     }
 

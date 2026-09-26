@@ -183,6 +183,7 @@ class ProductoPrecioController extends Controller
 
             $historial = \Illuminate\Support\Facades\DB::select("
                 SELECT
+                    c.idComprobante,
                     c.fechaRegistro,
                     c.numeroComprobante,
                     c.moneda,

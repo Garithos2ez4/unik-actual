@@ -34,6 +34,19 @@
                                 </select>
                             </div>
 
+                            {{-- Filtro Transportista --}}
+                            <div class="input-group shadow-sm flex-nowrap" style="max-width: 200px;">
+                                <span class="input-group-text bg-white fw-bold text-muted border-end-0">
+                                    <i class="bi bi-truck"></i>
+                                </span>
+                                <select name="carrier_name" class="form-select border-start-0 bg-white ps-0">
+                                    <option value="" {{ request('carrier_name') === '' ? 'selected' : '' }}>Agencias (Todas)</option>
+                                    <option value="urbano_all" {{ request('carrier_name') === 'urbano_all' ? 'selected' : '' }}>Urbano (Regular y Express)</option>
+                                    <option value="302093" {{ request('carrier_name') === '302093' ? 'selected' : '' }}>Olva Courier</option>
+                                    <option value="1390020" {{ request('carrier_name') === '1390020' ? 'selected' : '' }}>Scharff</option>
+                                </select>
+                            </div>
+
                             {{-- Buscador --}}
                             <div class="input-group shadow-sm flex-nowrap" style="max-width: 250px;">
                                 <span class="input-group-text bg-white text-muted border-end-0">
@@ -159,7 +172,7 @@
                                     '302093' => 'Olva Courier',
                                     '1390020' => 'Scharff',
                                     '952082' => 'Flex (Mensajería)',
-                                    '658142' => 'Agencia / Punto',
+                                    '658142' => 'Urbano Express',
                                 ];
                                 $displayCarrier = $carrierNames[$order->carrier_name] ?? $order->carrier_name;
                                 @endphp

@@ -51,7 +51,9 @@
                     {{ \Carbon\Carbon::parse($row->fechaRegistro)->format('d/m/Y') }}
                 </td>
                 <td>
-                    <span class="badge bg-secondary">{{ $row->numeroComprobante }}</span>
+                    <a href="{{ route('documento', [encrypt($row->idComprobante), 0]) }}" target="_blank" class="text-decoration-none" title="Ver Comprobante">
+                        <span class="badge bg-secondary hover-shadow">{{ $row->numeroComprobante }}</span>
+                    </a>
                 </td>
                 <td>{{ $row->nombreProveedor ?? '-' }}</td>
                 <td>

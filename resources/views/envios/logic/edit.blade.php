@@ -541,13 +541,10 @@
         const seccionReceptor = document.getElementById('seccion-receptor-interno');
         if (!seccionReceptor) return;
 
-        const selectAgencia = document.querySelector('select[name="idAgencia"]');
-        const esShalom = selectAgencia && selectAgencia.value === '1';
-        
         // Asumiendo que 3 es el ID de RUC
         const esRuc = tipoDocumentoClienteSeleccionado == 3;
 
-        if (esShalom && esRuc) {
+        if (esRuc) {
             seccionReceptor.classList.remove('d-none');
             document.getElementById('receptor_nombre').setAttribute('required', 'required');
             document.getElementById('receptor_dni').setAttribute('required', 'required');
