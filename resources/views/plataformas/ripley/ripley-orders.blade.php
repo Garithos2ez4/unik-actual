@@ -89,7 +89,7 @@
                                 </span>
                             </td>
                             <td>
-                                <div class="fw-bold">{{ $order->items_count }} uds</div>
+                                <div class="fw-bold">{{ $order->items->sum('quantity') }} uds</div>
                                 <div class="small text-muted">
                                     @foreach($order->items->take(2) as $item)
                                         <div>{{ Str::limit($item->name, 35) }}</div>

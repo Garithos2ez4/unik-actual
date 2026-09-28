@@ -62,7 +62,7 @@
         </div>
         <div class="col-md-4">
             <div class="card border-0 shadow-sm text-center py-3">
-                <div class="fs-2 fw-bold text-primary">{{ $orders->sum('items_count') }}</div>
+                <div class="fs-2 fw-bold text-primary">{{ $orders->map(fn($o) => $o->items->sum('quantity'))->sum() }}</div>
                 <div class="text-muted small">Unidades totales</div>
             </div>
         </div>
@@ -132,7 +132,7 @@
                                 </span>
                             </td>
                             <td>
-                                <div class="fw-bold">{{ $order->items_count }} uds</div>
+                                <div class="fw-bold">{{ $order->items->sum('quantity') }} uds</div>
                                 <div class="small text-muted">
                                     @foreach($order->items->take(2) as $item)
                                         <div>{{ Str::limit($item->name, 30) }}</div>

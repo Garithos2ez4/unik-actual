@@ -24,12 +24,12 @@
                     
                     recalcularPreviewUtilidad();
                     
-                    let showModal = () => {
-                        let modal = new bootstrap.Modal(document.getElementById('modalEditarUtilidad'));
-                        modal.show();
-                    };
-                    
-                    showModal();
+                    let modalEl = document.getElementById('modalEditarUtilidad');
+                    let modal = bootstrap.Modal.getInstance(modalEl);
+                    if (!modal) {
+                        modal = new bootstrap.Modal(modalEl);
+                    }
+                    modal.show();
                 } else {
                     Swal.fire('Error', data.message, 'error');
                 }

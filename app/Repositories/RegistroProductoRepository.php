@@ -151,7 +151,6 @@ class RegistroProductoRepository implements RegistroProductoRepositoryInterface
         $response = RegistroProducto::join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante', 'inner', false)
             ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
             ->where('RegistroProducto.estado', '<>', 'INVALIDO', 'and')
-            ->where('Comprobante.idProveedor', '=', $idProveedor, 'and')
             ->where('RegistroProducto.numeroSerie', '=', $serie)->first();
         return $response;
     }

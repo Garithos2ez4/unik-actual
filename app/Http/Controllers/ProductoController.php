@@ -341,7 +341,7 @@ class ProductoController extends Controller
                         }
 
                         $precio = $inputPrecio / $tcAUsar;
-                        $ganancia = $inputGanancia;
+                        $ganancia = $inputGanancia / $tcAUsar;
                     } else {
                         $precio = $inputPrecio;
                         $ganancia = $inputGanancia;
@@ -565,7 +565,7 @@ class ProductoController extends Controller
                             }
 
                             $precio = $request->input('precio') / $tcAUsar;
-                            $ganancia = $request->input('ganancia');
+                            $ganancia = $request->input('ganancia') / $tcAUsar;
                         } else {
                             $precio = $request->input('precio');
                             $ganancia = $request->input('ganancia');

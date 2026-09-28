@@ -37,13 +37,13 @@ class EgresoPendienteController extends Controller
         $mlPendientes = MercadoLibreOrder::whereNotExists(function ($query) {
             $query->select(DB::raw(1))
                 ->from('EgresoProducto')
-                ->whereRaw('EgresoProducto.numeroOrden = ml_orders.ml_order_id');
+                ->whereRaw('(EgresoProducto.numeroOrden = ml_orders.ml_order_id OR (JSON_UNQUOTE(JSON_EXTRACT(ml_orders.payload, "$.pack_id")) IS NOT NULL AND EgresoProducto.numeroOrden = JSON_UNQUOTE(JSON_EXTRACT(ml_orders.payload, "$.pack_id"))))');
         })
             ->with('items')
             ->where(function ($q) {
                 $q->whereNull('return_status')->orWhere('return_status', '');
             })
-            ->whereIn('status', ['delivered', 'shipped'])
+            ->whereIn('shipping_status', ['delivered', 'shipped'])
             ->orderBy('created_at_ml', 'desc')
             ->get();
 

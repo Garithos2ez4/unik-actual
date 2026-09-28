@@ -5,11 +5,14 @@ $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 $api = app(App\Services\MercadoLibreApiService::class);
-$cred = App\Models\Ecommerce\MercadoLibreCredential::where('seller_nickname', 'UNIK TECHNOLOGY')->first();
-if ($cred) {
+$creds = App\Models\Ecommerce\MercadoLibreCredential::all();
+foreach ($creds as $cred) {
     try {
-        echo json_encode($api->getOrder($cred->seller_id, '2000018560542590'), JSON_PRETTY_PRINT);
+        $result = $api->getOrder($cred->seller_id, '2000018644371552');
+        echo "Exito con cuenta: " . $cred->seller_nickname . "\n";
+        echo json_encode($result, JSON_PRETTY_PRINT);
+        break;
     } catch (\Exception $e) {
-        echo "Error: " . $e->getMessage();
+        // Ignorar si no es dueño
     }
 }

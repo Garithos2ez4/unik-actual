@@ -28,50 +28,7 @@
                 </h3>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
-                @php
-                $hasFalabella = $producto->hasMapper('falabella');
-                $hasMercadoLibre = $producto->hasMapper('Mercado');
-                $hasCompleto = $producto->hasTemplateCompleto('falabella');
-                @endphp
-                
-                @if($hasFalabella || $hasMercadoLibre)
-                <div class="btn-group me-2">
-                    <button type="button" class="btn btn-success dropdown-toggle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false" title="Descargar plantillas Excel">
-                        <i class="bi bi-file-earmark-excel-fill"></i>
-                        <span class="d-none d-lg-inline"> Plantillas</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        @if($hasFalabella)
-                            <li><h6 class="dropdown-header text-success fw-bold"><i class="bi bi-bag"></i> Falabella</h6></li>
-                            @if($hasCompleto)
-                            <li>
-                                <a class="dropdown-item" href="{{ route('producto.falabella.template', $producto->idProducto) }}">
-                                    <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Template Completo
-                                </a>
-                            </li>
-                            @endif
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="abrirModalTitulosFbk({{ $producto->idProducto }}, '{{ addslashes($producto->nombreProducto) }}'); return false;">
-                                    <i class="bi bi-lightning-fill text-warning me-1"></i> Template Express
-                                </a>
-                            </li>
-                        @endif
-
-                        @if($hasFalabella && $hasMercadoLibre)
-                            <li><hr class="dropdown-divider"></li>
-                        @endif
-
-                        @if($hasMercadoLibre)
-                            <li><h6 class="dropdown-header text-primary fw-bold"><i class="bi bi-shop"></i> Mercado Libre</h6></li>
-                            <li>
-                                <a class="dropdown-item" href="{{ route('producto.mercadolibre.template', $producto->idProducto) }}">
-                                    <i class="bi bi-file-earmark-excel-fill text-primary me-1"></i> Template MercadoLibre
-                                </a>
-                            </li>
-                        @endif
-                    </ul>
-                </div>
-                @endif
+                @include('productos.components.btn_templates')
                 <h5 class="d-inline"><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
             </div>
         </div>
@@ -316,127 +273,7 @@
             </div>
         </div>
 
-        <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
-            <div class="mb-2 col-6">
-                <h3>Inventario disponible</h3>
-            </div>
-            <div class="mb-2 col-6 text-end">
-                <button type="button" class="btn btn-info btn-sm text-white fw-bold shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#modalUbicacion-{{$producto->idProducto}}">
-                    <i class="bi bi-geo-alt-fill"></i> Ver Ubicación Exacta
-                </button>
-                <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
-                @php
-                $ingresoEdit = "";
-                @endphp
-                @foreach ($user->Accesos as $access)
-                @if($access->idVista == 10)
-                @php
-                $ingresoEdit = "input-edit";
-                @endphp
-                @endif
-                @endforeach
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">Stock Minimo:</label>
-                <input name="stockminimo" value="{{$producto->stockMin}}" type="number" class="form-control input-edit" disabled>
-            </div>
-            @foreach($almacenes as $almacen)
-            @php
-            $inventario = $producto->Inventario
-            ->where('idAlmacen', $almacen->idAlmacen)
-            ->first();
-            @endphp
-            <div class="col-6 col-md-3 col-lg-2">
-                <label class="form-label">
-                    Stock {{ $almacen->descripcion }}:
-                </label>
-
-                <input
-                    name="stock[{{ $almacen->idAlmacen }}]"
-                    value="{{ $inventario ? $inventario->stock : 0 }}"
-                    type="number"
-                    class="form-control {{ $ingresoEdit }}"
-                    disabled>
-            </div>
-            <div class="col-12 col-md-4 col-lg-4">
-                <label class="form-label" title="Ubicación exacta en {{ $almacen->descripcion }}">
-                    Ubicación {{ $almacen->descripcion }}:
-                </label>
-                @php
-                $ubicacionesExactas = \App\Models\Inventario\UbicacionEstante::where('idAlmacen', $almacen->idAlmacen)
-                ->where('estado', 1)
-                ->orderBy('nombre_rack')
-                ->orderBy('fila_estante')
-                ->get()
-                ->groupBy('nombre_rack');
-
-                $currentRackName = ($inventario && $inventario->UbicacionExacta && $inventario->UbicacionExacta->idAlmacen == $almacen->idAlmacen) ? $inventario->UbicacionExacta->nombre_rack : '';
-                @endphp
-                <div class="d-flex gap-2">
-                    <select class="form-select input-edit rack-selector" style="min-width:0;flex:1" data-target="fila-select-{{$almacen->idAlmacen}}" disabled onchange="updateFilas(this)">
-                        <option value="">— Estante —</option>
-                        @foreach($ubicacionesExactas as $rackName => $filas)
-                        <option value="{{ $rackName }}" {{ $currentRackName == $rackName ? 'selected' : '' }}>
-                            {{ $rackName }}
-                        </option>
-                        @endforeach
-                    </select>
-
-                    <select name="idUbicacionExacta[{{ $almacen->idAlmacen }}]" id="fila-select-{{$almacen->idAlmacen}}" class="form-select input-edit fila-selector" style="min-width:0;flex:1" disabled>
-                        <option value="">— Fila —</option>
-                        @foreach($ubicacionesExactas as $rackName => $filas)
-                        @foreach($filas as $ue)
-                        <option value="{{ $ue->idUbicacionExacta }}" data-rack="{{ $rackName }}"
-                            {{ ($inventario && $inventario->idUbicacionExacta == $ue->idUbicacionExacta) ? 'selected' : '' }}
-                            class="{{ $currentRackName != $rackName ? 'd-none' : '' }}">
-                            Fila {{ $ue->fila_estante }}
-                        </option>
-                        @endforeach
-                        @endforeach
-                    </select>
-                </div>
-
-                @php
-                $racksEspecificos = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
-                $q->where('idProducto', $producto->idProducto);
-                })
-                ->where('idAlmacen', $almacen->idAlmacen)
-                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
-                ->whereNotNull('ubicacion_especifica')
-                ->whereHas('UbicacionExacta', function($q) use ($almacen) {
-                $q->where('idAlmacen', $almacen->idAlmacen);
-                })
-                ->with('UbicacionExacta')
-                ->get()
-                ->pluck('UbicacionExacta.nombre_completo')
-                ->unique()
-                ->filter()
-                ->toArray();
-                @endphp
-                @if(count($racksEspecificos) > 0)
-                <small class="text-muted d-block mt-1" style="font-size: 0.75rem; line-height: 1.2;">
-                    <i class="bi bi-geo-alt-fill text-danger"></i> Series en: <strong>{{ implode(', ', $racksEspecificos) }}</strong>
-                </small>
-                @endif
-            </div>
-            @endforeach
-            <div class="col-6 col-md-4 col-lg-2">
-                <label class="form-label">Stock Proveedor:</label>
-                <input name="stockproveedor" value="{{ $producto->Inventario_Proveedor ? $producto->Inventario_Proveedor->stock : 0 }}" type="number" class="form-control input-edit" disabled>
-            </div>
-            <div class="col-6 col-md-4 col-lg-3">
-                <label for="grupo-product" id="proveedor-label" class="form-label">Proveedor:</label>
-                <select name="proveedor" id="proveedor-product" class="form-select input-edit" disabled>
-                    <option value="">Seleccione Proveedor</option>
-                    @foreach($proveedor as $pro)
-                    <option value="{{ $pro['idProveedor'] }}"
-                        {{ ($producto->Inventario_Proveedor && $producto->Inventario_Proveedor->idProveedor == $pro['idProveedor']) ? 'selected' : '' }}>
-                        {{ $pro['nombreProveedor'] }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
+        @include('productos.components.inventario_disponible')
         {{-- Prueba de VIDEOS --}}
         <div class="editButton row border shadow rounded-3 pt-3 pb-3 mb-3 mt-3">
             <div class="col-6 mb-2">
@@ -541,44 +378,7 @@
     <br>
 </div>
 
-<!-- Modal Herramientas de Servicio -->
-<div class="modal fade" id="modalServicios" tabindex="-1" aria-labelledby="modalServiciosLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title" id="modalServiciosLabel"><i class="bi bi-tools"></i> Administrar Herramientas de Servicio</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted">
-                    Aquí puedes marcar series específicas de este producto para que sean tratadas como herramientas de taller/servicio.
-                    Las series marcadas aquí no descontarán inventario cuando se cobren servicios con ellas.
-                </p>
-
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>N° Serie</th>
-                                <th>Almacén</th>
-                                <th>Estado Actual</th>
-                                <th class="text-center">Herramienta de Servicio</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-series-servicios">
-                            <tr>
-                                <td colspan="4" class="text-center">Cargando series...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
+@include('productos.components.modal_herramientas_servicio')
 
 <script>
     // Usamos strings para las variables de Blade así el formateador (Prettier) no las destruye al guardar el archivo.
@@ -586,44 +386,18 @@
         tc: parseFloat("{{ $tc ?? '0' }}"),
         productoIdEncriptado: "{{ encrypt($producto->idProducto) }}",
         isLiquidacion: ("{{ $producto->estadoProductoWeb }}" === "LIQUIDACION"),
-        precioLiquidacionSoles: ("{{ $producto->estadoProductoWeb }}" === "LIQUIDACION" && "{{ optional($producto->liquidacion)->precio_liquidacion ?? 'null' }}" !== "null") 
-                                ? parseFloat("{{ optional($producto->liquidacion)->precio_liquidacion }}") 
-                                : null
+        precioLiquidacionSoles: ("{{ $producto->estadoProductoWeb }}" === "LIQUIDACION" && "{{ optional($producto->liquidacion)->precio_liquidacion ?? 'null' }}" !== "null") ?
+            parseFloat("{{ optional($producto->liquidacion)->precio_liquidacion }}") : null
     };
 </script>
-<script src="{{ asset('js/update-product-scripts.js') }}?v=1.03"></script>
+<script src="{{ asset('js/update-product-scripts.js') }}?v=1.04"></script>
 @include('productos.logic.producto_scripts')
 
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.01"></script>
 
 @include('productos.modals.ubicacion')
 
-<script>
-    function updateFilas(rackSelect) {
-        let targetId = rackSelect.getAttribute('data-target');
-        let filaSelect = document.getElementById(targetId);
-        let selectedRack = rackSelect.value;
-
-        let hasValidOption = false;
-        Array.from(filaSelect.options).forEach(function(opt) {
-            if (opt.value === "") return;
-            if (opt.getAttribute('data-rack') === selectedRack) {
-                opt.classList.remove('d-none');
-                if (!hasValidOption) {
-                    opt.selected = true; // Selecciona la primera fila válida
-                    hasValidOption = true;
-                }
-            } else {
-                opt.classList.add('d-none');
-                opt.selected = false;
-            }
-        });
-
-        if (!selectedRack) {
-            filaSelect.value = "";
-        }
-    }
-</script>
+@include('productos.logic.updatefilas')
 
 @include('productos.partials.modal_historial_precio_tienda')
 

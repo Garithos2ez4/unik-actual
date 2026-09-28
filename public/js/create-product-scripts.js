@@ -16,11 +16,15 @@ function calcPrices() {
     let type = document.getElementById('select-tipoprecio').value;
     let idGrupo = document.getElementById('grupo-product').value;
     let state = document.getElementById('estado-product').value;
-    let ganancia = document.getElementById('precio-product-ganancia').value;
+    let gananciaRaw = document.getElementById('precio-product-ganancia').value;
+    let gananciaUsd = gananciaRaw;
+    if (type === 'SOL' && window.APP_DATA && window.APP_DATA.tc) {
+        gananciaUsd = (gananciaRaw / window.APP_DATA.tc).toFixed(2);
+    }
 
     if (price > -1) {
         let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/producto/calculate?price=${encodeURIComponent(price)}&type=${encodeURIComponent(type)}&idGrupo=${encodeURIComponent(idGrupo)}&state=${encodeURIComponent(state)}&ganancia=${encodeURIComponent(ganancia)}`, true);
+        xhr.open('GET', `/producto/calculate?price=${encodeURIComponent(price)}&type=${encodeURIComponent(type)}&idGrupo=${encodeURIComponent(idGrupo)}&state=${encodeURIComponent(state)}&ganancia=${encodeURIComponent(gananciaUsd)}`, true);
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
@@ -28,7 +32,7 @@ function calcPrices() {
                     let data = JSON.parse(xhr.responseText);
                     let precioCalculado = document.getElementById('precio-product-calculado');
                     let divTotal = document.getElementById('div-total-price');
-                    let gananciaVal = parseFloat(ganancia) || 0;
+                    let gananciaVal = parseFloat(gananciaUsd) || 0;
                     
                     let calculadoUsd = data[0].calculado;
                     if (type === 'SOL') {
@@ -108,7 +112,7 @@ function calcIgv() {
 
 function changeTC() {
     let selectPrice = document.getElementById('select-tipoprecio').value;
-    let priceProduct = document.querySelectorAll('.price-product:not(#precio-product-ganancia):not(#precio-product-calculado):not(#precio-total-fijo)');
+    let priceProduct = document.querySelectorAll('.price-product:not(#precio-product-calculado):not(#precio-total-fijo)');
 
     priceProduct.forEach(function (x) {
         if (selectPrice == 'SOL') {

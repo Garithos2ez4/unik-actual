@@ -423,5 +423,5 @@
         }))
     };
 </script>
-<script src="{{ asset('js/create-product-scripts.js') }}?v=1.03"></script>
+<script src="{{ asset('js/create-product-scripts.js') }}?v=1.04"></script>
 @endsection
