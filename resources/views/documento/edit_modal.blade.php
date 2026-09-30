@@ -1,50 +1,151 @@
-        <!-- Modal Editar Comprobante -->
-        @if(!$validate)
-        <form action="{{ route('editcomprobante') }}" method="POST">
-            @csrf
-            <input type="hidden" name="idComprobante" value="{{ $documento->idComprobante }}">
-            <div class="modal fade" id="editComprobanteModal" tabindex="-1" aria-labelledby="editComprobanteModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header bg-warning">
-                            <h5 class="modal-title" id="editComprobanteModalLabel"><i class="bi bi-pencil-square"></i> Editar Comprobante</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal Editar Comprobante -->
+<form action="{{ route('editcomprobante') }}" method="POST" id="form-edit-comprobante">
+    @csrf
+    <input type="hidden" name="idComprobante" value="{{ $documento->idComprobante }}">
+    <div class="modal fade" id="editComprobanteModal" tabindex="-1" aria-labelledby="editComprobanteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content shadow border-0">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold text-dark" id="editComprobanteModalLabel">
+                        <i class="bi bi-pencil-square me-2"></i> Editar Comprobante
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    
+                    <!-- Sección 1: Todos los Campos de Cabecera del Comprobante -->
+                    <div class="card border-0 bg-light mb-4 shadow-sm">
+                        <div class="card-header bg-white border-bottom-0 py-3">
+                            <h6 class="fw-bold mb-0 text-primary">
+                                <i class="bi bi-file-earmark-text me-1"></i> 1. Campos de la Cabecera del Comprobante
+                            </h6>
                         </div>
-                        <div class="modal-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Moneda del Comprobante:</label>
-                                    <select class="form-select" name="moneda" required>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <!-- Proveedor -->
+                                <div class="col-md-6 col-lg-5">
+                                    <label class="form-label fw-bold">Proveedor (idProveedor):</label>
+                                    <select class="form-select" name="idProveedor" id="edit-comprobante-proveedor" required>
+                                        @foreach($proveedores ?? [] as $prov)
+                                            <option value="{{ $prov->idProveedor }}" {{ $documento->idProveedor == $prov->idProveedor ? 'selected' : '' }}>
+                                                {{ $prov->razSocialProveedor ?: $prov->nombreProveedor }} (RUC: {{ $prov->rucProveedor }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Tipo de Comprobante -->
+                                <div class="col-md-6 col-lg-4">
+                                    <label class="form-label fw-bold">Tipo Comprobante (idTipoComprobante):</label>
+                                    <select class="form-select" name="idTipoComprobante" required>
+                                        @foreach($tiposComprobante ?? [] as $tipo)
+                                            <option value="{{ $tipo->idTipoComprobante }}" {{ $documento->idTipoComprobante == $tipo->idTipoComprobante ? 'selected' : '' }}>
+                                                {{ $tipo->descripcion }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- N° de Comprobante -->
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label fw-bold">N° Comprobante (numeroComprobante):</label>
+                                    <input type="text" name="numeroComprobante" class="form-control fw-bold" value="{{ $documento->numeroComprobante }}" required placeholder="Ej: F001-00012345">
+                                </div>
+
+                                <!-- Fecha de Emisión / Registro -->
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label fw-bold">Fecha de Registro (fechaRegistro):</label>
+                                    <input type="date" name="fechaRegistro" class="form-control" value="{{ $documento->fechaRegistro ? $documento->fechaRegistro->format('Y-m-d') : '' }}" required>
+                                </div>
+
+                                <!-- Moneda -->
+                                <div class="col-md-4 col-lg-2">
+                                    <label class="form-label fw-bold">Moneda (moneda):</label>
+                                    <select class="form-select" name="moneda" id="edit-comprobante-moneda" required onchange="cambiarSimboloMoneda(this.value)">
                                         <option value="SOL" {{ $documento->moneda == 'SOL' ? 'selected' : '' }}>Soles (SOL)</option>
                                         <option value="DOLAR" {{ $documento->moneda == 'DOLAR' ? 'selected' : '' }}>Dólares (DOLAR)</option>
                                     </select>
                                 </div>
-                            </div>
-                            <hr>
-                            <div class="row align-items-center mb-2">
-                                <div class="col-8">
-                                    <h6 class="fw-bold mb-0">Detalle de Productos (Precio Unitario - SIN IGV)</h6>
-                                    <p class="text-secondary small mb-0">Actualiza el precio unitario. El precio total se calculará automáticamente.</p>
+
+                                <!-- Adquisición -->
+                                <div class="col-md-4 col-lg-2">
+                                    <label class="form-label fw-bold">Adquisición (adquisicion):</label>
+                                    <select class="form-select" name="adquisicion">
+                                        <option value="NORMAL" {{ ($documento->adquisicion ?? 'NORMAL') == 'NORMAL' ? 'selected' : '' }}>Normal</option>
+                                        <option value="OFERTA" {{ ($documento->adquisicion ?? '') == 'OFERTA' ? 'selected' : '' }}>Oferta</option>
+                                    </select>
                                 </div>
-                                <div class="col-4 text-end">
-                                    <button type="button" class="btn btn-sm btn-info text-white fw-bold shadow-sm" id="btnToggleProrrateo" onclick="document.getElementById('panel-prorrateo').classList.toggle('d-none')">
-                                        <i class="bi bi-magic"></i> Prorratear
-                                    </button>
-                                    <div class="form-check form-switch d-inline-block ms-2">
-                                        <input class="form-check-input" type="checkbox" id="addIgvCheckbox">
-                                        <label class="form-check-label text-primary fw-bold" for="addIgvCheckbox">+ 18% IGV</label>
+
+                                <!-- Estado -->
+                                <div class="col-md-4 col-lg-2">
+                                    <label class="form-label fw-bold">Estado (estado):</label>
+                                    <select class="form-select" name="estado">
+                                        @foreach($estadosComprobante ?? ['REGISTRADO', 'PENDIENTE', 'INVALIDO', 'ELIMINADO'] as $est)
+                                            <option value="{{ $est }}" {{ $documento->estado == $est ? 'selected' : '' }}>
+                                                {{ $est }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Usuario Responsable -->
+                                <div class="col-md-6 col-lg-3">
+                                    <label class="form-label fw-bold">Usuario (idUser):</label>
+                                    <select class="form-select" name="idUser">
+                                        @foreach($usuarios ?? [] as $usr)
+                                            <option value="{{ $usr->idUser }}" {{ $documento->idUser == $usr->idUser ? 'selected' : '' }}>
+                                                {{ $usr->user }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Total Compra -->
+                                <div class="col-md-6 col-lg-4">
+                                    <label class="form-label fw-bold text-success">Total Compra (totalCompra):</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-success text-white fw-bold span-simbolo-moneda">{{ $documento->moneda == 'DOLAR' ? '$' : 'S/' }}</span>
+                                        <input type="number" step="0.01" min="0" name="totalCompra" id="edit-comprobante-total" class="form-control fw-bold text-success fs-5" value="{{ number_format($documento->totalCompra, 2, '.', '') }}">
                                     </div>
+                                    <small class="text-muted">Se actualiza según los productos o puedes digitarlo directamente.</small>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    @if($documento->DetalleComprobante && $documento->DetalleComprobante->count() > 0)
+                    <!-- Sección 2: Detalle de Productos y Precios -->
+                    <div class="card border-0 bg-light shadow-sm">
+                        <div class="card-header bg-white border-bottom-0 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-primary">
+                                    <i class="bi bi-boxes me-1"></i> 2. Detalle de Productos (Precio Unitario - Sin IGV)
+                                </h6>
+                                <p class="text-secondary small mb-0">Al cambiar los precios unitarios, el total se recalculará automáticamente.</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-info text-white fw-bold shadow-sm" id="btnToggleProrrateo" onclick="document.getElementById('panel-prorrateo').classList.toggle('d-none')">
+                                    <i class="bi bi-magic"></i> Prorratear
+                                </button>
+                                <div class="form-check form-switch ms-2 m-0">
+                                    <input class="form-check-input" type="checkbox" id="addIgvCheckbox">
+                                    <label class="form-check-label text-primary fw-bold small" for="addIgvCheckbox">+ 18% IGV</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
                             
                             <!-- Calculadora de Prorrateo -->
-                            <div id="panel-prorrateo" class="d-none bg-light p-3 border rounded mb-3 shadow-sm">
+                            <div id="panel-prorrateo" class="d-none bg-white p-3 border rounded mb-3 shadow-sm">
                                 <h6 class="text-primary fw-bold"><i class="bi bi-calculator"></i> Prorrateo Inteligente</h6>
-                                <p class="small text-muted mb-2">Ingresa el total exacto pagado en la factura y los precios referenciales de cada ítem. El sistema calculará el peso de cada producto y asignará su costo final unitario.</p>
-                                <div class="row align-items-end">
-                                    <div class="col-md-4">
+                                <p class="small text-muted mb-2">Ingresa el total pagado en la factura y los precios referenciales de cada ítem para distribuir el costo automáticamente.</p>
+                                <div class="row align-items-end mb-3">
+                                    <div class="col-md-5">
                                         <label class="form-label fw-bold">Total Factura (Sin IGV):</label>
-                                        <input type="number" id="prorrateoTotalPagado" class="form-control fw-bold text-success border-success" placeholder="Ej: 15150.00" step="0.01">
+                                        <div class="input-group">
+                                            <span class="input-group-text span-simbolo-moneda">{{ $documento->moneda == 'DOLAR' ? '$' : 'S/' }}</span>
+                                            <input type="number" id="prorrateoTotalPagado" class="form-control fw-bold text-success border-success" placeholder="Ej: 15150.00" step="0.01">
+                                        </div>
                                     </div>
                                     <div class="col-md-4">
                                         <button type="button" class="btn btn-primary w-100 fw-bold" onclick="calcularProrrateo()">
@@ -53,13 +154,13 @@
                                     </div>
                                 </div>
                                 
-                                <div class="table-responsive mt-3">
-                                    <table class="table table-sm table-bordered bg-white">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered bg-light">
                                         <thead>
                                             <tr>
                                                 <th>Producto</th>
                                                 <th width="80" class="text-center">Cant.</th>
-                                                <th width="120">Precio Ref. ({{ $documento->moneda }})</th>
+                                                <th width="140">Precio Ref. (<span class="span-simbolo-moneda">{{ $documento->moneda == 'DOLAR' ? '$' : 'S/' }}</span>)</th>
                                                 <th width="100" class="text-center">% Peso</th>
                                             </tr>
                                         </thead>
@@ -70,13 +171,11 @@
                                                 foreach($detalle->RegistroProducto as $reg) {
                                                     if($reg->estado != 'INVALIDO') $validCount++;
                                                 }
-                                                // Obtener ultimo precio referencial
                                                 $ultimoDetalle = \App\Models\Ventas\DetalleComprobante::where('idProducto', $detalle->idProducto)
                                                     ->where('idDetalleComprobante', '!=', $detalle->idDetalleComprobante)
                                                     ->orderBy('idDetalleComprobante', 'desc')
                                                     ->first();
                                                 
-                                                $precioRef = 0;
                                                 if ($ultimoDetalle) {
                                                     $precioRef = $ultimoDetalle->precioUnitario;
                                                 } else {
@@ -97,111 +196,45 @@
                                 </div>
                             </div>
                             
-                            <script>
-                                document.addEventListener('DOMContentLoaded', function () {
-                                    const checkbox = document.getElementById('addIgvCheckbox');
-                                    if (checkbox) {
-                                        checkbox.addEventListener('change', function () {
-                                            const inputs = document.querySelectorAll('input[name^="detalles"][name$="[precioUnitario]"]');
-                                            inputs.forEach(input => {
-                                                if (input.value) {
-                                                    let val = parseFloat(input.value);
-                                                    if (this.checked) {
-                                                        input.dataset.original = val;
-                                                        input.value = (val * 1.18).toFixed(2);
-                                                    } else {
-                                                        if (input.dataset.original) {
-                                                            input.value = parseFloat(input.dataset.original).toFixed(2);
-                                                        } else {
-                                                            input.value = (val / 1.18).toFixed(2);
-                                                        }
-                                                    }
-                                                }
-                                            });
-                                        });
-                                    }
-                                });
-
-                                function calcularProrrateo() {
-                                    let totalPagado = parseFloat(document.getElementById('prorrateoTotalPagado').value);
-                                    if (!totalPagado || totalPagado <= 0) {
-                                        alert("Por favor ingresa el monto total de la factura.");
-                                        return;
-                                    }
-
-                                    let items = [];
-                                    let costoTeoricoTotal = 0;
-
-                                    document.querySelectorAll('.prorrateo-ref').forEach(input => {
-                                        let index = input.getAttribute('data-index');
-                                        let refPrice = parseFloat(input.value) || 0;
-                                        let spanCant = document.querySelector(`.prorrateo-cant[data-index="${index}"]`);
-                                        let qty = parseFloat(spanCant.innerText) || 0;
-
-                                        let rowTeorico = refPrice * qty;
-                                        costoTeoricoTotal += rowTeorico;
-
-                                        items.push({
-                                            index: index,
-                                            refPrice: refPrice,
-                                            qty: qty,
-                                            rowTeorico: rowTeorico
-                                        });
-                                    });
-
-                                    if (costoTeoricoTotal <= 0) {
-                                        alert("Los precios referenciales no pueden ser cero en todos los productos.");
-                                        return;
-                                    }
-
-                                    items.forEach(item => {
-                                        let porcentaje = item.rowTeorico / costoTeoricoTotal;
-                                        let badge = document.getElementById(`peso-${item.index}`);
-                                        badge.innerText = (porcentaje * 100).toFixed(2) + '%';
-                                        badge.classList.remove('bg-secondary');
-                                        badge.classList.add('bg-success');
-
-                                        let costoProrrateadoFila = totalPagado * porcentaje;
-                                        let costoUnitarioFinal = (costoProrrateadoFila / item.qty) || 0;
-
-                                        let mainInput = document.querySelector(`input[name="detalles[${item.index}][precioUnitario]"]`);
-                                        if (mainInput) {
-                                            mainInput.value = costoUnitarioFinal.toFixed(2);
-                                            
-                                            let checkbox = document.getElementById('addIgvCheckbox');
-                                            if(checkbox && checkbox.checked) {
-                                                mainInput.dataset.original = costoUnitarioFinal.toFixed(2);
-                                                mainInput.value = (costoUnitarioFinal * 1.18).toFixed(2);
-                                            }
-                                        }
-                                    });
-                                }
-                            </script>
+                            <!-- Tabla de Precios Unitarios de Productos -->
                             <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
+                                <table class="table table-sm table-bordered bg-white mb-0 align-middle">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Producto</th>
-                                            <th class="text-center" width="100">Cant.</th>
-                                            <th width="150">Precio Unit. ({{ $documento->moneda }})</th>
+                                            <th class="text-center" width="90">Cant.</th>
+                                            <th width="160">P. Unit. (<span class="span-simbolo-moneda">{{ $documento->moneda == 'DOLAR' ? '$' : 'S/' }}</span>)</th>
+                                            <th width="150" class="text-end">Subtotal (<span class="span-simbolo-moneda">{{ $documento->moneda == 'DOLAR' ? '$' : 'S/' }}</span>)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($documento->DetalleComprobante as $index => $detalle)
+                                        @php
+                                            $validCount = 0;
+                                            foreach($detalle->RegistroProducto as $reg) {
+                                                if($reg->estado != 'INVALIDO') $validCount++;
+                                            }
+                                            $rowTotal = $detalle->precioUnitario * $validCount;
+                                        @endphp
                                         <tr>
-                                            <td class="align-middle">{{ $detalle->Producto->nombreProducto }}</td>
-                                            <td class="align-middle text-center">
-                                                @php
-                                                    $validCount = 0;
-                                                    foreach($detalle->RegistroProducto as $reg) {
-                                                        if($reg->estado != 'INVALIDO') $validCount++;
-                                                    }
-                                                @endphp
-                                                {{ $validCount }}
+                                            <td>
+                                                <div class="fw-semibold">{{ $detalle->Producto->nombreProducto }}</div>
+                                                <small class="text-muted">SKU: {{ $detalle->Producto->sku ?? '—' }}</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-light text-dark border">{{ $validCount }}</span>
                                             </td>
                                             <td>
                                                 <input type="hidden" name="detalles[{{ $index }}][idDetalleComprobante]" value="{{ $detalle->idDetalleComprobante }}">
-                                                <input type="number" step="0.01" min="0" class="form-control" name="detalles[{{ $index }}][precioUnitario]" value="{{ $detalle->precioUnitario }}" required>
+                                                <input type="number" step="0.01" min="0" class="form-control form-control-sm input-detalle-pu text-end" 
+                                                       name="detalles[{{ $index }}][precioUnitario]" 
+                                                       value="{{ number_format($detalle->precioUnitario, 2, '.', '') }}" 
+                                                       data-qty="{{ $validCount }}" 
+                                                       data-index="{{ $index }}"
+                                                       oninput="recalcularFilaYTotal(this)" required>
+                                            </td>
+                                            <td class="text-end fw-bold">
+                                                <span id="subtotal-row-{{ $index }}">{{ number_format($rowTotal, 2) }}</span>
                                             </td>
                                         </tr>
                                         @endforeach
@@ -209,12 +242,19 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-warning"><i class="bi bi-floppy-fill"></i> Guardar Cambios</button>
-                        </div>
                     </div>
+                    @endif
+
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold shadow-sm">
+                        <i class="bi bi-floppy-fill me-1"></i> Guardar Cambios
+                    </button>
                 </div>
             </div>
-        </form>
-        @endif
+        </div>
+    </div>
+</form>
+
+@include('documento.logic.edit_modal')

@@ -28,12 +28,13 @@ class DeliveryFlexController extends Controller
         $userModel = $this->headerService->getModelUser();
         $savedRoutes = \App\Models\Ecommerce\MercadoLibreFlexRoute::all()->keyBy('ml_order_id');
 
-        // 1. Órdenes Flex de Mercado Libre
+        // 1. Órdenes Flex de Mercado Libre (Solo últimos 3 días y activas)
         $flexOrders = MercadoLibreOrder::with(['items', 'credential'])
             ->where('logistic_type', 'self_service')
+            ->where('created_at_ml', '>=', now()->subDays(3)->startOfDay())
             ->whereNotIn('status', ['cancelled'])
             ->where(function ($q) {
-                $q->where('shipping_status', '!=', 'delivered')
+                $q->whereNotIn('shipping_status', ['delivered', 'cancelled', 'not_delivered'])
                     ->orWhereNull('shipping_status');
             })
             ->orderBy('created_at_ml', 'desc')
@@ -585,9 +586,10 @@ class DeliveryFlexController extends Controller
 
         $flexOrders = \App\Models\Ecommerce\MercadoLibreOrder::with('items')
             ->where('logistic_type', 'self_service')
+            ->where('created_at_ml', '>=', now()->subDays(3)->startOfDay())
             ->whereNotIn('status', ['cancelled'])
             ->where(function ($q) {
-                $q->where('shipping_status', '!=', 'delivered')
+                $q->whereNotIn('shipping_status', ['delivered', 'cancelled', 'not_delivered'])
                     ->orWhereNull('shipping_status');
             })
             ->orderBy('created_at_ml', 'desc')

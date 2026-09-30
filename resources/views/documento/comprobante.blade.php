@@ -5,19 +5,62 @@
 @section('content')
 <div class="container py-4">
     <!-- Cabecera del Documento -->
-    <div class="row mb-4 align-items-center">
+    <div class="row mb-3 align-items-center">
         <div class="col-md-6">
             <h2 class="mb-0">
-                <a href="{{ route('documentos', [$documento->fechaRegistro->format('Y-m')]) }}" class="text-secondary text-decoration-none me-2">
+                <a href="{{ route('documentos', [$documento->fechaRegistro ? $documento->fechaRegistro->format('Y-m') : now()->format('Y-m')]) }}" class="text-secondary text-decoration-none me-2">
                     <i class="bi bi-arrow-left-circle"></i>
                 </a> 
-                {{ $documento->Preveedor->razSocialProveedor }}
+                {{ $documento->Preveedor->razSocialProveedor ?? ($documento->Preveedor->nombreProveedor ?? 'Proveedor') }}
             </h2>
-            <h5 class="text-muted mt-1"><i class="bi bi-card-text"></i> RUC: {{ $documento->Preveedor->rucProveedor }}</h5>
+            <h5 class="text-muted mt-1"><i class="bi bi-card-text"></i> RUC: {{ $documento->Preveedor->rucProveedor ?? '—' }}</h5>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0">
             <h2 class="mb-0 text-primary">{{ $documento->numeroComprobante }}</h2>
-            <h5 class="text-muted mt-1">{{ $documento->TipoComprobante->descripcion }}</h5>
+            <h5 class="text-muted mt-1">{{ $documento->TipoComprobante->descripcion ?? 'Comprobante' }}</h5>
+        </div>
+    </div>
+
+    <!-- Barra de Resumen de Campos de Comprobante -->
+    <div class="card shadow-sm border-0 mb-4 bg-white">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-center small">
+                <div class="col-auto">
+                    <span class="text-muted">Fecha:</span> 
+                    <strong class="text-dark">{{ $documento->fechaRegistro ? $documento->fechaRegistro->format('d/m/Y') : '—' }}</strong>
+                </div>
+                <div class="col-auto text-muted">|</div>
+                <div class="col-auto">
+                    <span class="text-muted">Moneda:</span> 
+                    <strong class="text-dark">{{ $documento->moneda }}</strong>
+                </div>
+                <div class="col-auto text-muted">|</div>
+                <div class="col-auto">
+                    <span class="text-muted">Adquisición:</span> 
+                    <strong class="text-dark">{{ $documento->adquisicion ?? 'NORMAL' }}</strong>
+                </div>
+                <div class="col-auto text-muted">|</div>
+                <div class="col-auto">
+                    <span class="text-muted">Registrado por:</span> 
+                    <strong class="text-dark">{{ $documento->Usuario->user ?? '—' }}</strong>
+                </div>
+                <div class="col-auto text-muted">|</div>
+                <div class="col-auto">
+                    <span class="text-muted">Total:</span> 
+                    <strong class="text-primary fs-6">{{ $documento->moneda == 'DOLAR' ? '$' : 'S/' }} {{ number_format($documento->totalCompra, 2) }}</strong>
+                </div>
+                <div class="col-auto ms-auto">
+                    @php
+                        $badgeEstado = 'bg-secondary';
+                        if ($documento->estado == 'REGISTRADO') $badgeEstado = 'bg-success';
+                        elseif ($documento->estado == 'PENDIENTE') $badgeEstado = 'bg-warning text-dark';
+                        elseif ($documento->estado == 'INVALIDO' || $documento->estado == 'ELIMINADO') $badgeEstado = 'bg-danger';
+                    @endphp
+                    <span class="badge {{ $badgeEstado }} px-3 py-2 fs-6">
+                        <i class="bi bi-shield-check me-1"></i>{{ $documento->estado }}
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -72,6 +115,9 @@
         
         <!-- Botonera de Acción -->
         <div class="d-flex justify-content-end gap-2 mb-3">
+            <button type="button" class="btn btn-warning shadow-sm" data-bs-toggle="modal" data-bs-target="#editComprobanteModal">
+                <i class="bi bi-pencil-square"></i> <span class="d-none d-md-inline">Editar Comprobante</span>
+            </button>
             <button type="button" onclick="generatePlantilla()" class="btn btn-outline-success shadow-sm">
                 <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Plantilla</span>
             </button>
@@ -87,9 +133,9 @@
             </button>
             <div>
                 <button type="button" class="btn btn-warning shadow-sm {{ $documento->estado == 'INVALIDO' ? 'd-none' : '' }}" data-bs-toggle="modal" data-bs-target="#editComprobanteModal">
-                    <i class="bi bi-pencil-square"></i> Editar Cabecera
+                    <i class="bi bi-pencil-square"></i> Editar Comprobante
                 </button>
-                @if (count($pdf) > 0)
+                @if (isset($pdf) && count($pdf) > 0)
                     <button type="button" class="btn btn-danger ms-2 shadow-sm" onclick="openPdfInNewWindow()">
                         <i class="bi bi-file-earmark-pdf"></i> Ver Series
                     </button>

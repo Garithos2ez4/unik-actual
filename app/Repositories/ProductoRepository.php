@@ -328,7 +328,28 @@ class ProductoRepository implements ProductoRepositoryInterface
             }
         }
 
-        if (isset($filtros['almacen'])) {
+        if (isset($filtros['estado_serie']) && $filtros['estado_serie'] !== '') {
+            $estadoSerie = $filtros['estado_serie'];
+            $query->whereExists(function ($subQuery) use ($estadoSerie, $filtros) {
+                $subQuery->select(\DB::raw(1))
+                    ->from('RegistroProducto')
+                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
+                    ->whereColumn('DetalleComprobante.idProducto', 'Producto.idProducto')
+                    ->where('RegistroProducto.estado', '!=', 'ENTREGADO');
+
+                if ($estadoSerie === 'TODOS_INCIDENCIA') {
+                    $subQuery->whereIn('RegistroProducto.estado', ['GARANTIA', 'ABIERTO', 'DEFECTUOSO', 'DEVOLUCION']);
+                } else {
+                    $subQuery->where('RegistroProducto.estado', '=', $estadoSerie);
+                }
+
+                if (isset($filtros['almacen']) && $filtros['almacen'] !== '') {
+                    $subQuery->where('RegistroProducto.idAlmacen', '=', $filtros['almacen']);
+                }
+            });
+        }
+
+        if (isset($filtros['almacen']) && $filtros['almacen'] !== '') {
             $query->whereHas('Inventario', function ($q) use ($filtros) {
                 $q->where('idAlmacen', $filtros['almacen'])
                     ->where('stock', '>', 0);
@@ -339,7 +360,7 @@ class ProductoRepository implements ProductoRepositoryInterface
                             ->orWhereExists(function ($query) use ($filtros) {
                                 $query->select(\DB::raw(1))
                                     ->from('RegistroProducto')
-                                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalle')
+                                    ->join('DetalleComprobante', 'RegistroProducto.idDetalleComprobante', '=', 'DetalleComprobante.idDetalleComprobante')
                                     ->whereColumn('DetalleComprobante.idProducto', 'Inventario.idProducto')
                                     ->whereColumn('RegistroProducto.idAlmacen', 'Inventario.idAlmacen')
                                     ->whereNotIn('RegistroProducto.estado', ['ENTREGADO', 'INVALIDO'])

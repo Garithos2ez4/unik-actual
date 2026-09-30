@@ -110,7 +110,7 @@ class ComprobanteService implements ComprobanteServiceInterface
             }
         }
     }
-    public function updateRegisteredComprobante($id, $moneda, array $detalles)
+    public function updateRegisteredComprobante($id, $data, array $detalles = [])
     {
         DB::beginTransaction();
         try {
@@ -119,41 +119,60 @@ class ComprobanteService implements ComprobanteServiceInterface
                 throw new Exception("Comprobante no encontrado.");
             }
 
-            $totalCompra = 0;
+            if (!is_array($data)) {
+                $data = ['moneda' => $data];
+            }
 
-            foreach ($comprobante->DetalleComprobante as $detalle) {
-                $newPrecioUnitario = null;
-                foreach ($detalles as $reqDetalle) {
-                    if ($reqDetalle['idDetalleComprobante'] == $detalle->idDetalleComprobante) {
-                        $newPrecioUnitario = $reqDetalle['precioUnitario'];
-                        break;
-                    }
-                }
+            $hasDetalleUpdates = false;
+            $totalCompraCalculado = 0;
 
-                if ($newPrecioUnitario !== null) {
-                    $validRegistros = 0;
-                    foreach ($detalle->RegistroProducto as $registro) {
-                        if ($registro->estado != 'INVALIDO') {
-                            $validRegistros++;
+            if (!empty($detalles)) {
+                foreach ($comprobante->DetalleComprobante as $detalle) {
+                    $newPrecioUnitario = null;
+                    foreach ($detalles as $reqDetalle) {
+                        if ($reqDetalle['idDetalleComprobante'] == $detalle->idDetalleComprobante) {
+                            $newPrecioUnitario = $reqDetalle['precioUnitario'];
+                            break;
                         }
                     }
-                    
-                    $precioCompra = $newPrecioUnitario * $validRegistros;
-                    $totalCompra += $precioCompra;
 
-                    $this->detalleComprobanteRepository->update($detalle->idDetalleComprobante, [
-                        'precioUnitario' => $newPrecioUnitario,
-                        'precioCompra' => $precioCompra
-                    ]);
-                } else {
-                    $totalCompra += $detalle->precioCompra;
+                    if ($newPrecioUnitario !== null) {
+                        $hasDetalleUpdates = true;
+                        $validRegistros = 0;
+                        foreach ($detalle->RegistroProducto as $registro) {
+                            if ($registro->estado != 'INVALIDO') {
+                                $validRegistros++;
+                            }
+                        }
+                        
+                        $precioCompra = $newPrecioUnitario * $validRegistros;
+                        $totalCompraCalculado += $precioCompra;
+
+                        $this->detalleComprobanteRepository->update($detalle->idDetalleComprobante, [
+                            'precioUnitario' => $newPrecioUnitario,
+                            'precioCompra' => $precioCompra
+                        ]);
+                    } else {
+                        $totalCompraCalculado += $detalle->precioCompra;
+                    }
                 }
             }
 
-            $this->comprobanteRepository->update($id, [
-                'moneda' => $moneda,
-                'totalCompra' => $totalCompra
-            ]);
+            // Si se actualizaron precios de detalles, actualizamos totalCompra calculado
+            if ($hasDetalleUpdates) {
+                $data['totalCompra'] = $totalCompraCalculado;
+            } elseif (!isset($data['totalCompra']) || $data['totalCompra'] === null || $data['totalCompra'] === '') {
+                unset($data['totalCompra']);
+            }
+
+            // Filtrar solo valores no nulos
+            $dataToUpdate = array_filter($data, function ($val) {
+                return $val !== null && $val !== '';
+            });
+
+            if (!empty($dataToUpdate)) {
+                $this->comprobanteRepository->update($id, $dataToUpdate);
+            }
 
             DB::commit();
             return true;

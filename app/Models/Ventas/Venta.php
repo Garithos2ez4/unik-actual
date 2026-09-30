@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Venta extends Model
 {
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $table = 'Venta';
 
@@ -24,6 +24,8 @@ class Venta extends Model
         'fechaVenta',
         'totalVenta',
         'observacion',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [
@@ -32,6 +34,8 @@ class Venta extends Model
         'idUser'      => 'int',
         'totalVenta'  => 'float',
         'fechaVenta'  => 'datetime',
+        'created_at'  => 'datetime',
+        'updated_at'  => 'datetime',
     ];
 
     protected static function booted()

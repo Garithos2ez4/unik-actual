@@ -45,6 +45,8 @@
                                         href="{{route('producto',[encrypt($pro->idProducto)])}}">
                                         <small>{{$pro->nombreProducto}}</small>
                                     </a>
+                                    <br>
+                                    <span class="text-muted" style="font-size: 0.75rem;">Mini Código: {{$pro->idProducto}}</span>
                                 </div>
                                 <div class="col-9 d-flex flex-column justify-content-end text-start pb-2">
                                     <small class="text-secondary">{{$pro->modelo}}</small>

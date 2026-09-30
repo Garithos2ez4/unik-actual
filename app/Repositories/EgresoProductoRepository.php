@@ -41,7 +41,9 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
         });
         
         return $query->orderBy('fechaDespacho','desc')
-                                    ->paginate($cant);
+                     ->orderBy('created_at', 'desc')
+                     ->orderBy('idEgreso', 'desc')
+                     ->paginate($cant);
     }
 
     public function searchOne($column, $data)
@@ -85,7 +87,7 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
     }
     
     public function getLast(){
-        return EgresoProducto::orderBy('idEgreso', 'desc')->first();
+        return EgresoProducto::orderBy('created_at', 'desc')->orderBy('idEgreso', 'desc')->first();
     }
     
     private function validateColumns($column){

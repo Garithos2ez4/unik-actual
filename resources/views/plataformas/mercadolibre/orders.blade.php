@@ -24,13 +24,13 @@
                                     <i class="bi bi-box-seam"></i>
                                 </span>
                                 <select name="shipping_status" class="form-select border-start-0 bg-white ps-0">
-                                    <option value="pending_only" {{ request('shipping_status', 'pending_only') === 'pending_only' ? 'selected' : '' }}>Pendientes (No entregados)</option>
-                                    <option value="" {{ request('shipping_status') === '' ? 'selected' : '' }}>Todos los estados</option>
-                                    <option value="ready_to_ship" {{ request('shipping_status') === 'ready_to_ship' ? 'selected' : '' }}>Listo para enviar</option>
-                                    <option value="shipped" {{ request('shipping_status') === 'shipped' ? 'selected' : '' }}>En tránsito (Shipped)</option>
-                                    <option value="delivered" {{ request('shipping_status') === 'delivered' ? 'selected' : '' }}>Entregado (Delivered)</option>
-                                    <option value="not_delivered" {{ request('shipping_status') === 'not_delivered' ? 'selected' : '' }}>No Entregado (Rechazado/Devuelto)</option>
-                                    <option value="cancelled" {{ request('shipping_status') === 'cancelled' ? 'selected' : '' }}>Cancelado</option>
+                                    <option value="pending_only" {{ ($selectedShippingStatus ?? request('shipping_status', 'pending_only')) === 'pending_only' ? 'selected' : '' }}>Pendientes (No entregados)</option>
+                                    <option value="all" {{ ($selectedShippingStatus ?? request('shipping_status')) === 'all' ? 'selected' : '' }}>Todos los estados</option>
+                                    <option value="ready_to_ship" {{ ($selectedShippingStatus ?? request('shipping_status')) === 'ready_to_ship' ? 'selected' : '' }}>Listo para enviar</option>
+                                    <option value="shipped" {{ ($selectedShippingStatus ?? request('shipping_status')) === 'shipped' ? 'selected' : '' }}>En tránsito (Shipped)</option>
+                                    <option value="delivered" {{ ($selectedShippingStatus ?? request('shipping_status')) === 'delivered' ? 'selected' : '' }}>Entregado (Delivered)</option>
+                                    <option value="not_delivered" {{ ($selectedShippingStatus ?? request('shipping_status')) === 'not_delivered' ? 'selected' : '' }}>No Entregado (Rechazado/Devuelto)</option>
+                                    <option value="cancelled" {{ ($selectedShippingStatus ?? request('shipping_status')) === 'cancelled' ? 'selected' : '' }}>Cancelado</option>
                                 </select>
                             </div>
 
@@ -217,7 +217,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
                                 No hay órdenes sincronizadas aún. Usa el botón <strong>Sincronizar</strong>.
                             </td>

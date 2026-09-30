@@ -120,6 +120,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/inventario/{estado}', [HomeController::class, 'dashboardInventario'])->name('dashboardinventario');
 
     Route::get('/calculadora', [CalculadoraController::class, 'index'])->name('calculadora');
+    Route::get('/calculadora/cotizador', [CalculadoraController::class, 'cotizador'])->name('calculadora.cotizador');
     Route::get('/calculadora/calculate', [CalculadoraController::class, 'calculate'])->name('calculadora-calculate');
 
     Route::get('/ingresos/searchingresos', [IngresoController::class, 'searchIngreso'])->name('searchingresos');

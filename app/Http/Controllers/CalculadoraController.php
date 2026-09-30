@@ -36,6 +36,21 @@ class CalculadoraController extends Controller
                                 ]);
     }
 
+    public function cotizador(Request $request){
+        //variables de la cabecera
+        $serviceHeader = new HeaderService;
+        $userModel = $serviceHeader->getModelUser();
+
+        //variables del controlador
+        $valores = $this->calculadoraService->get();
+        $plataformas = $this->calculadoraService->getComisionByRelation('ComisionPlataforma');
+        
+        return view('calculadora.cotizador',['user' => $userModel,
+                                    'valores' => $valores,
+                                    'plataformas' => $plataformas
+                                ]);
+    }
+
     public function calculate(Request $request)
     {
         $query = $request->input('query');

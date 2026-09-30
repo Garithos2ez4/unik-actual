@@ -21,11 +21,11 @@
     <form action="{{route('updateproduct',[encrypt($producto->idProducto)])}}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row">
-            <div class="col-10 col-lg-6 d-flex align-items-center">
+            <div class="col-10 col-lg-6 flex-column justify-content-center">
                 <h3>
-
                     PRODUCTO: <span class="text-secondary">{{$producto->codigoProducto}}</span>
                 </h3>
+                <span class="text-muted">Mini Código: {{$producto->idProducto}}</span>
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
                 @include('productos.components.btn_templates')

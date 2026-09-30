@@ -7,7 +7,13 @@
     <br>
     <div class="row">
         <div class="col-12 col-md-6">
-            <h2><a href="javascript:void(0)" onclick="window.history.back()" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> <i class="bi bi-lightning-charge-fill text-primary"></i> Egreso Masivo <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" class="btn btn-sm btn-outline-primary ms-2" title="Añadir Cliente"><i class="bi bi-person-fill-add"></i></a></h2>
+            <div class="d-flex align-items-center mb-1">
+                <button type="button" class="btn btn-outline-danger btn-sm me-2 rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; min-width: 36px;" title="Cerrar esta ventana" data-bs-toggle="modal" data-bs-target="#modalConfirmarCerrar">
+                    <i class="bi bi-x-lg fw-bold fs-6"></i>
+                </button>
+                <h2 class="mb-0"><i class="bi bi-lightning-charge-fill text-primary"></i> Egreso Masivo</h2>
+                <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal" class="btn btn-sm btn-outline-primary ms-2" title="Añadir Cliente"><i class="bi bi-person-fill-add"></i></a>
+            </div>
             <p class="text-muted mb-1">Busca productos, selecciona sus series, asígnales un SKU y agrégalos a la lista para procesarlos juntos.</p>
         </div>
     </div>
@@ -314,5 +320,6 @@
     };
 </script>
 <script src="{{asset('js/egresos_masivos.js')}}?v=1.1"></script>
+@include('egresos.partials.modal_confirmar_cerrar')
 @include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

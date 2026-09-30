@@ -11,18 +11,18 @@
         @endif
     @endforeach
     <div class="row mb-2 mt-3">
-        <div class="col-4 col-lg-2">
+        <div class="col-6 col-md-3 col-lg-2 mb-2">
             <small>Marca</small>
             <select class="form-select form-select-sm filtro-componente" name="filtro[marca]">
                 <option value="">Todos</option>
                 @foreach ($marcas as $marca)
-                <option value="{{ data_get($marca, 'idMarca') ?? data_get($marca, 'id') ?? '' }}">
+                <option value="{{ data_get($marca, 'idMarca') ?? data_get($marca, 'id') ?? '' }}" {{ request()->input('filtro.marca') == (data_get($marca, 'idMarca') ?? data_get($marca, 'id') ?? '') ? 'selected' : '' }}>
                     {{ data_get($marca, 'MarcaProducto.nombreMarca') ?? data_get($marca, 'nombreMarca') ?? data_get($marca, 'nombre') ?? '' }}
                 </option>
                 @endforeach
             </select>
         </div>
-        <div class="col-4 col-lg-2">
+        <div class="col-6 col-md-3 col-lg-2 mb-2">
             <small>Estado</small>
             <select class="form-select form-select-sm filtro-componente" name="filtro[estado]"
                 {{ request()->input('filtro.estado') ? 'data-selected="'.request()->input('filtro.estado').'"' : '' }}>
@@ -42,7 +42,17 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-4 col-lg-2">
+        <div class="col-6 col-md-3 col-lg-2 mb-2">
+            <small>Estado Serie</small>
+            <select class="form-select form-select-sm filtro-componente" name="filtro[estado_serie]">
+                <option value="">Todos</option>
+                <option value="GARANTIA" {{ request()->input('filtro.estado_serie') == 'GARANTIA' ? 'selected' : '' }}>GARANTIA</option>
+                <option value="ABIERTO" {{ request()->input('filtro.estado_serie') == 'ABIERTO' ? 'selected' : '' }}>ABIERTO</option>
+                <option value="DEFECTUOSO" {{ request()->input('filtro.estado_serie') == 'DEFECTUOSO' ? 'selected' : '' }}>DEFECTUOSO</option>
+                <option value="DEVOLUCION" {{ request()->input('filtro.estado_serie') == 'DEVOLUCION' ? 'selected' : '' }}>DEVOLUCION</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2 mb-2">
             <small>Almacén</small>
             <select class="form-select form-select-sm filtro-componente" name="filtro[almacen]" id="select-filtro-almacen">
                 <option value="">Todos</option>
@@ -53,7 +63,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-4 col-lg-2" id="div-filtro-rack" style="display: {{ request()->input('filtro.almacen') ? 'block' : 'none' }};">
+        <div class="col-6 col-md-3 col-lg-2 mb-2" id="div-filtro-rack" style="display: {{ request()->input('filtro.almacen') ? 'block' : 'none' }};">
             <small>Rack/Estante</small>
             <select class="form-select form-select-sm filtro-componente" name="filtro[rack]" id="select-filtro-rack">
                 <option value="">Todos los Racks</option>

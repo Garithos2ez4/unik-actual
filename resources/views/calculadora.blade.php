@@ -6,8 +6,11 @@
     <div class="container">
         <br>
         <div class="row">
-            <div class="col-8">
-                 <h2><i class="bi bi-calculator"></i> Calculadora</h2>
+            <div class="col-8 d-flex align-items-center">
+                 <h2 class="mb-0"><i class="bi bi-calculator"></i> Calculadora</h2>
+                 <a href="{{ route('calculadora.cotizador') }}" class="btn btn-outline-primary ms-4 shadow-sm" style="border-radius: 20px;">
+                     <i class="bi bi-magic"></i> Ir al Nuevo Cotizador Avanzado
+                 </a>
             </div>
             <div class="col-4 text-end text-secondary">
                 <h4>

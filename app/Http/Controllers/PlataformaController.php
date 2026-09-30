@@ -307,12 +307,12 @@ class PlataformaController extends Controller
                 $status = trim((string) $request->input('status', ''));
 
                 try {
-                    // Sincronizar solo el día exacto y no refrescar obsoletos para que sea rápido
-                    $result = $this->falabellaOrderSyncService->syncDispatchQueue($date, $status ?: null, 0, false);
+                    // Sincronizar el día exacto trayendo todos los estados, y refrescar obsoletos para actualizar envíos
+                    $result = $this->falabellaOrderSyncService->syncDispatchQueue($date, null, 0, true);
 
                     $this->headerService->sendFlashAlerts(
                         'Sincronizacion completada',
-                        'Se sincronizaron ' . $result['count'] . ' ordenes (solo del día seleccionado)',
+                        'Se sincronizaron y actualizaron ' . $result['count'] . ' órdenes en total',
                         'success',
                         'btn-success'
                     );

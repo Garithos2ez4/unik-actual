@@ -45,6 +45,11 @@ class DocumentoController extends Controller
         $adquisiciones = [['value' => 'NORMAL', 'name' => 'Normal'],
                         ['value' => 'OFERTA', 'name' => 'Oferta']];
         
+        $proveedores = \App\Models\Empresa\Preveedor::orderBy('razSocialProveedor')->get();
+        $tiposComprobante = \App\Models\Ventas\TipoComprobante::all();
+        $usuarios = \App\Models\Usuarios\Usuario::all();
+        $estadosComprobante = ['REGISTRADO', 'PENDIENTE', 'INVALIDO', 'ELIMINADO'];
+
         if($documento->estado == "PENDIENTE"){
             $bool = true;
         }
@@ -59,7 +64,11 @@ class DocumentoController extends Controller
                 'adquisiciones' => $adquisiciones,
                 'validate' => $bool,
                 'conteoEstados' => $conteoEstados,
-                'totalItems' => $totalItems
+                'totalItems' => $totalItems,
+                'proveedores' => $proveedores,
+                'tiposComprobante' => $tiposComprobante,
+                'usuarios' => $usuarios,
+                'estadosComprobante' => $estadosComprobante,
                 ]);
             }
 
@@ -73,7 +82,11 @@ class DocumentoController extends Controller
                 'validate' => $bool,
                 'pdf' => $registrosFiltrados,
                 'conteoEstados' => $conteoEstados,
-                'totalItems' => $totalItems
+                'totalItems' => $totalItems,
+                'proveedores' => $proveedores,
+                'tiposComprobante' => $tiposComprobante,
+                'usuarios' => $usuarios,
+                'estadosComprobante' => $estadosComprobante,
                 ]);
             }
         }
@@ -130,14 +143,38 @@ class DocumentoController extends Controller
     {
         $userModel = $this->headerService->getModelUser();
         $idComprobante = $request->input('idComprobante');
-        $moneda = $request->input('moneda');
         $detalles = $request->input('detalles', []);
 
+        $request->validate([
+            'idComprobante' => 'required',
+            'idProveedor' => 'nullable|integer',
+            'idTipoComprobante' => 'nullable|integer',
+            'numeroComprobante' => 'nullable|string|max:100',
+            'moneda' => 'nullable|string|in:SOL,DOLAR',
+            'adquisicion' => 'nullable|string|max:50',
+            'totalCompra' => 'nullable|numeric|min:0',
+            'fechaRegistro' => 'nullable|date',
+            'estado' => 'nullable|string|max:50',
+            'idUser' => 'nullable|integer',
+        ]);
+
+        $data = $request->only([
+            'idProveedor',
+            'idTipoComprobante',
+            'idUser',
+            'numeroComprobante',
+            'moneda',
+            'adquisicion',
+            'totalCompra',
+            'fechaRegistro',
+            'estado',
+        ]);
+
         foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 8) {
+            if ($acceso->idVista == 8 || $acceso->idVista == 2) {
                 try {
-                    $this->comprobanteService->updateRegisteredComprobante($idComprobante, $moneda, $detalles);
-                    $this->headerService->sendFlashAlerts('Comprobante Actualizado', 'Se editaron los precios y/o moneda correctamente', 'success', 'btn-success');
+                    $this->comprobanteService->updateRegisteredComprobante($idComprobante, $data, $detalles);
+                    $this->headerService->sendFlashAlerts('Comprobante Actualizado', 'Se editaron los datos del comprobante correctamente', 'success', 'btn-success');
                 } catch (\Exception $e) {
                     $this->headerService->sendFlashAlerts('Error', 'No se pudo editar el comprobante: ' . $e->getMessage(), 'error', 'btn-danger');
                 }

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class DetalleVenta extends Model
 {
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $table = 'DetalleVenta';
 
@@ -26,6 +26,8 @@ class DetalleVenta extends Model
         'cantidad',
         'origenPrecio',   // 'TIENDA' | 'PUBLICACION' | 'NEGOCIADO'
         'estado',         // 'COMPLETADO' | 'DEVUELTO' | 'ELIMINADO'
+        'created_at',
+        'updated_at',
     ];
 
     protected static function booted()
@@ -49,6 +51,8 @@ class DetalleVenta extends Model
         'idPublicacion'   => 'int',
         'precioVenta'     => 'float',
         'cantidad'        => 'int',
+        'created_at'      => 'datetime',
+        'updated_at'      => 'datetime',
     ];
 
     // ─── Relaciones ────────────────────────────────────────────

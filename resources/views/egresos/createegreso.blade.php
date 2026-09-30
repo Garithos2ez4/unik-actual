@@ -9,7 +9,10 @@
     </div>
     <br>
     <div class="row align-items-center">
-        <div class="col-12 col-md-7 mb-2 mb-md-0">
+        <div class="col-12 col-md-7 mb-2 mb-md-0 d-flex align-items-center">
+            <button type="button" class="btn btn-outline-danger btn-sm me-2 rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; min-width: 36px;" title="Cerrar esta ventana" data-bs-toggle="modal" data-bs-target="#modalConfirmarCerrar">
+                <i class="bi bi-x-lg fw-bold fs-6"></i>
+            </button>
             <h2 class="mb-0">Nuevo egreso</h2>
         </div>
         <div class="col-12 col-md-5 mb-2" style="position:relative">
@@ -331,5 +334,6 @@
 <script src="{{asset('js/createegreso.js')}}?v=1.18"></script>
 <script src="{{asset('js/createegreso_sku.js')}}?v=1.00"></script>
 <script src="{{asset('js/createegreso_pagos.js')}}?v=1.01"></script>
+@include('egresos.partials.modal_confirmar_cerrar')
 @include('envios.components.modal_new_cliente', ['documentos' => $tipoDocumentos])
 @endsection

@@ -623,7 +623,7 @@ class EgresoProductoService implements EgresoProductoServiceInterface
 
     private function getNewIdEgreso()
     {
-        $lastEgreso = $this->egresoRepository->getLast();
+        $lastEgreso = \App\Models\Inventario\EgresoProducto::orderBy('idEgreso', 'desc')->lockForUpdate()->first();
         $id = $lastEgreso ? $lastEgreso->idEgreso : 0;
         return $id + 1;
     }

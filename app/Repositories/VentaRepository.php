@@ -18,6 +18,6 @@ class VentaRepository implements VentaRepositoryInterface
 
     public function getAll($paginate = 50)
     {
-        return Venta::orderBy('idVenta', 'desc')->paginate($paginate);
+        return Venta::orderBy('created_at', 'desc')->orderBy('idVenta', 'desc')->paginate($paginate);
     }
 }

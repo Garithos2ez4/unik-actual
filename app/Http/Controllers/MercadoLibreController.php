@@ -148,8 +148,19 @@ class MercadoLibreController extends Controller
         }
 
         $query = MercadoLibreOrder::with(['items', 'credential'])
-            ->where('created_at_ml', '>=', now()->subDays(3)->startOfDay())
             ->orderByDesc('created_at_ml');
+
+        // Filtro de fecha: Si el usuario busca por texto, o especifica fechas, respetamos eso.
+        // Si no está buscando ni puso fechas específicas, limitamos a los últimos 3 días por defecto para rendimiento.
+        if ($request->filled('from')) {
+            $query->whereDate('created_at_ml', '>=', $request->input('from'));
+        } elseif (!$request->filled('search')) {
+            $query->where('created_at_ml', '>=', now()->subDays(3)->startOfDay());
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('created_at_ml', '<=', $request->input('to'));
+        }
 
         if ($request->filled('logistic_type')) {
             $logType = $request->input('logistic_type');
@@ -169,26 +180,39 @@ class MercadoLibreController extends Controller
             }
         }
 
-        $shippingStatus = $request->input('shipping_status', 'pending_only');
+        $shippingStatus = $request->input('shipping_status');
+        // Si el usuario realiza una búsqueda y no seleccionó un estado específico, o dejó el default/todos,
+        // no restringimos a solo pendientes para que encuentre la orden sin importar su estado.
+        if ($request->filled('search')) {
+            if (empty($shippingStatus) || $shippingStatus === 'pending_only' || $shippingStatus === 'all') {
+                $shippingStatus = 'all';
+            }
+        } else {
+            if (empty($shippingStatus)) {
+                $shippingStatus = 'pending_only';
+            }
+        }
+
         if ($shippingStatus === 'pending_only') {
             // Ocultar los finalizados, cancelados y enviados
             $query->whereNotIn('shipping_status', ['delivered', 'not_delivered', 'cancelled', 'shipped'])
                   ->where('status', '!=', 'cancelled');
-        } elseif ($shippingStatus !== '') {
+        } elseif ($shippingStatus !== 'all' && filled($shippingStatus)) {
             $query->where('shipping_status', $shippingStatus);
         }
-        if ($request->filled('from')) {
-            $query->whereDate('created_at_ml', '>=', $request->input('from'));
-        }
-        if ($request->filled('to')) {
-            $query->whereDate('created_at_ml', '<=', $request->input('to'));
-        }
+
         if ($request->filled('search')) {
-            $search = $request->input('search');
+            $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('ml_order_id', 'LIKE', "%{$search}%")
+                    ->orWhere('shipping_id', 'LIKE', "%{$search}%")
+                    ->orWhere('tracking_number', 'LIKE', "%{$search}%")
                     ->orWhere('buyer_name', 'LIKE', "%{$search}%")
-                    ->orWhere('buyer_nickname', 'LIKE', "%{$search}%");
+                    ->orWhere('buyer_nickname', 'LIKE', "%{$search}%")
+                    ->orWhereHas('items', function ($qi) use ($search) {
+                        $qi->where('seller_sku', 'LIKE', "%{$search}%")
+                           ->orWhere('title', 'LIKE', "%{$search}%");
+                    });
             });
         }
 
@@ -196,10 +220,11 @@ class MercadoLibreController extends Controller
         $credentials = MercadoLibreCredential::all();
 
         return view('plataformas.mercadolibre.orders', [
-            'user'        => $userModel,
-            'orders'      => $orders,
-            'credentials' => $credentials,
-            'filtros'     => $request->only('logistic_type', 'status', 'from', 'to', 'carrier_name'),
+            'user'                   => $userModel,
+            'orders'                 => $orders,
+            'credentials'            => $credentials,
+            'filtros'                => $request->only('logistic_type', 'status', 'from', 'to', 'carrier_name', 'shipping_status', 'search'),
+            'selectedShippingStatus' => $shippingStatus,
         ]);
     }
 

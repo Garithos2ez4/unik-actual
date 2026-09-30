@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EgresoProducto extends Model
 {
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $table = 'EgresoProducto';
 
@@ -25,7 +25,9 @@ class EgresoProducto extends Model
         'idUser',
         'numeroOrden',
         'fechaCompra',
-        'fechaDespacho'
+        'fechaDespacho',
+        'created_at',
+        'updated_at'
     ];
 
 
@@ -38,8 +40,9 @@ class EgresoProducto extends Model
         'idUser' => 'int',
         'idPublicacion' => 'int',
         'fechaCompra' => 'datetime',
-        'fechaDespacho' => 'datetime'
-
+        'fechaDespacho' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
     protected static function booted()

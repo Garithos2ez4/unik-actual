@@ -703,3 +703,24 @@ window.removeComponente = function (id) {
     componentesAgregados = componentesAgregados.filter(c => c.id !== id);
     renderComponentes();
 };
+
+// Alerta al intentar salir/cerrar pestaña con datos cargados
+window.addEventListener('beforeunload', function (e) {
+    if (window.isClosingConfirmed || window.isSubmitting) return;
+    const count = (window.cartManager && window.cartManager.productosAgregados) || (window.productosAgregados && window.productosAgregados.length) || 0;
+    const ordenInput = document.getElementById('input-numero-orden');
+    if (count > 0 || (ordenInput && ordenInput.value.trim() !== '')) {
+        e.preventDefault();
+        e.returnValue = '¿Estás seguro de que deseas salir? Hay datos no guardados.';
+        return '¿Estás seguro de que deseas salir? Hay datos no guardados.';
+    }
+});
+
+document.getElementById('form-egreso')?.addEventListener('submit', function(e) {
+    window.isSubmitting = true;
+    const btnReg = document.getElementById('btn-registrar');
+    if (btnReg) {
+        btnReg.disabled = true;
+        btnReg.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+    }
+});

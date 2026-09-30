@@ -1049,4 +1049,25 @@
         }
     });
 
+    // Alerta al intentar salir/cerrar pestaña con datos cargados
+    window.addEventListener('beforeunload', function (e) {
+        if (window.isClosingConfirmed || window.isSubmitting) return;
+        const btnReg = document.getElementById('btn-registrar-masivo');
+        const hiddenContainer = document.getElementById('hidden-items-container');
+        if ((btnReg && !btnReg.disabled) || (hiddenContainer && hiddenContainer.children.length > 0)) {
+            e.preventDefault();
+            e.returnValue = '¿Estás seguro de que deseas salir? Hay productos en el egreso masivo.';
+            return '¿Estás seguro de que deseas salir? Hay productos en el egreso masivo.';
+        }
+    });
+
+    document.getElementById('form-egreso-masivo')?.addEventListener('submit', function(e) {
+        window.isSubmitting = true;
+        const btnReg = document.getElementById('btn-registrar-masivo');
+        if (btnReg) {
+            btnReg.disabled = true;
+            btnReg.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+        }
+    });
+
 })();
