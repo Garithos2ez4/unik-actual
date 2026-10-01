@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Productos;
+use App\Http\Controllers\Controller;
 
 use App\Models\Catalogo\Producto;
 use App\Models\Usuarios\Usuario;
@@ -32,3 +33,4 @@ class ProductoMercadoLibreController extends Controller
         }
     }
 }
+

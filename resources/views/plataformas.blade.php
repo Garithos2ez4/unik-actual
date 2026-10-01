@@ -10,7 +10,10 @@
         <div class="col-6 col-md-9 mb-2">
             <h2><i class="bi bi-shop"></i> Plataformas</h2>
         </div>
-        <div class="col-6 col-md-3 mb-2 text-end">
+        <div class="col-12 col-md-6 mb-2 text-end">
+            <a href="{{ route('plataformas.faltantes') }}" class="btn btn-warning text-dark me-2">
+                <i class="bi bi-exclamation-square-fill"></i> Productos Faltantes
+            </a>
             <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#plataformaModal"><i class="bi bi-clipboard-plus-fill"></i> Nueva Plataforma</button>
         </div>
     </div>

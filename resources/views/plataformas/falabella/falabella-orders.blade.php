@@ -79,7 +79,10 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light text-muted small text-uppercase">
                             <tr>
-                                <th class="ps-4">Orden</th>
+                                <th class="ps-4" style="width: 40px;">
+                                    <input class="form-check-input border-secondary" type="checkbox" id="selectAllOrders" onchange="document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = this.checked)">
+                                </th>
+                                <th>Orden</th>
                                 <th>Cliente</th>
                                 <th>Estado</th>
                                 <th>SKU SHOP</th>
@@ -93,6 +96,9 @@
                             @forelse($orders as $order)
                             <tr>
                                 <td class="ps-4">
+                                    <input class="form-check-input border-secondary order-checkbox" type="checkbox" value="{{ $order->order_id }}">
+                                </td>
+                                <td>
                                     <div class="fw-bold text-dark">{{ $order->order_number }}</div>
                                     <div class="small text-muted">ID: {{ $order->order_id }}</div>
                                 </td>
@@ -186,7 +192,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">
+                                <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
                                     No se encontraron órdenes sincronizadas para esta fecha y estado.
                                 </td>
@@ -202,6 +208,13 @@
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script>
         async function generarEtiquetasFalabella(url) {
+            const selected = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
+            if(selected.length > 0) {
+                const urlObj = new URL(url.startsWith('http') ? url : window.location.origin + url);
+                urlObj.searchParams.set('order_ids', selected.join(','));
+                url = urlObj.toString();
+            }
+
             const btn = event.currentTarget;
             const originalHtml = btn.innerHTML;
             btn.disabled = true;

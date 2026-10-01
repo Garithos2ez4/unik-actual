@@ -43,6 +43,33 @@ class RipleyApiService
         return $data['orders'] ?? [];
     }
 
+    public function getOffers(array $params = []): array
+    {
+        if (empty($this->apiKey)) {
+            throw new RuntimeException("Ripley API Key is not configured.");
+        }
+
+        $response = Http::baseUrl($this->baseUrl)
+            ->withoutVerifying()
+            ->withHeaders([
+                'Authorization' => $this->apiKey,
+                'Accept' => 'application/json',
+            ])
+            ->timeout(60)
+            ->get('/offers', $params);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Ripley HTTP Error: " . $response->status() . " - " . $response->body());
+        }
+
+        $data = $response->json();
+        
+        return [
+            'offers' => $data['offers'] ?? [],
+            'total_count' => $data['total_count'] ?? 0
+        ];
+    }
+
     /**
      * Descarga los documentos (etiquetas/manifiestos) para uno o varios pedidos.
      * Retorna el contenido binario crudo del PDF o ZIP (dependiendo de Mirakl).

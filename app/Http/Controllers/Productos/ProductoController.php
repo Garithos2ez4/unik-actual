@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Productos;
+use App\Http\Controllers\Controller;
 
 use App\Models\Catalogo\Producto;
 use Illuminate\Http\Request;
@@ -38,7 +39,7 @@ class ProductoController extends Controller
                 $productos = $this->productoService->getAllProductsByColumn('idGrupo', decrypt($idGrupo), 15, $request->query('filtro'))->appends($request->all());
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
-                // Si es petición AJAX (paginación o filtro)
+                // Si es peticiÃ³n AJAX (paginaciÃ³n o filtro)
                 if ($request->query('page') || $request->query('filtro')) {
                     $view = view('components.lista_producto', [
                         'productos' => $productos,
@@ -53,7 +54,7 @@ class ProductoController extends Controller
                     return response()->json(['html' => $view]);
                 }
 
-                // Carga inicial completa de la página
+                // Carga inicial completa de la pÃ¡gina
                 $grupo = $this->productoService->getOneLabelGrupo(decrypt($idGrupo));
                 $grupos = $this->productoService->getAllLabelGrupoXCategory(decrypt($idCategory));
                 $categoria = $this->productoService->getOneLabelCategory(decrypt($idCategory));
@@ -79,7 +80,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
     public function update($idProducto)
@@ -111,7 +112,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -154,7 +155,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -214,7 +215,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -238,7 +239,7 @@ class ProductoController extends Controller
                 $productos = $this->productoService->searchProducts($input, 25, $request->query('filtro'));
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
-                // Obtener marcas filtradas por búsqueda si hay término de búsqueda
+                // Obtener marcas filtradas por bÃºsqueda si hay tÃ©rmino de bÃºsqueda
                 if ($input) {
                     $marcasFiltradas = $this->productoService->getMarcasBySearch($input);
                 } else {
@@ -246,7 +247,7 @@ class ProductoController extends Controller
                 }
 
                 if ($request->query('page') || $request->query('filtro')) {
-                    // Obtener marcas filtradas también para la paginación AJAX
+                    // Obtener marcas filtradas tambiÃ©n para la paginaciÃ³n AJAX
                     if ($input) {
                         $marcasFiltradas = $this->productoService->getMarcasBySearch($input);
                     } else {
@@ -278,7 +279,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -483,7 +484,7 @@ class ProductoController extends Controller
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
     public function obtenerUbicacionHtml($id)
@@ -544,7 +545,7 @@ class ProductoController extends Controller
                 $video2 = $request->input('videoUrl2');
 
                 try {
-                    // Solo actualizar si el campo fue enviado (no está disabled)
+                    // Solo actualizar si el campo fue enviado (no estÃ¡ disabled)
                     if ($request->has('titulo')) {
                         $arrayProduct['nombreProducto'] = $titulo;
                     }
@@ -656,7 +657,7 @@ class ProductoController extends Controller
 
                     $this->productoService->validateState(decrypt($idProducto));
 
-                    // ── Precio de Tienda ──
+                    // â”€â”€ Precio de Tienda â”€â”€
                     if ($request->has('precioTienda')) {
                         $nuevoPrecio = floatval($request->input('precioTienda'));
                         $realId = decrypt($idProducto);
@@ -683,7 +684,7 @@ class ProductoController extends Controller
                                 'precioTienda' => $nuevoPrecio,
                                 'updated_at'   => now(),
                             ]);
-                            // Primer registro: historial 0 → nuevo
+                            // Primer registro: historial 0 â†’ nuevo
                             if ($nuevoPrecio > 0) {
                                 \App\Models\Precios\HistorialPrecioTienda::create([
                                     'idProducto'     => $realId,
@@ -719,7 +720,7 @@ class ProductoController extends Controller
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -746,7 +747,7 @@ class ProductoController extends Controller
                 return redirect()->back();
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -762,7 +763,7 @@ class ProductoController extends Controller
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -806,7 +807,7 @@ class ProductoController extends Controller
 
                     return response()->json([
                         'success' => false,
-                        'message' => 'No se pudo obtener el grupo recién creado.'
+                        'message' => 'No se pudo obtener el grupo reciÃ©n creado.'
                     ], 500);
                 } catch (Exception $e) {
                     \Log::error('Error in quickCreateGrupo: ' . $e->getMessage());
@@ -824,3 +825,4 @@ class ProductoController extends Controller
         ], 403);
     }
 }
+

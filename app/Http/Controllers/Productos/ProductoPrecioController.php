@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Productos;
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
 use App\Models\Catalogo\Producto;
@@ -34,8 +35,8 @@ class ProductoPrecioController extends Controller
             $producto->estadoProductoWeb
         );
 
-        // usar_tc_fijo=1 → toggle "Usar TC SUNAT" está ON → usar TC SUNAT
-        // usar_tc_fijo=0 → toggle está OFF → usar TC Fijo
+        // usar_tc_fijo=1 â†’ toggle "Usar TC SUNAT" estÃ¡ ON â†’ usar TC SUNAT
+        // usar_tc_fijo=0 â†’ toggle estÃ¡ OFF â†’ usar TC Fijo
         $usarTcFijo = $producto->usar_tc_fijo ?? true;
         if ($usarTcFijo) {
             $tcUsar = (float)$this->calculadoraService->getTasaCambio();
@@ -54,7 +55,7 @@ class ProductoPrecioController extends Controller
         $precioVentaUsd = $precioCalculado + $producto->gananciaExtra;
         $precioVentaSoles = round($precioVentaUsd * $tcUsar, 2);
 
-        // Si el producto está en liquidación, el precio web final es el precio de liquidación
+        // Si el producto estÃ¡ en liquidaciÃ³n, el precio web final es el precio de liquidaciÃ³n
         if ($producto->estadoProductoWeb === 'LIQUIDACION' && $producto->liquidacion) {
             $precioVentaSoles = $producto->liquidacion->precio_liquidacion;
             $precioVentaUsd = round($precioVentaSoles / $tcUsar, 2);
@@ -63,7 +64,7 @@ class ProductoPrecioController extends Controller
         $precioBaseSoles = round($producto->precioDolar * $tcUsar, 2);
         $precioIgvSoles = round($precioConIgv * $tcUsar, 2);
 
-        // Fetch último costo desde compras
+        // Fetch Ãºltimo costo desde compras
         $ultimoDetalle = \App\Models\Ventas\DetalleComprobante::with('Comprobante')
             ->where('idProducto', $idProducto)
             ->orderBy('idDetalleComprobante', 'desc')
@@ -159,7 +160,7 @@ class ProductoPrecioController extends Controller
 
             $requestYear = request()->query('year', date('Y'));
 
-            // Obtener los años disponibles para este producto
+            // Obtener los aÃ±os disponibles para este producto
             $aniosDisponibles = \Illuminate\Support\Facades\DB::select("
                 SELECT DISTINCT YEAR(c.fechaRegistro) as anio
                 FROM DetalleComprobante dc
@@ -170,12 +171,12 @@ class ProductoPrecioController extends Controller
 
             $anios = collect($aniosDisponibles)->pluck('anio')->toArray();
 
-            // Si el año solicitado no tiene compras, pero hay otros años, usar el más reciente
+            // Si el aÃ±o solicitado no tiene compras, pero hay otros aÃ±os, usar el mÃ¡s reciente
             if (!in_array($requestYear, $anios) && !empty($anios)) {
                 $requestYear = $anios[0];
             }
 
-            // Si no hay compras en absoluto, asegurarnos de tener al menos el año actual para no romper la UI
+            // Si no hay compras en absoluto, asegurarnos de tener al menos el aÃ±o actual para no romper la UI
             if (empty($anios)) {
                 $anios = [date('Y')];
                 $requestYear = date('Y');
@@ -236,3 +237,4 @@ class ProductoPrecioController extends Controller
         }
     }
 }
+

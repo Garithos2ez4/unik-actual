@@ -252,6 +252,11 @@
                                         </a>
                                     </li>
                                     <li>
+                                        <a href="{{ route('plataformas.ripley.catalogo') }}" class="btn btn-sm text-info py-0">
+                                            <i class="bi bi-chevron-right"></i> Publicaciones
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a href="{{ route('plataformas.ripley.etiquetas') }}" class="btn btn-sm text-info py-0">
                                             <i class="bi bi-chevron-right"></i> Etiquetas
                                         </a>

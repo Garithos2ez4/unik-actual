@@ -7,12 +7,12 @@ use Illuminate\Support\Facades\DB;
 
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\ProductoPackController;
-use App\Http\Controllers\ProductoFalabellaController;
-use App\Http\Controllers\ProductoMercadoLibreController;
-use App\Http\Controllers\ProductoPrecioController;
-use App\Http\Controllers\ProductoHerramientaController;
+use App\Http\Controllers\Productos\ProductoController;
+use App\Http\Controllers\Productos\ProductoPackController;
+use App\Http\Controllers\Productos\ProductoFalabellaController;
+use App\Http\Controllers\Productos\ProductoMercadoLibreController;
+use App\Http\Controllers\Productos\ProductoPrecioController;
+use App\Http\Controllers\Productos\ProductoHerramientaController;
 use App\Http\Controllers\LiquidacionController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\IngresoController;
@@ -259,6 +259,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/plataformas', [PlataformaController::class, 'index'])->name('plataformas');
     Route::post('/plataforma/updatecuenta', [PlataformaController::class, 'updateCuentas'])->name('updatecuenta');
     Route::post('/plataforma/createcuenta', [PlataformaController::class, 'createCuenta'])->name('createcuenta');
+    Route::get('/plataformas/faltantes', [PlataformaController::class, 'faltantes'])->name('plataformas.faltantes');
 
     // Envios a Provincias
     Route::prefix('envios-provincias')->name('envios.')->group(function () {
@@ -321,6 +322,7 @@ Route::middleware(['validate.session'])->group(function () {
     // RIPLEY
     Route::prefix('plataformas/ripley')->name('plataformas.ripley.')->group(function () {
         Route::get('/orders', [PlataformaController::class, 'ripleyOrders'])->name('orders');
+        Route::get('/catalogo', [PlataformaController::class, 'ripleyPublicaciones'])->name('catalogo');
         Route::get('/etiquetas', [PlataformaController::class, 'ripleyEtiquetas'])->name('etiquetas');
         Route::get('/etiquetas/descargar', [PlataformaController::class, 'ripleyEtiquetasDescargar'])->name('etiquetas.descargar');
     });

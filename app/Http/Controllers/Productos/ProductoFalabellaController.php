@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Productos;
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
 use App\Models\Catalogo\Producto;
@@ -56,7 +57,7 @@ class ProductoFalabellaController extends Controller
     }
 
     /**
-     * AJAX: devuelve títulos sugeridos para el modal de personalización.
+     * AJAX: devuelve tÃ­tulos sugeridos para el modal de personalizaciÃ³n.
      * GET /producto/{idProducto}/falabella-titulos-sugeridos
      */
     public function sugerirTitulosFalabella($idProducto)
@@ -75,7 +76,7 @@ class ProductoFalabellaController extends Controller
     }
 
     /**
-     * Descarga template Express con títulos personalizados enviados via POST.
+     * Descarga template Express con tÃ­tulos personalizados enviados via POST.
      * POST /producto/{idProducto}/falabella-template-express
      * Body JSON: { "titulo1": "...", "titulo2": "...", "titulo3": "..." }
      */
@@ -105,3 +106,4 @@ class ProductoFalabellaController extends Controller
         }
     }
 }
+

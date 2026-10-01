@@ -48,6 +48,105 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
+    public function faltantes(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 4) {
+                @ini_set('max_execution_time', '300'); // Evitar timeout
+
+                $plataformas = \App\Models\Empresa\Plataforma::whereIn('nombrePlataforma', ['Falabella', 'Mercado Libre', 'Ripley'])->get();
+
+                $publicadosPorPlataforma = [];
+                $publicadosMap = []; // Para busqueda O(1)
+
+                foreach ($plataformas as $plat) {
+                    $cuentas = $plat->CuentasPlataforma->pluck('idCuentaPlataforma');
+                    $pubs = \App\Models\Catalogo\Publicacion::whereIn('idCuentaPlataforma', $cuentas)->get(['idProducto', 'titulo', 'sku']);
+                    
+                    $publicadosMap[$plat->idPlataforma] = ['by_id' => [], 'pubs' => []];
+                    
+                    foreach ($pubs as $pub) {
+                        if ($pub->idProducto) {
+                            $publicadosMap[$plat->idPlataforma]['by_id'][$pub->idProducto] = true;
+                        }
+                        // Pre-calcular el uppercase para no hacerlo millones de veces en el loop interno
+                        $publicadosMap[$plat->idPlataforma]['pubs'][] = [
+                            'titulo' => strtoupper((string)$pub->titulo),
+                            'sku' => strtoupper((string)$pub->sku),
+                        ];
+                    }
+                }
+
+                $productosConStock = \App\Models\Catalogo\Producto::with('Inventario')->whereHas('Inventario', function ($q) {
+                    $q->where('stock', '>', 0);
+                })->where('estadoProductoWeb', '!=', 'DESCONTINUADO')->get();
+
+                $faltantesGenerales = [];
+
+                foreach ($productosConStock as $prod) {
+                    $modelo = strtoupper(trim((string)$prod->modelo));
+                    $missingIn = [];
+
+                    foreach ($plataformas as $plat) {
+                        $isPublished = false;
+                        
+                        // 1. Busqueda super rapida O(1) por idProducto
+                        if (isset($publicadosMap[$plat->idPlataforma]['by_id'][$prod->idProducto])) {
+                            $isPublished = true;
+                        } 
+                        // 2. Busqueda inteligente por modelo en string
+                        elseif (!empty($modelo) && $modelo !== '-') {
+                            // Generamos variantes del modelo para un "Fuzzy Match" (Como un LIKE flexible)
+                            $variantes = [$modelo];
+                            
+                            // Variante sin guiones (ej. TE-2764G -> TE2764G)
+                            if (str_contains($modelo, '-')) {
+                                $variantes[] = str_replace('-', '', $modelo);
+                                $variantes[] = str_replace('-', ' ', $modelo);
+                                
+                                // Variante base (ej. T544120-BK -> T544120)
+                                $partes = explode('-', $modelo);
+                                if (strlen($partes[0]) >= 4) { // Solo si la base es representativa
+                                    $variantes[] = trim($partes[0]);
+                                } elseif (isset($partes[1]) && strlen($partes[1]) >= 4) {
+                                    $variantes[] = trim($partes[1]); // ej. TE-2765G -> 2765G
+                                }
+                            }
+
+                            foreach ($publicadosMap[$plat->idPlataforma]['pubs'] as $p) {
+                                foreach ($variantes as $var) {
+                                    if (str_contains($p['titulo'], $var) || str_contains($p['sku'], $var)) {
+                                        $isPublished = true;
+                                        break 2; // Romper ambos foreach
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!$isPublished) {
+                            $missingIn[] = $plat;
+                        }
+                    }
+
+                    if (count($missingIn) > 0) {
+                        $prod->missing_platforms = $missingIn;
+                        $faltantesGenerales[] = $prod;
+                    }
+                }
+
+                return view('plataformas.faltantes', [
+                    'user' => $userModel,
+                    'plataformas' => $plataformas,
+                    'faltantes' => $faltantesGenerales
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
     public function falabellaProductos(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
@@ -278,6 +377,15 @@ class PlataformaController extends Controller
                         $selectedDate,
                         $selectedStatus !== '' ? $selectedStatus : null
                     );
+
+                    // Filtrar solo las órdenes seleccionadas por checkbox (si se enviaron)
+                    $orderIdsParam = $request->query('order_ids');
+                    if (!empty($orderIdsParam)) {
+                        $selectedIds = is_array($orderIdsParam) ? $orderIdsParam : explode(',', $orderIdsParam);
+                        $orders = $orders->filter(function ($order) use ($selectedIds) {
+                            return in_array($order->order_id, $selectedIds);
+                        });
+                    }
                 }
 
                 return view('plataformas.falabella.falabella-orders', [
@@ -623,6 +731,15 @@ class PlataformaController extends Controller
                     $selectedStatus !== '' ? $selectedStatus : null
                 );
 
+                // Filtrar solo las órdenes seleccionadas por checkbox (si se enviaron)
+                $orderIdsParam = $request->query('order_ids');
+                if (!empty($orderIdsParam)) {
+                    $selectedIds = is_array($orderIdsParam) ? $orderIdsParam : explode(',', $orderIdsParam);
+                    $orders = $orders->filter(function ($order) use ($selectedIds) {
+                        return in_array($order->order_id, $selectedIds);
+                    });
+                }
+
                 $labels = [];
                 $errors = [];
                 $processedPackages = [];
@@ -732,6 +849,66 @@ class PlataformaController extends Controller
                     'selectedDate'   => $selectedDate,
                     'selectedStatus' => $selectedStatus,
                     'orders'         => $orders,
+                ]);
+            }
+        }
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+        return redirect()->route('dashboard', ['user' => $userModel]);
+    }
+
+    public function ripleyPublicaciones(Request $request, \App\Services\RipleyApiService $ripleyApiService)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 4) {
+                $search = $request->input('search');
+                $limit  = 50;
+                $offset = max(0, (int) $request->input('offset', 0));
+
+                $params = [
+                    'max' => 1000,
+                    'offset' => 0, // Siempre traemos desde el inicio para filtrar localmente
+                ];
+
+                try {
+                    $response = $ripleyApiService->getOffers($params);
+                    $allOffers = $response['offers'];
+
+                    if ($search) {
+                        $searchLower = strtolower($search);
+                        $filtered = [];
+                        foreach ($allOffers as $offer) {
+                            $title = strtolower($offer['product_title'] ?? '');
+                            $shopSku = strtolower($offer['shop_sku'] ?? '');
+                            $productSku = strtolower($offer['product_sku'] ?? '');
+
+                            if (str_contains($title, $searchLower) || str_contains($shopSku, $searchLower) || str_contains($productSku, $searchLower)) {
+                                $filtered[] = $offer;
+                            }
+                        }
+                        $totalCount = count($filtered);
+                        $offers = array_slice($filtered, $offset, $limit);
+                    } else {
+                        $totalCount = $response['total_count'];
+                        $offers = array_slice($allOffers, $offset, $limit);
+                    }
+
+                    $error = null;
+                } catch (\Exception $e) {
+                    $offers = [];
+                    $totalCount = 0;
+                    $error = $e->getMessage();
+                }
+
+                return view('plataformas.ripley.ripley-publicaciones', [
+                    'user'       => $userModel,
+                    'offers'     => $offers,
+                    'search'     => $search ?? '',
+                    'limit'      => $limit,
+                    'offset'     => $offset,
+                    'totalCount' => $totalCount,
+                    'error'      => $error ?? null,
                 ]);
             }
         }
@@ -855,3 +1032,4 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 }
+

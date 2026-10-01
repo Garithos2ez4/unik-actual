@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Productos;
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
 use Exception;
@@ -36,11 +37,11 @@ class ProductoPackController extends Controller
             $porcentajeCosto = $request->input('porcentaje_costo', 0);
 
             if (!$idHijo || $cantidad < 1 || $porcentajeCosto < 0) {
-                return response()->json(['success' => false, 'message' => 'Datos inválidos.']);
+                return response()->json(['success' => false, 'message' => 'Datos invÃ¡lidos.']);
             }
 
             if ($idHijo == $idPadre) {
-                return response()->json(['success' => false, 'message' => 'Un producto no puede ser componente de sí mismo.']);
+                return response()->json(['success' => false, 'message' => 'Un producto no puede ser componente de sÃ­ mismo.']);
             }
 
             $exists = ProductoPack::where('idProductoPack', $idPadre)
@@ -74,7 +75,7 @@ class ProductoPackController extends Controller
             $porcentajeCosto = $request->input('porcentaje_costo', 0);
 
             if ($cantidad < 1 || $porcentajeCosto < 0) {
-                return response()->json(['success' => false, 'message' => 'Datos inválidos.']);
+                return response()->json(['success' => false, 'message' => 'Datos invÃ¡lidos.']);
             }
 
             $comp = ProductoPack::where('idProductoPack', $idPadre)
@@ -109,3 +110,4 @@ class ProductoPackController extends Controller
         }
     }
 }
+
