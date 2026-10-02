@@ -19,11 +19,16 @@ use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\EgresoMasivoController;
 use App\Http\Controllers\PlataformaController;
+use App\Http\Controllers\Plataformas\PlataformaBaseController;
+use App\Http\Controllers\Plataformas\FalabellaController;
+use App\Http\Controllers\Plataformas\RipleyController;
 use App\Http\Controllers\PublicidadController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\CalculadoraController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\Plataformas\MercadoLibreController;
+use App\Http\Controllers\DeliveryFlexController;
 use App\Http\Controllers\Configuracion\ConfigWebController;
 use App\Http\Controllers\Configuracion\ConfigCalculosController;
 use App\Http\Controllers\Configuracion\ConfigProductosController;
@@ -71,25 +76,27 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/descargar-licencia/{id}', [LicenciaController::class, 'descargarLicencia'])->name('licencia.descargar');
     Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/alertas/{id}/ignorar', [HomeController::class, 'ignorarAlerta'])->name('alertas.ignorar');
+    Route::get('/top-compradores', [HomeController::class, 'topCompradores'])->name('top-compradores');
+
     // Rutas de analítica y herramientas
     Route::get('/dashboard/analitica', [AnalyticsController::class, 'index'])->name('dashboard.analitica');
     Route::get('/dashboard/analitica/falabella', [AnalyticsFallabellaController::class, 'falabella'])->name('dashboard.analitica.falabella');
-    
+
     // Egresos Pendientes
     Route::get('/dashboard/herramientas/egresos-pendientes', [\App\Http\Controllers\EgresoPendienteController::class, 'index'])->name('egresos.pendientes');
-    
+
     // Delivery Flex
-    Route::get('/dashboard/logistica/delivery-flex', [\App\Http\Controllers\DeliveryFlexController::class, 'index'])->name('delivery.flex');
-    Route::post('/dashboard/logistica/delivery-flex/reorder', [\App\Http\Controllers\DeliveryFlexController::class, 'reorder'])->name('delivery.flex.reorder');
-    Route::post('/dashboard/logistica/delivery-flex/manual-complete/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'completeManual'])->name('delivery.flex.completeManual');
-    Route::post('/dashboard/logistica/delivery-flex/manual', [\App\Http\Controllers\DeliveryFlexController::class, 'storeManual'])->name('delivery.flex.store');
-    Route::put('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'updateManual'])->name('delivery.flex.update');
-    Route::delete('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'destroyManual'])->name('delivery.flex.destroy');
-    Route::get('/dashboard/logistica/delivery-flex/buscar-productos', [\App\Http\Controllers\DeliveryFlexController::class, 'searchProductos'])->name('delivery.flex.searchProductos');
-    Route::get('/dashboard/logistica/delivery-flex/buscar-clientes', [\App\Http\Controllers\DeliveryFlexController::class, 'searchClientes'])->name('delivery.flex.searchClientes');
-    Route::get('/dashboard/logistica/delivery-flex/manual/{id}', [\App\Http\Controllers\DeliveryFlexController::class, 'getManual'])->name('delivery.flex.getManual');
-    Route::post('/dashboard/logistica/delivery-flex/update-delivery-info/{orderId}', [\App\Http\Controllers\DeliveryFlexController::class, 'updateDeliveryInfo'])->name('delivery.flex.updateDeliveryInfo');
-    Route::get('/dashboard/logistica/delivery-flex/pdf/{zona}', [\App\Http\Controllers\DeliveryFlexController::class, 'downloadPdf'])->name('delivery.flex.pdf');
+    Route::get('/dashboard/logistica/delivery-flex', [DeliveryFlexController::class, 'index'])->name('delivery.flex');
+    Route::post('/dashboard/logistica/delivery-flex/reorder', [DeliveryFlexController::class, 'reorder'])->name('delivery.flex.reorder');
+    Route::post('/dashboard/logistica/delivery-flex/manual-complete/{id}', [DeliveryFlexController::class, 'completeManual'])->name('delivery.flex.completeManual');
+    Route::post('/dashboard/logistica/delivery-flex/manual', [DeliveryFlexController::class, 'storeManual'])->name('delivery.flex.store');
+    Route::put('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'updateManual'])->name('delivery.flex.update');
+    Route::delete('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'destroyManual'])->name('delivery.flex.destroy');
+    Route::get('/dashboard/logistica/delivery-flex/buscar-productos', [DeliveryFlexController::class, 'searchProductos'])->name('delivery.flex.searchProductos');
+    Route::get('/dashboard/logistica/delivery-flex/buscar-clientes', [DeliveryFlexController::class, 'searchClientes'])->name('delivery.flex.searchClientes');
+    Route::get('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'getManual'])->name('delivery.flex.getManual');
+    Route::post('/dashboard/logistica/delivery-flex/update-delivery-info/{orderId}', [DeliveryFlexController::class, 'updateDeliveryInfo'])->name('delivery.flex.updateDeliveryInfo');
+    Route::get('/dashboard/logistica/delivery-flex/pdf/{zona}', [DeliveryFlexController::class, 'downloadPdf'])->name('delivery.flex.pdf');
 
     Route::get('/dashboard/herramientas/scraper-falabella', [AnalyticsFallabellaController::class, 'scraperFalabella'])->name('dashboard.herramientas.scraper_falabella');
     Route::get('/dashboard/herramientas/scraper-mercadolibre', [AnalyticsMercadolibreController::class, 'scraperMercadolibre'])->name('dashboard.herramientas.scraper_mercadolibre');
@@ -256,10 +263,10 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/garantia/searchregistro', [GarantiaController::class, 'searchRegistro'])->name('garantia.searchregistro');
     Route::get('/garantia/getoneegreso', [GarantiaController::class, 'getOneRegistro'])->name('garantia.getoneegreso');
 
-    Route::get('/plataformas', [PlataformaController::class, 'index'])->name('plataformas');
-    Route::post('/plataforma/updatecuenta', [PlataformaController::class, 'updateCuentas'])->name('updatecuenta');
-    Route::post('/plataforma/createcuenta', [PlataformaController::class, 'createCuenta'])->name('createcuenta');
-    Route::get('/plataformas/faltantes', [PlataformaController::class, 'faltantes'])->name('plataformas.faltantes');
+    Route::get('/plataformas', [PlataformaBaseController::class, 'index'])->name('plataformas');
+    Route::post('/plataforma/updatecuenta', [PlataformaBaseController::class, 'updateCuentas'])->name('updatecuenta');
+    Route::post('/plataforma/createcuenta', [PlataformaBaseController::class, 'createCuenta'])->name('createcuenta');
+    Route::get('/plataformas/faltantes', [PlataformaBaseController::class, 'faltantes'])->name('plataformas.faltantes');
 
     // Envios a Provincias
     Route::prefix('envios-provincias')->name('envios.')->group(function () {
@@ -304,46 +311,46 @@ Route::middleware(['validate.session'])->group(function () {
 
     // FALABELLA
     Route::prefix('plataformas/falabella')->name('plataformas.falabella.')->group(function () {
-        Route::get('/productos', [PlataformaController::class, 'falabellaProductos'])->name('productos');
-        Route::get('/catalogo-fbf', [PlataformaController::class, 'falabellaPublicaciones'])->name('publicaciones');
-        Route::get('/seller', [PlataformaController::class, 'sellerFalabella'])->name('seller');
-        Route::get('/orders', [PlataformaController::class, 'falabellaOrders'])->name('orders');
-        Route::get('/order/{order_id}', [PlataformaController::class, 'falabellaOrderDetails'])->name('order-details');
-        Route::post('/sync-orders', [PlataformaController::class, 'syncFalabellaOrders'])->name('sync-orders');
-        Route::get('/picking', [PlataformaController::class, 'falabellaPicking'])->name('picking');
-        Route::get('/picking-pdf', [PlataformaController::class, 'falabellaPickingPdf'])->name('picking.pdf');
-        Route::get('/etiquetas', [PlataformaController::class, 'falabellaEtiquetas'])->name('etiquetas');
-        Route::get('/etiquetas-pdf', [PlataformaController::class, 'falabellaEtiquetasPdf'])->name('etiquetas.pdf');
-        Route::get('/etiquetas-oficiales-pdf', [PlataformaController::class, 'falabellaEtiquetasOficialesPdf'])->name('etiquetas-oficiales.pdf');
-        Route::get('/devoluciones', [PlataformaController::class, 'falabellaReturns'])->name('devoluciones');
-        Route::post('/sync-devoluciones', [PlataformaController::class, 'syncFalabellaReturns'])->name('sync-devoluciones');
+        Route::get('/productos', [FalabellaController::class, 'productos'])->name('productos');
+        Route::get('/catalogo-fbf', [FalabellaController::class, 'publicaciones'])->name('publicaciones');
+        Route::get('/seller', [FalabellaController::class, 'sellerFalabella'])->name('seller');
+        Route::get('/orders', [FalabellaController::class, 'orders'])->name('orders');
+        Route::get('/order/{order_id}', [FalabellaController::class, 'orderDetails'])->name('order-details');
+        Route::post('/sync-orders', [FalabellaController::class, 'syncOrders'])->name('sync-orders');
+        Route::get('/picking', [FalabellaController::class, 'picking'])->name('picking');
+        Route::get('/picking-pdf', [FalabellaController::class, 'pickingPdf'])->name('picking.pdf');
+        Route::get('/etiquetas', [FalabellaController::class, 'etiquetas'])->name('etiquetas');
+        Route::get('/etiquetas-pdf', [FalabellaController::class, 'etiquetasPdf'])->name('etiquetas.pdf');
+        Route::get('/etiquetas-oficiales-pdf', [FalabellaController::class, 'etiquetasOficialesPdf'])->name('etiquetas-oficiales.pdf');
+        Route::get('/devoluciones', [FalabellaController::class, 'returns'])->name('devoluciones');
+        Route::post('/sync-devoluciones', [FalabellaController::class, 'syncReturns'])->name('sync-devoluciones');
     });
 
     // RIPLEY
     Route::prefix('plataformas/ripley')->name('plataformas.ripley.')->group(function () {
-        Route::get('/orders', [PlataformaController::class, 'ripleyOrders'])->name('orders');
-        Route::get('/catalogo', [PlataformaController::class, 'ripleyPublicaciones'])->name('catalogo');
-        Route::get('/etiquetas', [PlataformaController::class, 'ripleyEtiquetas'])->name('etiquetas');
-        Route::get('/etiquetas/descargar', [PlataformaController::class, 'ripleyEtiquetasDescargar'])->name('etiquetas.descargar');
+        Route::get('/orders', [RipleyController::class, 'orders'])->name('orders');
+        Route::get('/catalogo', [RipleyController::class, 'publicaciones'])->name('catalogo');
+        Route::get('/etiquetas', [RipleyController::class, 'etiquetas'])->name('etiquetas');
+        Route::get('/etiquetas/descargar', [RipleyController::class, 'etiquetasDescargar'])->name('etiquetas.descargar');
     });
 
     // MERCADO LIBRE
     Route::prefix('plataformas/mercadolibre')->name('plataformas.ml.')->group(function () {
-        Route::get('/orders', [\App\Http\Controllers\MercadoLibreController::class, 'orders'])->name('orders');
-        Route::get('/preguntas', [\App\Http\Controllers\MercadoLibreController::class, 'viewPreguntas'])->name('preguntas');
-        Route::get('/flex', [\App\Http\Controllers\MercadoLibreController::class, 'flexOrders'])->name('flex');
-        Route::get('/catalogo', [\App\Http\Controllers\MercadoLibreController::class, 'publicaciones'])->name('publicaciones');
-        Route::get('/etiquetas', [\App\Http\Controllers\MercadoLibreController::class, 'etiquetas'])->name('etiquetas');
-        Route::post('/shipment-labels-bulk', [\App\Http\Controllers\MercadoLibreController::class, 'downloadLabelsBulk'])->name('labels.bulk');
-        Route::post('/sync-orders', [\App\Http\Controllers\MercadoLibreController::class, 'syncOrders'])->name('sync-orders');
-        Route::get('/sync-status', [\App\Http\Controllers\MercadoLibreController::class, 'syncStatus'])->name('sync-status');
-        Route::get('/notifications', [\App\Http\Controllers\MercadoLibreController::class, 'getNotifications'])->name('notifications');
-        Route::post('/answer', [\App\Http\Controllers\MercadoLibreController::class, 'answerQuestion'])->name('answer');
-        Route::get('/shipment-label/{order_id}', [\App\Http\Controllers\MercadoLibreController::class, 'downloadLabel'])->name('label');
-        Route::post('/toggle-flex', [\App\Http\Controllers\MercadoLibreController::class, 'toggleFlexForItem'])->name('toggle-flex');
+        Route::get('/orders', [MercadoLibreController::class, 'orders'])->name('orders');
+        Route::get('/preguntas', [MercadoLibreController::class, 'viewPreguntas'])->name('preguntas');
+        Route::get('/flex', [MercadoLibreController::class, 'flexOrders'])->name('flex');
+        Route::get('/catalogo', [MercadoLibreController::class, 'publicaciones'])->name('publicaciones');
+        Route::get('/etiquetas', [MercadoLibreController::class, 'etiquetas'])->name('etiquetas');
+        Route::post('/shipment-labels-bulk', [MercadoLibreController::class, 'downloadLabelsBulk'])->name('labels.bulk');
+        Route::post('/sync-orders', [MercadoLibreController::class, 'syncOrders'])->name('sync-orders');
+        Route::get('/sync-status', [MercadoLibreController::class, 'syncStatus'])->name('sync-status');
+        Route::get('/notifications', [MercadoLibreController::class, 'getNotifications'])->name('notifications');
+        Route::post('/answer', [MercadoLibreController::class, 'answerQuestion'])->name('answer');
+        Route::get('/shipment-label/{order_id}', [MercadoLibreController::class, 'downloadLabel'])->name('label');
+        Route::post('/toggle-flex', [MercadoLibreController::class, 'toggleFlexForItem'])->name('toggle-flex');
     });
-    Route::get('/configuracion/mercadolibre/auth', [\App\Http\Controllers\MercadoLibreController::class, 'authorize'])->name('ml.auth');
-    Route::get('/configuracion/mercadolibre/callback', [\App\Http\Controllers\MercadoLibreController::class, 'callback'])->name('ml.callback');
+    Route::get('/configuracion/mercadolibre/auth', [MercadoLibreController::class, 'authorize'])->name('ml.auth');
+    Route::get('/configuracion/mercadolibre/callback', [MercadoLibreController::class, 'callback'])->name('ml.callback');
 
     Route::prefix('reclamos-plataforma')->name('reclamos.')->group(function () {
         Route::get('/', [ReclamoPlataformaController::class, 'index'])->name('index');
@@ -503,7 +510,6 @@ Route::middleware(['validate.session'])->group(function () {
             'clave' => $claveKey
         ]);
     })->name('verificar.clave.duplicada');
-
 });
 
 Route::middleware(['validate.session'])->prefix('licencias')->name('licencias.')->group(function () {

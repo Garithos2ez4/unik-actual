@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Plataformas;
 
+use App\Http\Controllers\Controller;
 use App\Models\Ecommerce\MercadoLibreCredential;
 use App\Models\Ecommerce\MercadoLibreOrder;
 use App\Jobs\SyncMercadoLibreOrdersJob;
@@ -196,7 +197,7 @@ class MercadoLibreController extends Controller
         if ($shippingStatus === 'pending_only') {
             // Ocultar los finalizados, cancelados y enviados
             $query->whereNotIn('shipping_status', ['delivered', 'not_delivered', 'cancelled', 'shipped'])
-                  ->where('status', '!=', 'cancelled');
+                ->where('status', '!=', 'cancelled');
         } elseif ($shippingStatus !== 'all' && filled($shippingStatus)) {
             $query->where('shipping_status', $shippingStatus);
         }
@@ -211,7 +212,7 @@ class MercadoLibreController extends Controller
                     ->orWhere('buyer_nickname', 'LIKE', "%{$search}%")
                     ->orWhereHas('items', function ($qi) use ($search) {
                         $qi->where('seller_sku', 'LIKE', "%{$search}%")
-                           ->orWhere('title', 'LIKE', "%{$search}%");
+                            ->orWhere('title', 'LIKE', "%{$search}%");
                     });
             });
         }
@@ -691,9 +692,9 @@ class MercadoLibreController extends Controller
         }
 
         $allCredentials = \App\Models\Ecommerce\MercadoLibreCredential::all();
-        
+
         $sellerId = $request->input('seller_id');
-        
+
         if ($sellerId) {
             $credential = $allCredentials->where('seller_id', $sellerId)->first();
         } else {

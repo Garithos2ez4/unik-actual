@@ -465,4 +465,86 @@ class HomeController extends Controller
         }
         return response()->json(['success' => false], 404);
     }
+
+    public function topCompradores(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+
+        $periodo    = $request->query('periodo', 'mes');
+        $orden      = $request->query('orden', 'monto');
+        $limite     = (int) $request->query('limite', 10);
+        $desde      = $request->query('desde');
+        $hasta      = $request->query('hasta');
+
+        $query = \App\Models\Usuarios\Cliente::query()
+            ->join('Venta', 'Venta.idCliente', '=', 'Cliente.idCliente')
+            ->join('DetalleVenta', 'DetalleVenta.idVenta', '=', 'Venta.idVenta')
+            ->select(
+                'Cliente.idCliente',
+                'Cliente.nombre',
+                'Cliente.apellidoPaterno',
+                'Cliente.apellidoMaterno',
+                'Cliente.numeroDocumento',
+                'Cliente.correo',
+                \DB::raw('COUNT(DISTINCT Venta.idVenta) as total_compras'),
+                \DB::raw('SUM(DetalleVenta.precioVenta * DetalleVenta.cantidad) as total_monto'),
+                \DB::raw('MAX(Venta.fechaVenta) as ultima_compra')
+            )
+            ->where('DetalleVenta.estado', 'COMPLETADO');
+
+        // Aplicar filtro de período
+        switch ($periodo) {
+            case 'mes':
+                $query->whereMonth('Venta.fechaVenta', now()->month)
+                      ->whereYear('Venta.fechaVenta', now()->year);
+                break;
+            case 'trimestre':
+                $query->where('Venta.fechaVenta', '>=', now()->subMonths(3)->startOfDay());
+                break;
+            case 'semestre':
+                $query->where('Venta.fechaVenta', '>=', now()->subMonths(6)->startOfDay());
+                break;
+            case 'anio':
+                $query->whereYear('Venta.fechaVenta', now()->year);
+                break;
+            case 'personalizado':
+                if ($desde) {
+                    $query->where('Venta.fechaVenta', '>=', $desde . ' 00:00:00');
+                }
+                if ($hasta) {
+                    $query->where('Venta.fechaVenta', '<=', $hasta . ' 23:59:59');
+                }
+                break;
+            // 'todo' → sin filtro de fecha
+        }
+
+        // Ordenar
+        if ($orden === 'compras') {
+            $query->orderBy('total_compras', 'desc');
+        } else {
+            $query->orderBy('total_monto', 'desc');
+        }
+
+        $compradores = $query
+            ->groupBy(
+                'Cliente.idCliente',
+                'Cliente.nombre',
+                'Cliente.apellidoPaterno',
+                'Cliente.apellidoMaterno',
+                'Cliente.numeroDocumento',
+                'Cliente.correo'
+            )
+            ->limit($limite)
+            ->get();
+
+        return view('top_compradores', [
+            'user'        => $userModel,
+            'compradores' => $compradores,
+            'periodo'     => $periodo,
+            'orden'       => $orden,
+            'limite'      => $limite,
+            'desde'       => $desde,
+            'hasta'       => $hasta,
+        ]);
+    }
 }

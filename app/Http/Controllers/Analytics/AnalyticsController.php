@@ -618,7 +618,7 @@ class AnalyticsController extends Controller
     public function productoHistorialIndex(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
-        
+
         // Vista libre sin restricciones (solicitado)
         // if (!$this->validateAccess($userModel, 13)) {
         //     $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
@@ -644,7 +644,7 @@ class AnalyticsController extends Controller
             ->leftJoin('EgresoProducto', 'DetalleVenta.idEgreso', '=', 'EgresoProducto.idEgreso')
             ->leftJoin('RegistroProducto', 'EgresoProducto.idRegistro', '=', 'RegistroProducto.idRegistro')
             ->select(
-                'Venta.fechaVenta',
+                'DetalleVenta.created_at as real_created_at',
                 'Venta.canal',
                 'Venta.numeroOrden',
                 'Venta.idVenta',
@@ -654,12 +654,12 @@ class AnalyticsController extends Controller
                 'RegistroProducto.numeroSerie'
             )
             ->where('DetalleVenta.idProducto', $idProducto)
-            ->orderByDesc('Venta.fechaVenta')
+            ->orderByDesc('DetalleVenta.created_at')
             ->get()
             ->map(function ($item) {
                 return [
-                    'fecha' => \Carbon\Carbon::parse($item->fechaVenta)->format('d/m/Y H:i'),
-                    'fecha_sort' => \Carbon\Carbon::parse($item->fechaVenta)->timestamp,
+                    'fecha' => \Carbon\Carbon::parse($item->real_created_at)->format('d/m/Y H:i'),
+                    'fecha_sort' => \Carbon\Carbon::parse($item->real_created_at)->timestamp,
                     'canal' => $item->canal ?? 'Desconocido',
                     'orden' => $item->numeroOrden ?? 'V-' . $item->idVenta,
                     'cantidad' => $item->cantidad,

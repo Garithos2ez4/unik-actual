@@ -1,16 +1,20 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Plataformas;
 
-use App\Services\FalabellaApiService;
-use App\Services\FalabellaOrderSyncService;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\PlataformaServiceInterface;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Request;
+use App\Services\FalabellaApiService;
+use App\Services\FalabellaOrderSyncService;
+use App\Services\RipleyApiService;
+use Illuminate\Support\Facades\Log;
 use Throwable;
+use Exception;
+use Barryvdh\DomPDF\Facade\Pdf;
 
-class PlataformaController extends Controller
+class FalabellaController extends Controller
 {
     protected $headerService;
     protected $plataformaService;
@@ -28,126 +32,10 @@ class PlataformaController extends Controller
         $this->falabellaApiService        = $falabellaApiService;
         $this->falabellaOrderSyncService  = $falabellaOrderSyncService;
     }
-    public function index()
-    {
-        $userModel = $this->headerService->getModelUser();
 
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                $plataformas = $this->plataformaService->getAllPlataformas()->filter(function ($p) {
-                    return $p->nombrePlataforma !== 'Tienda';
-                });
 
-                return view('plataformas', [
-                    'user' => $userModel,
-                    'plataformas' => $plataformas
-                ]);
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
 
-    public function faltantes(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                @ini_set('max_execution_time', '300'); // Evitar timeout
-
-                $plataformas = \App\Models\Empresa\Plataforma::whereIn('nombrePlataforma', ['Falabella', 'Mercado Libre', 'Ripley'])->get();
-
-                $publicadosPorPlataforma = [];
-                $publicadosMap = []; // Para busqueda O(1)
-
-                foreach ($plataformas as $plat) {
-                    $cuentas = $plat->CuentasPlataforma->pluck('idCuentaPlataforma');
-                    $pubs = \App\Models\Catalogo\Publicacion::whereIn('idCuentaPlataforma', $cuentas)->get(['idProducto', 'titulo', 'sku']);
-                    
-                    $publicadosMap[$plat->idPlataforma] = ['by_id' => [], 'pubs' => []];
-                    
-                    foreach ($pubs as $pub) {
-                        if ($pub->idProducto) {
-                            $publicadosMap[$plat->idPlataforma]['by_id'][$pub->idProducto] = true;
-                        }
-                        // Pre-calcular el uppercase para no hacerlo millones de veces en el loop interno
-                        $publicadosMap[$plat->idPlataforma]['pubs'][] = [
-                            'titulo' => strtoupper((string)$pub->titulo),
-                            'sku' => strtoupper((string)$pub->sku),
-                        ];
-                    }
-                }
-
-                $productosConStock = \App\Models\Catalogo\Producto::with('Inventario')->whereHas('Inventario', function ($q) {
-                    $q->where('stock', '>', 0);
-                })->where('estadoProductoWeb', '!=', 'DESCONTINUADO')->get();
-
-                $faltantesGenerales = [];
-
-                foreach ($productosConStock as $prod) {
-                    $modelo = strtoupper(trim((string)$prod->modelo));
-                    $missingIn = [];
-
-                    foreach ($plataformas as $plat) {
-                        $isPublished = false;
-                        
-                        // 1. Busqueda super rapida O(1) por idProducto
-                        if (isset($publicadosMap[$plat->idPlataforma]['by_id'][$prod->idProducto])) {
-                            $isPublished = true;
-                        } 
-                        // 2. Busqueda inteligente por modelo en string
-                        elseif (!empty($modelo) && $modelo !== '-') {
-                            // Generamos variantes del modelo para un "Fuzzy Match" (Como un LIKE flexible)
-                            $variantes = [$modelo];
-                            
-                            // Variante sin guiones (ej. TE-2764G -> TE2764G)
-                            if (str_contains($modelo, '-')) {
-                                $variantes[] = str_replace('-', '', $modelo);
-                                $variantes[] = str_replace('-', ' ', $modelo);
-                                
-                                // Variante base (ej. T544120-BK -> T544120)
-                                $partes = explode('-', $modelo);
-                                if (strlen($partes[0]) >= 4) { // Solo si la base es representativa
-                                    $variantes[] = trim($partes[0]);
-                                } elseif (isset($partes[1]) && strlen($partes[1]) >= 4) {
-                                    $variantes[] = trim($partes[1]); // ej. TE-2765G -> 2765G
-                                }
-                            }
-
-                            foreach ($publicadosMap[$plat->idPlataforma]['pubs'] as $p) {
-                                foreach ($variantes as $var) {
-                                    if (str_contains($p['titulo'], $var) || str_contains($p['sku'], $var)) {
-                                        $isPublished = true;
-                                        break 2; // Romper ambos foreach
-                                    }
-                                }
-                            }
-                        }
-
-                        if (!$isPublished) {
-                            $missingIn[] = $plat;
-                        }
-                    }
-
-                    if (count($missingIn) > 0) {
-                        $prod->missing_platforms = $missingIn;
-                        $faltantesGenerales[] = $prod;
-                    }
-                }
-
-                return view('plataformas.faltantes', [
-                    'user' => $userModel,
-                    'plataformas' => $plataformas,
-                    'faltantes' => $faltantesGenerales
-                ]);
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
-
-    public function falabellaProductos(Request $request)
+    public function productos(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -191,7 +79,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaPublicaciones(Request $request)
+
+
+    public function publicaciones(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -237,6 +127,8 @@ class PlataformaController extends Controller
         $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
+
+
 
     public function sellerFalabella()
     {
@@ -303,7 +195,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaOrders(Request $request)
+
+
+    public function orders(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -402,7 +296,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function syncFalabellaOrders(Request $request)
+
+
+    public function syncOrders(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -444,7 +340,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaPicking(Request $request)
+
+
+    public function picking(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -506,7 +404,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaEtiquetas(Request $request)
+
+
+    public function etiquetas(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -533,7 +433,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaPickingPdf(Request $request)
+
+
+    public function pickingPdf(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -597,7 +499,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaEtiquetasPdf(Request $request)
+
+
+    public function etiquetasPdf(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -624,7 +528,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaReturns(Request $request)
+
+
+    public function returns(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -654,7 +560,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function syncFalabellaReturns(Request $request)
+
+
+    public function syncReturns(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -695,7 +603,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
-    public function falabellaOrderDetails(Request $request, $order_id)
+
+
+    public function orderDetails(Request $request, $order_id)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -714,7 +624,9 @@ class PlataformaController extends Controller
         return redirect()->route('dashboard');
     }
 
-    public function falabellaEtiquetasOficialesPdf(Request $request)
+
+
+    public function etiquetasOficialesPdf(Request $request)
     {
         $userModel = $this->headerService->getModelUser();
 
@@ -775,261 +687,4 @@ class PlataformaController extends Controller
         return response()->json(['success' => false, 'error' => 'No tienes permiso'], 403);
     }
 
-    public function updateCuentas(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-        $acounts = $request->input('cuentas', []);
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                $this->plataformaService->updateCuentas($acounts);
-                $this->headerService->sendFlashAlerts('Cuentas actualizadas', 'Operacion realizada correctamente', 'success', 'btn-success');
-                return redirect()->back();
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
-
-    public function createCuenta(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-        $nombrecuenta = $request->input('cuenta');
-        $idplataforma = $request->input('plataforma');
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                if ($nombrecuenta != '') {
-                    $this->plataformaService->createCuenta($idplataforma, $nombrecuenta);
-                    $this->headerService->sendFlashAlerts('Cuenta Registrada', 'Operacion realizada correctamente.', 'success', 'btn-success');
-                    return redirect()->back();
-                } else {
-                    $this->headerService->sendFlashAlerts('Faltan datos', 'Ingresa datos en el formulario.', 'info', 'btn-warning');
-                    return redirect()->back();
-                }
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
-
-    // ─── RIPLEY ───────────────────────────────────────────────────────────────
-
-    public function ripleyOrders(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                $selectedDate   = $request->query('date', now()->toDateString());
-                $selectedStatus = trim((string) $request->query('status', 'pending'));
-
-                $query = \App\Models\Ecommerce\RipleyOrder::with('items');
-                if ($selectedDate) {
-                    $query->where(function ($q) use ($selectedDate) {
-                        $q->whereDate('created_at_ripley', $selectedDate)
-                            ->orWhereDate('sync_date', $selectedDate);
-                    });
-                }
-
-                if (filled($selectedStatus) && $selectedStatus !== 'all') {
-                    if ($selectedStatus === 'pending') {
-                        $query->whereIn('status', ['SHIPPING', 'STAGING', 'WAITING_ACCEPTANCE']);
-                    } elseif ($selectedStatus === 'shipped') {
-                        $query->whereIn('status', ['SHIPPED', 'RECEIVED']);
-                    } else {
-                        $query->where('status', $selectedStatus);
-                    }
-                }
-
-                $orders = $query->orderByDesc('created_at_ripley')->get();
-
-                return view('plataformas.ripley.ripley-orders', [
-                    'user'           => $userModel,
-                    'selectedDate'   => $selectedDate,
-                    'selectedStatus' => $selectedStatus,
-                    'orders'         => $orders,
-                ]);
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
-
-    public function ripleyPublicaciones(Request $request, \App\Services\RipleyApiService $ripleyApiService)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                $search = $request->input('search');
-                $limit  = 50;
-                $offset = max(0, (int) $request->input('offset', 0));
-
-                $params = [
-                    'max' => 1000,
-                    'offset' => 0, // Siempre traemos desde el inicio para filtrar localmente
-                ];
-
-                try {
-                    $response = $ripleyApiService->getOffers($params);
-                    $allOffers = $response['offers'];
-
-                    if ($search) {
-                        $searchLower = strtolower($search);
-                        $filtered = [];
-                        foreach ($allOffers as $offer) {
-                            $title = strtolower($offer['product_title'] ?? '');
-                            $shopSku = strtolower($offer['shop_sku'] ?? '');
-                            $productSku = strtolower($offer['product_sku'] ?? '');
-
-                            if (str_contains($title, $searchLower) || str_contains($shopSku, $searchLower) || str_contains($productSku, $searchLower)) {
-                                $filtered[] = $offer;
-                            }
-                        }
-                        $totalCount = count($filtered);
-                        $offers = array_slice($filtered, $offset, $limit);
-                    } else {
-                        $totalCount = $response['total_count'];
-                        $offers = array_slice($allOffers, $offset, $limit);
-                    }
-
-                    $error = null;
-                } catch (\Exception $e) {
-                    $offers = [];
-                    $totalCount = 0;
-                    $error = $e->getMessage();
-                }
-
-                return view('plataformas.ripley.ripley-publicaciones', [
-                    'user'       => $userModel,
-                    'offers'     => $offers,
-                    'search'     => $search ?? '',
-                    'limit'      => $limit,
-                    'offset'     => $offset,
-                    'totalCount' => $totalCount,
-                    'error'      => $error ?? null,
-                ]);
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
-
-    public function ripleyEtiquetas(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                $selectedDate   = $request->query('date', now()->toDateString());
-                $selectedStatus = trim((string) $request->query('status', 'pending'));
-
-                $query = \App\Models\Ecommerce\RipleyOrder::with('items');
-
-                if ($selectedDate) {
-                    $query->whereDate('promised_shipping_time', $selectedDate);
-                }
-
-                if (filled($selectedStatus) && $selectedStatus === 'pending') {
-                    // En Mirakl, WAITING_ACCEPTANCE y SHIPPING significan que el vendedor debe enviarlo
-                    $query->whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING', 'pending', 'ready_to_ship', 'waiting_debit_payment']);
-                } elseif (filled($selectedStatus) && $selectedStatus !== 'all') {
-                    $query->where('status', $selectedStatus);
-                }
-
-                $orders = $query->orderByDesc('promised_shipping_time')->get();
-
-                return view('plataformas.ripley.ripley-etiquetas', [
-                    'user'           => $userModel,
-                    'selectedDate'   => $selectedDate,
-                    'selectedStatus' => $selectedStatus,
-                    'orders'         => $orders,
-                ]);
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
-
-    public function ripleyEtiquetasDescargar(Request $request)
-    {
-        $userModel = $this->headerService->getModelUser();
-
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 4) {
-                @ini_set('max_execution_time', '300');
-                @set_time_limit(300);
-
-                $selectedDate   = $request->query('date', now()->toDateString());
-                $selectedStatus = trim((string) $request->query('status', 'pending'));
-
-                $query = \App\Models\Ecommerce\RipleyOrder::with('items');
-
-                if ($selectedDate) {
-                    $query->whereDate('promised_shipping_time', $selectedDate);
-                }
-
-                if (filled($selectedStatus) && $selectedStatus === 'pending') {
-                    $query->whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING', 'pending', 'ready_to_ship', 'waiting_debit_payment']);
-                } elseif (filled($selectedStatus) && $selectedStatus !== 'all') {
-                    $query->where('status', $selectedStatus);
-                }
-
-                $orders = $query->orderByDesc('promised_shipping_time')->get();
-
-                if ($orders->isEmpty()) {
-                    $this->headerService->sendFlashAlerts('Sin etiquetas', 'No hay órdenes para la fecha/estado seleccionado.', 'info', 'btn-warning');
-                    return redirect()->back();
-                }
-
-                // Obtenemos los IDs de las ordenes
-                $orderIds = $orders->pluck('order_id')->toArray();
-
-                try {
-                    $ripleyApi = app(\App\Services\RipleyApiService::class);
-                    $result = $ripleyApi->getDocumentsRaw($orderIds);
-
-                    $contentType = $result['content_type'];
-                    $labels = [];
-
-                    if (str_contains(strtolower($contentType), 'zip')) {
-                        // Extract ZIP
-                        $tempZip = storage_path('app/temp_ripley_' . time() . '.zip');
-                        file_put_contents($tempZip, $result['body']);
-
-                        $zip = new \ZipArchive;
-                        if ($zip->open($tempZip) === TRUE) {
-                            for ($i = 0; $i < $zip->numFiles; $i++) {
-                                $filename = $zip->getNameIndex($i);
-                                if (str_ends_with(strtolower($filename), '.pdf')) {
-                                    $pdfContent = $zip->getFromIndex($i);
-                                    $labels[] = base64_encode($pdfContent);
-                                }
-                            }
-                            $zip->close();
-                        }
-                        @unlink($tempZip);
-                    } else {
-                        // Es un solo PDF
-                        $labels[] = base64_encode($result['body']);
-                    }
-
-                    if (empty($labels)) {
-                        return response()->json(['success' => false, 'error' => 'No se encontraron etiquetas PDF en la respuesta.']);
-                    }
-
-                    return response()->json([
-                        'success' => true,
-                        'labels'  => $labels,
-                    ]);
-                } catch (\Throwable $e) {
-                    return response()->json(['success' => false, 'error' => $e->getMessage()]);
-                }
-            }
-        }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
-    }
 }
-

@@ -72,7 +72,7 @@
             searchField: ['modelo', 'nombreProducto'],
             load: function(query, callback) {
                 if (!query.length) return callback();
-                
+
                 // Usamos la ruta existente searchModelProduct
                 fetch(`{{ route('searchmodelproduct') }}?query=${encodeURIComponent(query)}`)
                     .then(response => response.json())
@@ -104,9 +104,10 @@
             language: {
                 url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
             },
-            order: [[0, 'desc']], // Ordenar por fecha descendente
-            columns: [
-                { 
+            order: [
+                [0, 'desc']
+            ], // Ordenar por fecha descendente
+            columns: [{
                     data: 'fecha',
                     render: function(data, type, row) {
                         // DataTables usa 'sort' y 'type' para el ordenamiento
@@ -116,24 +117,36 @@
                         return data;
                     }
                 },
-                { 
+                {
                     data: 'canal',
                     render: function(data) {
                         return `<span class="badge bg-secondary opacity-75">${data}</span>`;
                     }
                 },
-                { data: 'orden', className: 'text-primary fw-bold' },
-                { data: 'serie', className: 'text-center text-muted fw-semibold' },
-                { data: 'cantidad', className: 'text-center fw-bold' },
-                { data: 'precio_unitario', className: 'text-end text-muted' },
-                { 
-                    data: 'total', 
+                {
+                    data: 'orden',
+                    className: 'text-primary fw-bold'
+                },
+                {
+                    data: 'serie',
+                    className: 'text-center text-muted fw-semibold'
+                },
+                {
+                    data: 'cantidad',
+                    className: 'text-center fw-bold'
+                },
+                {
+                    data: 'precio_unitario',
+                    className: 'text-end text-muted'
+                },
+                {
+                    data: 'total',
                     className: 'text-end fw-bold text-success',
                     render: function(data) {
                         return 'S/ ' + data;
                     }
                 },
-                { 
+                {
                     data: 'estado',
                     className: 'text-center',
                     render: function(data) {
@@ -151,16 +164,16 @@
         document.getElementById('btnBuscar').addEventListener('click', function() {
             let idProducto = tomSelect.getValue();
             let modelo = tomSelect.options[idProducto].modelo;
-            
+
             if (!idProducto) return;
 
             // Mostrar card
             document.getElementById('resultadosCard').style.display = 'block';
             document.getElementById('productTitle').innerText = 'Historial de Ventas: ' + modelo;
-            
+
             // Mostrar loading con SweetAlert o en tabla
             tabla.clear().draw();
-            
+
             fetch(`{{ route('dashboard.analitica.producto.data') }}?idProducto=${idProducto}`)
                 .then(response => response.json())
                 .then(data => {
@@ -182,12 +195,15 @@
         const urlModelo = urlParams.get('modelo');
 
         if (urlId && urlModelo) {
-            tomSelect.addOption({ idProducto: urlId, modelo: urlModelo });
+            tomSelect.addOption({
+                idProducto: urlId,
+                modelo: urlModelo
+            });
             tomSelect.setValue(urlId);
-            
+
             // Simular click en buscar
             let btnBuscar = document.getElementById('btnBuscar');
-            if(btnBuscar) {
+            if (btnBuscar) {
                 // Esperar a que el botn est habilitado si no lo est todava
                 setTimeout(() => {
                     btnBuscar.disabled = false;

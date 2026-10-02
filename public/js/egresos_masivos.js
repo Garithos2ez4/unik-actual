@@ -925,6 +925,14 @@
                     }
                 });
 
+                const btnReg = document.getElementById('btn-registrar-masivo');
+                const originalBtnText = btnReg ? btnReg.innerHTML : '';
+                window.isSubmitting = true;
+                if (btnReg) {
+                    btnReg.disabled = true;
+                    btnReg.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+                }
+
                 fetch(form.action, {
                     method: 'POST',
                     body: formData,
@@ -946,6 +954,11 @@
                             window.location.reload();
                         });
                     } else {
+                        if (btnReg) {
+                            btnReg.disabled = false;
+                            btnReg.innerHTML = originalBtnText;
+                        }
+                        window.isSubmitting = false;
                         Swal.fire({
                             icon: 'error',
                             title: 'Error de Validación',
@@ -955,12 +968,19 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    if (btnReg) {
+                        btnReg.disabled = false;
+                        btnReg.innerHTML = originalBtnText;
+                    }
+                    window.isSubmitting = false;
                     Swal.fire({
                         icon: 'error',
                         title: 'Error Inesperado',
                         text: 'Ocurrió un error al enviar los datos. Revisa la consola para más detalles.'
                     });
                 });
+            } else {
+                window.isSubmitting = false;
             }
         });
     });
@@ -1061,13 +1081,6 @@
         }
     });
 
-    document.getElementById('form-egreso-masivo')?.addEventListener('submit', function(e) {
-        window.isSubmitting = true;
-        const btnReg = document.getElementById('btn-registrar-masivo');
-        if (btnReg) {
-            btnReg.disabled = true;
-            btnReg.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
-        }
-    });
+
 
 })();
