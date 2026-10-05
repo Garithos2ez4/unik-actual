@@ -118,6 +118,16 @@ class EnvioProvinciaController extends Controller
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
             $productos = $request->input('productos', []);
 
+            // Custom validation for idSubAgencia
+            // Custom validation for idSubAgencia
+            $agencyHasBranches = \App\Models\Envios\SubAgencia::where('idAgencia', $request->idAgencia)
+                ->where('estado', 1)
+                ->exists();
+                
+            if ($agencyHasBranches && empty($request->idSubAgencia)) {
+                throw new \Exception('Esta agencia requiere seleccionar una oficina/sucursal obligatoriamente.');
+            }
+
             $this->envioService->createEnvio($data, $productos);
 
             $this->headerService->sendFlashAlerts('Envío registrado', 'Operación exitosa', 'success', 'btn-success');
@@ -174,6 +184,16 @@ class EnvioProvinciaController extends Controller
             $data = $request->all();
             $data['pago_destino'] = $request->has('pago_destino') ? 1 : 0;
             $productos = $request->input('productos', []);
+
+            // Custom validation for idSubAgencia
+            // Custom validation for idSubAgencia
+            $agencyHasBranches = \App\Models\Envios\SubAgencia::where('idAgencia', $request->idAgencia)
+                ->where('estado', 1)
+                ->exists();
+                
+            if ($agencyHasBranches && empty($request->idSubAgencia)) {
+                throw new \Exception('Esta agencia requiere seleccionar una oficina/sucursal obligatoriamente.');
+            }
 
             $this->envioService->updateEnvio($id, $data, $productos);
 

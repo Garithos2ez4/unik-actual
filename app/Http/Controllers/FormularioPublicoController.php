@@ -109,6 +109,15 @@ class FormularioPublicoController extends Controller
             'correo.dns'   => 'El dominio del correo no existe o no puede recibir mensajes.'
         ]);
 
+        // Custom validation for idSubAgencia
+        $agencyHasBranches = \App\Models\Envios\SubAgencia::where('idAgencia', $request->idAgencia)
+            ->where('estado', 1)
+            ->exists();
+            
+        if ($agencyHasBranches && empty($request->idSubAgencia)) {
+            return back()->withErrors(['idSubAgencia' => 'Esta agencia requiere seleccionar una oficina/sucursal de destino válida.'])->withInput();
+        }
+
         $tipoDoc = (int)$request->idTipoDocumento;
         $numDoc  = trim($request->numeroDocumento);
 

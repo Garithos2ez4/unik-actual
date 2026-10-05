@@ -32,36 +32,38 @@
             }
             }
 
-            // 2. Traer solo las series que cuentan como stock real en este almacén
+            // 2. Traer TODAS las series activas que están en el almacén
             $seriesAlmacen = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
             $q->where('idProducto', $producto->idProducto);
             })
             ->where('idAlmacen', $almacen->idAlmacen)
-            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION', 'DEFECTUOSO'])
+            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO'])
             ->with('UbicacionExacta')
             ->get();
 
-            // 3. Agrupar y contar las cantidades por estante
+            // 3. Filtrar las que queremos contar
+            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO']);
+
+            // 4. Agrupar y contar las cantidades por estante
             $distribucion = [];
+            $stockRealMostrar = 0;
 
             if($seriesAlmacen->count() > 0) {
-                foreach($seriesAlmacen as $serie) {
+                $stockRealMostrar = $seriesValidas->count();
+                foreach($seriesValidas as $serie) {
                     $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : 'Sin asignar';
                     $fotoRack = null;
 
                     if(!isset($distribucion[$nombreRack])) {
-                        $distribucion[$nombreRack] = ['cantidad' => 0, 'defectuosos' => 0, 'foto' => $fotoRack];
+                        $distribucion[$nombreRack] = ['cantidad' => 0, 'foto' => $fotoRack];
                     }
                     $distribucion[$nombreRack]['cantidad']++;
-                    if ($serie->estado === 'DEFECTUOSO') {
-                        $distribucion[$nombreRack]['defectuosos']++;
-                    }
                 }
             } else {
                 // Si es un producto que se vende a granel (sin series), todo va al rack general
+                $stockRealMostrar = $inventario->stock;
                 $distribucion[$rackGeneralNombre] = [
                     'cantidad' => $inventario->stock,
-                    'defectuosos' => 0,
                     'foto' => $rackGeneralFoto
                 ];
             }
@@ -85,20 +87,13 @@
                             </div>
                             <div>
                                 <span class="fw-bold text-dark small">{{ $data['cantidad'] }} und.</span>
-                                @if($data['defectuosos'] > 0)
-                                    <span class="badge bg-danger ms-1" style="font-size: 10px;" title="Productos defectuosos en esta ubicación">({{ $data['defectuosos'] }} def.)</span>
-                                @endif
                             </div>
                         </div>
                         @endforeach
                     </div>
                 </td>
                 <td class="align-middle">
-                    <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $inventario->stock }}</span>
-                    @php $totalDefectuosos = $seriesAlmacen->where('estado', 'DEFECTUOSO')->count(); @endphp
-                    @if($totalDefectuosos > 0)
-                        <br><span class="badge bg-danger mt-1" style="font-size: 11px;" title="Stock defectuoso no sumado al total"> +{{ $totalDefectuosos }} def.</span>
-                    @endif
+                    <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $stockRealMostrar }}</span>
                 </td>
             </tr>
             @endif

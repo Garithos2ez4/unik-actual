@@ -40,39 +40,41 @@
                             }
                             }
 
-                            // 2. Traer solo las series que cuentan como stock real en este almacén
+                            // 2. Traer TODAS las series que están en el almacén
                             $seriesAlmacen = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
                             $q->where('idProducto', $producto->idProducto);
                             })
                             ->where('idAlmacen', $almacen->idAlmacen)
-                            ->whereIn('estado', ['NUEVO', 'ABIERTO', 'DEVOLUCION', 'DEFECTUOSO'])
+                            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
                             ->with('UbicacionExacta')
                             ->get();
 
-                            // 3. Agrupar y contar las cantidades por estante
+                            // 3. Filtrar las que queremos contar
+                            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO']);
+
+                            // 4. Agrupar y contar las cantidades por estante
                             $distribucion = [];
+                            $stockRealMostrar = 0;
 
                             if($seriesAlmacen->count() > 0) {
-                                foreach($seriesAlmacen as $serie) {
-                                    // Si la serie tiene una ubicación específica en este mismo almacén, usamos esa, sino usamos la general
-                                    $nombreRack = ($serie->UbicacionExacta && $serie->UbicacionExacta->idAlmacen == $almacen->idAlmacen) ? $serie->UbicacionExacta->nombre_completo : $rackGeneralNombre;
-                                    $fotoRack = null;
+                            $stockRealMostrar = $seriesValidas->count();
+                            foreach($seriesValidas as $serie) {
+                            // Si la serie tiene una ubicación específica en este mismo almacén, usamos esa, sino usamos la general
+                            $nombreRack = ($serie->UbicacionExacta && $serie->UbicacionExacta->idAlmacen == $almacen->idAlmacen) ? $serie->UbicacionExacta->nombre_completo : $rackGeneralNombre;
+                            $fotoRack = null;
 
-                                    if(!isset($distribucion[$nombreRack])) {
-                                        $distribucion[$nombreRack] = ['cantidad' => 0, 'defectuosos' => 0, 'foto' => $fotoRack];
-                                    }
-                                    $distribucion[$nombreRack]['cantidad']++;
-                                    if ($serie->estado === 'DEFECTUOSO') {
-                                        $distribucion[$nombreRack]['defectuosos']++;
-                                    }
-                                }
+                            if(!isset($distribucion[$nombreRack])) {
+                            $distribucion[$nombreRack] = ['cantidad' => 0, 'foto' => $fotoRack];
+                            }
+                            $distribucion[$nombreRack]['cantidad']++;
+                            }
                             } else {
-                                // Si es un producto que se vende a granel (sin series), todo va al rack general
-                                $distribucion[$rackGeneralNombre] = [
-                                    'cantidad' => $inventario->stock,
-                                    'defectuosos' => 0,
-                                    'foto' => $rackGeneralFoto
-                                ];
+                            // Si es un producto que se vende a granel (sin series), todo va al rack general
+                            $stockRealMostrar = $inventario->stock;
+                            $distribucion[$rackGeneralNombre] = [
+                            'cantidad' => $inventario->stock,
+                            'foto' => $rackGeneralFoto
+                            ];
                             }
                             @endphp
 
@@ -94,20 +96,13 @@
                                             </div>
                                             <div>
                                                 <span class="fw-bold text-dark small">{{ $data['cantidad'] }} und.</span>
-                                                @if($data['defectuosos'] > 0)
-                                                    <span class="badge bg-danger ms-1" style="font-size: 10px;" title="Productos defectuosos en esta ubicación">({{ $data['defectuosos'] }} def.)</span>
-                                                @endif
                                             </div>
                                         </div>
                                         @endforeach
                                     </div>
                                 </td>
                                 <td class="align-middle">
-                                    <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $inventario->stock }}</span>
-                                    @php $totalDefectuosos = $seriesAlmacen->where('estado', 'DEFECTUOSO')->count(); @endphp
-                                    @if($totalDefectuosos > 0)
-                                        <br><span class="badge bg-danger mt-1" style="font-size: 11px;" title="Stock defectuoso no sumado al total"> +{{ $totalDefectuosos }} def.</span>
-                                    @endif
+                                    <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $stockRealMostrar }}</span>
                                 </td>
                             </tr>
                             @endif
@@ -137,8 +132,7 @@
                 @php
                 // Obtener series disponibles para este producto
                 $seriesDisponibles = \App\Models\Inventario\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
-                ->where('estado', '!=', 'ENTREGADO')
-                ->where('estado', '!=', 'INVALIDO')
+                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO'])
                 ->whereHas('DetalleComprobante', function ($q) use ($producto) {
                 $q->where('idProducto', $producto->idProducto);
                 })

@@ -134,7 +134,7 @@
                             </div>
 
                             <div class="col-md-9" id="container-subagencia">
-                                <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
+                                <label class="form-label fw-bold">Oficina / Sucursal</label>
                                 <div class="input-group">
                                     <select name="idSubAgencia" id="select-subagencia" class="form-select" {{ $subagencias->isEmpty() ? 'disabled' : '' }}>
                                         @if($subagencias->isEmpty())

@@ -29,6 +29,20 @@
     @endif
 
     <div class="public-card-body">
+        @if($errors->any())
+        <div class="alert alert-danger" style="border-radius: 10px; font-size: 0.95rem;">
+            <div class="d-flex align-items-center gap-2 fw-bold mb-2">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                Se encontraron los siguientes errores:
+            </div>
+            <ul class="mb-0 ps-3">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
+
         <form id="form-envio-publico" action="{{ route('formulario.publico.store', $token) }}" method="POST" novalidate>
             @csrf
 
@@ -43,34 +57,34 @@
                     <select name="idTipoDocumento" id="idTipoDocumento" class="form-select" required>
                         <option value="">Seleccione...</option>
                         @foreach($documentos as $doc)
-                        <option value="{{ $doc->idTipoDocumento }}">{{ $doc->descripcion }}</option>
+                        <option value="{{ $doc->idTipoDocumento }}" {{ old('idTipoDocumento') == $doc->idTipoDocumento ? 'selected' : '' }}>{{ $doc->descripcion }}</option>
                         @endforeach
                     </select>
                 </div>
 
                 <div class="col-12 col-sm-6">
                     <label class="form-label">N° de Documento <span class="required-star">*</span></label>
-                    <input type="text" name="numeroDocumento" id="numeroDocumento" class="form-control" placeholder="Ej: 72345678" required maxlength="20" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <input type="text" name="numeroDocumento" id="numeroDocumento" class="form-control" placeholder="Ej: 72345678" required maxlength="20" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" value="{{ old('numeroDocumento') }}">
                 </div>
 
                 <div class="col-12 col-sm-6">
                     <label class="form-label" id="label-nombre">Nombres <span class="required-star">*</span></label>
-                    <input type="text" name="nombre" id="nombre" class="form-control" placeholder="Tus nombres" required maxlength="100">
+                    <input type="text" name="nombre" id="nombre" class="form-control" placeholder="Tus nombres" required maxlength="100" value="{{ old('nombre') }}">
                 </div>
 
                 <div class="col-12 col-sm-6" id="div-apellido-paterno">
                     <label class="form-label">Apellido Paterno <span class="required-star">*</span></label>
-                    <input type="text" name="apellidoPaterno" id="apellidoPaterno" class="form-control" placeholder="Apellido paterno" required maxlength="100">
+                    <input type="text" name="apellidoPaterno" id="apellidoPaterno" class="form-control" placeholder="Apellido paterno" required maxlength="100" value="{{ old('apellidoPaterno') }}">
                 </div>
 
                 <div class="col-12 col-sm-6" id="div-apellido-materno">
                     <label class="form-label">Apellido Materno</label>
-                    <input type="text" name="apellidoMaterno" id="apellidoMaterno" class="form-control" placeholder="Apellido materno" maxlength="100">
+                    <input type="text" name="apellidoMaterno" id="apellidoMaterno" class="form-control" placeholder="Apellido materno" maxlength="100" value="{{ old('apellidoMaterno') }}">
                 </div>
 
                 <div class="col-12 col-sm-6">
                     <label class="form-label">Celular / Teléfono <span class="required-star">*</span></label>
-                    <input type="tel" name="telefono" id="telefono" class="form-control" placeholder="Ej: 987654321" required minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
+                    <input type="tel" name="telefono" id="telefono" class="form-control" placeholder="Ej: 987654321" required minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)" value="{{ old('telefono') }}">
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="mismo_numero" checked>
                         <label class="form-check-label text-muted" for="mismo_numero" style="font-size: 0.85rem;">
@@ -81,12 +95,12 @@
 
                 <div class="col-12 col-sm-6" id="div-numero-registrante" style="display: none;">
                     <label class="form-label text-primary fw-bold">Tu N° de WhatsApp <span class="required-star">*</span></label>
-                    <input type="tel" name="telefono_registrante" id="telefono_registrante" class="form-control border-primary" placeholder="Número con el que nos escribiste" minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
+                    <input type="tel" name="telefono_registrante" id="telefono_registrante" class="form-control border-primary" placeholder="Número con el que nos escribiste" minlength="9" maxlength="9" pattern="[0-9]{9}" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)" value="{{ old('telefono_registrante') }}">
                 </div>
 
                 <div class="col-12">
                     <label class="form-label">Correo Electrónico-(Opcional)</label>
-                    <input type="email" name="correo" id="correo" class="form-control" placeholder="correo@ejemplo.com" maxlength="100" inputmode="email">
+                    <input type="email" name="correo" id="correo" class="form-control" placeholder="correo@ejemplo.com" maxlength="100" inputmode="email" value="{{ old('correo') }}">
                 </div>
             </div>
 
@@ -101,7 +115,7 @@
                     <select id="select-departamento" class="form-select" required onchange="cargarProvincias(this.value)">
                         <option value="">Seleccione departamento...</option>
                         @foreach($departamentos as $depto)
-                        <option value="{{ $depto->idDepartamento }}">{{ $depto->nombre }}</option>
+                        <option value="{{ $depto->idDepartamento }}" {{ old('idDepartamento') == $depto->idDepartamento ? 'selected' : '' }}>{{ $depto->nombre }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -132,12 +146,12 @@
                     <select name="idAgencia" id="select-agencia" class="form-select" required onchange="verificarCostoAgencia(); cargarSubAgencias()">
                         <option value="">Seleccione agencia...</option>
                         @foreach($agencias as $agencia)
-                        <option value="{{ $agencia->idAgencia }}">{{ $agencia->nombre }}</option>
+                        <option value="{{ $agencia->idAgencia }}" {{ old('idAgencia') == $agencia->idAgencia ? 'selected' : '' }}>{{ $agencia->nombre }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-12 mt-2" id="container-subagencia" style="display:none;">
-                    <label class="form-label fw-bold">Oficina / Sucursal <span class="text-muted">(Opcional)</span></label>
+                    <label class="form-label fw-bold">Oficina / Sucursal</label>
                     <select name="idSubAgencia" id="select-subagencia" class="form-select" disabled>
                         <option value="">Primero elija Agencia y Distrito...</option>
                     </select>
@@ -145,19 +159,19 @@
 
                 <div class="col-12 mt-2">
                     <div class="form-check form-switch p-3 rounded" style="background-color: #f8f9fa; border: 1px solid #e2e8f0;">
-                        <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="entrega_domicilio" name="entrega_domicilio" value="1" {{ old('entrega_domicilio') ? 'checked' : '' }}>
                         <label class="form-check-label fw-bold text-primary" for="entrega_domicilio">¿Entrega a Domicilio?</label>
                     </div>
                 </div>
 
                 <div class="col-12">
                     <label class="form-label" id="label-dir">Dirección de entrega</label>
-                    <input type="text" name="dir" class="form-control" placeholder="Ej: Av. Principal 123" maxlength="100">
+                    <input type="text" name="dir" class="form-control" placeholder="Ej: Av. Principal 123" maxlength="100" value="{{ old('dir') }}">
                 </div>
 
                 <div class="col-12">
                     <label class="form-label">Referencia</label>
-                    <input type="text" name="ref" class="form-control" placeholder="Ej: Cerca al parque central" maxlength="100">
+                    <input type="text" name="ref" class="form-control" placeholder="Ej: Cerca al parque central" maxlength="100" value="{{ old('ref') }}">
                 </div>
             </div>
 
@@ -171,17 +185,17 @@
                 <div class="row g-3">
                     <div class="col-12 col-sm-6">
                         <label class="form-label">Nombre completo del receptor <span class="required-star">*</span></label>
-                        <input type="text" name="receptor[nombre]" id="receptor_nombre" class="form-control" placeholder="Ej: Juan Pérez García" maxlength="150" minlength="3">
+                        <input type="text" name="receptor[nombre]" id="receptor_nombre" class="form-control" placeholder="Ej: Juan Pérez García" maxlength="150" minlength="3" value="{{ old('receptor.nombre') }}">
                     </div>
 
                     <div class="col-12 col-sm-3">
                         <label class="form-label">DNI del receptor <span class="required-star">*</span></label>
-                        <input type="text" name="receptor[dni]" id="receptor_dni" class="form-control" placeholder="Ej: 72345678" maxlength="8" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+                        <input type="text" name="receptor[dni]" id="receptor_dni" class="form-control" placeholder="Ej: 72345678" maxlength="8" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)" value="{{ old('receptor.dni') }}">
                     </div>
 
                     <div class="col-12 col-sm-3">
                         <label class="form-label">Teléfono <span class="text-muted">(Opcional)</span></label>
-                        <input type="tel" name="receptor[telefono]" id="receptor_telefono" class="form-control" placeholder="987654321" maxlength="9" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)">
+                        <input type="tel" name="receptor[telefono]" id="receptor_telefono" class="form-control" placeholder="987654321" maxlength="9" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)" value="{{ old('receptor.telefono') }}">
                     </div>
                 </div>
             </div>

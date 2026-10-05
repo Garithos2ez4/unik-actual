@@ -122,7 +122,6 @@ class DeliveryFlexController extends Controller
 
         // 2. Pedidos Web con delivery a domicilio (ventas por WhatsApp u otros)
         $pedidosWeb = PedidoWeb::with(['direccion', 'detalles.producto', 'cliente'])
-            ->where('tipo_entrega', 'domicilio')
             ->where('estado', 'pendiente')
             ->whereHas('direccion')
             ->orderBy('created_at', 'desc')
@@ -648,7 +647,6 @@ class DeliveryFlexController extends Controller
 
         // 2. Obtener Pedidos Web (WSP)
         $pedidosWeb = \App\Models\web\PedidoWeb::with(['direccion', 'detalles.producto', 'cliente'])
-            ->where('tipo_entrega', 'domicilio')
             ->where('estado', 'pendiente')
             ->whereHas('direccion')
             ->orderBy('created_at', 'desc')
