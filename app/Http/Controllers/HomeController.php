@@ -226,7 +226,7 @@ class HomeController extends Controller
                     ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 2 LIMIT 1), 0) as stock_alm2")
                     ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 3 LIMIT 1), 0) as stock_alm3")
                     ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 4 LIMIT 1), 0) as stock_alm4")
-                    ->selectRaw("COALESCE((SELECT SUM(cantidad) FROM DetalleVenta WHERE DetalleVenta.idProducto = Producto.idProducto AND estado = 'COMPLETADO'), 0) as total_ventas")
+                    ->selectRaw("COALESCE((SELECT SUM(cantidad) FROM DetalleVenta WHERE DetalleVenta.idProducto = Producto.idProducto AND estado = 'COMPLETADO' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)), 0) as total_ventas")
                     ->havingRaw('stock_tienda <= 2 AND (stock_alm2 > 0 OR stock_alm3 > 0 OR stock_alm4 > 0)')
                     ->orderBy('total_ventas', 'desc')
                     ->limit(10)
@@ -496,7 +496,7 @@ class HomeController extends Controller
         switch ($periodo) {
             case 'mes':
                 $query->whereMonth('Venta.fechaVenta', now()->month)
-                      ->whereYear('Venta.fechaVenta', now()->year);
+                    ->whereYear('Venta.fechaVenta', now()->year);
                 break;
             case 'trimestre':
                 $query->where('Venta.fechaVenta', '>=', now()->subMonths(3)->startOfDay());
@@ -515,7 +515,7 @@ class HomeController extends Controller
                     $query->where('Venta.fechaVenta', '<=', $hasta . ' 23:59:59');
                 }
                 break;
-            // 'todo' → sin filtro de fecha
+                // 'todo' → sin filtro de fecha
         }
 
         // Ordenar

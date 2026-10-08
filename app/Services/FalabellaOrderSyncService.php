@@ -200,9 +200,30 @@ class FalabellaOrderSyncService
     public function getOrdersByDate(string $date, ?string $status = null)
     {
         $targetDate = Carbon::parse($date)->toDateString();
+        $threeDaysAgo = Carbon::parse($date)->subDays(3)->toDateString();
+        
         $query = FalabellaOrder::with('items')
             ->whereNotNull('promised_shipping_time')
-            ->whereDate('promised_shipping_time', '=', $targetDate);
+            ->where(function ($q) use ($targetDate, $threeDaysAgo) {
+                // 1. Órdenes exactamente de esta fecha
+                $q->whereDate('promised_shipping_time', '=', $targetDate)
+                  // 2. Órdenes retrasadas (máximo 3 días) que aún están pendientes
+                  ->orWhere(function ($subQ) use ($targetDate, $threeDaysAgo) {
+                      $subQ->whereDate('promised_shipping_time', '<', $targetDate)
+                           ->whereDate('promised_shipping_time', '>=', $threeDaysAgo)
+                           ->where(function ($pendingQ) {
+                               $pendingQ->whereIn('status', ['pending', 'ready_to_ship'])
+                                   ->orWhere(function ($subPending) {
+                                       $subPending->where(function ($s) {
+                                           $s->whereNull('status')->orWhereIn('status', ['-', '']);
+                                       })
+                                       ->whereHas('items', function ($iq) {
+                                           $iq->whereIn('status', ['pending', 'ready_to_ship']);
+                                       });
+                                   });
+                           });
+                  });
+            });
 
         if (filled($status) && $status === 'pending') {
             // "Pendientes" agrupa todo lo que falta despachar (igual que Falabella)

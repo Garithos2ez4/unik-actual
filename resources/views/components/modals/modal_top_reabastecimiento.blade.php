@@ -9,7 +9,7 @@
             </div>
             <div class="modal-body bg-light">
                 <p class="mb-3 text-dark">
-                    Los siguientes productos están en el <strong>Top 10 de más vendidos</strong> pero tienen stock crítico en Tienda (≤ 2). Tienen stock disponible en otros almacenes.
+                    Los siguientes productos están en el <strong>Top 10 de más vendidos (últimos 30 días)</strong> pero tienen stock crítico en Tienda (≤ 2). Tienen stock disponible en otros almacenes.
                 </p>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered table-hover bg-white mb-0">
@@ -19,6 +19,7 @@
                                 <th>Producto</th>
                                 <th class="text-center">Total Ventas</th>
                                 <th class="text-center">Stock Tienda</th>
+                                <th class="text-center">Stock Gaming</th>
                                 <th>Traer de Almacén</th>
                             </tr>
                         </thead>
@@ -36,10 +37,14 @@
                                         {{ $prod->stock_tienda }}
                                     </span>
                                 </td>
+                                <td class="text-center">
+                                    <span class="badge {{ $prod->stock_alm3 == 0 ? 'bg-danger' : 'bg-success' }} fs-6">
+                                        {{ $prod->stock_alm3 }}
+                                    </span>
+                                </td>
                                 <td>
-                                    @if($prod->stock_alm2 > 0) <span class="badge bg-secondary">{{ optional($almacenes->firstWhere('idAlmacen', 2))->descripcion ?? 'Almacen 2' }} ({{ $prod->stock_alm2 }})</span> @endif
-                                    @if($prod->stock_alm3 > 0) <span class="badge bg-secondary">{{ optional($almacenes->firstWhere('idAlmacen', 3))->descripcion ?? 'Almacen 3' }} ({{ $prod->stock_alm3 }})</span> @endif
-                                    @if($prod->stock_alm4 > 0) <span class="badge bg-secondary">{{ optional($almacenes->firstWhere('idAlmacen', 4))->descripcion ?? 'Almacen 4' }} ({{ $prod->stock_alm4 }})</span> @endif
+                                    @if($prod->stock_alm2 > 0) <span class="badge bg-secondary">{{ optional($almacenes->firstWhere('idAlmacen', 2))->descripcion ?? 'Colombia' }} ({{ $prod->stock_alm2 }})</span> @endif
+                                    @if($prod->stock_alm4 > 0) <span class="badge bg-secondary">{{ optional($almacenes->firstWhere('idAlmacen', 4))->descripcion ?? 'Bolivar' }} ({{ $prod->stock_alm4 }})</span> @endif
                                 </td>
                             </tr>
                             @endforeach

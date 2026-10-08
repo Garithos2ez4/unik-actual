@@ -40,8 +40,7 @@ class EgresoProductoRepository implements EgresoProductoRepositoryInterface
             $q->where('estado', '!=', 'ELIMINADO');
         });
         
-        return $query->orderBy('created_at', 'asc')
-                     ->orderBy('idEgreso', 'asc')
+        return $query->orderBy('idEgreso', 'desc')
                      ->paginate($cant);
     }
 

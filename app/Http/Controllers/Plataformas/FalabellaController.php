@@ -676,6 +676,8 @@ class FalabellaController extends Controller
                     }
                 }
 
+                $labels = array_values(array_unique($labels));
+
                 return response()->json([
                     'success' => true,
                     'labels'  => $labels,

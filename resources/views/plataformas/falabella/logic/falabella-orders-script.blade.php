@@ -43,85 +43,85 @@
             for (const base64 of data.labels) {
                 try {
                     const labelPdf = await PDFDocument.load(base64);
+                    const pagesCount = labelPdf.getPageCount();
 
                     if (formato === 'a4_1') {
-                        const [copiedPage] = await outPdf.copyPages(labelPdf, [0]);
-                        outPdf.addPage(copiedPage);
-                        labelCount++;
+                        const copiedPages = await outPdf.copyPages(labelPdf, Array.from({length: pagesCount}, (_, i) => i));
+                        for (const copiedPage of copiedPages) {
+                            outPdf.addPage(copiedPage);
+                            labelCount++;
+                        }
                         continue;
                     }
 
-                    const sourcePage = labelPdf.getPages()[0];
-
-                    // La API de Falabella envía una hoja A4 completa, pero la etiqueta solo ocupa la esquina superior izquierda (10x15cm).
-                    const spHeight = sourcePage.getHeight();
-                    const cropWidth = 283.46; // 100mm
-                    const cropHeight = 425.20; // 150mm
+                    // Crop all pages first
+                    for (let i = 0; i < pagesCount; i++) {
+                        const sourcePage = labelPdf.getPages()[i];
+                        const spHeight = sourcePage.getHeight();
+                        const cropWidth = 283.46; // 100mm
+                        const cropHeight = 425.20; // 150mm
+                        sourcePage.setCropBox(0, spHeight - cropHeight, cropWidth, cropHeight);
+                    }
                     
-                    // Recortamos la hoja original a solo el área de la etiqueta
-                    sourcePage.setCropBox(0, spHeight - cropHeight, cropWidth, cropHeight);
-                    
-                    // FIX: Para que pdf-lib respete el cropBox al incrustar, debemos serializar y recargar el PDF
+                    // Save and reload to apply cropBox for pdf-lib embed
                     const savedBytes = await labelPdf.save();
                     const croppedPdf = await PDFDocument.load(savedBytes);
 
-                    const [embeddedPage] = await outPdf.embedPdf(croppedPdf, [0]);
+                    for (let i = 0; i < pagesCount; i++) {
+                        const [embeddedPage] = await outPdf.embedPdf(croppedPdf, [i]);
 
-                    if (formato === 'termica') {
-                        // 10x15cm (Aprox 4x6 pulgadas = 288x432 puntos)
-                        const pageWidth = 283.46;
-                        const pageHeight = 425.20;
+                        if (formato === 'termica') {
+                            const pageWidth = 283.46;
+                            const pageHeight = 425.20;
 
-                        currentPage = outPdf.addPage([pageWidth, pageHeight]);
-
-                        const scaleFactor = Math.min(pageWidth / embeddedPage.width, pageHeight / embeddedPage.height) * userZoom;
-                        const drawW = embeddedPage.width * scaleFactor;
-                        const drawH = embeddedPage.height * scaleFactor;
-
-                        currentPage.drawPage(embeddedPage, {
-                            x: 10, // Margen izquierdo
-                            y: pageHeight - drawH - 10, // Anclado arriba
-                            width: drawW,
-                            height: drawH
-                        });
-                    } else {
-                        // Formato A4
-                        const pageWidth = 595.28;
-                        const pageHeight = 841.89;
-
-                        if (labelCount % 4 === 0) {
                             currentPage = outPdf.addPage([pageWidth, pageHeight]);
+
+                            const scaleFactor = Math.min(pageWidth / embeddedPage.width, pageHeight / embeddedPage.height) * userZoom;
+                            const drawW = embeddedPage.width * scaleFactor;
+                            const drawH = embeddedPage.height * scaleFactor;
+
+                            currentPage.drawPage(embeddedPage, {
+                                x: 10,
+                                y: pageHeight - drawH - 10,
+                                width: drawW,
+                                height: drawH
+                            });
+                        } else {
+                            const pageWidth = 595.28;
+                            const pageHeight = 841.89;
+
+                            if (labelCount % 4 === 0) {
+                                currentPage = outPdf.addPage([pageWidth, pageHeight]);
+                            }
+
+                            const indexOnPage = labelCount % 4;
+                            const col = indexOnPage % 2;
+                            const row = Math.floor(indexOnPage / 2);
+
+                            const quadWidth = pageWidth / 2;
+                            const quadHeight = pageHeight / 2;
+
+                            const baseScale = Math.min(quadWidth / embeddedPage.width, quadHeight / embeddedPage.height);
+                            const safeScale = 0.94 * userZoom; 
+                            const finalScale = baseScale * safeScale;
+
+                            const drawWidth = embeddedPage.width * finalScale;
+                            const drawHeight = embeddedPage.height * finalScale;
+
+                            const margin = 15;
+                            const x = (col * quadWidth) + margin;
+                            const y = (pageHeight - (row * quadHeight)) - drawHeight - margin;
+
+                            currentPage.drawPage(embeddedPage, {
+                                x,
+                                y,
+                                width: drawWidth,
+                                height: drawHeight
+                            });
                         }
 
-                        const indexOnPage = labelCount % 4;
-                        const col = indexOnPage % 2;
-                        const row = Math.floor(indexOnPage / 2);
-
-                        const quadWidth = pageWidth / 2;
-                        const quadHeight = pageHeight / 2;
-
-                        const baseScale = Math.min(quadWidth / embeddedPage.width, quadHeight / embeddedPage.height);
-                        // Aplicamos el margen seguro + el zoom interactivo del usuario
-                        const safeScale = 0.94 * userZoom; 
-                        const finalScale = baseScale * safeScale;
-
-                        const drawWidth = embeddedPage.width * finalScale;
-                        const drawHeight = embeddedPage.height * finalScale;
-
-                        // Anclamos la etiqueta a la esquina superior izquierda de su cuadrante
-                        const margin = 15;
-                        const x = (col * quadWidth) + margin;
-                        const y = (pageHeight - (row * quadHeight)) - drawHeight - margin;
-
-                        currentPage.drawPage(embeddedPage, {
-                            x,
-                            y,
-                            width: drawWidth,
-                            height: drawHeight
-                        });
+                        labelCount++;
                     }
-
-                    labelCount++;
                 } catch (err) {
                     console.error('Error al incrustar etiqueta:', err);
                 }

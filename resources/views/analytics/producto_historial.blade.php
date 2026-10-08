@@ -42,7 +42,6 @@
                             <th class="text-uppercase small fw-bold text-secondary text-center">Nro Serie</th>
                             <th class="text-uppercase small fw-bold text-secondary text-center">Cantidad</th>
                             <th class="text-uppercase small fw-bold text-secondary text-end">Precio Unit.</th>
-                            <th class="text-uppercase small fw-bold text-secondary text-end">Total</th>
                             <th class="text-uppercase small fw-bold text-secondary text-center">Estado</th>
                         </tr>
                     </thead>
@@ -138,13 +137,6 @@
                 {
                     data: 'precio_unitario',
                     className: 'text-end text-muted'
-                },
-                {
-                    data: 'total',
-                    className: 'text-end fw-bold text-success',
-                    render: function(data) {
-                        return 'S/ ' + data;
-                    }
                 },
                 {
                     data: 'estado',

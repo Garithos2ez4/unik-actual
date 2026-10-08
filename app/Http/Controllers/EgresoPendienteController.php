@@ -43,6 +43,7 @@ class EgresoPendienteController extends Controller
             ->where(function ($q) {
                 $q->whereNull('return_status')->orWhere('return_status', '');
             })
+            ->where('status', '!=', 'cancelled')
             ->whereIn('shipping_status', ['delivered', 'shipped'])
             ->orderBy('created_at_ml', 'desc')
             ->get();

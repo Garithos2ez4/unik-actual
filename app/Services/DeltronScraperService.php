@@ -10,7 +10,7 @@ use App\Models\Inventario\Inventario_Proveedor;
 class DeltronScraperService
 {
     protected $username = '20606545470';
-    protected $password = '60654547';
+    protected $password = '2060654547';
     protected $idProveedor = 1; // ID de Deltron en Preveedor
 
     /**

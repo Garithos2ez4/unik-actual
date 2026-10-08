@@ -81,6 +81,8 @@
         </div>
     </div>
 
+    @include('plataformas.mercadolibre.partials.sku-counter')
+
     {{-- Tabla --}}
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-bottom-0 p-2 d-flex justify-content-between align-items-center">

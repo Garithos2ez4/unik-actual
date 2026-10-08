@@ -215,6 +215,19 @@
                                                 </div>
                                                 <div class="col-11 col-md-4 text-start fw-bold text-dark">
                                                     {{ $detalle->Producto->nombreProducto }}
+                                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                                        @foreach(collect($detalle->RegistroProducto)->groupBy('estado')->map->count() as $estado => $cantidad)
+                                                            @php
+                                                                $badgeColor = 'bg-secondary';
+                                                                if ($estado === 'NUEVO') $badgeColor = 'bg-primary';
+                                                                elseif ($estado === 'ENTREGADO' || $estado === 'EGRESADO' || $estado === 'VENDIDO') $badgeColor = 'bg-success';
+                                                                elseif ($estado === 'DEVUELTO' || $estado === 'DEFECTUOSO' || $estado === 'GARANTIA') $badgeColor = 'bg-danger';
+                                                            @endphp
+                                                            <span class="badge {{ $badgeColor }}" style="font-size: 0.7rem;">
+                                                                {{ $estado }}: {{ $cantidad }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
                                                 <div class="col-md-1 d-none d-md-block fw-bold text-primary">
                                                     {{ count($detalle->RegistroProducto) }}
