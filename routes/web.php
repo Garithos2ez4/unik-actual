@@ -162,6 +162,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/usuario/updateuser', [UsuarioController::class, 'updateUser'])->name('updateuser');
     Route::get('/colaboradores', [UsuarioController::class, 'colaboradoresIndex'])->name('colaboradores');
     Route::get('/usuario/getbandeja', [UsuarioController::class, 'getBandejaColaborador'])->name('getbandeja');
+    Route::post('/usuario/tour-completado', [UsuarioController::class, 'marcarTourCompletado'])->name('tour.completado');
 
     Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
 

@@ -42,6 +42,7 @@ class ConfigInventarioController extends Controller
                         ->selectRaw("COALESCE((SELECT stock FROM Inventario WHERE Inventario.idProducto = Producto.idProducto AND Inventario.idAlmacen = 4 LIMIT 1), 0) as stock_alm4")
                         ->havingRaw('stock_tienda <= 2 AND (stock_alm2 > 0 OR stock_alm3 > 0 OR stock_alm4 > 0)')
                         ->orderBy('stock_tienda', 'asc')
+                        ->limit(50)
                         ->get();
                 }
 

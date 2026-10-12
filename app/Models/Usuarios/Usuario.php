@@ -18,7 +18,7 @@ class Usuario extends Model
 
     protected $guarded = ['pass'];
     
-    protected $fillable = ['idUser','user','tokenSesion','registroSesion','horaSesion','estadoUsuario','bandeja'
+    protected $fillable = ['idUser','user','tokenSesion','registroSesion','horaSesion','estadoUsuario','bandeja', 'tour_completado'
                             ];
 
     protected $hidden = [ 'tokenSesion','registroSesion','horaSesion','estadoUsuario','pass'
@@ -32,6 +32,7 @@ class Usuario extends Model
         'registroSesion' => 'boolean',
         'horaSesion' => 'datetime',
         'estadoUsuario' => 'boolean',
+        'tour_completado' => 'boolean',
     ];
     
     public function Publicacion()

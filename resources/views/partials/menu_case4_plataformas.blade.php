@@ -1,5 +1,5 @@
 <li class="list-group-item bg-sistema-uno menu-border">
-    <a href="{{ route('plataformas') }}" class="btn text-light">Plataformas <i class="bi bi-shop"></i></a>
+    <a href="{{ route('plataformas') }}" class="btn text-light" id="tour-plataformas">Plataformas <i class="bi bi-shop"></i></a>
     <ul class="list-unstyled ps-3 mt-1">
         <li class="mb-2 mt-1">
             <a href="{{ route('egresos.pendientes') }}" class="btn btn-sm text-warning fw-bold p-0 border-0 d-flex align-items-center w-100">

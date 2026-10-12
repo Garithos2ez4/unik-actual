@@ -164,4 +164,20 @@ class UsuarioController extends Controller
         $this->headerService->sendFlashAlerts('Acceso denegado','No tienes permiso para ingresar a esta pestaña','warning','btn-danger');
         return redirect()->route('dashboard',['user' => $userModel]);
     }
+    
+    public function marcarTourCompletado(Request $request)
+    {
+        try {
+            $userModel = $this->headerService->getModelUser();
+            if ($userModel) {
+                $userModel->tour_completado = 1;
+                $userModel->save();
+                return response()->json(['success' => true]);
+            }
+            return response()->json(['success' => false, 'message' => 'No autenticado'], 401);
+        } catch (\Exception $e) {
+            \Log::error('Error al marcar tour completado: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error en servidor'], 500);
+        }
+    }
 }

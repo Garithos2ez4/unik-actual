@@ -65,6 +65,11 @@
                             &nbsp;<span class="text-secondary"> </span></h5>
                     </div>
                     <div class="col-6 col-lg-2 d-flex align-items-center justify-content-end" style="position:relative;z-index:9000">
+                        {{-- Botón Tour Guiado (Ojo) --}}
+                        <div class="position-relative me-3" id="btn-start-tour" style="cursor:pointer;" title="Iniciar Tour del Sistema">
+                            <i class="bi bi-eye-fill text-light" style="font-size:1.4rem;"></i>
+                        </div>
+
                         {{-- Campana ML Notificaciones --}}
                         @if ($user->Accesos->contains('idVista', 4))
                         <div class="position-relative me-3" id="mlBellWrapper" style="cursor:pointer;">
@@ -171,13 +176,13 @@
 
                     @case(2)
                     <li class="list-group-item bg-sistema-uno menu-border"><a
-                            href="{{ route('productos', [encrypt(1), encrypt(1)]) }}" class="btn text-light">Productos
+                            href="{{ route('productos', [encrypt(1), encrypt(1)]) }}" class="btn text-light" id="tour-productos">Productos
                             <i class="bi bi-box-fill"></i></a></li>
                     <li class="list-group-item bg-sistema-uno menu-border"><a
                             href="{{ route('productos.liquidacion') }}" class="btn text-light">Liquidación
                             <i class="bi bi-tags-fill"></i></a></li>
                     <li class="list-group-item bg-sistema-uno menu-border"><a
-                            href="{{ route('documentos', [now()->format('Y-m')]) }}" class="btn text-light">Movimientos <i
+                            href="{{ route('documentos', [now()->format('Y-m')]) }}" class="btn text-light" id="tour-movimientos">Movimientos <i
                                 class="bi bi-folder-fill"></i></a></li>
                     @break
 
@@ -218,7 +223,7 @@
                     @break
                     @case(12)
                     <li class="list-group-item bg-sistema-uno menu-border">
-                        <a href="{{ route('envios.index') }}" class="btn text-light w-100 text-start">Envíos <i class="bi bi-truck "></i></a>
+                        <a href="{{ route('envios.index') }}" class="btn text-light w-100 text-start" id="tour-envios">Envíos <i class="bi bi-truck "></i></a>
                     </li>
                     @break
                     @case(15)
@@ -300,6 +305,9 @@
     </script>
     <script src="{{ asset('js/ml-notifications.js') }}?v=1.02"></script>
     @endif
+
+    {{-- Tour Guiado --}}
+    @include('partials.tour-script')
 </body>
 
 </html>

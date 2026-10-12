@@ -119,7 +119,6 @@ class MercadoLibreApiService
     {
         $defaults = [
             'seller'        => $sellerId,
-            'order.status'  => 'paid',
             'limit'         => 50,
             'offset'        => 0,
         ];
