@@ -124,10 +124,13 @@
                                         <small class="text-muted" id="phone-text-{{ $entrega['order_id'] }}">
                                             <i class="bi bi-telephone-fill me-1"></i>{{ $entrega['telefono'] ?? 'Sin teléfono' }}
                                         </small>
-                                        <button class="btn btn-sm btn-link p-0 ms-2 text-primary" onclick="editPhone('{{ $entrega['order_id'] }}', '{{ $entrega['telefono'] ?? '' }}', '{{ $entrega['nota'] ?? '' }}')" title="Editar Información">
+                                        <button class="btn btn-sm btn-link p-0 ms-2 text-primary" onclick="editPhone('{{ $entrega['order_id'] }}', '{{ $entrega['telefono'] ?? '' }}', '{{ addslashes($entrega['nota'] ?? '') }}', '{{ addslashes($entrega['delivery_note'] ?? '') }}')" title="Editar Información">
                                             <i class="bi bi-pencil-square" style="font-size: 0.9rem;"></i>
                                         </button>
-                                        <i class="bi bi-chat-left-text-fill text-warning ms-2 {{ empty($entrega['nota']) ? 'd-none' : '' }}" id="note-icon-{{ $entrega['order_id'] }}" title="{{ $entrega['nota'] ?? '' }}" style="font-size: 0.9rem;"></i>
+                                        <i class="bi bi-chat-left-text-fill text-warning ms-2 {{ empty($entrega['nota']) ? 'd-none' : '' }}" id="note-icon-{{ $entrega['order_id'] }}" title="Palabra clave: {{ $entrega['nota'] ?? '' }}" style="font-size: 0.9rem;"></i>
+                                    </div>
+                                    <div class="mt-1 text-danger fw-semibold {{ empty($entrega['delivery_note']) ? 'd-none' : '' }}" id="delivery-note-container-{{ $entrega['order_id'] }}" style="font-size: 11px;">
+                                        <i class="bi bi-clock-history me-1"></i><span id="delivery-note-text-{{ $entrega['order_id'] }}">{{ $entrega['delivery_note'] ?? '' }}</span>
                                     </div>
                                 @endif
                             </td>
@@ -334,6 +337,10 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold text-dark">Palabra Clave (Nota)</label>
                     <input type="text" class="form-control" id="editDeliveryNote" placeholder="Ej: Manzana, Casa Azul, etc.">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark">Nota / Horario de Entrega</label>
+                    <input type="text" class="form-control" id="editDeliveryDeliveryNote" placeholder="Ej: Solo estará hasta las 2:00 PM, llamar antes de llegar, etc.">
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light">

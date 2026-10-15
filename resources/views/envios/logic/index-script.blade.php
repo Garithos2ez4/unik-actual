@@ -78,11 +78,15 @@
                     if (data.success) {
                         navigator.clipboard.writeText(data.link).then(() => {
 
-                            // Banner de aviso si son las 5pm o más en Lima
-                            const avisoBanner = data.es_despues_5pm
+                            // Banner de aviso si es feriado, domingo o después de las 5pm
+                            const motivoTexto = data.motivo_postergacion
+                                ? (data.motivo_postergacion.charAt(0).toUpperCase() + data.motivo_postergacion.slice(1))
+                                : 'Día no hábil o fuera de horario de atención';
+
+                            const avisoBanner = (data.tiene_postergacion || data.es_despues_5pm)
                                 ? `<div class="alert alert-warning text-start py-2 mb-3" style="border-radius:8px;">
-                                       <i class="bi bi-clock-fill me-1"></i>
-                                       <strong>⚠️ Aviso de horario:</strong> Son las 5:00 PM o más.
+                                       <i class="bi bi-calendar-event-fill me-1"></i>
+                                       <strong>⚠️ Aviso de fecha de envío:</strong> ${motivoTexto}.<br>
                                        El envío se registrará en la agencia el <strong>${data.fecha_registro_real}</strong>.
                                        El cliente verá este aviso también en su formulario.
                                    </div>`
@@ -123,10 +127,23 @@
         .then(data => {
             if (data.success) {
                 navigator.clipboard.writeText(data.link).then(() => {
+                    const motivoTexto = data.motivo_postergacion
+                        ? (data.motivo_postergacion.charAt(0).toUpperCase() + data.motivo_postergacion.slice(1))
+                        : 'Día no hábil o fuera de horario de atención';
+
+                    const avisoBanner = (data.tiene_postergacion || data.es_despues_5pm)
+                        ? `<div class="alert alert-warning text-start py-2 mb-3" style="border-radius:8px;">
+                               <i class="bi bi-calendar-event-fill me-1"></i>
+                               <strong>⚠️ Aviso de fecha de envío:</strong> ${motivoTexto}.<br>
+                               El envío se registrará en la agencia el <strong>${data.fecha_registro_real}</strong>.
+                           </div>`
+                        : '';
+
                     Swal.fire({
                         icon: 'success',
                         title: '¡Nuevo link copiado!',
-                        html: `<div class="input-group mt-2">
+                        html: `${avisoBanner}
+                               <div class="input-group mt-2">
                                    <input type="text" class="form-control form-control-sm" value="${data.link}" readonly id="link-regen">
                                    <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('link-regen').value)">
                                        <i class="bi bi-clipboard"></i>

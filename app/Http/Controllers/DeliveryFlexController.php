@@ -116,7 +116,8 @@ class DeliveryFlexController extends Controller
                 'telefono' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->buyer_phone : null,
                 'cuenta' => $order->credential->seller_nickname ?? 'N/A',
                 'balance_envio' => ($order->receiver_shipping_cost ?? 0) + ($order->promoted_shipping_amount ?? 0),
-                'nota' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->note : null
+                'nota' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->note : null,
+                'delivery_note' => isset($savedRoutes[$order->ml_order_id]) ? $savedRoutes[$order->ml_order_id]->delivery_note : null
             ];
         }
 
@@ -192,7 +193,8 @@ class DeliveryFlexController extends Controller
                 'telefono' => $clienteTelefono,
                 'cuenta' => 'WhatsApp',
                 'balance_envio' => 0,
-                'nota' => isset($savedRoutes['WSP-' . $pedido->idPedidoWeb]) ? $savedRoutes['WSP-' . $pedido->idPedidoWeb]->note : null
+                'nota' => isset($savedRoutes['WSP-' . $pedido->idPedidoWeb]) ? $savedRoutes['WSP-' . $pedido->idPedidoWeb]->note : null,
+                'delivery_note' => isset($savedRoutes['WSP-' . $pedido->idPedidoWeb]) ? $savedRoutes['WSP-' . $pedido->idPedidoWeb]->delivery_note : null
             ];
         }
 
@@ -775,7 +777,8 @@ class DeliveryFlexController extends Controller
     {
         $request->validate([
             'buyer_phone' => 'nullable|string|max:20',
-            'note' => 'nullable|string|max:255'
+            'note' => 'nullable|string|max:255',
+            'delivery_note' => 'nullable|string|max:255'
         ]);
 
         $flexRoute = \App\Models\Ecommerce\MercadoLibreFlexRoute::firstOrCreate(
@@ -785,13 +788,15 @@ class DeliveryFlexController extends Controller
         
         $flexRoute->update([
             'note' => $request->note,
-            'buyer_phone' => $request->buyer_phone
+            'buyer_phone' => $request->buyer_phone,
+            'delivery_note' => $request->delivery_note
         ]);
 
         return response()->json([
             'success' => true,
             'buyer_phone' => $flexRoute->buyer_phone,
-            'note' => $flexRoute->note
+            'note' => $flexRoute->note,
+            'delivery_note' => $flexRoute->delivery_note
         ]);
     }
 }

@@ -157,6 +157,16 @@
             </td>
             <td>
                 {{ $entrega['destino'] }}
+                @if(!empty($entrega['delivery_note']))
+                    <div style="color: #c0392b; font-size: 10px; font-weight: bold; margin-top: 3px;">
+                        ⏰ Nota: {{ $entrega['delivery_note'] }}
+                    </div>
+                @endif
+                @if(!empty($entrega['nota']))
+                    <div style="color: #d35400; font-size: 10px; font-weight: bold; margin-top: 2px;">
+                        🔑 Clave: {{ $entrega['nota'] }}
+                    </div>
+                @endif
             </td>
             <td>
                 @if(is_array($entrega['items']) || $entrega['items'] instanceof \Traversable)

@@ -52,23 +52,26 @@ class FormularioPublicoController extends Controller
             ? Carbon::now()->diffInSeconds($solicitud->token_expires_at, false)
             : null;
 
-        // Calcular si el link fue generado después de las 5pm Lima
-        $creadoEn       = Carbon::parse($solicitud->created_at)->setTimezone('America/Lima');
-        $esDespues5pm   = es_despues_del_corte($creadoEn);
-        $fechaRegistroReal = null;
-        if ($esDespues5pm) {
+        // Calcular si el link fue generado en horario que requiere postergación (después de 5pm, feriado o domingo)
+        $creadoEn           = Carbon::parse($solicitud->created_at)->setTimezone('America/Lima');
+        $tienePostergacion  = tiene_postergacion_envio($creadoEn);
+        $motivoPostergacion = motivo_postergacion_envio($creadoEn);
+        $fechaRegistroReal  = null;
+        if ($tienePostergacion) {
             $fechaRegistroReal = calcular_fecha_real_legible($creadoEn);
         }
 
         return view('public.formulario_envio', [
-            'solicitud'         => $solicitud,
-            'token'             => $token,
-            'departamentos'     => $departamentos,
-            'agencias'          => $agencias,
-            'documentos'        => $documentos,
-            'segundosRestantes' => $minutosRestantes,
-            'esDespues5pm'      => $esDespues5pm,
-            'fechaRegistroReal' => $fechaRegistroReal,
+            'solicitud'          => $solicitud,
+            'token'              => $token,
+            'departamentos'      => $departamentos,
+            'agencias'           => $agencias,
+            'documentos'         => $documentos,
+            'segundosRestantes'  => $minutosRestantes,
+            'esDespues5pm'       => $tienePostergacion, // Compatibilidad con vistas existentes
+            'tienePostergacion'  => $tienePostergacion,
+            'motivoPostergacion' => $motivoPostergacion,
+            'fechaRegistroReal'  => $fechaRegistroReal,
         ]);
     }
 

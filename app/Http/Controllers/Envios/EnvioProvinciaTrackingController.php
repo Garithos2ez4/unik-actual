@@ -45,16 +45,19 @@ class EnvioProvinciaTrackingController extends Controller
             $baseUrl = rtrim(config('app.public_envio_url', url('/')), '/');
             $link = "{$baseUrl}/formulario-envio/{$token}";
 
-            // Determinar si se está generando el link después del horario de cierre (17:00 Lima)
-            $esDespues5pm    = es_despues_del_corte();
-            $fechaRegistroReal = calcular_fecha_real_legible();
+            // Determinar si se está generando el link en feriado, domingo o después del horario de cierre (17:00 Lima)
+            $tienePostergacion  = tiene_postergacion_envio();
+            $motivoPostergacion = motivo_postergacion_envio();
+            $fechaRegistroReal  = calcular_fecha_real_legible();
 
             return response()->json([
-                'success'           => true,
-                'link'              => $link,
-                'idSolicitud'       => $solicitud->idSolicitud,
-                'expira_en'         => '20 minutos',
-                'es_despues_5pm'    => $esDespues5pm,
+                'success'             => true,
+                'link'                => $link,
+                'idSolicitud'         => $solicitud->idSolicitud,
+                'expira_en'           => '20 minutos',
+                'es_despues_5pm'      => $tienePostergacion,
+                'tiene_postergacion'  => $tienePostergacion,
+                'motivo_postergacion' => $motivoPostergacion,
                 'fecha_registro_real' => $fechaRegistroReal,
             ]);
         } catch (\Throwable $th) {
@@ -109,10 +112,18 @@ class EnvioProvinciaTrackingController extends Controller
             $baseUrl = rtrim(config('app.public_envio_url', url('/')), '/');
             $link = "{$baseUrl}/formulario-envio/{$token}";
 
+            $tienePostergacion  = tiene_postergacion_envio();
+            $motivoPostergacion = motivo_postergacion_envio();
+            $fechaRegistroReal  = calcular_fecha_real_legible();
+
             return response()->json([
-                'success' => true,
-                'link' => $link,
-                'expira_en' => '20 minutos'
+                'success'             => true,
+                'link'                => $link,
+                'expira_en'           => '20 minutos',
+                'es_despues_5pm'      => $tienePostergacion,
+                'tiene_postergacion'  => $tienePostergacion,
+                'motivo_postergacion' => $motivoPostergacion,
+                'fecha_registro_real' => $fechaRegistroReal,
             ]);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);

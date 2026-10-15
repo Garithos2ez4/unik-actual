@@ -15,6 +15,15 @@
                     <form id="form-create-envio" action="{{ route('envios.store') }}" method="POST">
                         @csrf
 
+                        @if(tiene_postergacion_envio())
+                        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3 py-2" style="border-radius: 8px;">
+                            <i class="bi bi-calendar-event-fill fs-5 text-warning flex-shrink-0"></i>
+                            <div>
+                                <strong>Aviso de fecha de envío:</strong> Como {{ motivo_postergacion_envio() }}, este envío se registrará con fecha del <strong>{{ calcular_fecha_real_legible() }}</strong>.
+                            </div>
+                        </div>
+                        @endif
+
                         <div class="row g-3">
                             <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-fill"></i> 1. Información del Cliente y Envío</h6>
 

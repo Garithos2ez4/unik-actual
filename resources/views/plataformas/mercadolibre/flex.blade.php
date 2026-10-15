@@ -89,8 +89,13 @@
                                         <i class="bi bi-telephone-fill me-1"></i>{{ $order->flexRoute->buyer_phone ?? 'Sin teléfono' }}
                                     </span>
                                     @if($order->flexRoute && $order->flexRoute->note)
-                                        <span class="d-block mt-1 text-warning" title="{{ $order->flexRoute->note }}">
-                                            <i class="bi bi-chat-left-text-fill me-1"></i>Nota asignada
+                                        <span class="d-block mt-1 text-warning" title="Palabra clave: {{ $order->flexRoute->note }}">
+                                            <i class="bi bi-chat-left-text-fill me-1"></i>Clave: {{ $order->flexRoute->note }}
+                                        </span>
+                                    @endif
+                                    @if($order->flexRoute && $order->flexRoute->delivery_note)
+                                        <span class="d-block mt-1 text-danger fw-semibold" title="{{ $order->flexRoute->delivery_note }}">
+                                            <i class="bi bi-clock-history me-1"></i>{{ $order->flexRoute->delivery_note }}
                                         </span>
                                     @endif
                                 </div>

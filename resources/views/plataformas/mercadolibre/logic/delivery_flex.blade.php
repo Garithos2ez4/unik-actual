@@ -520,10 +520,11 @@
     // ========================
     // Editar Teléfono ML
     // ========================
-    function editPhone(orderId, currentPhone, currentNote) {
+    function editPhone(orderId, currentPhone, currentNote, currentDeliveryNote) {
         document.getElementById('editDeliveryOrderId').value = orderId;
         document.getElementById('editDeliveryPhone').value = currentPhone || '';
         document.getElementById('editDeliveryNote').value = currentNote || '';
+        document.getElementById('editDeliveryDeliveryNote').value = currentDeliveryNote || '';
         const modal = new bootstrap.Modal(document.getElementById('modalEditDeliveryInfo'));
         modal.show();
     }
@@ -532,6 +533,7 @@
         const orderId = document.getElementById('editDeliveryOrderId').value;
         const newPhone = document.getElementById('editDeliveryPhone').value;
         const newNote = document.getElementById('editDeliveryNote').value;
+        const newDeliveryNote = document.getElementById('editDeliveryDeliveryNote').value;
 
         fetch('{{ url("dashboard/logistica/delivery-flex/update-delivery-info") }}/' + orderId, {
             method: 'POST',
@@ -539,24 +541,37 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({ buyer_phone: newPhone, note: newNote })
+            body: JSON.stringify({ buyer_phone: newPhone, note: newNote, delivery_note: newDeliveryNote })
         })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
                 const phoneText = data.buyer_phone || 'Sin teléfono';
-                document.getElementById('phone-text-' + orderId).innerHTML = '<i class="bi bi-telephone-fill me-1"></i>' + phoneText;
+                const phoneEl = document.getElementById('phone-text-' + orderId);
+                if (phoneEl) {
+                    phoneEl.innerHTML = '<i class="bi bi-telephone-fill me-1"></i>' + phoneText;
+                }
                 
                 // Update note icon if exists
                 const noteIcon = document.getElementById('note-icon-' + orderId);
-                if (data.note) {
-                    if (noteIcon) {
-                        noteIcon.setAttribute('title', data.note);
+                if (noteIcon) {
+                    if (data.note) {
+                        noteIcon.setAttribute('title', 'Palabra clave: ' + data.note);
                         noteIcon.classList.remove('d-none');
-                    }
-                } else {
-                    if (noteIcon) {
+                    } else {
                         noteIcon.classList.add('d-none');
+                    }
+                }
+
+                // Update delivery note text
+                const noteCont = document.getElementById('delivery-note-container-' + orderId);
+                const noteTxt = document.getElementById('delivery-note-text-' + orderId);
+                if (noteCont && noteTxt) {
+                    if (data.delivery_note) {
+                        noteTxt.textContent = data.delivery_note;
+                        noteCont.classList.remove('d-none');
+                    } else {
+                        noteCont.classList.add('d-none');
                     }
                 }
 
