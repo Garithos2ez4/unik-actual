@@ -44,7 +44,6 @@ class ValidateSession
             $usuario = $this->usuarioService->getUserId($idUserSesion);
             $tokenBase = $usuario->tokenSesion;
             if($tokenBase == $tokenSesion){
-                $this->sesionService->eliminarSesionesCaducadas();
                 return $next($request);
             }else{
                 $this->headerService->sendFlashAlerts('Inicia sesion','Sesión en otro dispositivo','warning','btn-danger');

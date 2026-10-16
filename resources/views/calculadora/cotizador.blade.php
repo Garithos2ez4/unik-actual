@@ -93,7 +93,10 @@
                     <h5 class="card-title mb-4"><i class="bi bi-laptop"></i> Producto Individual</h5>
                     
                     <div class="mb-4 text-center">
-                        <h4 id="indiv-nombre-producto" class="text-primary mb-1">Cotización Manual</h4>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <h4 id="indiv-nombre-producto" class="text-primary mb-1">Cotización Manual</h4>
+                            <button class="btn btn-sm btn-outline-danger ms-2 d-none" id="btn-remover-prod-indiv" title="Quitar selección y cotizar manual"><i class="bi bi-x-circle"></i></button>
+                        </div>
                         <div id="indiv-detalles-producto" class="text-muted small">Ingresa el costo manualmente o busca un producto arriba.</div>
                     </div>
 
@@ -218,6 +221,10 @@
                         <!-- Precios de venta generados por JS -->
                         <div class="accordion" id="accordionPlataformas">
                             @foreach($plataformas as $index => $plata)
+                            @php
+                                $plataformaKey = strtoupper(trim($plata->nombrePlataforma));
+                                $reglasPlata = isset($reglasComisiones) ? $reglasComisiones->where('plataforma', $plataformaKey) : collect();
+                            @endphp
                             <div class="accordion-item mb-2 border rounded shadow-sm">
                                 <h2 class="accordion-header" id="heading-{{$plata->idPlataforma}}">
                                     <button class="accordion-button {{$index !== 0 ? 'collapsed' : ''}} py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{$plata->idPlataforma}}" aria-expanded="{{$index === 0 ? 'true' : 'false'}}" aria-controls="collapse-{{$plata->idPlataforma}}">
@@ -238,13 +245,35 @@
                                     <div class="accordion-body p-0">
                                         <div class="list-group list-group-flush rounded-bottom">
                                             <!-- Guardamos la info de comisiones en data attributes para leerlas desde JS -->
-                                            <div class="d-none plataforma-data" data-pid="{{$plata->idPlataforma}}" data-name="{{$plata->nombrePlataforma}}">
-                                                @foreach($plata->ComisionPlataforma as $comi)
-                                                    <span class="comision-data" data-comision="{{$comi->comision}}" data-flete="{{$comi->flete}}"></span>
-                                                @endforeach
+                                            <div class="d-none plataforma-data" data-pid="{{$plata->idPlataforma}}" data-name="{{$plata->nombrePlataforma}}" data-has-rules="{{$reglasPlata->isNotEmpty() ? '1' : '0'}}">
+                                                @if($reglasPlata->isNotEmpty())
+                                                    @foreach($reglasPlata as $regla)
+                                                        <span class="comision-data" 
+                                                              data-id="{{$regla->id}}"
+                                                              data-nombre="{{$regla->nombre_regla}}"
+                                                              data-comision="{{$regla->porcentaje_comision !== null ? ($regla->porcentaje_comision * 100) : 0}}" 
+                                                              data-flete="{{$regla->monto_fijo ?? 0}}"
+                                                              data-tipo="{{$regla->tipo_condicion}}"
+                                                              data-valor="{{$regla->valor_condicion ?? ''}}"
+                                                              data-prioridad="{{$regla->prioridad}}">
+                                                        </span>
+                                                    @endforeach
+                                                @else
+                                                    @foreach($plata->ComisionPlataforma as $comi)
+                                                        <span class="comision-data" 
+                                                              data-id="{{$comi->idComisionPlataforma}}"
+                                                              data-nombre=""
+                                                              data-comision="{{$comi->comision}}" 
+                                                              data-flete="{{$comi->flete}}"
+                                                              data-tipo="DEFAULT"
+                                                              data-valor=""
+                                                              data-prioridad="0">
+                                                        </span>
+                                                    @endforeach
+                                                @endif
                                             </div>
                                             
-                                            <!-- Aquí se inyectan las opciones de comisiones (8%, 10%, etc) con JS -->
+                                            <!-- Aquí se inyectan las opciones de comisiones con JS -->
                                             <div class="plataforma-comisiones-container" id="container-plataforma-{{$plata->idPlataforma}}">
                                                 <!-- Plantilla JS -->
                                             </div>
@@ -309,5 +338,5 @@
             });
     }
 </script>
-<script src="{{ asset('js/cotizador.js') }}?v=1.00"></script>
+<script src="{{ asset('js/cotizador.js') }}?v=1.02"></script>
 @endsection

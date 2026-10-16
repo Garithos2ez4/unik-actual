@@ -45,10 +45,22 @@ class CalculadoraController extends Controller
         $valores = $this->calculadoraService->get();
         $plataformas = $this->calculadoraService->getComisionByRelation('ComisionPlataforma');
         
-        return view('calculadora.cotizador',['user' => $userModel,
-                                    'valores' => $valores,
-                                    'plataformas' => $plataformas
-                                ]);
+        $reglasComisiones = \App\Models\Ecommerce\ReglaComision::where('estado', true)
+            ->orderBy('prioridad', 'desc')
+            ->orderBy('id', 'asc')
+            ->get();
+            
+        $tarifasEnvio = \App\Models\Ecommerce\ReglaTarifaEnvio::where('estado', true)
+            ->orderByRaw('peso_maximo IS NULL, peso_maximo ASC')
+            ->get();
+
+        return view('calculadora.cotizador',[
+            'user' => $userModel,
+            'valores' => $valores,
+            'plataformas' => $plataformas,
+            'reglasComisiones' => $reglasComisiones,
+            'tarifasEnvio' => $tarifasEnvio
+        ]);
     }
 
     public function calculate(Request $request)

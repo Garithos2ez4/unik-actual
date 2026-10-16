@@ -10,6 +10,7 @@ use App\Services\MercadoLibreApiService;
 use App\Services\HeaderServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MercadoLibreController extends Controller
@@ -107,6 +108,14 @@ class MercadoLibreController extends Controller
         $userModel = $this->headerService->getModelUser();
         if (!$userModel->Accesos->contains('idVista', 7)) {
             return response()->json(['error' => 'Acceso denegado'], 403);
+        }
+
+        // Evitar múltiples sincronizaciones simultáneas que bloqueen conexiones a la base de datos
+        if (Cache::get('ml_sync_orders_status') === 'processing') {
+            return response()->json([
+                'status'  => 'processing',
+                'message' => 'Ya hay una sincronización en curso. Por favor espera a que finalice.'
+            ]);
         }
 
         $sellerId = $request->input('seller_id');
@@ -297,76 +306,84 @@ class MercadoLibreController extends Controller
 
     /**
      * Retorna JSON con preguntas sin responder + reclamos abiertos de ML.
+     * Se cachea por 3 minutos y se desconecta de MySQL durante las peticiones a la API
+     * para no agotar el pool de conexiones en hosting compartido.
      */
     public function getNotifications()
     {
-        $credentials = MercadoLibreCredential::all();
+        $data = Cache::remember('ml_notifications_data', 180, function () {
+            $credentials = MercadoLibreCredential::all();
 
-        if ($credentials->isEmpty()) {
-            return response()->json([
-                'questions_count' => 0,
-                'claims_count'    => 0,
-                'total'           => 0,
-                'questions'       => [],
-                'claims'          => [],
-            ]);
-        }
+            // Liberar la conexión a MySQL inmediatamente antes de llamar a la API de ML
+            DB::disconnect();
 
-        $allQuestions = [];
-        $allClaims    = [];
-
-        foreach ($credentials as $credential) {
-            // Preguntas sin responder
-            $qData = $this->mlApi->getUnansweredQuestions($credential->seller_id, 10);
-            $questions = $qData['questions'] ?? [];
-
-            // Filtrar preguntas con más de 2 semanas de antigüedad
-            $twoWeeksAgo = now()->subWeeks(2);
-            $questions = array_filter($questions, function ($q) use ($twoWeeksAgo) {
-                if (isset($q['date_created'])) {
-                    try {
-                        return \Carbon\Carbon::parse($q['date_created'])->greaterThanOrEqualTo($twoWeeksAgo);
-                    } catch (\Throwable $e) {
-                        return true;
-                    }
-                }
-                return true;
-            });
-            $questions = array_values($questions);
-
-
-            // Enriquecer con título del producto
-            $itemCache = [];
-            foreach ($questions as &$q) {
-                $itemId = $q['item_id'] ?? '';
-                if ($itemId && !isset($itemCache[$itemId])) {
-                    $itemCache[$itemId] = $this->mlApi->getItem($credential->seller_id, $itemId);
-                }
-                $q['item_title'] = $itemCache[$itemId]['title'] ?? 'Producto';
-                $q['item_thumbnail'] = $itemCache[$itemId]['thumbnail'] ?? '';
-                $q['item_price'] = $itemCache[$itemId]['price'] ?? null;
-                $q['item_permalink'] = $itemCache[$itemId]['permalink'] ?? '#';
-                $q['item_available_quantity'] = $itemCache[$itemId]['available_quantity'] ?? 0;
-                $q['item_status'] = $itemCache[$itemId]['status'] ?? 'unknown';
-                $q['seller_id'] = $credential->seller_id;
+            if ($credentials->isEmpty()) {
+                return [
+                    'questions_count' => 0,
+                    'claims_count'    => 0,
+                    'total'           => 0,
+                    'questions'       => [],
+                    'claims'          => [],
+                ];
             }
-            unset($q);
 
-            $allQuestions = array_merge($allQuestions, $questions);
+            $allQuestions = [];
+            $allClaims    = [];
 
-            // Reclamos abiertos
-            $claimsData = $this->mlApi->getOpenClaims($credential->seller_id);
-            $claims = $claimsData['data'] ?? [];
-            $allClaims = array_merge($allClaims, $claims);
-        }
+            foreach ($credentials as $credential) {
+                // Preguntas sin responder
+                $qData = $this->mlApi->getUnansweredQuestions($credential->seller_id, 10);
+                $questions = $qData['questions'] ?? [];
 
-        return response()->json([
-            'questions_count' => count($allQuestions),
-            'claims_count'    => count($allClaims),
-            'total'           => count($allQuestions) + count($allClaims),
-            'questions'       => $allQuestions,
-            'claims'          => $allClaims,
-        ]);
+                // Filtrar preguntas con más de 2 semanas de antigüedad
+                $twoWeeksAgo = now()->subWeeks(2);
+                $questions = array_filter($questions, function ($q) use ($twoWeeksAgo) {
+                    if (isset($q['date_created'])) {
+                        try {
+                            return \Carbon\Carbon::parse($q['date_created'])->greaterThanOrEqualTo($twoWeeksAgo);
+                        } catch (\Throwable $e) {
+                            return true;
+                        }
+                    }
+                    return true;
+                });
+                $questions = array_values($questions);
+
+                // Enriquecer con título del producto
+                $itemCache = [];
+                foreach ($questions as &$q) {
+                    $itemId = $q['item_id'] ?? '';
+                    if ($itemId && !isset($itemCache[$itemId])) {
+                        $itemCache[$itemId] = $this->mlApi->getItem($credential->seller_id, $itemId);
+                    }
+                    $q['item_title'] = $itemCache[$itemId]['title'] ?? 'Producto';
+                    $q['item_thumbnail'] = $itemCache[$itemId]['thumbnail'] ?? '';
+                    $q['item_price'] = $itemCache[$itemId]['price'] ?? null;
+                    $q['item_permalink'] = $itemCache[$itemId]['permalink'] ?? '#';
+                    $q['item_available_quantity'] = $itemCache[$itemId]['available_quantity'] ?? 0;
+                    $q['item_status'] = $itemCache[$itemId]['status'] ?? 'unknown';
+                    $q['seller_id'] = $credential->seller_id;
+                }
+                unset($q);
+
+                $allQuestions = array_merge($allQuestions, $questions);
+
+                // Reclamos abiertos
+                $claimsData = $this->mlApi->getOpenClaims($credential->seller_id);
+                $claims = $claimsData['data'] ?? [];
+                $allClaims = array_merge($allClaims, $claims);
+            }
+
+            return [
+                'questions_count' => count($allQuestions),
+                'claims_count'    => count($allClaims),
+                'total'           => count($allQuestions) + count($allClaims),
+                'questions'       => $allQuestions,
+                'claims'          => $allClaims,
+            ];
+        });
+
+        return response()->json($data);
     }
 
     /**
@@ -392,6 +409,9 @@ class MercadoLibreController extends Controller
                 $request->input('question_id'),
                 $request->input('text')
             );
+
+            // Invalidar caché de notificaciones para reflejar la respuesta de inmediato
+            Cache::forget('ml_notifications_data');
 
             return response()->json(['success' => true, 'data' => $result]);
         } catch (\Throwable $e) {

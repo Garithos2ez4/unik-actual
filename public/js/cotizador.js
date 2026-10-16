@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let modoCombo = false;
     let comboItems = [];
     let itemIdCounter = 1;
+    let currentIndividualProduct = null;
 
     // Elementos DOM
     const searchInput = document.getElementById('search-producto');
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const indivTotalBase = document.getElementById('indiv-total-base');
     const inputsIndiv = document.querySelectorAll('.input-indiv');
     const inputTasaCambio = document.getElementById('input-tasa-cambio');
+    const btnRemoverProdIndiv = document.getElementById('btn-remover-prod-indiv');
 
     // Inicializar la vista será llamado al final del script
 
@@ -64,7 +66,23 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', () => window.recalcularCotizacion());
         input.addEventListener('focus', function() { this.select(); });
     });
-    indivMoneda.addEventListener('change', () => window.recalcularCotizacion());
+    
+    let prevMonedaIndiv = indivMoneda ? indivMoneda.value : 'USD';
+    if (indivMoneda) {
+        indivMoneda.addEventListener('change', function() {
+            const val = parseFloat(indivCosto.value) || 0;
+            const newMoneda = this.value;
+            if (val > 0 && window.APP_DATA.tasaCambio > 0) {
+                if (prevMonedaIndiv === 'USD' && newMoneda === 'PEN') {
+                    indivCosto.value = (val * window.APP_DATA.tasaCambio).toFixed(2);
+                } else if (prevMonedaIndiv === 'PEN' && newMoneda === 'USD') {
+                    indivCosto.value = (val / window.APP_DATA.tasaCambio).toFixed(2);
+                }
+            }
+            prevMonedaIndiv = newMoneda;
+            window.recalcularCotizacion();
+        });
+    }
 
     // Eventos TC
     if (inputTasaCambio) {
@@ -74,6 +92,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.APP_DATA.tasaCambio = val;
                 window.recalcularCotizacion();
             }
+        });
+    }
+
+    // Remover selección individual
+    if (btnRemoverProdIndiv) {
+        btnRemoverProdIndiv.addEventListener('click', function() {
+            currentIndividualProduct = null;
+            indivNombreProducto.textContent = 'Cotización Manual';
+            indivDetallesProducto.textContent = 'Ingresa el costo manualmente o busca un producto arriba.';
+            this.classList.add('d-none');
+            window.recalcularCotizacion();
         });
     }
 
@@ -137,8 +166,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let html = '<div class="list-group list-group-flush">';
         data.forEach(prod => {
-            // El backend devuelve precioDolar, vamos a usarlo como el "Costo $"
-            const precioUsd = parseFloat(prod.precioDolar || 0).toFixed(2);
+            // El backend devuelve costoComprobante (de DetalleComprobante) y monedaComprobante
+            const moneda = prod.monedaComprobante || 'USD';
+            const costo = parseFloat(prod.costoComprobante !== undefined ? prod.costoComprobante : (prod.precioDolar || 0));
             const marca = prod.nombreMarca ? prod.nombreMarca : '';
             const imgUrl = prod.imagenProducto1 ? `/storage/${prod.imagenProducto1}` : '/images/no-image.png';
             
@@ -151,10 +181,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 nombre: prod.nombreProducto,
                 modelo: prod.modelo,
                 marca: marca,
-                precioUsd: parseFloat(precioUsd)
+                costo: costo,
+                moneda: moneda,
+                comprobante: prod.numeroComprobante || null,
+                idGrupo: prod.idGrupo || null,
+                idCategoria: prod.idCategoria || null
             });
             // encodeURIComponent no escapa comillas simples, lo hacemos manualmente
             const prodData = encodeURIComponent(prodDataStr).replace(/'/g, "%27");
+
+            const badgeCosto = moneda === 'PEN' 
+                ? `S/ ${costo.toFixed(2)}` 
+                : `$ ${costo.toFixed(2)} (S/ ${(costo * window.APP_DATA.tasaCambio).toFixed(2)})`;
+            const infoComp = prod.numeroComprobante ? `<small class="text-secondary ms-1">(${prod.numeroComprobante})</small>` : '';
 
             html += `
                 <a href="javascript:void(0)" class="list-group-item list-group-item-action product-result-item" onclick="agregarAlCombo('${prodData}')">
@@ -163,9 +202,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="flex-grow-1 overflow-hidden">
                             <h6 class="mb-0 text-truncate">${prod.nombreProducto}</h6>
                             <small class="text-muted">${marca} | Mod: ${prod.modelo}</small>
+                            ${infoComp}
                         </div>
-                        <div class="ms-2 text-end" style="min-width: 80px;">
-                            <span class="badge bg-success">$ ${precioUsd}</span>
+                        <div class="ms-2 text-end" style="min-width: 110px;">
+                            <span class="badge bg-success">${badgeCosto}</span>
                         </div>
                     </div>
                 </a>
@@ -188,6 +228,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (modoCombo) {
             // Añadir ítem a la lista combo
+            // En combo se guarda costoUsd (sin IGV) para que (costoUsd * igvFactor * tasaCambio) dé el subtotal en soles
+            const costoUsd = prod.moneda === 'PEN' 
+                ? (window.APP_DATA.tasaCambio > 0 ? (prod.costo / window.APP_DATA.igvFactor) / window.APP_DATA.tasaCambio : prod.costo)
+                : (prod.costo / window.APP_DATA.igvFactor);
+
             comboItems.push({
                 uid: itemIdCounter++,
                 idProducto: prod.id,
@@ -195,19 +240,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 modelo: prod.modelo,
                 marca: prod.marca,
                 cantidad: 1,
-                costoUsd: prod.precioUsd,
+                costoUsd: parseFloat(costoUsd.toFixed(2)),
                 fleteSoles: 0,
-                gananciaSoles: 0
+                gananciaSoles: 0,
+                idGrupo: prod.idGrupo || null,
+                idCategoria: prod.idCategoria || null
             });
             renderCombo();
         } else {
             // Establecer en individual
+            currentIndividualProduct = prod;
             indivNombreProducto.textContent = prod.nombre;
-            indivDetallesProducto.textContent = `${prod.marca} | Mod: ${prod.modelo}`;
-            indivMoneda.value = 'USD';
-            // Precio con IGV
-            const precioConIgv = prod.precioUsd * window.APP_DATA.igvFactor;
-            indivCosto.value = precioConIgv.toFixed(2);
+            const extraComp = prod.comprobante ? ` | Comp: ${prod.comprobante}` : '';
+            indivDetallesProducto.textContent = `${prod.marca} | Mod: ${prod.modelo}${extraComp}`;
+            if (btnRemoverProdIndiv) btnRemoverProdIndiv.classList.remove('d-none');
+            
+            indivMoneda.value = prod.moneda || 'USD';
+            prevMonedaIndiv = indivMoneda.value;
+            indivCosto.value = parseFloat(prod.costo).toFixed(2);
             indivFlete.value = '0.00';
             indivGanancia.value = '0.00';
             window.recalcularCotizacion();
@@ -414,8 +464,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         plataformas.forEach(plataforma => {
             const pid = plataforma.dataset.pid;
-            const name = plataforma.dataset.name;
             const container = document.getElementById(`container-plataforma-${pid}`);
+            if (!container) return;
             
             const comisionesElements = plataforma.querySelectorAll('.comision-data');
             let html = '';
@@ -426,30 +476,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 html += `
                 <div class="list-group-item bg-light border-bottom-0 pb-1 pt-2">
                     <div class="row text-secondary small fw-bold">
-                        <div class="col-2">Comisión</div>
-                        <div class="col-4 text-center" title="Total Sin Facturar">T.S.Fact</div>
-                        <div class="col-3 text-center" title="Total Facturado">T.Fact</div>
+                        <div class="col-4">Comisión / Flete</div>
+                        <div class="col-3 text-center" title="Total Sin Facturar">T.S.Fact</div>
+                        <div class="col-2 text-center" title="Total Facturado">T.Fact</div>
                         <div class="col-3 text-end text-primary">Promedio</div>
                     </div>
                 </div>
                 `;
                 
                 comisionesElements.forEach((com, idx) => {
-                    const pct = parseFloat(com.dataset.comision);
-                    const flete = parseFloat(com.dataset.flete);
+                    const pct = parseFloat(com.dataset.comision) || 0;
+                    const flete = parseFloat(com.dataset.flete) || 0;
+                    const nombre = com.dataset.nombre || '';
+                    const tipo = com.dataset.tipo || 'DEFAULT';
+                    const valor = com.dataset.valor || '';
+                    const prioridad = parseInt(com.dataset.prioridad) || 0;
+                    const id = com.dataset.id || idx;
                     
                     html += `
                     <div class="list-group-item py-2 hover-sistema-uno simulacion-row" 
-                         data-pid="${pid}" data-pct="${pct}" data-flete="${flete}">
+                         id="sim-row-${pid}-${id}"
+                         data-pid="${pid}" 
+                         data-pct="${pct}" 
+                         data-flete="${flete}"
+                         data-tipo="${tipo}"
+                         data-valor="${valor}"
+                         data-prioridad="${prioridad}"
+                         data-nombre="${nombre}">
                         <div class="row align-items-center">
-                            <div class="col-2 fw-bold">
-                                ${pct}%
-                                ${flete > 0 ? `<br><small class="text-muted fw-normal">+S/ ${flete}</small>` : ''}
-                            </div>
-                            <div class="col-4 text-center">
-                                <small class="text-secondary">S/ <span class="val-tsfact">0.00</span></small>
+                            <div class="col-4">
+                                <div class="d-flex align-items-center flex-wrap">
+                                    <span class="fw-bold me-1">${pct}%</span>
+                                    ${flete > 0 ? `<span class="badge bg-light text-secondary border small fw-normal">+S/ ${flete.toFixed(2)}</span>` : ''}
+                                </div>
+                                ${nombre ? `<div class="text-muted text-truncate" style="font-size: 0.73rem; max-width: 140px;" title="${nombre}">${nombre}</div>` : ''}
+                                <span class="badge bg-success d-none badge-aplicable mt-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i> Sugerido</span>
                             </div>
                             <div class="col-3 text-center">
+                                <small class="text-secondary">S/ <span class="val-tsfact">0.00</span></small>
+                            </div>
+                            <div class="col-2 text-center">
                                 <small class="text-secondary">S/ <span class="val-tfact">0.00</span></small>
                             </div>
                             <div class="col-3 text-end fw-bold text-dark">
@@ -465,55 +531,122 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function getMatchingRule(filasPlataforma, activeProd) {
+        if (!activeProd || !activeProd.idGrupo) return null;
+        
+        const idGrupo = String(activeProd.idGrupo).trim();
+        const idCat = activeProd.idCategoria ? String(activeProd.idCategoria).trim() : null;
+        
+        // 1. Probar GRUPO_IN
+        for (const fila of filasPlataforma) {
+            const tipo = fila.dataset.tipo;
+            const valor = fila.dataset.valor || '';
+            if (tipo === 'GRUPO_IN' && valor) {
+                const grupos = valor.split(',').map(g => g.trim());
+                if (grupos.includes(idGrupo)) {
+                    return fila;
+                }
+            }
+        }
+        
+        // 2. Probar CATEGORIA_IN
+        if (idCat) {
+            for (const fila of filasPlataforma) {
+                const tipo = fila.dataset.tipo;
+                const valor = fila.dataset.valor || '';
+                if (tipo === 'CATEGORIA_IN' && valor) {
+                    const cats = valor.split(',').map(c => c.trim());
+                    if (cats.includes(idCat)) {
+                        return fila;
+                    }
+                }
+            }
+        }
+        
+        // 3. Fallback a DEFAULT
+        for (const fila of filasPlataforma) {
+            if (fila.dataset.tipo === 'DEFAULT') {
+                return fila;
+            }
+        }
+        
+        return null;
+    }
+
     function actualizarSimulacionPlataformas(totalBaseSinComision) {
         if (totalBaseSinComision <= 0) return;
 
-        const filas = document.querySelectorAll('.simulacion-row');
+        const plataformasDom = document.querySelectorAll('.plataforma-data');
         
-        // Guardaremos el menor "Promedio" de cada plataforma para mostrarlo en el encabezado
-        const menoresPorPlataforma = {};
+        // Determinar producto activo para la simulación
+        let activeProduct = null;
+        if (!modoCombo && currentIndividualProduct) {
+            activeProduct = currentIndividualProduct;
+        } else if (modoCombo && comboItems.length > 0) {
+            // En combo, tomar el producto prioritario o el primero
+            activeProduct = comboItems[0];
+        }
 
-        filas.forEach(fila => {
-            const pid = fila.dataset.pid;
-            const pctComision = parseFloat(fila.dataset.pct); // Ej: 12 (significa 12%)
-            const fleteFijo = parseFloat(fila.dataset.flete);
+        plataformasDom.forEach(plataforma => {
+            const pid = plataforma.dataset.pid;
+            const hasRules = plataforma.dataset.hasRules === '1';
+            const filas = document.querySelectorAll(`.simulacion-row[data-pid="${pid}"]`);
             
-            // Fórmulas copiadas del Excel / JS original:
-            // montoComision = TotalBase * (1 + %comision) -> wait, el original hacía: promedio * ((porcentaje/100)+1) 
-            // En el Excel: 
-            // H = Costo * 1.15
-            // I = (H * 0.15) + Costo
-            // Es decir: ComisionMonto = (CostoBase * (1 + %Comision)) * %Comision
-            // Total Sin Facturar = ComisionMonto + CostoBase
-            
-            // Replicando la fórmula exacta del cotizador antiguo `calculator-scripts.js`:
-            // monto = promedio * ((porcentaje / 100) + 1);   // Aquí "promedio" era el costo base!
-            // costo = promedio + (monto * (porcentaje / 100)); // Total Sin Facturar
-            
-            const montoCalculo = totalBaseSinComision * ((pctComision / 100) + 1);
-            const totalSinFacturar = totalBaseSinComision + (montoCalculo * (pctComision / 100));
-            const totalFacturado = totalSinFacturar * window.APP_DATA.facturacionFactor;
-            
-            // Promedio = ((TotalSinFacturar + TotalFacturado)/2) + fleteFijo
-            const promedioFinal = ((totalSinFacturar + totalFacturado) / 2) + fleteFijo;
-            
-            fila.querySelector('.val-tsfact').textContent = totalSinFacturar.toFixed(2);
-            fila.querySelector('.val-tfact').textContent = totalFacturado.toFixed(2);
-            fila.querySelector('.val-promedio').textContent = promedioFinal.toFixed(2);
+            if (filas.length === 0) return;
 
-            // Actualizar menor por plataforma
-            if (!menoresPorPlataforma[pid] || promedioFinal < menoresPorPlataforma[pid]) {
-                menoresPorPlataforma[pid] = promedioFinal;
-            }
-        });
+            const matchedRow = (activeProduct && hasRules) ? getMatchingRule(filas, activeProduct) : null;
+            let menorValor = null;
+            let matchedValor = null;
 
-        // Actualizar los badges de los encabezados de los accordions
-        for (const [pid, menorValor] of Object.entries(menoresPorPlataforma)) {
+            filas.forEach(fila => {
+                const pctComision = parseFloat(fila.dataset.pct) || 0;
+                const fleteFijo = parseFloat(fila.dataset.flete) || 0;
+                
+                // Replicando la fórmula del cotizador:
+                // montoCalculo = totalBase * ((pctComision / 100) + 1)
+                // totalSinFacturar = totalBase + (montoCalculo * (pctComision / 100))
+                // totalFacturado = totalSinFacturar * facturacionFactor
+                // promedioFinal = ((totalSinFacturar + totalFacturado) / 2) + fleteFijo
+                
+                const montoCalculo = totalBaseSinComision * ((pctComision / 100) + 1);
+                const totalSinFacturar = totalBaseSinComision + (montoCalculo * (pctComision / 100));
+                const totalFacturado = totalSinFacturar * window.APP_DATA.facturacionFactor;
+                const promedioFinal = ((totalSinFacturar + totalFacturado) / 2) + fleteFijo;
+                
+                fila.querySelector('.val-tsfact').textContent = totalSinFacturar.toFixed(2);
+                fila.querySelector('.val-tfact').textContent = totalFacturado.toFixed(2);
+                fila.querySelector('.val-promedio').textContent = promedioFinal.toFixed(2);
+
+                const badgeAplicable = fila.querySelector('.badge-aplicable');
+
+                if (matchedRow && fila === matchedRow) {
+                    matchedValor = promedioFinal;
+                    fila.classList.add('bg-light-subtle', 'border-start', 'border-3', 'border-success');
+                    if (badgeAplicable) badgeAplicable.classList.remove('d-none');
+                } else {
+                    fila.classList.remove('bg-light-subtle', 'border-start', 'border-3', 'border-success');
+                    if (badgeAplicable) badgeAplicable.classList.add('d-none');
+                }
+
+                if (menorValor === null || promedioFinal < menorValor) {
+                    menorValor = promedioFinal;
+                }
+            });
+
+            // Actualizar badge en el encabezado del accordion
             const badge = document.querySelector(`.js-rango-recomendado[data-pid="${pid}"]`);
             if (badge) {
-                badge.textContent = `Desde S/ ${menorValor.toFixed(2)}`;
+                if (matchedValor !== null) {
+                    badge.textContent = `Sugerido: S/ ${matchedValor.toFixed(2)}`;
+                    badge.className = 'badge bg-success rounded-pill js-rango-recomendado';
+                    badge.title = matchedRow ? (matchedRow.dataset.nombre || 'Regla sugerida para el producto') : '';
+                } else if (menorValor !== null) {
+                    badge.textContent = `Desde S/ ${menorValor.toFixed(2)}`;
+                    badge.className = 'badge bg-primary rounded-pill js-rango-recomendado';
+                    badge.title = '';
+                }
             }
-        }
+        });
     }
 
     // Inicializar la vista ahora que todo está definido

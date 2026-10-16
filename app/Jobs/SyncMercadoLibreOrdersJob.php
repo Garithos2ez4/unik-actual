@@ -26,6 +26,13 @@ class SyncMercadoLibreOrdersJob implements ShouldQueue
     public function handle(MercadoLibreOrderSyncService $syncService): void
     {
         set_time_limit(0);
+
+        $lock = Cache::lock('ml_sync_execution_lock', 300);
+        if (!$lock->get()) {
+            Log::warning('SyncMercadoLibreOrdersJob omitido: ya existe otra sincronización ejecutándose.');
+            return;
+        }
+
         try {
             Cache::put('ml_sync_orders_status', 'processing', 300);
             Log::info('Iniciando sync ML' . ($this->sellerId ? " seller={$this->sellerId}" : ' (todos los sellers)'));
@@ -40,6 +47,7 @@ class SyncMercadoLibreOrdersJob implements ShouldQueue
             throw $e;
         } finally {
             Cache::put('ml_sync_orders_status', 'completed', 300);
+            $lock->release();
         }
     }
 }

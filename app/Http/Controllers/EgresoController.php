@@ -599,6 +599,7 @@ class EgresoController extends Controller
         $queryBuilder = \App\Models\Catalogo\Producto::query()
             ->with('PrecioTienda')
             ->leftJoin('MarcaProducto', 'Producto.idMarca', '=', 'MarcaProducto.idMarca')
+            ->leftJoin('GrupoProducto', 'Producto.idGrupo', '=', 'GrupoProducto.idGrupoProducto')
             ->select(
                 'Producto.idProducto',
                 'Producto.nombreProducto',
@@ -608,6 +609,7 @@ class EgresoController extends Controller
                 'MarcaProducto.nombreMarca',
                 'Producto.precioDolar',
                 'Producto.idGrupo',
+                'GrupoProducto.idCategoria',
                 'Producto.gananciaExtra',
                 'Producto.estadoProductoWeb',
                 'Producto.usar_tc_fijo'
@@ -631,6 +633,29 @@ class EgresoController extends Controller
             ->take(10)
             ->get();
 
+        // Obtener último costo registrado en DetalleComprobante
+        $ids = $productos->pluck('idProducto')->toArray();
+        $detallesCompra = \App\Models\Ventas\DetalleComprobante::query()
+            ->join('Comprobante', 'DetalleComprobante.idComprobante', '=', 'Comprobante.idComprobante')
+            ->whereIn('DetalleComprobante.idProducto', $ids)
+            ->where(function ($q) {
+                $q->where('DetalleComprobante.precioUnitario', '>', 0)
+                  ->orWhere('DetalleComprobante.precioCompra', '>', 0);
+            })
+            ->whereNotIn('Comprobante.estado', ['ELIMINADO', 'INVALIDO'])
+            ->select(
+                'DetalleComprobante.idDetalleComprobante',
+                'DetalleComprobante.idProducto',
+                'DetalleComprobante.precioUnitario',
+                'DetalleComprobante.precioCompra',
+                'Comprobante.moneda',
+                'Comprobante.numeroComprobante',
+                'Comprobante.fechaRegistro'
+            )
+            ->orderBy('DetalleComprobante.idDetalleComprobante', 'desc')
+            ->get()
+            ->groupBy('idProducto');
+
         // Calcular precio de venta sugerido igual que la Web
         $calculadora1 = \App\Models\Precios\Calculadora::find(1);
         $calculadora2 = \App\Models\Precios\Calculadora::find(2);
@@ -646,6 +671,29 @@ class EgresoController extends Controller
         $comisionesPorGrupo = [];
 
         foreach ($productos as $p) {
+            $detalles = $detallesCompra->get($p->idProducto);
+            $ultimoDetalle = null;
+            if ($detalles) {
+                $ultimoDetalle = $detalles->first(function ($d) {
+                    return stripos($d->numeroComprobante, 'INVENTARIO') === false;
+                }) ?? $detalles->first();
+            }
+
+            if ($ultimoDetalle) {
+                $p->costoComprobante = floatval($ultimoDetalle->precioUnitario) > 0 
+                    ? floatval($ultimoDetalle->precioUnitario) 
+                    : floatval($ultimoDetalle->precioCompra);
+                $monedaRaw = strtoupper(trim($ultimoDetalle->moneda ?? ''));
+                $p->monedaComprobante = in_array($monedaRaw, ['SOL', 'SOLES', 'PEN']) ? 'PEN' : 'USD';
+                $p->numeroComprobante = $ultimoDetalle->numeroComprobante;
+                $p->esComprobante = true;
+            } else {
+                $p->costoComprobante = floatval($p->precioDolar);
+                $p->monedaComprobante = 'USD';
+                $p->numeroComprobante = null;
+                $p->esComprobante = false;
+            }
+
             $tc = $p->usar_tc_fijo ? $tcFijo : $tcSunat;
             $precioSolesBase = $p->precioDolar * $tc;
             $gananciaSoles = $p->gananciaExtra * $tc;
