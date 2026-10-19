@@ -649,6 +649,100 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Auto-búsqueda si viene parámetro ?search=... en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam && searchInput) {
+        searchInput.value = searchParam;
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // ---------------------------------------------------------
+    // VERIFICACIÓN DE PRECIO DELTRON EN VIVO (API-0000030)
+    // ---------------------------------------------------------
+    window.verificarPrecioDeltronCotizador = function() {
+        let query = '';
+        if (currentIndividualProduct && currentIndividualProduct.modelo) {
+            query = currentIndividualProduct.modelo;
+        } else if (searchInput && searchInput.value.trim()) {
+            query = searchInput.value.trim();
+        }
+
+        const feedback = document.getElementById('deltron-verify-feedback');
+        if (!query) {
+            if (feedback) {
+                feedback.style.display = 'block';
+                feedback.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Ingresa un SKU o selecciona un producto para consultar a Deltron.</span>';
+            }
+            return;
+        }
+
+        if (feedback) {
+            feedback.style.display = 'block';
+            feedback.innerHTML = '<span class="text-primary"><div class="spinner-border spinner-border-sm me-1"></div>Consultando precio en Deltron API (API-0000030)...</span>';
+        }
+
+        fetch(`/compras/deltron/precio-tiempo-real?sku=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'ok' && res.data) {
+                    const data = res.data;
+                    const precioLista = data.price ? parseFloat(data.price) : 0;
+                    const precioPromo = data.price_promo ? parseFloat(data.price_promo) : null;
+                    const tienePromo = data.tiene_promo && precioPromo > 0;
+                    const ahorro = data.ahorro || 0;
+
+                    const precioElegidoSinIgv = tienePromo ? precioPromo : precioLista;
+                    const precioElegidoConIgv = (precioElegidoSinIgv * 1.18).toFixed(2);
+
+                    let html = `
+                        <div class="alert ${tienePromo ? 'alert-success' : 'alert-info'} border-0 shadow-xs py-2 px-3 text-start mt-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold">${data.name || data.sku}</span>
+                                <span class="badge ${tienePromo ? 'bg-danger' : 'bg-primary'} font-monospace">API-0000030</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <div>
+                                    <small class="text-muted d-block">Precio Regular Deltron:</small>
+                                    <span class="${tienePromo ? 'text-decoration-line-through text-muted' : 'fw-bold text-dark'}">$${precioLista.toFixed(2)} USD</span>
+                                    <small class="text-muted">(+IGV: $${(precioLista * 1.18).toFixed(2)})</small>
+                                </div>
+                                ${tienePromo ? `
+                                <div>
+                                    <small class="text-danger fw-bold d-block"><i class="bi bi-fire"></i> ¡Precio Promo Vigente!</small>
+                                    <span class="fw-bold text-success fs-6">$${precioPromo.toFixed(2)} USD</span>
+                                    <small class="text-success fw-semibold">(+IGV: $${(precioPromo * 1.18).toFixed(2)})</small>
+                                </div>
+                                ` : ''}
+                            </div>
+                            ${tienePromo ? `<div class="badge bg-warning text-dark mt-1">Ahorro de $${ahorro.toFixed(2)} USD por unidad</div>` : ''}
+                            <div class="mt-2 text-end">
+                                <button type="button" class="btn btn-sm ${tienePromo ? 'btn-success' : 'btn-primary'} rounded-pill px-3 py-1" onclick="aplicarPrecioDeltronCotizador(${precioElegidoConIgv})">
+                                    <i class="bi bi-check2-circle me-1"></i> Aplicar $${precioElegidoConIgv} USD (Con IGV) a Cotización
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    feedback.innerHTML = html;
+                } else {
+                    feedback.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>${res.message || 'No se encontró precio en Deltron.'}</span>`;
+                }
+            })
+            .catch(err => {
+                feedback.innerHTML = '<span class="text-danger"><i class="bi bi-wifi-off me-1"></i>Error de conexión al consultar Deltron.</span>';
+            });
+    };
+
+    window.aplicarPrecioDeltronCotizador = function(costoConIgvUsd) {
+        if (indivMoneda) indivMoneda.value = 'USD';
+        if (indivCosto) indivCosto.value = parseFloat(costoConIgvUsd).toFixed(2);
+        window.recalcularCotizacion();
+        const feedback = document.getElementById('deltron-verify-feedback');
+        if (feedback) {
+            feedback.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Costo actualizado a $${parseFloat(costoConIgvUsd).toFixed(2)} USD (Con IGV) desde Deltron.</span>`;
+        }
+    };
+
     // Inicializar la vista ahora que todo está definido
     renderPlataformasTemplate();
     window.recalcularCotizacion();

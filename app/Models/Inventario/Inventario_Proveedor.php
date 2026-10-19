@@ -42,6 +42,11 @@ class Inventario_Proveedor extends Model
     {
         return $this->belongsTo(Producto::class,'idProducto','idProducto');
     }
+
+    public function skuApi()
+    {
+        return $this->hasOne(InventarioProveedorSku::class, 'idInventarioProveedor', 'idInventarioProveedor');
+    }
     
 
     /**

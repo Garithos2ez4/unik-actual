@@ -4,7 +4,16 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use App\Http\Controllers\Envios\EnvioProvinciaController;
+use App\Http\Controllers\Envios\EnvioProvinciaExportController;
+use App\Http\Controllers\Envios\EnvioProvinciaTrackingController;
+use App\Http\Controllers\Envios\EnvioProvinciaDictionaryController;
+use App\Http\Controllers\Api\MarvisurSyncController;
+use App\Http\Controllers\Api\EmtrafesaSyncController;
+use App\Http\Controllers\Api\OlvaSyncController;
+use App\Http\Controllers\Api\ShalomSyncController;
+use App\Http\Controllers\Api\ShalomTarifaController;
+use App\Http\Controllers\DeltronController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Productos\ProductoController;
@@ -18,7 +27,6 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\EgresoMasivoController;
-use App\Http\Controllers\PlataformaController;
 use App\Http\Controllers\Plataformas\PlataformaBaseController;
 use App\Http\Controllers\Plataformas\FalabellaController;
 use App\Http\Controllers\Plataformas\RipleyController;
@@ -227,8 +235,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/egresos/searchregistro', [EgresoController::class, 'searchRegistro'])->name('searchregistro');
     Route::post('/egresos/appendegreso', [EgresoController::class, 'appendEgreso'])->name('appendegreso');
     Route::post('/egresos/upgrade', [EgresoController::class, 'upgradeEgreso'])->name('upgradeegreso');
-    Route::get('/egresos/pendientes-envios', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
-    Route::post('/egresos/pendientes-envios/mark', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
+    Route::get('/egresos/pendientes-envios', [EnvioProvinciaTrackingController::class, 'pendientesEnvios'])->name('egresos.pendientes_envios');
+    Route::post('/egresos/pendientes-envios/mark', [EnvioProvinciaTrackingController::class, 'markPendienteEgresado'])->name('egresos.pendientes_envios.mark');
     Route::get('/egresos/searchegreso', [EgresoController::class, 'searchEgreso'])->name('searchegreso');
     Route::get('/egresos/getoneegreso', [EgresoController::class, 'getOneRegistro'])->name('getoneegreso');
     Route::get('/egresos/nuevosegresos', [EgresoController::class, 'create'])->name('createegreso');
@@ -247,8 +255,12 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/egresos/anular', [EgresoController::class, 'anularEgreso'])->name('anularegreso');
 
     // Deltron Compras
-    Route::get('/compras/deltron-ofertas', [\App\Http\Controllers\DeltronController::class, 'indexStock'])->name('compras.deltron');
-    Route::post('/compras/deltron-ofertas/sync', [\App\Http\Controllers\DeltronController::class, 'syncManual'])->name('compras.deltron.sync');
+    Route::get('/compras/deltron-ofertas', [DeltronController::class, 'indexStock'])->name('compras.deltron');
+    Route::post('/compras/deltron-ofertas/sync', [DeltronController::class, 'syncManual'])->name('compras.deltron.sync');
+    Route::get('/compras/deltron/consultar-tiempo-real', [DeltronController::class, 'consultarTiempoReal'])->name('compras.deltron.consultar');
+    Route::get('/compras/deltron/precio-tiempo-real', [DeltronController::class, 'consultarPrecioTiempoReal'])->name('compras.deltron.precio');
+    Route::get('/compras/deltron/promocion-detalle/{promo_id}', [DeltronController::class, 'consultarPromocionDetalle'])->where('promo_id', '.*')->name('compras.deltron.promocion.detalle');
+    Route::get('/compras/deltron/ficha-sku/{sku?}', [DeltronController::class, 'consultarFichaSku'])->where('sku', '.*')->name('compras.deltron.ficha.sku');
 
     // Rutas para Ventas
     Route::prefix('ventas')->name('ventas.')->group(function () {
@@ -271,25 +283,25 @@ Route::middleware(['validate.session'])->group(function () {
 
     // Envios a Provincias
     Route::prefix('envios-provincias')->name('envios.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'create'])->name('create');
-        Route::post('/store', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'store'])->name('store');
-        Route::get('/edit/{id}', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'edit'])->name('edit');
-        Route::put('/update/{id}', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'update'])->name('update');
-        Route::post('/toggle-despachado', [\App\Http\Controllers\Envios\EnvioProvinciaController::class, 'toggleDespachado'])->name('toggle-despachado');
-        Route::get('/pdf', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'pdf'])->name('pdf');
-        Route::get('/excel', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'excel'])->name('excel');
-        Route::get('/etiquetas', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'etiquetas'])->name('etiquetas');
-        Route::get('/lista-productos', [\App\Http\Controllers\Envios\EnvioProvinciaExportController::class, 'listaProductos'])->name('listaProductos');
-        Route::get('/solicitudes', [\App\Http\Controllers\Envios\EnvioProvinciaTrackingController::class, 'obtenerSolicitudes'])->name('solicitudes');
-        Route::get('/sync-marvisur', [\App\Http\Controllers\Api\MarvisurSyncController::class, 'sync']);
-        Route::get('/sync-emtrafesa', [\App\Http\Controllers\Api\EmtrafesaSyncController::class, 'sync']);
-        Route::get('/sync-olva', [\App\Http\Controllers\Api\OlvaSyncController::class, 'sync']);
-        Route::get('/sync-shalom', [\App\Http\Controllers\Api\ShalomSyncController::class, 'sync']);
-        Route::get('/sync-all', [\App\Http\Controllers\Envios\EnvioProvinciaDictionaryController::class, 'syncAllAgencias']);
-        Route::get('/shalom-terminals', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getTerminals']);
-        Route::post('/shalom-cotizar', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'calculate']);
-        Route::get('/shalom-restricciones', [\App\Http\Controllers\Api\ShalomTarifaController::class, 'getRestricciones']);
+        Route::get('/', [EnvioProvinciaController::class, 'index'])->name('index');
+        Route::get('/create', [EnvioProvinciaController::class, 'create'])->name('create');
+        Route::post('/store', [EnvioProvinciaController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [EnvioProvinciaController::class, 'edit'])->name('edit');
+        Route::put('/update/{id}', [EnvioProvinciaController::class, 'update'])->name('update');
+        Route::post('/toggle-despachado', [EnvioProvinciaController::class, 'toggleDespachado'])->name('toggle-despachado');
+        Route::get('/pdf', [EnvioProvinciaExportController::class, 'pdf'])->name('pdf');
+        Route::get('/excel', [EnvioProvinciaExportController::class, 'excel'])->name('excel');
+        Route::get('/etiquetas', [EnvioProvinciaExportController::class, 'etiquetas'])->name('etiquetas');
+        Route::get('/lista-productos', [EnvioProvinciaExportController::class, 'listaProductos'])->name('listaProductos');
+        Route::get('/solicitudes', [EnvioProvinciaTrackingController::class, 'obtenerSolicitudes'])->name('solicitudes');
+        Route::get('/sync-marvisur', [MarvisurSyncController::class, 'sync']);
+        Route::get('/sync-emtrafesa', [EmtrafesaSyncController::class, 'sync']);
+        Route::get('/sync-olva', [OlvaSyncController::class, 'sync']);
+        Route::get('/sync-shalom', [ShalomSyncController::class, 'sync']);
+        Route::get('/sync-all', [EnvioProvinciaDictionaryController::class, 'syncAllAgencias']);
+        Route::get('/shalom-terminals', [ShalomTarifaController::class, 'getTerminals']);
+        Route::post('/shalom-cotizar', [ShalomTarifaController::class, 'calculate']);
+        Route::get('/shalom-restricciones', [ShalomTarifaController::class, 'getRestricciones']);
         Route::get('/olva-cajas', [\App\Http\Controllers\Api\OlvaTarifaController::class, 'getCajas']);
 
         // AJAX Endpoints

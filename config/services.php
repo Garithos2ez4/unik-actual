@@ -51,4 +51,11 @@ return [
         'redirect_uri'  => env('MELI_REDIRECT_URI', 'https://log.unikstoreperu.com/configuracion/mercadolibre/callback'),
     ],
 
+    'deltron' => [
+        'base_url'   => env('DELTRON_API_URL', 'https://api.deltron.com.pe/vadhsgytGn/partner-service'),
+        'api_key'    => env('DELTRON_API_KEY', ''),
+        'api_secret' => env('DELTRON_API_SECRET', ''),
+        'token'      => env('DELTRON_API_TOKEN', ''),
+    ],
+
 ];

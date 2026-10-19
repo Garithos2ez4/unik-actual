@@ -98,6 +98,12 @@
                             <button class="btn btn-sm btn-outline-danger ms-2 d-none" id="btn-remover-prod-indiv" title="Quitar selección y cotizar manual"><i class="bi bi-x-circle"></i></button>
                         </div>
                         <div id="indiv-detalles-producto" class="text-muted small">Ingresa el costo manualmente o busca un producto arriba.</div>
+                        <div class="mt-2 text-center" id="box-deltron-verify">
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 shadow-xs" id="btn-verificar-precio-deltron" onclick="verificarPrecioDeltronCotizador()" title="Verificar precio de lista y precio de promoción vigente en Deltron en tiempo real (API-0000030)">
+                                <i class="bi bi-tag-fill text-warning me-1"></i> Verificar Precio Deltron en Vivo (API-0000030)
+                            </button>
+                            <div id="deltron-verify-feedback" class="mt-2 small" style="display: none;"></div>
+                        </div>
                     </div>
 
                     <div class="row g-3 justify-content-center">
