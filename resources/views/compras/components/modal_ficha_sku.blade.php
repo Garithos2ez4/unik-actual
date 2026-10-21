@@ -149,7 +149,7 @@
                                     <i class="bi bi-boxes text-success me-1"></i> STOCK DISPONIBLE
                                 </small>
                                 <span class="fs-4 fw-bold text-success" id="fichaStockTotal">0</span> <small class="text-muted">uds.</small>
-                                <small class="text-muted d-block small mt-1">Total en 13 almacenes</small>
+                                <small class="text-muted d-block small mt-1" id="fichaStockSub">Total en 13 almacenes</small>
                             </div>
                         </div>
 
@@ -292,6 +292,9 @@
                     <i class="bi bi-shield-check text-success me-1"></i> Guardado en almacenamiento local para no consumir cuota en visitas web.
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="#" id="fichaCrearBtn" target="_blank" class="btn btn-primary btn-sm rounded-pill px-3 shadow-xs" style="display: none;">
+                        <i class="bi bi-plus-circle me-1"></i> Crear en Unike
+                    </a>
                     <a href="#" id="fichaCotizarBtn" target="_blank" class="btn btn-success btn-sm rounded-pill px-3 shadow-xs">
                         <i class="bi bi-calculator me-1"></i> Cotizar en Calculadora
                     </a>

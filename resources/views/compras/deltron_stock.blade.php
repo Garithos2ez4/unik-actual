@@ -28,6 +28,11 @@
                     <span class="fw-semibold">{{ $historial->first() ? $historial->first()->fecha_ejecucion->format('d/m h:i A') : 'Ninguna' }}</span>
                 </button>
 
+                <!-- Modal Importar Ofertas Masivas (+100 Stock Lima) -->
+                <button type="button" class="btn btn-sm btn-danger text-white rounded-pill px-3 shadow-xs fw-semibold" onclick="abrirModalImportacionOfertas()" title="Importar masivamente productos en oferta con mas de 100 de stock en Lima">
+                    <i class="bi bi-box-arrow-in-down me-1"></i> Importar Ofertas (+100 Stock Lima)
+                </button>
+
                 <!-- Modal Promociones y Recomendados -->
                 <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 shadow-xs fw-semibold" data-bs-toggle="modal" data-bs-target="#recomendadosModal" onclick="if(document.getElementById('tab-promos-link')) document.getElementById('tab-promos-link').click();" title="Ver promociones y oportunidades oficiales de Deltron">
                     <i class="bi bi-tag-fill text-warning me-1"></i> Promociones B2B 
@@ -293,18 +298,28 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                @if(isset($prod['precio']) && $prod['precio'] > 0)
-                                <div class="fw-bold text-danger fs-6">${{ number_format($prod['precio'], 2) }}</div>
+                                @if(isset($prod['precio_promo']) && $prod['precio_promo'] > 0)
+                                <div class="fw-bold text-danger fs-6">${{ number_format($prod['precio_promo'], 2) }}</div>
+                                <small class="text-muted text-decoration-line-through d-block" style="font-size: 0.72rem;">${{ number_format($prod['precio'], 2) }}</small>
+                                @elseif(isset($prod['precio']) && $prod['precio'] > 0)
+                                <div class="fw-bold text-dark fs-6">${{ number_format($prod['precio'], 2) }}</div>
                                 <small class="text-muted d-block" style="font-size: 0.72rem;">sin IGV</small>
                                 @else
                                 <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td class="text-center">
+                            <td class="text-center stock-cell">
                                 @if($prod['stock'] > 0)
-                                <span class="badge rounded-pill bg-success px-3 py-2 fs-6 shadow-xs">
-                                    <i class="bi bi-box-seam me-1"></i> {{ number_format($prod['stock']) }}
-                                </span>
+                                    @if(!empty($prod['hay_mas']) || $prod['stock'] >= 200)
+                                    <span class="badge rounded-pill bg-success px-2 py-2 fs-6 shadow-xs" title="Stock masivo en Deltron (+20 por almacén)">
+                                        <i class="bi bi-box-seam me-1"></i> +{{ number_format($prod['stock']) }}
+                                    </span>
+                                    <small class="text-success d-block fw-semibold mt-1" style="font-size: 0.68rem;">Stock masivo (+20 alm.)</small>
+                                    @else
+                                    <span class="badge rounded-pill bg-success px-3 py-2 fs-6 shadow-xs">
+                                        <i class="bi bi-box-seam me-1"></i> {{ number_format($prod['stock']) }}
+                                    </span>
+                                    @endif
                                 @else
                                 <span class="badge rounded-pill bg-secondary px-3 py-2">0</span>
                                 @endif
@@ -381,6 +396,7 @@
 </div>
 
 <!-- Modales de Soporte (Componentes) -->
+@include('compras.components.modal_importar_ofertas')
 @include('compras.components.modal_almacenes')
 @include('compras.components.modal_historial')
 @include('compras.components.modal_ofertas')

@@ -39,7 +39,7 @@ class ProductoController extends Controller
                 $productos = $this->productoService->getAllProductsByColumn('idGrupo', decrypt($idGrupo), 15, $request->query('filtro'))->appends($request->all());
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
-                // Si es peticiÃ³n AJAX (paginaciÃ³n o filtro)
+                // Si es petición AJAX (paginación o filtro)
                 if ($request->query('page') || $request->query('filtro')) {
                     $view = view('components.lista_producto', [
                         'productos' => $productos,
@@ -54,7 +54,7 @@ class ProductoController extends Controller
                     return response()->json(['html' => $view]);
                 }
 
-                // Carga inicial completa de la pÃ¡gina
+                // Carga inicial completa de la página
                 $grupo = $this->productoService->getOneLabelGrupo(decrypt($idGrupo));
                 $grupos = $this->productoService->getAllLabelGrupoXCategory(decrypt($idCategory));
                 $categoria = $this->productoService->getOneLabelCategory(decrypt($idCategory));
@@ -80,7 +80,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
     public function update($idProducto)
@@ -112,7 +112,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -139,6 +139,58 @@ class ProductoController extends Controller
                     $productoCopiar = $this->productoService->getOneProductByColumn('idProducto', $request->copy_from);
                 }
 
+                $deltronData = null;
+                $deltronMarcaId = null;
+                if ($request->has('from_deltron')) {
+                    $deltronSku = trim($request->input('from_deltron'));
+                    if (!empty($deltronSku)) {
+                        try {
+                            $deltronService = app(\App\Services\Deltron\DeltronApiService::class);
+                            $deltronData = $deltronService->getOrFetchFichaSku($deltronSku);
+                            if ($deltronData) {
+                                if (empty($deltronData['descripcion_completa'])) {
+                                    $descBase = \App\Services\Deltron\DeltronApiService::cleanDeltronText($deltronData['descripcion_larga'] ?? ($deltronData['descripcion_corta'] ?? ''));
+                                    $specsBase = \App\Services\Deltron\DeltronApiService::parseSpecsHtmlToText($deltronData['specs_html'] ?? '');
+                                    if (!empty($descBase) && !empty($specsBase)) {
+                                        $deltronData['descripcion_completa'] = $descBase . "\n\n" . $specsBase;
+                                    } elseif (!empty($specsBase)) {
+                                        $deltronData['descripcion_completa'] = $specsBase;
+                                    } else {
+                                        $deltronData['descripcion_completa'] = $descBase;
+                                    }
+                                }
+
+                                if (!empty($deltronData['brand_name'])) {
+                                    $brandSearch = trim($deltronData['brand_name']);
+                                    $matchedMarca = \App\Models\Catalogo\MarcaProducto::where('nombreMarca', 'LIKE', "%{$brandSearch}%")->first();
+                                    if ($matchedMarca) {
+                                        $deltronMarcaId = $matchedMarca->idMarca;
+                                    }
+                                }
+
+                                // Extraer imagenes de Deltron (800x800)
+                                $deltronImages = [];
+                                if (!empty($deltronData['images']['carrusel']) && is_array($deltronData['images']['carrusel'])) {
+                                    foreach ($deltronData['images']['carrusel'] as $imgItem) {
+                                        $imgUrl = is_array($imgItem) ? ($imgItem['url'] ?? '') : (is_string($imgItem) ? $imgItem : '');
+                                        if ($imgUrl && !str_contains($imgUrl, 'blanco.jpg')) {
+                                            $deltronImages[] = $imgUrl;
+                                        }
+                                    }
+                                }
+                                if (empty($deltronImages) && !empty($deltronData['images']['listado'])) {
+                                    $listadoUrl = $deltronData['images']['listado'];
+                                    if (!str_contains($listadoUrl, 'blanco.jpg')) {
+                                        $deltronImages[] = $listadoUrl;
+                                    }
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning('No se pudo cargar ficha Deltron en create: ' . $e->getMessage());
+                        }
+                    }
+                }
+
                 return view('productos.partials.createproducto', [
                     'user' => $userModel,
                     'marcas' => $marcas,
@@ -151,11 +203,14 @@ class ProductoController extends Controller
                     'tc' => $this->calculadoraService->getTasaCambio(),
                     'igv' => $this->calculadoraService->getIgv(),
                     'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio,
-                    'productoCopiar' => $productoCopiar
+                    'productoCopiar' => $productoCopiar,
+                    'deltronData' => $deltronData,
+                    'deltronMarcaId' => $deltronMarcaId,
+                    'deltronImages' => $deltronImages ?? []
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -166,19 +221,30 @@ class ProductoController extends Controller
             'status' => 'required|boolean'
         ]);
 
-        $producto = \App\Models\Catalogo\Producto::find($request->idProducto);
+        $producto = \App\Models\Catalogo\Producto::with(['Inventario', 'Inventario_Proveedor'])->find($request->idProducto);
         if (!$producto) {
             return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
         }
 
-        $nuevoEstado = $request->status ? 'DISPONIBLE' : 'DESCONTINUADO';
+        if ($request->status) {
+            $nuevoEstado = 'DISPONIBLE';
+            if ($producto->Inventario_Proveedor && $producto->Inventario_Proveedor->stock == 0) {
+                $producto->Inventario_Proveedor->stock = 1;
+                $producto->Inventario_Proveedor->save();
+            }
+        } else {
+            // Verificar si tiene stock fisico o de proveedor
+            $stockFisico = $producto->Inventario ? $producto->Inventario->sum('stock') : 0;
+            $stockProv = $producto->Inventario_Proveedor ? $producto->Inventario_Proveedor->stock : 0;
+            $tieneStock = ($stockFisico + $stockProv) > 0;
+
+            // Si tiene stock pero el usuario lo desactiva, pasa a DESCONTINUADO
+            // Si no tiene stock (esta en 0), pasa a AGOTADO
+            $nuevoEstado = $tieneStock ? 'DESCONTINUADO' : 'AGOTADO';
+        }
+
         $producto->estadoProductoWeb = $nuevoEstado;
         $producto->save();
-
-        if ($nuevoEstado === 'DISPONIBLE' && $producto->Inventario_Proveedor && $producto->Inventario_Proveedor->stock == 0) {
-            $producto->Inventario_Proveedor->stock = 1;
-            $producto->Inventario_Proveedor->save();
-        }
 
         return response()->json([
             'success' => true,
@@ -215,7 +281,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -239,7 +305,7 @@ class ProductoController extends Controller
                 $productos = $this->productoService->searchProducts($input, 25, $request->query('filtro'));
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
-                // Obtener marcas filtradas por bÃºsqueda si hay tÃ©rmino de bÃºsqueda
+                // Obtener marcas filtradas por búsqueda si hay término de búsqueda
                 if ($input) {
                     $marcasFiltradas = $this->productoService->getMarcasBySearch($input);
                 } else {
@@ -247,7 +313,7 @@ class ProductoController extends Controller
                 }
 
                 if ($request->query('page') || $request->query('filtro')) {
-                    // Obtener marcas filtradas tambiÃ©n para la paginaciÃ³n AJAX
+                    // Obtener marcas filtradas también para la paginación AJAX
                     if ($input) {
                         $marcasFiltradas = $this->productoService->getMarcasBySearch($input);
                     } else {
@@ -279,7 +345,7 @@ class ProductoController extends Controller
                 ]);
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -408,18 +474,26 @@ class ProductoController extends Controller
 
                                 if ($request->hasFile('imgone')) {
                                     $img1 = $request->file('imgone');
+                                } elseif ($request->filled('deltron_img1')) {
+                                    $img1 = $request->input('deltron_img1');
                                 }
 
                                 if ($request->hasFile('imgtwo')) {
                                     $img2 = $request->file('imgtwo');
+                                } elseif ($request->filled('deltron_img2')) {
+                                    $img2 = $request->input('deltron_img2');
                                 }
 
                                 if ($request->hasFile('imgtree')) {
                                     $img3 = $request->file('imgtree');
+                                } elseif ($request->filled('deltron_img3')) {
+                                    $img3 = $request->input('deltron_img3');
                                 }
 
                                 if ($request->hasFile('imgfour')) {
                                     $img4 = $request->file('imgfour');
+                                } elseif ($request->filled('deltron_img4')) {
+                                    $img4 = $request->input('deltron_img4');
                                 }
 
                                 $arrayProduct['nombreProducto'] = $nombre;
@@ -465,6 +539,26 @@ class ProductoController extends Controller
                                         ]
                                     );
                                 }
+
+                                // Si provino de Deltron, guardar la vinculación en inventario_proveedor_skus
+                                if ($request->filled('deltron_sku')) {
+                                    $invProv = \App\Models\Inventario\Inventario_Proveedor::where('idProducto', $idProducto)->first();
+                                    if ($invProv) {
+                                        \App\Models\Inventario\InventarioProveedorSku::updateOrCreate(
+                                            [
+                                                'idInventarioProveedor' => $invProv->idInventarioProveedor,
+                                                'idProveedor' => 1,
+                                            ],
+                                            [
+                                                'sku_proveedor' => strtoupper(trim($request->input('deltron_sku'))),
+                                                'part_number' => $request->input('partnumber') ?: $request->input('deltron_pn'),
+                                                'mini_codigo' => $request->input('deltron_mini'),
+                                                'precio_b2b' => floatval($request->input('precio')),
+                                                'hay_mas' => $request->boolean('deltron_hay_mas', false),
+                                            ]
+                                        );
+                                    }
+                                }
                             } catch (Exception $e) {
                                 \Log::error('Error en insert/validate: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
                                 $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error en la transaccion', 'error', 'btn-danger');
@@ -484,7 +578,7 @@ class ProductoController extends Controller
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
     public function obtenerUbicacionHtml($id)
@@ -494,7 +588,7 @@ class ProductoController extends Controller
             $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
             $seriesDisponibles = \App\Models\Inventario\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
-                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'ELIMINADO', 'DIVIDIDO'])
+                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO'])
                 ->whereHas('DetalleComprobante', function ($q) use ($id) {
                     $q->where('idProducto', $id);
                 })
@@ -545,7 +639,7 @@ class ProductoController extends Controller
                 $video2 = $request->input('videoUrl2');
 
                 try {
-                    // Solo actualizar si el campo fue enviado (no estÃ¡ disabled)
+                    // Solo actualizar si el campo fue enviado (no está disabled)
                     if ($request->has('titulo')) {
                         $arrayProduct['nombreProducto'] = $titulo;
                     }
@@ -657,7 +751,7 @@ class ProductoController extends Controller
 
                     $this->productoService->validateState(decrypt($idProducto));
 
-                    // â”€â”€ Precio de Tienda â”€â”€
+                    // -- Precio de Tienda --
                     if ($request->has('precioTienda')) {
                         $nuevoPrecio = floatval($request->input('precioTienda'));
                         $realId = decrypt($idProducto);
@@ -684,7 +778,7 @@ class ProductoController extends Controller
                                 'precioTienda' => $nuevoPrecio,
                                 'updated_at'   => now(),
                             ]);
-                            // Primer registro: historial 0 â†’ nuevo
+                            // Primer registro: historial 0 -> nuevo
                             if ($nuevoPrecio > 0) {
                                 \App\Models\Precios\HistorialPrecioTienda::create([
                                     'idProducto'     => $realId,
@@ -720,7 +814,7 @@ class ProductoController extends Controller
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -747,7 +841,7 @@ class ProductoController extends Controller
                 return redirect()->back();
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -763,7 +857,7 @@ class ProductoController extends Controller
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaÃ±a', 'warning', 'btn-danger');
+        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
         return redirect()->route('dashboard', ['user' => $userModel]);
     }
 
@@ -807,7 +901,7 @@ class ProductoController extends Controller
 
                     return response()->json([
                         'success' => false,
-                        'message' => 'No se pudo obtener el grupo reciÃ©n creado.'
+                        'message' => 'No se pudo obtener el grupo recién creado.'
                     ], 500);
                 } catch (Exception $e) {
                     \Log::error('Error in quickCreateGrupo: ' . $e->getMessage());

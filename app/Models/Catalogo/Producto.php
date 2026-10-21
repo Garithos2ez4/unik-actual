@@ -75,11 +75,37 @@ class Producto extends Model
         parent::boot();
 
         static::creating(function ($producto) {
-            $producto->slugProducto = Str::slug($producto->nombreProducto);
+            $baseSlug = Str::slug($producto->nombreProducto ?: 'producto');
+            $slug = $baseSlug;
+            $counter = 1;
+            while (static::where('slugProducto', $slug)->exists()) {
+                if (!empty($producto->modelo)) {
+                    $slug = $baseSlug . '-' . Str::slug($producto->modelo);
+                    if (!static::where('slugProducto', $slug)->exists()) {
+                        break;
+                    }
+                }
+                $slug = $baseSlug . '-' . (++$counter);
+            }
+            $producto->slugProducto = $slug;
         });
 
         static::updating(function ($producto) {
-            $producto->slugProducto = Str::slug($producto->nombreProducto);
+            if ($producto->isDirty('nombreProducto')) {
+                $baseSlug = Str::slug($producto->nombreProducto ?: 'producto');
+                $slug = $baseSlug;
+                $counter = 1;
+                while (static::where('slugProducto', $slug)->where('idProducto', '!=', $producto->idProducto)->exists()) {
+                    if (!empty($producto->modelo)) {
+                        $slug = $baseSlug . '-' . Str::slug($producto->modelo);
+                        if (!static::where('slugProducto', $slug)->where('idProducto', '!=', $producto->idProducto)->exists()) {
+                            break;
+                        }
+                    }
+                    $slug = $baseSlug . '-' . (++$counter);
+                }
+                $producto->slugProducto = $slug;
+            }
         });
     }
     
@@ -134,19 +160,25 @@ class Producto extends Model
         return $this->belongsTo(Inventario_Proveedor::class, 'idProducto', 'idProducto');
     }
     
-    public function publicImages(){
-        
-            $default = asset('storage/noimagen.webp');
-    
-            $imagen1 = $this->imagenProducto1 ? asset('storage/'.$this->imagenProducto1) : $default;
-            $imagen2 = $this->imagenProducto2 ? asset('storage/'.$this->imagenProducto2) : $default;
-            $imagen3 = $this->imagenProducto3 ? asset('storage/'.$this->imagenProducto3) : $default;
-            $imagen4 = $this->imagenProducto4 ? asset('storage/'.$this->imagenProducto4) : $default;
-    
-            $images = [$imagen1, $imagen2, $imagen3, $imagen4];
-            
-    
-        return $images;
+    public function publicImages()
+    {
+        $default = asset('storage/noimagen.webp');
+        $baseDir = dirname(base_path());
+        $prodImagesPath = $baseDir . '/public_html/images/';
+
+        $checkExists = function ($img) use ($prodImagesPath) {
+            if (!$img) return false;
+            return file_exists(public_path('storage/' . $img)) 
+                || file_exists(storage_path('app/public/' . $img))
+                || (!app()->environment('local') && file_exists($prodImagesPath . $img));
+        };
+
+        $imagen1 = $checkExists($this->imagenProducto1) ? asset('storage/' . $this->imagenProducto1) : $default;
+        $imagen2 = $checkExists($this->imagenProducto2) ? asset('storage/' . $this->imagenProducto2) : $default;
+        $imagen3 = $checkExists($this->imagenProducto3) ? asset('storage/' . $this->imagenProducto3) : $default;
+        $imagen4 = $checkExists($this->imagenProducto4) ? asset('storage/' . $this->imagenProducto4) : $default;
+
+        return [$imagen1, $imagen2, $imagen3, $imagen4];
     }
        public function registros() {
         return $this->hasMany(RegistroProducto::class, 'idProducto', 'idProducto');

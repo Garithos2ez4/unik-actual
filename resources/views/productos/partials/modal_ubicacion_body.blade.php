@@ -42,30 +42,30 @@
             ->get();
 
             // 3. Filtrar las que queremos contar
-            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO']);
+            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO','REUNIDO']);
 
             // 4. Agrupar y contar las cantidades por estante
             $distribucion = [];
             $stockRealMostrar = 0;
 
             if($seriesAlmacen->count() > 0) {
-                $stockRealMostrar = $seriesValidas->count();
-                foreach($seriesValidas as $serie) {
-                    $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : 'Sin asignar';
-                    $fotoRack = null;
+            $stockRealMostrar = $seriesValidas->count();
+            foreach($seriesValidas as $serie) {
+            $nombreRack = $serie->UbicacionExacta ? $serie->UbicacionExacta->nombre_completo : 'Sin asignar';
+            $fotoRack = null;
 
-                    if(!isset($distribucion[$nombreRack])) {
-                        $distribucion[$nombreRack] = ['cantidad' => 0, 'foto' => $fotoRack];
-                    }
-                    $distribucion[$nombreRack]['cantidad']++;
-                }
+            if(!isset($distribucion[$nombreRack])) {
+            $distribucion[$nombreRack] = ['cantidad' => 0, 'foto' => $fotoRack];
+            }
+            $distribucion[$nombreRack]['cantidad']++;
+            }
             } else {
-                // Si es un producto que se vende a granel (sin series), todo va al rack general
-                $stockRealMostrar = $inventario->stock;
-                $distribucion[$rackGeneralNombre] = [
-                    'cantidad' => $inventario->stock,
-                    'foto' => $rackGeneralFoto
-                ];
+            // Si es un producto que se vende a granel (sin series), todo va al rack general
+            $stockRealMostrar = $inventario->stock;
+            $distribucion[$rackGeneralNombre] = [
+            'cantidad' => $inventario->stock,
+            'foto' => $rackGeneralFoto
+            ];
             }
             @endphp
 
@@ -148,13 +148,13 @@
                 </td>
                 <td>
                     @if(strtoupper($serie->estado) === 'DEFECTUOSO')
-                        <span class="badge bg-danger">Defectuoso</span>
+                    <span class="badge bg-danger">Defectuoso</span>
                     @elseif(strtoupper($serie->estado) === 'NUEVO')
-                        <span class="badge bg-success">Nuevo</span>
+                    <span class="badge bg-success">Nuevo</span>
                     @elseif(strtoupper($serie->estado) === 'DEVOLUCION')
-                        <span class="badge bg-warning text-dark">Devolución</span>
+                    <span class="badge bg-warning text-dark">Devolución</span>
                     @else
-                        <span class="badge bg-secondary">{{ ucfirst(strtolower($serie->estado)) }}</span>
+                    <span class="badge bg-secondary">{{ ucfirst(strtolower($serie->estado)) }}</span>
                     @endif
                 </td>
             </tr>

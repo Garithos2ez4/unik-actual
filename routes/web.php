@@ -261,6 +261,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/compras/deltron/precio-tiempo-real', [DeltronController::class, 'consultarPrecioTiempoReal'])->name('compras.deltron.precio');
     Route::get('/compras/deltron/promocion-detalle/{promo_id}', [DeltronController::class, 'consultarPromocionDetalle'])->where('promo_id', '.*')->name('compras.deltron.promocion.detalle');
     Route::get('/compras/deltron/ficha-sku/{sku?}', [DeltronController::class, 'consultarFichaSku'])->where('sku', '.*')->name('compras.deltron.ficha.sku');
+    Route::get('/compras/deltron/ofertas-candidatas', [DeltronController::class, 'getOfertasCandidatas'])->name('compras.deltron.ofertas.candidatas');
+    Route::post('/compras/deltron/importar-lote-ofertas', [DeltronController::class, 'importarLoteOfertas'])->name('compras.deltron.importar.lote');
 
     // Rutas para Ventas
     Route::prefix('ventas')->name('ventas.')->group(function () {

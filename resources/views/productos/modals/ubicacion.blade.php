@@ -50,7 +50,7 @@
                             ->get();
 
                             // 3. Filtrar las que queremos contar
-                            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO']);
+                            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO','REUNIDO']);
 
                             // 4. Agrupar y contar las cantidades por estante
                             $distribucion = [];
@@ -132,7 +132,7 @@
                 @php
                 // Obtener series disponibles para este producto
                 $seriesDisponibles = \App\Models\Inventario\RegistroProducto::with(['UbicacionExacta', 'Almacen'])
-                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO'])
+                ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO'])
                 ->whereHas('DetalleComprobante', function ($q) use ($producto) {
                 $q->where('idProducto', $producto->idProducto);
                 })

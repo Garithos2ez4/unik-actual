@@ -26,7 +26,7 @@
                 $todasLasSeriesActivas = \Illuminate\Support\Facades\DB::table('RegistroProducto as rp')
                 ->join('DetalleComprobante as dc', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
                 ->where('dc.idProducto', $pro->idProducto)
-                ->whereNotIn('rp.estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO'])
+                ->whereNotIn('rp.estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO'])
                 ->select('rp.idAlmacen', 'rp.estado')
                 ->get();
                 $esSerializado = $todasLasSeriesActivas->count() > 0;
@@ -86,7 +86,7 @@
                                 if ($esSerializado) {
                                 $seriesAlmacen = $todasLasSeriesActivas->where('idAlmacen', $almacen->idAlmacen);
                                 if ($seriesAlmacen->count() > 0) {
-                                $stock = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO'])->count();
+                                $stock = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO', 'REUNIDO'])->count();
                                 }
                                 }
                                 @endphp
@@ -146,7 +146,7 @@
                             ->join('DetalleComprobante as dc', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
                             ->where('dc.idProducto', $pro->idProducto)
                             ->where('rp.estado', '!=', 'NUEVO')
-                            ->whereNotIn('rp.estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO'])
+                            ->whereNotIn('rp.estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO'])
                             ->select('rp.numeroSerie', 'rp.estado', 'rp.observacion')
                             ->get();
                             @endphp
@@ -189,15 +189,11 @@
     <x-paginacion :justify="'end'" :coleccion="$productos" :container="$container" />
     <script>
         window.APP_DATA = window.APP_DATA || {};
-        window.APP_DATA.tc = {
-            {
-                $tc ?? '0'
-            }
-        };
+        window.APP_DATA.tc = {{ $tc ?? '0' }};
         window.APP_DATA.toggleStatusUrl = '{{ route("producto.toggleStatus") }}';
         window.APP_DATA.csrfToken = '{{ csrf_token() }}';
     </script>
-    <script src="{{ asset('js/list-products-scripts.js') }}?v=1.01"></script>
+    <script src="{{ asset('js/list-products-scripts.js') }}?v=1.02"></script>
     <script>
         function verObservacionesSeries(idProducto) {
             const content = document.getElementById('observaciones-series-' + idProducto).innerHTML;

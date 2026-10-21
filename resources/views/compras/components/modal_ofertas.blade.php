@@ -205,6 +205,9 @@
                                         </td>
                                         <td class="text-center pe-4 text-nowrap">
                                             @if(!empty($rec['sku']))
+                                            <a href="{{ route('createproducto') }}?from_deltron={{ urlencode($rec['sku']) }}" target="_blank" class="btn btn-sm btn-success rounded-pill px-2 py-1 shadow-xs me-1" title="Crear este producto en Unike Store">
+                                                <i class="bi bi-plus-circle"></i> Crear
+                                            </a>
                                             <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 me-1" onclick="abrirModalFichaSku('{{ $rec['sku'] }}', '{{ $pnFinal ?? '' }}', false, this)" title="Ver ficha técnica y Part Number oficial en Deltron">
                                                 <i class="bi bi-file-earmark-text"></i> Ficha
                                             </button>

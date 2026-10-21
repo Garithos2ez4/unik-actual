@@ -126,6 +126,9 @@
         document.getElementById('almContent').style.display = 'none';
         document.getElementById('almError').style.display = 'none';
 
+        const almCrearBtn = document.getElementById('almCrearBtn');
+        if (almCrearBtn) almCrearBtn.style.display = 'none';
+
         // Configurar enlace de cotizador
         const cotizarBtn = document.getElementById('almCotizarBtn');
         const queryCotizar = pn && pn !== '-' ? pn : sku;
@@ -142,6 +145,15 @@
 
                 if (data.status === 'ok') {
                     document.getElementById('almContent').style.display = 'block';
+
+                    if (almCrearBtn) {
+                        if (data.guardado_en_bd) {
+                            almCrearBtn.style.display = 'none';
+                        } else {
+                            almCrearBtn.href = "{{ route('createproducto') }}?from_deltron=" + encodeURIComponent(sku || pn);
+                            almCrearBtn.style.display = 'inline-block';
+                        }
+                    }
 
                     // Calcular precios regulares y de promoción (API-0000030)
                     let precioVal = 0;
@@ -213,7 +225,7 @@
                                 </td>
                                 <td class="text-center">
                                     <span class="${cant > 0 ? 'warehouse-badge-positive' : 'warehouse-badge-zero'}">
-                                        ${cant > 0 ? '<i class="bi bi-check-circle me-1"></i>' : ''} ${cant} uds.
+                                        ${cant > 0 ? '<i class="bi bi-check-circle me-1"></i>' : ''} ${alm.hay_mas ? '> ' : ''}${cant} uds.
                                     </span>
                                 </td>
                             `;
@@ -230,16 +242,37 @@
                         `;
                     }
 
-                    document.getElementById('almTotalStock').innerText = totalStock;
+                    const hasHayMas = (stockData && Array.isArray(stockData.almacenes) && stockData.almacenes.some(a => a.hay_mas)) || totalStock >= 200;
+                    document.getElementById('almTotalStock').innerText = (hasHayMas ? '+' : '') + totalStock;
+                    const almTotalStockSub = document.getElementById('almTotalStockSub');
+                    if (almTotalStockSub) {
+                        almTotalStockSub.innerText = hasHayMas ? 'Stock masivo (+20 por almacén)' : 'Total en 13 almacenes';
+                    }
 
                     // Si se guardó en la tabla Inventario_Proveedor, actualizar badge en la fila de la tabla
                     if (data.guardado_en_bd && btnTrigger) {
                         const trParent = btnTrigger.closest('tr');
                         if (trParent) {
-                            const badgeStock = trParent.querySelector('.badge.bg-success, .badge.bg-secondary');
-                            if (badgeStock) {
-                                badgeStock.className = totalStock > 0 ? 'badge rounded-pill bg-success px-3 py-2 fs-6 shadow-xs' : 'badge rounded-pill bg-secondary px-3 py-2';
-                                badgeStock.innerHTML = `<i class="bi bi-box-seam me-1"></i> ${totalStock}`;
+                            const stockCell = trParent.querySelector('.stock-cell');
+                            if (stockCell) {
+                                if (totalStock > 0) {
+                                    if (hasHayMas) {
+                                        stockCell.innerHTML = `
+                                            <span class="badge rounded-pill bg-success px-2 py-2 fs-6 shadow-xs" title="Stock masivo en Deltron (+20 por almacén)">
+                                                <i class="bi bi-box-seam me-1"></i> +${totalStock}
+                                            </span>
+                                            <small class="text-success d-block fw-semibold mt-1" style="font-size: 0.68rem;">Stock masivo (+20 alm.)</small>
+                                        `;
+                                    } else {
+                                        stockCell.innerHTML = `
+                                            <span class="badge rounded-pill bg-success px-3 py-2 fs-6 shadow-xs">
+                                                <i class="bi bi-box-seam me-1"></i> ${totalStock}
+                                            </span>
+                                        `;
+                                    }
+                                } else {
+                                    stockCell.innerHTML = `<span class="badge rounded-pill bg-secondary px-3 py-2">0</span>`;
+                                }
                             }
                         }
                     }
@@ -505,6 +538,9 @@
         document.getElementById('fichaContent').style.display = 'none';
         document.getElementById('fichaError').style.display = 'none';
 
+        const fichaCrearBtn = document.getElementById('fichaCrearBtn');
+        if (fichaCrearBtn) fichaCrearBtn.style.display = 'none';
+
         const btnForce = document.getElementById('btnForceFichaRefresh');
         if (btnForce) {
             btnForce.disabled = forceRefresh;
@@ -577,18 +613,28 @@
 
                     // Estado Vinculación BD
                     const bdStatusBox = document.getElementById('fichaBdStatusBox');
+                    const skuTarget = data.sku || sku || pn;
+                    const createUrl = "{{ route('createproducto') }}?from_deltron=" + encodeURIComponent(skuTarget);
                     if (data.vinculado_bd) {
                         bdStatusBox.innerHTML = `
                             <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
                                 <i class="bi bi-database-check me-1"></i> Sincronizado en BD
                             </span>
                         `;
+                        if (fichaCrearBtn) fichaCrearBtn.style.display = 'none';
                     } else {
                         bdStatusBox.innerHTML = `
+                            <a href="${createUrl}" target="_blank" class="btn btn-sm btn-success rounded-pill px-3 py-1 shadow-xs me-2">
+                                <i class="bi bi-plus-circle me-1"></i> Crear en Unike
+                            </a>
                             <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 rounded-pill">
                                 <i class="bi bi-info-circle me-1"></i> No registrado en BD Unike
                             </span>
                         `;
+                        if (fichaCrearBtn) {
+                            fichaCrearBtn.href = createUrl;
+                            fichaCrearBtn.style.display = 'inline-block';
+                        }
                     }
 
                     // Origen y Fecha
@@ -641,7 +687,12 @@
 
                     // 3. Stock y Tránsito
                     const stockTotal = data.stock_total || 0;
-                    document.getElementById('fichaStockTotal').innerText = stockTotal;
+                    const hasHayMasFicha = !!data.hay_mas || (Array.isArray(data.almacenes) && data.almacenes.some(a => a.hay_mas)) || stockTotal >= 200;
+                    document.getElementById('fichaStockTotal').innerText = (hasHayMasFicha ? '+' : '') + stockTotal;
+                    const fichaStockSub = document.getElementById('fichaStockSub');
+                    if (fichaStockSub) {
+                        fichaStockSub.innerText = hasHayMasFicha ? 'Stock masivo (+20 por almacén)' : 'Total en 13 almacenes';
+                    }
 
                     const transTotal = data.transito_total || 0;
                     document.getElementById('fichaTransitoTotal').innerText = transTotal;
@@ -730,7 +781,7 @@
                                 </td>
                                 <td class="text-center pe-3">
                                     <span class="${cant > 0 ? 'warehouse-badge-positive' : 'warehouse-badge-zero'}">
-                                        ${cant > 0 ? '<i class="bi bi-check-circle me-1"></i>' : ''} ${cant} uds.
+                                        ${cant > 0 ? '<i class="bi bi-check-circle me-1"></i>' : ''} ${alm.hay_mas ? '> ' : ''}${cant} uds.
                                     </span>
                                 </td>
                             `;
@@ -812,10 +863,26 @@
                     if (btnTrigger && data.vinculado_bd) {
                         const trParent = btnTrigger.closest('tr');
                         if (trParent) {
-                            const badgeStock = trParent.querySelector('.badge.bg-success, .badge.bg-secondary');
-                            if (badgeStock) {
-                                badgeStock.className = stockTotal > 0 ? 'badge rounded-pill bg-success px-3 py-2 fs-6 shadow-xs' : 'badge rounded-pill bg-secondary px-3 py-2';
-                                badgeStock.innerHTML = `<i class="bi bi-box-seam me-1"></i> ${stockTotal}`;
+                            const stockCell = trParent.querySelector('.stock-cell');
+                            if (stockCell) {
+                                if (stockTotal > 0) {
+                                    if (hasHayMasFicha) {
+                                        stockCell.innerHTML = `
+                                            <span class="badge rounded-pill bg-success px-2 py-2 fs-6 shadow-xs" title="Stock masivo en Deltron (+20 por almacén)">
+                                                <i class="bi bi-box-seam me-1"></i> +${stockTotal}
+                                            </span>
+                                            <small class="text-success d-block fw-semibold mt-1" style="font-size: 0.68rem;">Stock masivo (+20 alm.)</small>
+                                        `;
+                                    } else {
+                                        stockCell.innerHTML = `
+                                            <span class="badge rounded-pill bg-success px-3 py-2 fs-6 shadow-xs">
+                                                <i class="bi bi-box-seam me-1"></i> ${stockTotal}
+                                            </span>
+                                        `;
+                                    }
+                                } else {
+                                    stockCell.innerHTML = `<span class="badge rounded-pill bg-secondary px-3 py-2">0</span>`;
+                                }
                             }
                         }
                     }

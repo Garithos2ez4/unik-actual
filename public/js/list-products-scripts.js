@@ -1,18 +1,30 @@
 let clickPrices = false;
 
-document.addEventListener('DOMContentLoaded', function () {
-    document.body.addEventListener('change', function (e) {
+function initToggleStatus() {
+    if (window._toggleStatusListenerAttached) return;
+    window._toggleStatusListenerAttached = true;
+
+    document.addEventListener('change', function (e) {
         if (e.target && e.target.classList.contains('toggle-status-btn')) {
             let btn = e.target;
             let idProducto = btn.dataset.id;
             let isChecked = btn.checked;
             let label = document.querySelector('.toggle-status-label-' + idProducto);
 
-            fetch(window.APP_DATA.toggleStatusUrl, {
+            const url = (window.APP_DATA && window.APP_DATA.toggleStatusUrl)
+                ? window.APP_DATA.toggleStatusUrl
+                : '/productos/toggle-status';
+
+            const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = (window.APP_DATA && window.APP_DATA.csrfToken)
+                ? window.APP_DATA.csrfToken
+                : (metaCsrf ? metaCsrf.getAttribute('content') : '');
+
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': window.APP_DATA.csrfToken
+                    'X-CSRF-TOKEN': csrfToken
                 },
                 body: JSON.stringify({
                     idProducto: idProducto,
@@ -22,7 +34,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        if (label) label.textContent = data.estado === 'DISPONIBLE' ? 'Disponible' : 'Descontinuado';
+                        if (label) {
+                            if (data.estado === 'DISPONIBLE') {
+                                label.textContent = 'Disponible';
+                            } else if (data.estado === 'AGOTADO') {
+                                label.textContent = 'Agotado';
+                            } else {
+                                label.textContent = 'Descontinuado';
+                            }
+                        }
                     } else {
                         alert(data.message || 'Error al actualizar el estado');
                         btn.checked = !isChecked;
@@ -35,7 +55,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         }
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initToggleStatus);
+} else {
+    initToggleStatus();
+}
 
 
 function changePriceList() {

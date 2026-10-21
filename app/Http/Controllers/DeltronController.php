@@ -48,23 +48,25 @@ class DeltronController extends Controller
             }
         }
 
-        // Siempre consultar la base de datos local (Inventario_Proveedor) con su SKU oficial de proveedor
-        $query = Inventario_Proveedor::where('Inventario_Proveedor.idProveedor', 1)
-            ->join('Producto', 'Inventario_Proveedor.idProducto', '=', 'Producto.idProducto')
-            ->leftJoin('inventario_proveedor_skus', function ($join) {
+        // Consultar EXCLUSIVAMENTE productos que existen y estan vinculados con Deltron (con SKU oficial)
+        $query = Inventario_Proveedor::join('Producto', 'Inventario_Proveedor.idProducto', '=', 'Producto.idProducto')
+            ->join('inventario_proveedor_skus', function ($join) {
                 $join->on('Inventario_Proveedor.idInventarioProveedor', '=', 'inventario_proveedor_skus.idInventarioProveedor')
-                     ->where('inventario_proveedor_skus.idProveedor', '=', 1);
+                    ->where('inventario_proveedor_skus.idProveedor', '=', 1);
             })
+            ->whereNotNull('inventario_proveedor_skus.sku_proveedor')
+            ->where('inventario_proveedor_skus.sku_proveedor', '!=', '')
             ->where('Inventario_Proveedor.stock', '>', 0);
 
         if (!empty($keyword)) {
             $query->where(function ($q) use ($keyword) {
                 $q->where('Producto.nombreProducto', 'LIKE', "%{$keyword}%")
-                  ->orWhere('Producto.partNumber', 'LIKE', "%{$keyword}%")
-                  ->orWhere('Producto.codigoProducto', 'LIKE', "%{$keyword}%")
-                  ->orWhere('Producto.modelo', 'LIKE', "%{$keyword}%")
-                  ->orWhere('inventario_proveedor_skus.sku_proveedor', 'LIKE', "%{$keyword}%")
-                  ->orWhere('inventario_proveedor_skus.mini_codigo', 'LIKE', "%{$keyword}%");
+                    ->orWhere('inventario_proveedor_skus.part_number', 'LIKE', "%{$keyword}%")
+                    ->orWhere('Producto.partNumber', 'LIKE', "%{$keyword}%")
+                    ->orWhere('Producto.codigoProducto', 'LIKE', "%{$keyword}%")
+                    ->orWhere('Producto.modelo', 'LIKE', "%{$keyword}%")
+                    ->orWhere('inventario_proveedor_skus.sku_proveedor', 'LIKE', "%{$keyword}%")
+                    ->orWhere('inventario_proveedor_skus.mini_codigo', 'LIKE', "%{$keyword}%");
             });
         }
 
@@ -76,9 +78,11 @@ class DeltronController extends Controller
                 'Producto.idProducto as idProducto',
                 'Producto.nombreProducto as titulo',
                 'Producto.modelo as modelo',
-                'Producto.partNumber as part_number',
+                'inventario_proveedor_skus.part_number as part_number',
                 'Producto.codigoProducto as codigo_unike',
-                'Producto.precioDolar as precio',
+                'inventario_proveedor_skus.precio_b2b as precio',
+                'inventario_proveedor_skus.precio_promo as precio_promo',
+                'inventario_proveedor_skus.hay_mas as hay_mas',
                 'Inventario_Proveedor.stock as stock',
                 'inventario_proveedor_skus.sku_proveedor as sku_deltron',
                 'inventario_proveedor_skus.mini_codigo as mini_codigo_deltron'
@@ -92,16 +96,25 @@ class DeltronController extends Controller
                 'modelo' => $item->modelo ?: '-',
                 'sku_deltron' => $item->sku_deltron,
                 'mini_codigo_deltron' => $item->mini_codigo_deltron,
-                'part_number' => $item->part_number,
+                'part_number' => $item->part_number ?: '-',
                 'codigo_unike' => $item->codigo_unike,
                 'precio' => $item->precio,
-                'stock' => $item->stock
+                'precio_promo' => $item->precio_promo,
+                'stock' => $item->stock,
+                'hay_mas' => (bool) $item->hay_mas
             ];
         }
 
-        // Historial de sincronizaciones recientes
-        $historial = InventarioProveedorDetalle::orderBy('fecha_ejecucion', 'desc')->take(11)->get();
-        $totalStockProveedor = Inventario_Proveedor::where('idProveedor', 1)->where('stock', '>', 0)->count();
+        // Historial de sincronizaciones recientes (ordenado por PK para optimizacion con indice de MySQL)
+        $historial = InventarioProveedorDetalle::orderBy('idDetalle', 'desc')->take(11)->get();
+        $totalStockProveedor = Inventario_Proveedor::join('inventario_proveedor_skus', function ($join) {
+            $join->on('Inventario_Proveedor.idInventarioProveedor', '=', 'inventario_proveedor_skus.idInventarioProveedor')
+                ->where('inventario_proveedor_skus.idProveedor', '=', 1);
+        })
+            ->whereNotNull('inventario_proveedor_skus.sku_proveedor')
+            ->where('inventario_proveedor_skus.sku_proveedor', '!=', '')
+            ->where('Inventario_Proveedor.stock', '>', 0)
+            ->count();
 
         // Obtener promociones oficiales de Deltron desde la base de datos local (evita llamadas a la API en visitas web)
         $promociones = \App\Models\Inventario\DeltronPromocion::all()->map(function ($p) {
@@ -221,28 +234,46 @@ class DeltronController extends Controller
             $guardadoEnBd = false;
             if ($productoDb) {
                 if ($stock && isset($stock['stock_total'])) {
-                    $invProveedor = Inventario_Proveedor::updateOrCreate(
-                        [
-                            'idProducto' => $productoDb->idProducto,
-                            'idProveedor' => 1
-                        ],
-                        [
-                            'stock' => (int) $stock['stock_total'],
-                            'estado' => 1
-                        ]
-                    );
+                    $invProveedor = Inventario_Proveedor::where('idProducto', $productoDb->idProducto)->first();
+                    if (!$invProveedor) {
+                        $invProveedor = new Inventario_Proveedor();
+                        $invProveedor->idInventarioProveedor = $productoDb->idProducto;
+                        $invProveedor->idProducto = $productoDb->idProducto;
+                    }
+                    $invProveedor->idProveedor = 1;
+                    $invProveedor->stock = (int) $stock['stock_total'];
+                    $invProveedor->estado = 1;
+                    $invProveedor->save();
                     \App\Models\Catalogo\DetalleProducto::where('idProducto', $productoDb->idProducto)->update(['updated_at' => now()]);
 
                     if (!empty($query)) {
+                        $hayMasReal = !empty($stock['hay_mas']);
+                        if (!$hayMasReal && isset($stock['almacenes']) && is_array($stock['almacenes'])) {
+                            foreach ($stock['almacenes'] as $alm) {
+                                if (!empty($alm['hay_mas'])) {
+                                    $hayMasReal = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        $skuValues = [
+                            'sku_proveedor' => strtoupper(trim($query)),
+                            'part_number' => $partNumber,
+                            'hay_mas' => $hayMasReal,
+                        ];
+                        if ($precio && isset($precio['precio'])) {
+                            $skuValues['precio_b2b'] = (float) $precio['precio'];
+                        }
+                        if ($precio && isset($precio['precio_promocion'])) {
+                            $skuValues['precio_promo'] = (float) $precio['precio_promocion'];
+                        }
                         \App\Models\Inventario\InventarioProveedorSku::updateOrCreate(
                             [
                                 'idInventarioProveedor' => $invProveedor->idInventarioProveedor,
                                 'idProveedor' => 1
                             ],
-                            [
-                                'sku_proveedor' => strtoupper(trim($query)),
-                                'part_number' => $partNumber,
-                            ]
+                            $skuValues
                         );
                     }
 
@@ -348,13 +379,7 @@ class DeltronController extends Controller
         }
     }
 
-    /**
-     * Consulta la ficha técnica completa de un producto por SKU Deltron (API-0000027).
-     * Incluye especificaciones técnicas completas, imágenes de alta resolución,
-     * desglose de stock por los 13 almacenes, mercadería en tránsito y promociones.
-     * Guarda la ficha localmente en disco/BD para cumplir con la recomendación oficial de Deltron
-     * y no saturar el límite de 300 llamadas/día (60/hora).
-     */
+
     public function consultarFichaSku(Request $request, $sku = null)
     {
         $skuQuery = trim($sku ?: $request->input('sku', ''));
@@ -391,7 +416,67 @@ class DeltronController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al consultar ficha técnica en Deltron: ' . $e->getMessage()
+                'message' => 'Error al consultar ficha tecnica en Deltron: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Devuelve los productos candidatos en oferta con alto stock en Lima que no existen en Unike.
+     */
+    public function getOfertasCandidatas(Request $request)
+    {
+        try {
+            $candidatos = $this->deltronService->getCandidatosOfertasAltoStock();
+            $grupos = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')
+                ->orderBy('nombreGrupo')
+                ->get()
+                ->map(function ($g) {
+                    return [
+                        'idGrupo' => $g->idGrupoProducto,
+                        'nombreGrupo' => $g->nombreGrupo,
+                        'idCategoria' => $g->idCategoria,
+                        'nombreCategoria' => $g->CategoriaProducto ? $g->CategoriaProducto->nombreCategoria : 'General'
+                    ];
+                });
+
+            return response()->json([
+                'status' => 'ok',
+                'total' => count($candidatos),
+                'items' => $candidatos,
+                'grupos' => $grupos
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener candidatos de ofertas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Procesa la importacion masiva de un micro-lote de productos seleccionados (con Foto 1 WebP).
+     */
+    public function importarLoteOfertas(Request $request)
+    {
+        $items = $request->input('items', []);
+        if (empty($items) || !is_array($items)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se enviaron items para importar en este lote.'
+            ], 400);
+        }
+
+        try {
+            $resultado = $this->deltronService->importarLoteOfertas($items);
+            return response()->json([
+                'status' => 'ok',
+                'data' => $resultado
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al importar lote: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -56,7 +56,7 @@
                                     <i class="bi bi-boxes text-success me-1"></i> Stock Total Deltron
                                 </small>
                                 <span class="fs-4 fw-bold text-success" id="almTotalStock">0</span> <small class="text-muted">uds.</small>
-                                <small class="text-secondary d-block" style="font-size: 0.7rem;">API-0000031</small>
+                                <small class="text-secondary d-block" id="almTotalStockSub" style="font-size: 0.7rem;">API-0000031</small>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -106,6 +106,9 @@
                 </div>
             </div>
             <div class="modal-footer bg-light py-2">
+                <a href="#" id="almCrearBtn" target="_blank" class="btn btn-primary btn-sm rounded-pill px-3 shadow-xs" style="display: none;">
+                    <i class="bi bi-plus-circle me-1"></i> Crear en Unike
+                </a>
                 <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="almVerFichaBtn" title="Ver especificaciones técnicas completas e imágenes (API-0000027)">
                     <i class="bi bi-file-earmark-text me-1"></i> Ver Ficha Técnica (API-0000027)
                 </button>

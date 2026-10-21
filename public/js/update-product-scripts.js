@@ -287,11 +287,12 @@ function changeImage(event, input, img) {
             image.src = e.target.result;
 
             image.onload = function () {
-                const maxWidth = 1000; // Ancho máximo permitido
-                const maxHeight = 1000; // Alto máximo permitido
+                // Permitir imagenes cuadradas (1:1) de 800 x 800 px (Deltron) o 1000 x 1000 px (Unike)
+                const isSquare = (image.width === image.height);
+                const isAllowedDimension = (image.width >= 800 && image.width <= 1000);
 
-                if (image.width !== maxWidth || image.height !== maxHeight) {
-                    alert('La imagen no coincide con las dimensiones permitidas ' + maxWidth + ' x ' + maxHeight + ' píxeles.');
+                if (!isSquare || !isAllowedDimension) {
+                    alert('La imagen no coincide con las dimensiones permitidas: debe ser cuadrada (1:1) de 800 x 800 o 1000 x 1000 píxeles. (Actual: ' + image.width + ' x ' + image.height + ')');
                     input.value = ''; // Limpiar el input si no coincide
                     if (typeof disableSave === 'function') disableSave();
                     return;

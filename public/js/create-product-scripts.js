@@ -384,11 +384,12 @@ function changeImage(event, input, img) {
             image.src = e.target.result;
 
             image.onload = function () {
-                const maxWidth = 1000; // Ancho máximo permitido
-                const maxHeight = 1000; // Alto máximo permitido
+                // Permitir imagenes cuadradas (1:1) de 800 x 800 px (Deltron) o 1000 x 1000 px (Unike)
+                const isSquare = (image.width === image.height);
+                const isAllowedDimension = (image.width >= 800 && image.width <= 1000);
 
-                if (image.width !== maxWidth || image.height !== maxHeight) {
-                    alert('La imagen no coincide con las dimensiones permitidas ' + maxWidth + ' x ' + maxHeight + ' píxeles.');
+                if (!isSquare || !isAllowedDimension) {
+                    alert('La imagen no coincide con las dimensiones permitidas: debe ser cuadrada (1:1) de 800 x 800 o 1000 x 1000 píxeles. (Actual: ' + image.width + ' x ' + image.height + ')');
                     input.value = ''; // Limpiar el input si no coincide
                     if (typeof disableButton === 'function') disableButton();
                     return;
@@ -410,6 +411,34 @@ function changeImage(event, input, img) {
     } else {
         if (typeof disableButton === 'function') disableButton();
     }
+}
+
+function onUserSlotReplaced(slot) {
+    const hidden = document.getElementById('deltron_img' + slot);
+    if (hidden) hidden.value = '';
+    const badge = document.getElementById('badgeDeltron' + slot);
+    if (badge) badge.style.display = 'none';
+    const btn = document.getElementById('btnRemove' + slot);
+    if (btn) btn.classList.remove('d-none');
+}
+
+function clearImageSlot(slot) {
+    const inputIds = { 1: 'imgone-product', 2: 'imgtwo-product', 3: 'imgtree-product', 4: 'imgfour-product' };
+    const input = document.getElementById(inputIds[slot]);
+    const img = document.getElementById('triggerImage' + slot);
+    const hidden = document.getElementById('deltron_img' + slot);
+    const badge = document.getElementById('badgeDeltron' + slot);
+    const btn = document.getElementById('btnRemove' + slot);
+
+    if (input) input.value = '';
+    if (hidden) hidden.value = '';
+    const defaultPlaceholder = (window.APP_DATA && window.APP_DATA.defaultImage)
+        ? window.APP_DATA.defaultImage
+        : '/storage/1000x1000image.webp';
+    if (img) img.src = defaultPlaceholder;
+    if (badge) badge.style.display = 'none';
+    if (btn) btn.classList.add('d-none');
+    if (typeof disableButton === 'function') disableButton();
 }
 
 function validateForm() {
@@ -545,20 +574,24 @@ function validateForm() {
         lblproveedor.classList.remove('text-danger');
     }
 
-    if (imgone == 0) {
-        isValid = false;
-    }
+    const isDeltron = (window.APP_DATA && window.APP_DATA.isDeltronImport === true);
 
-    if (imgtwo == 0) {
-        isValid = false;
-    }
+    if (!isDeltron) {
+        if (imgone == 0 || (imgone && imgone.length == 0)) {
+            isValid = false;
+        }
 
-    if (imgtree == 0) {
-        isValid = false;
-    }
+        if (imgtwo == 0) {
+            isValid = false;
+        }
 
-    if (imgfour == 0) {
-        isValid = false;
+        if (imgtree == 0) {
+            isValid = false;
+        }
+
+        if (imgfour == 0) {
+            isValid = false;
+        }
     }
 
     return isValid;
@@ -592,6 +625,17 @@ function checkException(check, id) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Si es importacion directa desde Deltron, asegurar UPC en 0
+    if (window.APP_DATA && window.APP_DATA.isDeltronImport) {
+        const upcInput = document.getElementById('upc-product');
+        const checkUpc = document.getElementById('check-upc-product');
+        if (upcInput && checkUpc) {
+            upcInput.value = '0';
+            upcInput.readOnly = true;
+            checkUpc.checked = true;
+        }
+    }
+
     // Ejecutar disableButton() al cargar la página para establecer el estado inicial del botón
     disableButton();
 
@@ -655,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 
-// 👇 NUEVO BLOQUE PARA EL TIPO DE CAMBIO 👇
+// BLOQUE PARA EL TIPO DE CAMBIO
 const TC_SUNAT = parseFloat(window.APP_DATA.tc); // Tasa de cambio SUNAT
 const TC_FIJO = parseFloat(window.APP_DATA.tasaFija); // Tasa de cambio fija interna
 
