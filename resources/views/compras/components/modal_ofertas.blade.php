@@ -40,15 +40,23 @@
                 <!-- PESTAÑA 1: PROMOCIONES OFICIALES DELTRON -->
                 <div class="tab-pane fade show active" id="tab-promos" role="tabpanel" aria-labelledby="tab-promos-link">
                     <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <div class="input-group" style="max-width: 480px;">
-                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" id="promoSearchInput" class="form-control" placeholder="Filtrar por SKU, promoción o descripción...">
-                            <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('promoSearchInput').value=''; filterPromociones();">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="input-group" style="max-width: 420px;">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="promoSearchInput" class="form-control" placeholder="Filtrar por SKU, promoción o descripción...">
+                                <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('promoSearchInput').value=''; filterPromociones();">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="filterSoloConStock" checked onchange="filterPromociones()">
+                                <label class="form-check-label small fw-semibold text-dark user-select-none" for="filterSoloConStock">
+                                    <i class="bi bi-check2-circle text-success me-1"></i> Solo con stock disponible
+                                </label>
+                            </div>
                         </div>
                         <div class="small text-muted">
-                            Mostrando <strong id="promoVisibleCount">{{ count($promociones) }}</strong> promociones activas
+                            Mostrando <strong id="promoVisibleCount">{{ count($promociones) }}</strong> promociones
                         </div>
                     </div>
 
@@ -66,29 +74,33 @@
                                 </thead>
                                 <tbody>
                                     @forelse($promociones as $promo)
-                                    <tr class="promo-row" data-promo-id="{{ $promo['promocion_id'] ?? '' }}">
+                                    <tr class="promo-row" data-promo-id="{{ $promo['promocion_id'] ?? '' }}" data-tiene-stock="{{ !empty($promo['tiene_stock']) ? '1' : '0' }}">
                                         <td class="ps-3">
                                             <span class="badge bg-warning text-dark font-monospace fw-bold">{{ $promo['promocion_id'] ?? '-' }}</span>
                                             @if(!empty($promo['detalle_cargado']))
-                                                <span class="badge bg-success bg-opacity-25 text-success rounded-pill ms-1" title="Detalle sincronizado en base de datos"><i class="bi bi-check2"></i> BD</span>
+                                                <span class="badge bg-success text-white rounded-pill ms-1" title="Detalle sincronizado en base de datos"><i class="bi bi-check2"></i> BD</span>
                                             @endif
                                         </td>
                                         <td>
                                             <span class="fw-semibold text-dark d-block">{{ $promo['promocion_descripcion'] ?? '-' }}</span>
                                             <div class="d-flex align-items-center gap-2 mt-1 flex-wrap small">
+                                                @if(!empty($promo['tiene_stock']))
+                                                    <span class="badge rounded-pill" style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;" title="Stock disponible en Deltron">
+                                                        <i class="bi bi-box-seam me-1"></i>Stock: {{ number_format($promo['stock_total_promo']) }} uds.
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-danger text-white rounded-pill" title="Sin stock disponible en almacenes de Deltron">
+                                                        <i class="bi bi-x-circle me-1"></i>Sin stock / Agotado
+                                                    </span>
+                                                @endif
                                                 @if(!empty($promo['precio_promocion']))
-                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                                    <span class="badge rounded-pill" style="background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5;">
                                                         <i class="bi bi-tag-fill me-1"></i>Precio Promo: ${{ number_format($promo['precio_promocion'], 2) }}
                                                     </span>
                                                 @endif
                                                 @if(!empty($promo['fecha_fin']))
                                                     <span class="badge bg-light text-secondary border">
                                                         <i class="bi bi-calendar-event me-1"></i>Fin: {{ $promo['fecha_fin'] }}
-                                                    </span>
-                                                @endif
-                                                @if(isset($promo['stock_total_promo']) && !empty($promo['detalle_cargado']))
-                                                    <span class="badge {{ $promo['stock_total_promo'] > 0 ? 'bg-primary' : 'bg-secondary' }} bg-opacity-10 {{ $promo['stock_total_promo'] > 0 ? 'text-primary' : 'text-muted' }} border border-primary border-opacity-25">
-                                                        <i class="bi bi-box-seam me-1"></i>{{ $promo['stock_total_promo'] }} combos disponibles
                                                     </span>
                                                 @endif
                                             </div>
@@ -292,6 +304,18 @@
 
                 <!-- CONTENIDO DEL DETALLE -->
                 <div id="promoContent" style="display: none;">
+                    <!-- ALERTA PROMOCIÓN AGOTADA -->
+                    <div id="promoAgotadoAlert" class="alert alert-danger py-2 px-3 mb-3 border-0 rounded-3 d-flex align-items-center justify-content-between shadow-xs" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-x-circle-fill text-danger fs-4 me-2"></i>
+                            <div>
+                                <strong class="text-dark d-block">Promoción agotada en Deltron (0 stock)</strong>
+                                <small class="text-secondary">Deltron no cuenta con combos disponibles en este momento en ninguno de sus almacenes.</small>
+                            </div>
+                        </div>
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-2">Sin stock</span>
+                    </div>
+
                     <!-- TARJETAS DE RESUMEN (PRECIO, FECHA FIN, STOCK COMBO, ORIGEN) -->
                     <div class="row g-3 mb-4">
                         <!-- PRECIO PROMO -->
@@ -336,7 +360,7 @@
                                     <i class="bi bi-shield-check text-info me-1"></i> Origen de Datos
                                 </small>
                                 <div class="my-2" id="promoDetalleOrigenBadge">
-                                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 rounded-pill px-2 py-1">
+                                    <span class="badge rounded-pill px-2 py-1" style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;">
                                         <i class="bi bi-database-check me-1"></i> Base de Datos
                                     </span>
                                 </div>

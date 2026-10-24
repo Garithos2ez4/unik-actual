@@ -13,6 +13,10 @@ class DetalleProducto extends Model
         'idProducto',
         'mostrarPrecioWeb',
         'precio_pase',
+        // Atributos descriptivos de variante (solo para ficha/selector web)
+        'tipo_variante',     // Ej: COLOR, CAPACIDAD
+        'valor_variante',    // Ej: Negro / Gris, Rosa, Blanco
+        'codigo_color_hex',  // Ej: #212529
     ];
 
     protected $casts = [

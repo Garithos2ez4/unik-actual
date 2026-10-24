@@ -7,6 +7,7 @@
             .then(data => {
                 if(data.success) {
                     _utilidadData = data;
+                    _utilidadData.precioCalculadoOriginal = parseFloat(data.precioCalculado);
                     document.getElementById('editUtilidadIdProducto').value = idProducto;
                     document.getElementById('editUtilidadNombreProducto').textContent = data.nombreProducto;
                     document.getElementById('editUtilidadNombreProducto').title = data.nombreProducto;
@@ -65,10 +66,10 @@
         document.getElementById('editUtilidadPrecioWeb').value = precioVentaSoles.toFixed(2);
     }
 
+    let _debounceCalcularTimer = null;
+
     function recalcularDesdeBase() {
         let nuevoPrecioBase = parseFloat(document.getElementById('editUtilidadPrecioBase').value) || 0;
-        
-        // Update visual fields
         let tc = parseFloat(_utilidadData.tasaCambio) || 0;
         let precioConIgv = nuevoPrecioBase * 1.18;
         
@@ -76,11 +77,30 @@
         document.getElementById('editUtilidadPrecioBaseSoles').value = (nuevoPrecioBase * tc).toFixed(2);
         document.getElementById('editUtilidadPrecioIgvSoles').value = (precioConIgv * tc).toFixed(2);
         
-        // Exact recalculation using the server-provided multiplier
-        let multiplier = parseFloat(_utilidadData.precioCalculadoMultiplier) || 0;
-        _utilidadData.precioCalculado = nuevoPrecioBase * multiplier;
-
+        // Usar ratio respecto al precio base original del producto para no distorsionar por escalas de comisión
+        let baseOriginal = parseFloat(_utilidadData.precioDolar) || nuevoPrecioBase || 1;
+        let ratio = baseOriginal > 0 ? (nuevoPrecioBase / baseOriginal) : 1;
+        let precioCalculadoBase = parseFloat(_utilidadData.precioCalculadoOriginal || _utilidadData.precioCalculado) || 0;
+        _utilidadData.precioCalculado = precioCalculadoBase * ratio;
         recalcularPreviewUtilidad();
+
+        // Consultar al servidor el cálculo exacto según la tabla de comisiones por rango
+        if (_utilidadData.idGrupo && Math.abs(nuevoPrecioBase - baseOriginal) > 0.005) {
+            clearTimeout(_debounceCalcularTimer);
+            _debounceCalcularTimer = setTimeout(() => {
+                let url = `{{ route('calculateproducto') }}?price=${nuevoPrecioBase}&type=DOLAR&idGrupo=${_utilidadData.idGrupo}&state=${_utilidadData.estadoProductoWeb || 'DISPONIBLE'}&ganancia=0`;
+                fetch(url)
+                    .then(res => res.json())
+                    .then(resData => {
+                        let calc = resData[0]?.calculado;
+                        if (typeof calc !== 'undefined' && calc !== null) {
+                            _utilidadData.precioCalculado = parseFloat(calc);
+                            recalcularPreviewUtilidad();
+                        }
+                    })
+                    .catch(err => console.error('Error al calcular comisiones en servidor:', err));
+            }, 300);
+        }
     }
 
     function recalcularDesdeIgv() {
@@ -90,15 +110,31 @@
         document.getElementById('editUtilidadPrecioBase').value = nuevoPrecioBase.toFixed(2);
         
         let tc = parseFloat(_utilidadData.tasaCambio) || 0;
-        
         document.getElementById('editUtilidadPrecioBaseSoles').value = (nuevoPrecioBase * tc).toFixed(2);
         document.getElementById('editUtilidadPrecioIgvSoles').value = (nuevoPrecioIgv * tc).toFixed(2);
         
-        // Exact recalculation using the server-provided multiplier
-        let multiplier = parseFloat(_utilidadData.precioCalculadoMultiplier) || 0;
-        _utilidadData.precioCalculado = nuevoPrecioBase * multiplier;
-        
+        let baseOriginal = parseFloat(_utilidadData.precioDolar) || nuevoPrecioBase || 1;
+        let ratio = baseOriginal > 0 ? (nuevoPrecioBase / baseOriginal) : 1;
+        let precioCalculadoBase = parseFloat(_utilidadData.precioCalculadoOriginal || _utilidadData.precioCalculado) || 0;
+        _utilidadData.precioCalculado = precioCalculadoBase * ratio;
         recalcularPreviewUtilidad();
+
+        if (_utilidadData.idGrupo && Math.abs(nuevoPrecioBase - baseOriginal) > 0.005) {
+            clearTimeout(_debounceCalcularTimer);
+            _debounceCalcularTimer = setTimeout(() => {
+                let url = `{{ route('calculateproducto') }}?price=${nuevoPrecioBase}&type=DOLAR&idGrupo=${_utilidadData.idGrupo}&state=${_utilidadData.estadoProductoWeb || 'DISPONIBLE'}&ganancia=0`;
+                fetch(url)
+                    .then(res => res.json())
+                    .then(resData => {
+                        let calc = resData[0]?.calculado;
+                        if (typeof calc !== 'undefined' && calc !== null) {
+                            _utilidadData.precioCalculado = parseFloat(calc);
+                            recalcularPreviewUtilidad();
+                        }
+                    })
+                    .catch(err => console.error('Error al calcular comisiones en servidor:', err));
+            }, 300);
+        }
     }
 
     function recalcularDesdeWeb() {

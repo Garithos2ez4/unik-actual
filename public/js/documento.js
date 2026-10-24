@@ -20,7 +20,14 @@ function validateDisabledRegistro() {
         }
     });
 
-    btnModalProduct.disabled = disabledBtn;
+    let hiddenProd = document.getElementById('modal-hidden-product');
+    if (hiddenProd && (hiddenProd.dataset.esPadre === '1' || hiddenProd.dataset.esPadre === 'true')) {
+        disabledBtn = true;
+    }
+
+    if (btnModalProduct) {
+        btnModalProduct.disabled = disabledBtn;
+    }
 }
 
 function searchProduct(inputElement) {
@@ -28,7 +35,7 @@ function searchProduct(inputElement) {
 
     function handleClickOutside(event) {
         let suggestions = document.getElementById('suggestions-product');
-        if (!suggestions.contains(event.target) && event.target !== inputElement) {
+        if (suggestions && !suggestions.contains(event.target) && event.target !== inputElement) {
             suggestions.innerHTML = ''; // Limpiar sugerencias si se hace clic fuera del input
         }
     }
@@ -36,31 +43,87 @@ function searchProduct(inputElement) {
     // Agregar el manejador de clics al documento
     document.addEventListener('click', handleClickOutside);
 
+    let hiddenInput = document.getElementById('modal-hidden-product');
+    let padreWarning = document.getElementById('modal-padre-warning');
+
     if (query.length > 2) { // Comenzar la búsqueda después de 3 caracteres
-        document.getElementById('modal-hidden-product').value = "";
+        if (hiddenInput) {
+            hiddenInput.value = "";
+            hiddenInput.dataset.id = "";
+            hiddenInput.dataset.cod = "";
+            hiddenInput.dataset.esPadre = "0";
+        }
+        if (padreWarning) padreWarning.classList.add('d-none');
+
         let xhr = new XMLHttpRequest();
-        xhr.open('GET', `/productos/searchmodelproduct?query=${query}`, true);
+        xhr.open('GET', `/productos/searchmodelproduct?query=${encodeURIComponent(query)}`, true);
         xhr.onreadystatechange = function () {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 let data = JSON.parse(xhr.responseText);
                 let suggestions = document.getElementById('suggestions-product');
+                if (!suggestions) return;
                 suggestions.innerHTML = '';
 
                 data.forEach(item => {
                     let li = document.createElement('li');
-                    li.textContent = item.modelo;
                     li.classList.add('list-group-item');
-                    li.classList.add('hover-sistema-uno');
-                    li.style.cursor = "pointer";
 
-                    li.addEventListener('click', function () {
-                        inputElement.value = this.textContent;
-                        document.getElementById('modal-hidden-product').value = item.modelo;
-                        document.getElementById('modal-hidden-product').dataset.id = item.idProducto;
-                        document.getElementById('modal-hidden-product').dataset.cod = item.codigoProducto;
-                        validateDisabledRegistro();
-                        suggestions.innerHTML = ''; // Limpiar sugerencias después de seleccionar una
-                    });
+                    let isPadre = (item.es_padre == 1 || item.es_padre === true);
+
+                    if (isPadre) {
+                        li.classList.add('bg-light');
+                        li.style.cursor = "pointer";
+                        li.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-warning text-dark me-2"><i class="bi bi-diagram-3"></i> PADRE</span>
+                                    <strong class="text-secondary">${item.modelo}</strong>
+                                    <small class="text-muted d-block">${item.nombreProducto || ''}</small>
+                                </div>
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger small">No admite stock directo</span>
+                            </div>
+                        `;
+                        li.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (padreWarning) padreWarning.classList.remove('d-none');
+                            if (hiddenInput) {
+                                hiddenInput.value = item.modelo + ' (PADRE - NO ADMITE STOCK)';
+                                hiddenInput.dataset.id = item.idProducto;
+                                hiddenInput.dataset.cod = item.codigoProducto;
+                                hiddenInput.dataset.esPadre = '1';
+                            }
+                            validateDisabledRegistro();
+                            suggestions.innerHTML = '';
+                            alert(`El producto "${item.modelo}" es un contenedor Padre/Base de variantes y no puede recibir stock fisico.\n\nPor favor seleccione una de sus variantes hijas (por color o modelo especifico).`);
+                        });
+                    } else {
+                        li.classList.add('hover-sistema-uno');
+                        li.style.cursor = "pointer";
+                        let isVariante = (item.idProductoPadre != null && item.idProductoPadre != '');
+                        li.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="text-dark">${item.modelo}</strong>
+                                    <small class="text-muted d-block">${item.nombreProducto || ''}</small>
+                                </div>
+                                ${isVariante ? '<span class="badge bg-info text-dark small"><i class="bi bi-tag"></i> Variante</span>' : ''}
+                            </div>
+                        `;
+
+                        li.addEventListener('click', function () {
+                            inputElement.value = item.modelo;
+                            if (hiddenInput) {
+                                hiddenInput.value = item.modelo;
+                                hiddenInput.dataset.id = item.idProducto;
+                                hiddenInput.dataset.cod = item.codigoProducto;
+                                hiddenInput.dataset.esPadre = '0';
+                            }
+                            if (padreWarning) padreWarning.classList.add('d-none');
+                            validateDisabledRegistro();
+                            suggestions.innerHTML = ''; // Limpiar sugerencias después de seleccionar una
+                        });
+                    }
 
                     suggestions.appendChild(li);
                 });
@@ -68,8 +131,14 @@ function searchProduct(inputElement) {
         };
         xhr.send();
     } else {
-        document.getElementById('suggestions-product').innerHTML = ''; // Limpiar si hay menos de 3 caracteres
-        document.getElementById('modal-hidden-product').value = "";
+        let suggestions = document.getElementById('suggestions-product');
+        if (suggestions) suggestions.innerHTML = ''; // Limpiar si hay menos de 3 caracteres
+        if (hiddenInput) {
+            hiddenInput.value = "";
+            hiddenInput.dataset.esPadre = "0";
+        }
+        if (padreWarning) padreWarning.classList.add('d-none');
+        validateDisabledRegistro();
     }
 }
 

@@ -116,8 +116,26 @@ class DeltronController extends Controller
             ->where('Inventario_Proveedor.stock', '>', 0)
             ->count();
 
+        // Cargar stock oficial del catalogo Deltron para conocer disponibilidad real de cada SKU
+        $catSnapshotPath = storage_path('app/deltron_catalogo_snapshot.json');
+        $catalogStockBySku = [];
+        if (file_exists($catSnapshotPath)) {
+            $catData = @json_decode(file_get_contents($catSnapshotPath), true) ?: [];
+            foreach ($catData as $item) {
+                $skuKey = strtoupper(trim($item['sku'] ?? ''));
+                if (!$skuKey) continue;
+                $tot = 0;
+                foreach ($item['stock']['almacenes'] ?? [] as $alm) {
+                    $tot += (int)($alm['cantidad'] ?? 0);
+                }
+                $catalogStockBySku[$skuKey] = $tot;
+            }
+        }
+
         // Obtener promociones oficiales de Deltron desde la base de datos local (evita llamadas a la API en visitas web)
-        $promociones = \App\Models\Inventario\DeltronPromocion::all()->map(function ($p) {
+        $promociones = \App\Models\Inventario\DeltronPromocion::all()->map(function ($p) use ($catalogStockBySku) {
+            $sku = strtoupper(trim($p->sku ?? ''));
+            $stockEstimado = $p->detalle_cargado ? (int)$p->stock_total_promo : ($catalogStockBySku[$sku] ?? 0);
             return [
                 'promocion_id' => $p->promocion_id,
                 'promocion_descripcion' => $p->promocion_descripcion,
@@ -125,11 +143,15 @@ class DeltronController extends Controller
                 'sku_descripcion' => $p->sku_descripcion,
                 'precio_promocion' => $p->precio_promocion ? (float) $p->precio_promocion : null,
                 'fecha_fin' => $p->fecha_fin ? $p->fecha_fin->format('d/m/Y') : null,
-                'stock_total_promo' => (int) $p->stock_total_promo,
+                'stock_total_promo' => $stockEstimado,
+                'tiene_stock' => $stockEstimado > 0,
                 'detalle_cargado' => (bool) $p->detalle_cargado,
                 'items_count' => is_array($p->items_combo_json) ? count($p->items_combo_json) : 0
             ];
-        })->toArray();
+        })
+        ->sortByDesc(fn($p) => ($p['tiene_stock'] ? 1000000 : 0) + $p['stock_total_promo'])
+        ->values()
+        ->toArray();
 
         if (empty($promociones)) {
             try {
@@ -220,18 +242,13 @@ class DeltronController extends Controller
             }
 
             // Guardar inmediatamente en la tabla Inventario_Proveedor de la base de datos
-            $productoDb = null;
-            if (!empty($partNumber) && $partNumber !== '-') {
-                $productoDb = Producto::where('partNumber', $partNumber)->first();
+            $modeloReal = null;
+            if ($detalle) {
+                $modeloReal = $detalle['modelo_real'] ?? \App\Services\Deltron\DeltronApiService::extraerModeloRealDesdeSpecs($detalle['specs_html'] ?? '');
             }
-            if (!$productoDb && !empty($query)) {
-                $productoDb = Producto::where('modelo', $query)
-                    ->orWhere('codigoProducto', $query)
-                    ->orWhere('partNumber', $query)
-                    ->first();
-            }
+            $productoDb = $this->deltronService->buscarProductoEnUnike($query, $partNumber, $modeloReal);
 
-            $guardadoEnBd = false;
+            $guardadoEnBd = ($productoDb !== null);
             if ($productoDb) {
                 if ($stock && isset($stock['stock_total'])) {
                     $invProveedor = Inventario_Proveedor::where('idProducto', $productoDb->idProducto)->first();
@@ -303,9 +320,10 @@ class DeltronController extends Controller
      * Consulta el detalle de una promoción específica (API-0000025).
      * Reutiliza los datos almacenados en la base de datos local para no agotar el límite de 30 llamadas/hora.
      */
-    public function consultarPromocionDetalle(Request $request, $promo_id)
+    public function consultarPromocionDetalle(Request $request, $promo_id = null)
     {
-        $promoId = urldecode(trim($promo_id));
+        $rawId = $promo_id ?: $request->input('promo_id', '');
+        $promoId = urldecode(trim($rawId));
         $force = $request->boolean('force', false);
 
         if (empty($promoId)) {
@@ -450,6 +468,50 @@ class DeltronController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error al obtener candidatos de ofertas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Devuelve los productos candidatos del catalogo completo paginados de 100 en 100.
+     */
+    public function getCatalogoCandidatos(Request $request)
+    {
+        try {
+            $filtros = [
+                'query' => $request->input('query', ''),
+                'solo_con_stock' => $request->boolean('solo_con_stock', false),
+                'marca' => $request->input('marca', ''),
+            ];
+            $page = max(1, (int) $request->input('page', 1));
+            $perPage = 100;
+
+            $resultado = $this->deltronService->getCandidatosCatalogoPaginado($filtros, $page, $perPage);
+            $grupos = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')
+                ->orderBy('nombreGrupo')
+                ->get()
+                ->map(function ($g) {
+                    return [
+                        'idGrupo' => $g->idGrupoProducto,
+                        'nombreGrupo' => $g->nombreGrupo,
+                        'idCategoria' => $g->idCategoria,
+                        'nombreCategoria' => $g->CategoriaProducto ? $g->CategoriaProducto->nombreCategoria : 'General'
+                    ];
+                });
+
+            return response()->json([
+                'status' => 'ok',
+                'total' => $resultado['total'],
+                'page' => $resultado['page'],
+                'per_page' => $resultado['per_page'],
+                'last_page' => $resultado['last_page'],
+                'items' => $resultado['items'],
+                'grupos' => $grupos
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener catalogo paginado: ' . $e->getMessage()
             ], 500);
         }
     }

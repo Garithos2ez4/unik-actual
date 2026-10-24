@@ -377,7 +377,11 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-8">
                         <label class="form-label fw-bold text-primary">Producto Seleccionado:</label>
-                        <input type="text" class="form-control form-control-lg bg-light input-modal-product border-0" data-id="" data-cod="" value="" id="modal-hidden-product" disabled>
+                        <input type="text" class="form-control form-control-lg bg-light input-modal-product border-0" data-id="" data-cod="" data-es-padre="0" value="" id="modal-hidden-product" disabled>
+                        <div id="modal-padre-warning" class="alert alert-danger d-none py-2 px-3 small mt-2 mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            <strong>Contenedor Padre:</strong> Este es un producto agrupador y no admite stock directo. Debes seleccionar una de sus variantes hijas.
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold text-primary">Unidad de Medida:</label>
@@ -453,6 +457,6 @@
         almacenes: @json($ubicaciones)
     };
 </script>
-<script src="{{ asset('js/documento-scripts.js') }}?v=1.00"></script>
-<script src="{{ asset('js/documento.js') }}"></script>
+<script src="{{ asset('js/documento-scripts.js') }}?v=1.01"></script>
+<script src="{{ asset('js/documento.js') }}?v=1.01"></script>
 @endsection

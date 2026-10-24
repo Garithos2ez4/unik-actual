@@ -216,6 +216,16 @@
         });
     }
 
+    function esColorClaro(hex) {
+        if (!hex || hex.length < 6) return false;
+        hex = hex.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 170);
+    }
+
     function renderizarTablaCandidatos(items) {
         const tbody = document.getElementById('tbodyCandidatosOfertas');
         tbody.innerHTML = '';
@@ -267,10 +277,18 @@
                 <td>
                     <div class="fw-bold text-dark text-truncate" style="max-width: 340px;" title="${item.name}">${item.name}</div>
                     ${item.deltron_name && item.deltron_name !== item.name ? `<div class="text-muted text-truncate" style="font-size: 0.74rem;" title="${item.deltron_name}">${item.deltron_name}</div>` : ''}
-                    <div class="d-flex align-items-center gap-2 mt-1">
+                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
                         <span class="badge bg-secondary font-monospace">${item.sku}</span>
                         <span class="text-muted font-monospace" style="font-size: 0.75rem;">PN: ${item.part_number || '-'}</span>
                         <span class="badge bg-light text-dark border" style="font-size: 0.72rem;">${item.brand_name || 'Teros'}</span>
+                        ${item.es_variante && item.valor_variante ? `
+                            <span class="badge rounded-pill border" style="background-color: ${item.codigo_color_hex || '#495057'}; color: ${esColorClaro(item.codigo_color_hex) ? '#000' : '#fff'}; font-size: 0.72rem;">
+                                <i class="bi bi-palette-fill me-1"></i>${item.valor_variante}
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;" title="Se agrupará como variante de: ${item.nombre_padre}">
+                                <i class="bi bi-diagram-3 me-1"></i>Variante: ${item.part_number_base}
+                            </span>
+                        ` : ''}
                     </div>
                 </td>
                 <td>

@@ -94,6 +94,8 @@ class ProductoPrecioController extends Controller
         return response()->json([
             'success' => true,
             'nombreProducto' => $producto->nombreProducto,
+            'idGrupo' => $producto->idGrupo,
+            'estadoProductoWeb' => $producto->estadoProductoWeb,
             'precioDolar' => $producto->precioDolar,
             'precioConIgv' => $precioConIgv,
             'precioBaseSoles' => $precioBaseSoles,

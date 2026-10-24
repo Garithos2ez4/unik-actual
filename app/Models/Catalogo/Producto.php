@@ -21,6 +21,8 @@ class Producto extends Model
     
     protected $primaryKey = 'idProducto';
 
+    public $incrementing = false;
+
     protected $guarded = ['idProducto'];
     
     protected $fillable = ['idProducto',
@@ -46,7 +48,10 @@ class Producto extends Model
                             'stockMin',
                             'slugProducto',
                             'usar_tc_fijo', // Valor true o false (1 o 0) para usar un determinado tipo de cambio
-                            'tc_fijo'
+                            'tc_fijo',
+                            // Sistema de variantes (Padre-Hijo). Atributos descriptivos en DetalleProducto.
+                            'idProductoPadre',
+                            'es_padre'
                             ];
 
     
@@ -63,7 +68,9 @@ class Producto extends Model
         'precioDolar' => 'float',
         'gananciaExtra' => 'float',
         'usar_tc_fijo' => 'boolean',
-        'tc_fijo' => 'float'
+        'tc_fijo' => 'float',
+        'idProductoPadre' => 'int',
+        'es_padre' => 'boolean'
     ];
 
     protected $attributes = [
@@ -168,9 +175,10 @@ class Producto extends Model
 
         $checkExists = function ($img) use ($prodImagesPath) {
             if (!$img) return false;
-            return file_exists(public_path('storage/' . $img)) 
-                || file_exists(storage_path('app/public/' . $img))
-                || (!app()->environment('local') && file_exists($prodImagesPath . $img));
+            $filePath = strtok($img, '?');
+            return file_exists(public_path('storage/' . $filePath)) 
+                || file_exists(storage_path('app/public/' . $filePath))
+                || (!app()->environment('local') && file_exists($prodImagesPath . $filePath));
         };
 
         $imagen1 = $checkExists($this->imagenProducto1) ? asset('storage/' . $this->imagenProducto1) : $default;
@@ -206,6 +214,78 @@ class Producto extends Model
     public function esPack()
     {
         return $this->packHijos()->exists();
+    }
+
+    // ==============================================================
+    // SISTEMA DE VARIANTES (PADRE-HIJO)
+    // ==============================================================
+
+    /**
+     * Producto padre (contenedor) al que pertenece esta variante.
+     */
+    public function padre()
+    {
+        return $this->belongsTo(Producto::class, 'idProductoPadre', 'idProducto');
+    }
+
+    /**
+     * Variantes hijas (colores, capacidades, etc.) de este producto padre.
+     */
+    public function variantes()
+    {
+        return $this->hasMany(Producto::class, 'idProductoPadre', 'idProducto');
+    }
+
+    public function tieneVariantes(): bool
+    {
+        return (bool) $this->es_padre || $this->variantes()->exists();
+    }
+
+    public function esVariante(): bool
+    {
+        return !is_null($this->idProductoPadre);
+    }
+
+    /**
+     * Catalogo web (webunk): solo padres y productos simples, nunca variantes sueltas.
+     */
+    public function scopeCatalogoWeb($query)
+    {
+        return $query->whereNull('idProductoPadre');
+    }
+
+    /**
+     * Productos vendibles (POS, facturacion, guias de remision): excluye contenedores padre.
+     */
+    public function scopeVendibles($query)
+    {
+        return $query->where('es_padre', 0);
+    }
+
+    /**
+     * Stock fisico total en almacenes.
+     * Si es padre, retorna la suma del stock de todas sus variantes para que el
+     * catalogo web no lo muestre agotado mientras al menos un color tenga stock.
+     */
+    public function stockTotal(): int
+    {
+        if ($this->es_padre) {
+            $idsVariantes = $this->relationLoaded('variantes')
+                ? $this->variantes->pluck('idProducto')
+                : $this->variantes()->pluck('idProducto');
+
+            if ($idsVariantes->isEmpty()) {
+                return 0;
+            }
+
+            return (int) Inventario::whereIn('idProducto', $idsVariantes)->sum('stock');
+        }
+
+        if ($this->relationLoaded('Inventario')) {
+            return (int) $this->Inventario->sum('stock');
+        }
+
+        return (int) Inventario::where('idProducto', $this->idProducto)->sum('stock');
     }
     
     

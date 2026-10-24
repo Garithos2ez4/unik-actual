@@ -91,7 +91,7 @@ class ProductoController extends Controller
         //variables del controlador
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 2) {
-                $producto = $this->productoService->getOneProductByColumn('idProducto', decrypt($idProducto));
+                $producto = $this->productoService->getOneProductByColumn('idProducto', $this->resolverIdProducto($idProducto));
                 $marcas = $this->productoService->getAllLabelMarca();
                 $proveedor = $this->productoService->getAllLabelProveedor();
                 $grupos = $this->productoService->getAllLabelGrupo();
@@ -158,6 +158,10 @@ class ProductoController extends Controller
                                     } else {
                                         $deltronData['descripcion_completa'] = $descBase;
                                     }
+                                }
+
+                                if (empty($deltronData['modelo_real'])) {
+                                    $deltronData['modelo_real'] = \App\Services\Deltron\DeltronApiService::extraerModeloRealDesdeSpecs($deltronData['specs_html'] ?? '');
                                 }
 
                                 if (!empty($deltronData['brand_name'])) {
@@ -288,8 +292,27 @@ class ProductoController extends Controller
     public function searchModelProduct(Request $request)
     {
         $query = $request->input('query');
+        if (empty($query)) {
+            return response()->json([]);
+        }
 
-        $results = $this->productoService->searchAjaxProducts('modelo', $query);
+        $queryBuilder = Producto::query()
+            ->where(function ($q) use ($query) {
+                $q->where('modelo', 'LIKE', '%' . $query . '%')
+                  ->orWhere('nombreProducto', 'LIKE', '%' . $query . '%')
+                  ->orWhere('codigoProducto', 'LIKE', '%' . $query . '%')
+                  ->orWhere('partNumber', 'LIKE', '%' . $query . '%');
+            });
+
+        if ($request->boolean('vendibles', false) || $request->boolean('no_padre', false)) {
+            $queryBuilder->where('es_padre', 0);
+        }
+
+        if ($request->boolean('solo_padres', false)) {
+            $queryBuilder->where('es_padre', 1);
+        }
+
+        $results = $queryBuilder->take(20)->get();
 
         return response()->json($results);
     }
@@ -917,6 +940,216 @@ class ProductoController extends Controller
             'success' => false,
             'message' => 'Acceso denegado.'
         ], 403);
+    }
+
+    public function crearProductoPadre(Request $request)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $request->validate([
+            'nombreProducto' => 'required|string|max:255',
+            'modelo' => 'required|string|max:100',
+            'idMarca' => 'required|integer',
+            'idGrupo' => 'required|integer',
+        ]);
+
+        $grupo = \App\Models\Catalogo\GrupoProducto::findOrFail($request->input('idGrupo'));
+        $deltronService = app()->make(\App\Services\Deltron\DeltronApiService::class);
+        $codigoPadre = $deltronService->generarSiguienteCodigoProducto($grupo->idGrupoProducto, $grupo->nombreGrupo);
+
+        $padre = Producto::create([
+            'idMarca' => $request->input('idMarca'),
+            'idGrupo' => $request->input('idGrupo'),
+            'codigoProducto' => $codigoPadre,
+            'nombreProducto' => trim($request->input('nombreProducto')),
+            'modelo' => trim($request->input('modelo')),
+            'partNumber' => trim($request->input('partNumber') ?: $request->input('modelo')),
+            'precioDolar' => floatval($request->input('precioDolar', 0)),
+            'gananciaExtra' => 0.00,
+            'garantia' => $request->input('garantia', '12 meses'),
+            'descripcionProducto' => $request->input('descripcionProducto', ''),
+            'imagenProducto1' => $request->input('imagenProducto1') ?: "asset('storage/images/noimagen.webp')",
+            'estadoProductoWeb' => 'DISPONIBLE',
+            'stockMin' => 1,
+            'usar_tc_fijo' => 1,
+            'es_padre' => 1,
+            'idProductoPadre' => null,
+        ]);
+
+        \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+            ['idProducto' => $padre->idProducto],
+            [
+                'mostrarPrecioWeb' => true,
+                'tipo_variante' => 'COLOR',
+                'valor_variante' => '',
+                'codigo_color_hex' => '',
+            ]
+        );
+
+        // Si se selecciono vincular el producto actual donde se abrio el modal:
+        $idActual = $request->input('idProductoActual');
+        if ($request->boolean('vincular_actual') && $idActual) {
+            $hijo = Producto::find($idActual);
+            if ($hijo && $hijo->idProducto != $padre->idProducto) {
+                $hijo->idProductoPadre = $padre->idProducto;
+                $hijo->es_padre = 0;
+                $hijo->save();
+
+                $colorNombre = trim($request->input('color_actual', ''));
+                $colorHex = trim($request->input('color_hex_actual', '#6c757d'));
+
+                \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+                    ['idProducto' => $hijo->idProducto],
+                    [
+                        'tipo_variante' => 'COLOR',
+                        'valor_variante' => $colorNombre ?: 'Variante',
+                        'codigo_color_hex' => $colorHex ?: '#6c757d',
+                        'mostrarPrecioWeb' => true,
+                    ]
+                );
+            }
+        }
+
+        $this->headerService->sendFlashAlerts(
+            'Producto Padre Creado',
+            "Se creo el contenedor padre {$padre->nombreProducto} ({$padre->modelo}) exitosamente.",
+            'success',
+            'btn-success'
+        );
+
+        return redirect()->route('producto', [encrypt($padre->idProducto)]);
+    }
+
+    private function resolverIdProducto($id)
+    {
+        if (empty($id)) {
+            return null;
+        }
+
+        if (is_numeric($id)) {
+            return (int) $id;
+        }
+
+        try {
+            $decrypted = decrypt($id);
+            return is_numeric($decrypted) ? (int) $decrypted : $decrypted;
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            return is_numeric($id) ? (int) $id : $id;
+        } catch (\Exception $e) {
+            return is_numeric($id) ? (int) $id : $id;
+        }
+    }
+
+    public function convertirEnPadre(Request $request, $idProducto)
+    {
+        $id = $this->resolverIdProducto($idProducto);
+        $producto = Producto::findOrFail($id);
+
+        $producto->es_padre = 1;
+        $producto->idProductoPadre = null;
+        $producto->save();
+
+        \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+            ['idProducto' => $producto->idProducto],
+            [
+                'mostrarPrecioWeb' => true,
+                'tipo_variante' => 'COLOR',
+                'valor_variante' => '',
+                'codigo_color_hex' => '',
+            ]
+        );
+
+        $this->headerService->sendFlashAlerts(
+            'Convertido a Padre',
+            "El producto {$producto->modelo} ahora es un Contenedor Padre de variantes.",
+            'success',
+            'btn-success'
+        );
+
+        return back();
+    }
+
+    public function vincularVariante(Request $request, $idPadre)
+    {
+        $userModel = $this->headerService->getModelUser();
+        $idPadre = $this->resolverIdProducto($idPadre);
+        $idHijo = $this->resolverIdProducto($request->input('idProductoHijo'));
+
+        if (!$idPadre || !$idHijo) {
+            $this->headerService->sendFlashAlerts('Error', 'No se especifico el producto padre o hijo.', 'warning', 'btn-danger');
+            return back();
+        }
+
+        $padre = Producto::findOrFail($idPadre);
+        $hijo = Producto::findOrFail($idHijo);
+
+        if ($hijo->idProducto == $padre->idProducto) {
+            $this->headerService->sendFlashAlerts('Error', 'Un producto no puede ser variante de si mismo', 'warning', 'btn-danger');
+            return back();
+        }
+
+        if ($padre->idProductoPadre) {
+            $this->headerService->sendFlashAlerts('Error', 'El producto seleccionado como padre ya es una variante de otro producto', 'warning', 'btn-danger');
+            return back();
+        }
+
+        if ($hijo->es_padre && $hijo->variantes()->exists()) {
+            $this->headerService->sendFlashAlerts('Error', 'El producto hijo ya tiene variantes asociadas. Desvincula sus variantes primero.', 'warning', 'btn-danger');
+            return back();
+        }
+
+        $color = trim($request->input('color', ''));
+        $colorHex = trim($request->input('color_hex', '#6c757d'));
+
+        $hijo->idProductoPadre = $padre->idProducto;
+        $hijo->es_padre = 0;
+        $hijo->save();
+
+        $padre->es_padre = 1;
+        $padre->save();
+
+        // Asegurar DetalleProducto para el padre si no existe
+        \App\Models\Catalogo\DetalleProducto::firstOrCreate(
+            ['idProducto' => $padre->idProducto],
+            [
+                'tipo_variante' => 'COLOR',
+                'valor_variante' => '',
+                'codigo_color_hex' => '',
+                'mostrarPrecioWeb' => true
+            ]
+        );
+
+        \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+            ['idProducto' => $hijo->idProducto],
+            [
+                'tipo_variante' => 'COLOR',
+                'valor_variante' => $color ?: 'Variante',
+                'codigo_color_hex' => $colorHex ?: '#6c757d',
+                'mostrarPrecioWeb' => true
+            ]
+        );
+
+        $this->headerService->sendFlashAlerts('Variante Vinculada', "Se vinculo {$hijo->modelo} al producto padre {$padre->modelo}", 'success', 'btn-success');
+        return back();
+    }
+
+    public function desvincularVariante(Request $request, $idHijo)
+    {
+        $idHijo = $this->resolverIdProducto($idHijo);
+        $hijo = Producto::findOrFail($idHijo);
+        $idPadreAnterior = $hijo->idProductoPadre;
+
+        $hijo->idProductoPadre = null;
+        $hijo->save();
+
+        if ($idPadreAnterior) {
+            $tieneMasHijos = Producto::where('idProductoPadre', $idPadreAnterior)->exists();
+            if (!$tieneMasHijos) {
+                Producto::where('idProducto', $idPadreAnterior)->update(['es_padre' => 0]);
+            }
+        }
+
+        $this->headerService->sendFlashAlerts('Variante Desvinculada', "El producto {$hijo->modelo} ahora es un producto individual independiente.", 'success', 'btn-success');
+        return back();
     }
 }
 

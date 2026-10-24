@@ -29,6 +29,7 @@
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
                 @include('productos.components.btn_templates')
+                @include('productos.components.modal_crear_padre')
                 <h5 class="d-inline"><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
             </div>
         </div>
@@ -374,6 +375,10 @@
             </div>
         </div>
     </form>
+
+    <div id="seccion-variantes">
+        @include('productos.partials.seccion_variantes')
+    </div>
     <br>
     <br>
 </div>

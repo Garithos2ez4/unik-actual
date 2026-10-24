@@ -270,7 +270,7 @@
             </div>
             <div class="col-lg-3">
                 <label class="form-label">Modelo</label>
-                <input type="text" name="modelo" class="form-control mb-3" id="modelo-product" value="{{ old('modelo', isset($deltronData) ? ($deltronData['sku'] ?? '') : '') }}" aria-describedby="basic-addon1" maxlength="70">
+                <input type="text" name="modelo" class="form-control mb-3" id="modelo-product" value="{{ old('modelo', isset($deltronData) ? ($deltronData['modelo_real'] ?? ($deltronData['part_number'] ?? ($deltronData['sku'] ?? ''))) : '') }}" aria-describedby="basic-addon1" maxlength="70">
             </div>
             <div class="col-lg-3">
                 <label class="form-label d-flex w-100"><span class="w-50">Numero de Parte</span><span class="text-secondary text-end w-50">No aplica</span></label>

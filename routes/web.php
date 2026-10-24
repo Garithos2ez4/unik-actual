@@ -208,6 +208,12 @@ Route::middleware(['validate.session'])->group(function () {
 
     Route::post('/producto/creargrupo-rapido', [ProductoController::class, 'quickCreateGrupo'])->name('quickcreategrupo');
 
+    // Rutas para Gestion de Variantes (Padre-Hijo)
+    Route::post('/producto/crear-padre', [ProductoController::class, 'crearProductoPadre'])->name('producto.crear_padre');
+    Route::post('/producto/{id}/convertir-en-padre', [ProductoController::class, 'convertirEnPadre'])->name('producto.convertir_en_padre');
+    Route::post('/producto/{id}/vincular-variante', [ProductoController::class, 'vincularVariante'])->name('producto.vincular_variante');
+    Route::post('/producto/{id}/desvincular-variante', [ProductoController::class, 'desvincularVariante'])->name('producto.desvincular_variante');
+
     // Template Falabella pre-llenado
     Route::get('/producto/{idProducto}/falabella-template', [ProductoFalabellaController::class, 'descargarTemplateFalabella'])->name('producto.falabella.template');
     Route::get('/producto/{idProducto}/falabella-template-express', [ProductoFalabellaController::class, 'descargarTemplateFalabellaExpress'])->name('producto.falabella.template.express');
@@ -259,9 +265,10 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/compras/deltron-ofertas/sync', [DeltronController::class, 'syncManual'])->name('compras.deltron.sync');
     Route::get('/compras/deltron/consultar-tiempo-real', [DeltronController::class, 'consultarTiempoReal'])->name('compras.deltron.consultar');
     Route::get('/compras/deltron/precio-tiempo-real', [DeltronController::class, 'consultarPrecioTiempoReal'])->name('compras.deltron.precio');
-    Route::get('/compras/deltron/promocion-detalle/{promo_id}', [DeltronController::class, 'consultarPromocionDetalle'])->where('promo_id', '.*')->name('compras.deltron.promocion.detalle');
+    Route::get('/compras/deltron/promocion-detalle/{promo_id?}', [DeltronController::class, 'consultarPromocionDetalle'])->where('promo_id', '.*')->name('compras.deltron.promocion.detalle');
     Route::get('/compras/deltron/ficha-sku/{sku?}', [DeltronController::class, 'consultarFichaSku'])->where('sku', '.*')->name('compras.deltron.ficha.sku');
     Route::get('/compras/deltron/ofertas-candidatas', [DeltronController::class, 'getOfertasCandidatas'])->name('compras.deltron.ofertas.candidatas');
+    Route::get('/compras/deltron/catalogo-candidatos', [DeltronController::class, 'getCatalogoCandidatos'])->name('compras.deltron.catalogo.candidatos');
     Route::post('/compras/deltron/importar-lote-ofertas', [DeltronController::class, 'importarLoteOfertas'])->name('compras.deltron.importar.lote');
 
     // Rutas para Ventas

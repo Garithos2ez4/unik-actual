@@ -16,6 +16,11 @@ if (!productInput.value.trim()) {
 return;
 }
 
+if (productInput.dataset.esPadre === '1' || productInput.dataset.esPadre === 'true') {
+    alert('El producto seleccionado es un contenedor Base/Padre de variantes y no admite stock fisico. Por favor seleccione una de sus variantes hijas.');
+    return;
+}
+
 let ulIngreso = document.getElementById('ul-ingreso');
 
 let liProduct = createLi(['list-group-item','list-group-item-dark'],'header-list-product-' + index);

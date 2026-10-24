@@ -56,6 +56,18 @@
                                     </a>
                                     <br>
                                     <span class="text-muted" style="font-size: 0.75rem;">Mini Código: {{$pro->idProducto}}</span>
+                                    @if($pro->es_padre)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.68rem;">
+                                            <i class="bi bi-diagram-3-fill me-1"></i>Base ({{ $pro->variantes->count() }} var.)
+                                        </span>
+                                    @elseif($pro->idProductoPadre)
+                                        <span class="badge bg-light text-dark border ms-1" style="font-size: 0.68rem;">
+                                            @if(optional($pro->DetalleProducto)->codigo_color_hex)
+                                                <i class="bi bi-circle-fill me-1" style="color: {{ $pro->DetalleProducto->codigo_color_hex }};"></i>
+                                            @endif
+                                            {{ optional($pro->DetalleProducto)->valor_variante ?: 'Variante' }}
+                                        </span>
+                                    @endif
                                 </div>
                                 <div class="col-9 d-flex flex-column justify-content-end text-start pb-2">
                                     <small class="text-secondary">{{$pro->modelo}}</small>

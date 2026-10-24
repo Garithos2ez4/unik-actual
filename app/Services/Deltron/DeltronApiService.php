@@ -276,6 +276,16 @@ class DeltronApiService
             $cached = Cache::get($cacheKey);
             if (is_array($cached) && !empty($cached)) {
                 $cached['origen'] = 'base_de_datos';
+                if (empty($cached['modelo_real'])) {
+                    $cached['modelo_real'] = self::extraerModeloRealDesdeSpecs($cached['specs_html'] ?? '');
+                }
+                if (empty($cached['vinculado_bd']) || empty($cached['idProducto'])) {
+                    $prodDb = $this->buscarProductoEnUnike($cleanSku, $cached['part_number'] ?? null, $cached['modelo_real'] ?? null);
+                    if ($prodDb) {
+                        $cached['vinculado_bd'] = true;
+                        $cached['idProducto'] = $prodDb->idProducto;
+                    }
+                }
                 return $cached;
             }
         }
@@ -292,6 +302,16 @@ class DeltronApiService
                     $saved['specs_texto'] = $specsTxt;
                     $comp = $saved['descripcion_larga'] ?: $saved['descripcion_corta'];
                     $saved['descripcion_completa'] = trim($comp . (!empty($specsTxt) ? "\n\n" . $specsTxt : ''));
+                }
+                if (empty($saved['modelo_real'])) {
+                    $saved['modelo_real'] = self::extraerModeloRealDesdeSpecs($saved['specs_html'] ?? '');
+                }
+                if (empty($saved['vinculado_bd']) || empty($saved['idProducto'])) {
+                    $prodDb = $this->buscarProductoEnUnike($cleanSku, $saved['part_number'] ?? null, $saved['modelo_real'] ?? null);
+                    if ($prodDb) {
+                        $saved['vinculado_bd'] = true;
+                        $saved['idProducto'] = $prodDb->idProducto;
+                    }
                 }
                 Cache::put($cacheKey, $saved, now()->addHours(24));
                 return $saved;
@@ -315,6 +335,16 @@ class DeltronApiService
                         $comp = $saved['descripcion_larga'] ?: $saved['descripcion_corta'];
                         $saved['descripcion_completa'] = trim($comp . (!empty($specsTxt) ? "\n\n" . $specsTxt : ''));
                     }
+                    if (empty($saved['modelo_real'])) {
+                        $saved['modelo_real'] = self::extraerModeloRealDesdeSpecs($saved['specs_html'] ?? '');
+                    }
+                    if (empty($saved['vinculado_bd']) || empty($saved['idProducto'])) {
+                        $prodDb = $this->buscarProductoEnUnike($cleanSku, $saved['part_number'] ?? null, $saved['modelo_real'] ?? null);
+                        if ($prodDb) {
+                            $saved['vinculado_bd'] = true;
+                            $saved['idProducto'] = $prodDb->idProducto;
+                        }
+                    }
                     return $saved;
                 }
             }
@@ -328,7 +358,7 @@ class DeltronApiService
         $brandName = self::stripEmojis($raw['brand_name'] ?? '');
         $categoryName = self::stripEmojis($raw['category_name'] ?? '');
         $subcategoryName = self::stripEmojis($raw['subcategory_name'] ?? '');
-        $warranty = self::stripEmojis($raw['warranty'] ?? '');
+        $warranty = self::normalizarGarantiaDeltron($raw['warranty'] ?? '');
         $status = self::stripEmojis($raw['status'] ?? '');
         $descLarge = self::cleanDeltronText($raw['description_large'] ?? '');
         $descSmall = self::cleanDeltronText($raw['description_small'] ?? '');
@@ -395,23 +425,8 @@ class DeltronApiService
         ];
 
         // 5. Vincular y sincronizar con la base de datos local de Unike (Inventario_Proveedor)
-        $producto = null;
-        if (!empty($partNumber) && $partNumber !== '-') {
-            $claveExacta = strtoupper(trim($partNumber));
-            $claveLimpia = preg_replace('/[^A-Z0-9]/', '', $claveExacta);
-
-            $producto = Producto::where('partNumber', $claveExacta)->first();
-            if (!$producto && !empty($claveLimpia)) {
-                $producto = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), ' ', ''), '/', '')) = ?", [$claveLimpia])->first();
-            }
-        }
-
-        if (!$producto && !empty($cleanSku)) {
-            $producto = Producto::where('modelo', $cleanSku)
-                ->orWhere('codigoProducto', $cleanSku)
-                ->orWhere('partNumber', $cleanSku)
-                ->first();
-        }
+        $modeloReal = self::extraerModeloRealDesdeSpecs($specsHtml);
+        $producto = $this->buscarProductoEnUnike($cleanSku, $partNumber, $modeloReal);
 
         $vinculadoBd = false;
         $idProducto = null;
@@ -461,6 +476,7 @@ class DeltronApiService
         $ficha = [
             'sku' => $cleanSku,
             'part_number' => $partNumber,
+            'modelo_real' => $modeloReal,
             'mini_code' => $miniCode,
             'name' => $name,
             'brand_name' => $brandName,
@@ -607,6 +623,7 @@ class DeltronApiService
         }
         $clean = self::stripEmojis($string);
         // Deltron usa [@@@] para separar el titular del cuerpo de la descripcion
+        $clean = str_replace(["\r\n", "\r"], "\n", $clean);
         $clean = str_replace(['[@@@]', '<br>', '<br/>', '<br />', '&nbsp;'], ["\n\n", "\n", "\n", "\n", ' '], $clean);
         $clean = strip_tags($clean);
         $clean = preg_replace("/[ \t]+/", ' ', $clean);
@@ -682,6 +699,165 @@ class DeltronApiService
 
         $res = trim(implode("\n", $output));
         return self::stripEmojis($res);
+    }
+
+    /**
+     * Arma la descripcion comercial de un producto de Deltron tal como se ve en su web:
+     * texto de la pestana Descripcion (description_large, o description_small si no hay)
+     * seguido de la pestana Especificaciones convertida a texto plano.
+     * Acepta un item crudo del catalogo/API (description_large, description_small, specs.specs_all_html).
+     */
+    public static function construirDescripcionProducto(array $item): string
+    {
+        $descLarga = self::cleanDeltronText($item['description_large'] ?? '');
+        $descCorta = self::cleanDeltronText($item['description_small'] ?? '');
+        $base = $descLarga !== '' ? $descLarga : $descCorta;
+
+        $specsHtml = $item['specs']['specs_all_html'] ?? ($item['specs_all_html'] ?? ($item['specs_html'] ?? ''));
+        $specsTexto = self::parseSpecsHtmlToText(is_string($specsHtml) ? self::stripEmojis($specsHtml) : '');
+
+        if ($base !== '' && $specsTexto !== '') {
+            return $base . "\n\n" . $specsTexto;
+        }
+        return $base !== '' ? $base : $specsTexto;
+    }
+
+    /**
+     * Recorta un texto largo en un salto de linea para no cortar una especificacion a la mitad.
+     */
+    public static function recortarTextoEnLinea(string $texto, int $max = 5000): string
+    {
+        if (strlen($texto) <= $max) {
+            return $texto;
+        }
+        $corte = substr($texto, 0, $max - 3);
+        $ultimoSalto = strrpos($corte, "\n");
+        if ($ultimoSalto !== false && $ultimoSalto > ($max * 0.6)) {
+            $corte = substr($corte, 0, $ultimoSalto);
+        }
+        return rtrim($corte) . '...';
+    }
+
+    /**
+     * Extrae el modelo verdadero del fabricante desde la tabla de especificaciones tecnicas (specs_html) de Deltron.
+     */
+    public static function extraerModeloRealDesdeSpecs(?string $html): ?string
+    {
+        if (empty($html) || trim($html) === '') {
+            return null;
+        }
+
+        // 1. Buscar en filas de tabla HTML (tr) que contengan celda MODELO
+        if (preg_match_all('/<tr[^>]*>(.*?)<\/tr>/is', $html, $rowMatches)) {
+            foreach ($rowMatches[1] as $row) {
+                if (preg_match('/<(?:td|th)[^>]*>\s*MODELO\s*:?\s*<\/(?:td|th)>/i', $row)) {
+                    if (preg_match_all('/<(?:td|th)[^>]*>(.*?)<\/(?:td|th)>/is', $row, $cellMatches)) {
+                        $cells = array_map(function($c) { return trim(strip_tags($c)); }, $cellMatches[1]);
+                        $lastValid = null;
+                        foreach ($cells as $cell) {
+                            $cUpper = strtoupper($cell);
+                            if (!empty($cell) && $cUpper !== 'MODELO' && $cUpper !== 'MODELO:' && $cUpper !== '-' && $cUpper !== 'N/A') {
+                                $lastValid = $cell;
+                            }
+                        }
+                        if ($lastValid && strlen($lastValid) <= 100) {
+                            return self::stripEmojis($lastValid);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Fallback de texto plano
+        if (preg_match('/(?:^|\n|\r)\s*MODELO\s*:\s*([^\r\n<]+)/i', strip_tags($html), $m)) {
+            $val = trim($m[1]);
+            $vUpper = strtoupper($val);
+            if (!empty($val) && $vUpper !== 'MODELO' && $vUpper !== '-' && $vUpper !== 'N/A' && strlen($val) <= 100) {
+                return self::stripEmojis($val);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Busca de forma exhaustiva si un producto de Deltron ya existe registrado en la BD de Unike.
+     * Criterios en orden de prioridad:
+     * 1. Vinculacion previa en InventarioProveedorSku (por sku_proveedor o part_number)
+     * 2. Part Number exacto y normalizado (sin guiones, barras ni espacios)
+     * 3. Modelo del producto exacto y normalizado (contra partNumber o modelo)
+     * 4. Modelo real extraido de las especificaciones tecnicas de Deltron (exacto y normalizado)
+     * 5. SKU Deltron exacto y normalizado (contra modelo, partNumber o codigoProducto)
+     */
+    public function buscarProductoEnUnike(string $sku, ?string $partNumber = null, ?string $modeloReal = null): ?Producto
+    {
+        $cleanSku = strtoupper(trim($sku));
+
+        // 1. Verificar vinculacion previa en InventarioProveedorSku
+        if (!empty($cleanSku)) {
+            $skuLink = \App\Models\Inventario\InventarioProveedorSku::where('sku_proveedor', $cleanSku)->first();
+            if ($skuLink) {
+                $invProv = Inventario_Proveedor::find($skuLink->idInventarioProveedor);
+                if ($invProv && $invProv->idProducto) {
+                    $p = Producto::find($invProv->idProducto);
+                    if ($p) return $p;
+                }
+            }
+        }
+
+        // 2. Part Number exacto y normalizado
+        if (!empty($partNumber) && $partNumber !== '-') {
+            $exactPn = strtoupper(trim($partNumber));
+            $cleanPn = preg_replace('/[^A-Z0-9]/', '', $exactPn);
+
+            $p = Producto::where('partNumber', $exactPn)->first();
+            if ($p) return $p;
+
+            if (!empty($cleanPn)) {
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanPn])->first();
+                if ($p) return $p;
+
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanPn])->first();
+                if ($p) return $p;
+            }
+        }
+
+        // 3. Modelo Real extraido de especificaciones de Deltron
+        if (!empty($modeloReal) && $modeloReal !== '-' && strtoupper($modeloReal) !== 'MODELO') {
+            $exactMod = trim($modeloReal);
+            $cleanMod = preg_replace('/[^A-Z0-9]/', '', strtoupper($exactMod));
+
+            $p = Producto::where('modelo', $exactMod)->first();
+            if ($p) return $p;
+
+            if (!empty($cleanMod)) {
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanMod])->first();
+                if ($p) return $p;
+
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanMod])->first();
+                if ($p) return $p;
+            }
+        }
+
+        // 4. SKU Deltron contra campos principales
+        if (!empty($cleanSku)) {
+            $p = Producto::where('modelo', $cleanSku)
+                ->orWhere('codigoProducto', $cleanSku)
+                ->orWhere('partNumber', $cleanSku)
+                ->first();
+            if ($p) return $p;
+
+            $cleanSkuNorm = preg_replace('/[^A-Z0-9]/', '', $cleanSku);
+            if (!empty($cleanSkuNorm)) {
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanSkuNorm])->first();
+                if ($p) return $p;
+
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanSkuNorm])->first();
+                if ($p) return $p;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1282,10 +1458,13 @@ class DeltronApiService
                 $idGrupoSugerido = 26; // Auriculares
             }
         }
-        // 17. Deltron Category: SOFTWARE
-        elseif (str_contains($catDeltron, 'SOFTWARE') || str_contains($subDeltron, 'SOFTWARE') || 
+        // 17. Deltron Category: SOFTWARE / LICENCIAS
+        elseif (str_contains($catDeltron, 'SOFTWARE') || str_contains($catDeltron, 'LICENCIA') || 
+            str_contains($subDeltron, 'SOFTWARE') || str_contains($subDeltron, 'LICENCIA') || str_contains($subDeltron, 'ESD') || str_contains($subDeltron, 'OFFICE') ||
             str_contains($titulo, 'WINDOWS') || str_contains($titulo, 'OFFICE') || str_contains($titulo, 'ANTIVIRUS') ||
-            str_starts_with($name, 'WIN 11') || str_starts_with($name, 'MS')) {
+            str_contains($titulo, 'LICENCIA') || str_contains($titulo, 'MICROSOFT 365') || str_contains($titulo, 'M365') ||
+            str_contains($name, 'OFFICE') || str_contains($name, 'MICROSOFT 365') || str_contains($name, 'LIC') ||
+            str_starts_with($name, 'WIN ') || str_starts_with($name, 'WIN11') || str_starts_with($name, 'MS')) {
             $idGrupoSugerido = 62; // Software
         }
         // 18. Deltron Category: SERVIDORES
@@ -1384,6 +1563,189 @@ class DeltronApiService
     }
 
     /**
+     * Detecta si un producto de Deltron corresponde a una variante (principalmente color)
+     * basandose en sufijos de SKU, tokens de Deltron y nombre/descripcion.
+     */
+    public static function detectarVarianteDeltron(array $item): ?array
+    {
+        $sku = strtoupper(trim($item['sku'] ?? ''));
+        $name = strtoupper(trim($item['name'] ?? ''));
+        $pn = strtoupper(trim($item['part_number'] ?? ''));
+
+        $colorMap = [
+            ['ROSE GOLD', '#b76e79', 'Rose Gold'],
+            ['ROSEGOLD', '#b76e79', 'Rose Gold'],
+            ['RSG', '#b76e79', 'Rose Gold'],
+            ['PINK', '#e83e8c', 'Rosa'],
+            ['ROSA', '#e83e8c', 'Rosa'],
+            ['PNK', '#e83e8c', 'Rosa'],
+            ['ROS', '#e83e8c', 'Rosa'],
+            ['WHITE', '#ffffff', 'Blanco'],
+            ['BLANCO', '#ffffff', 'Blanco'],
+            ['WHT', '#ffffff', 'Blanco'],
+            ['BLA', '#ffffff', 'Blanco'],
+            ['BLACK', '#212529', 'Negro'],
+            ['NEGRO', '#212529', 'Negro'],
+            ['BLK', '#212529', 'Negro'],
+            ['BLCK', '#212529', 'Negro'],
+            ['GREY', '#6c757d', 'Gris'],
+            ['GRAY', '#6c757d', 'Gris'],
+            ['GRIS', '#6c757d', 'Gris'],
+            ['GRY', '#6c757d', 'Gris'],
+            ['BLUE', '#0d6efd', 'Azul'],
+            ['AZUL', '#0d6efd', 'Azul'],
+            ['BLU', '#0d6efd', 'Azul'],
+            ['RED', '#dc3545', 'Rojo'],
+            ['ROJO', '#dc3545', 'Rojo'],
+            ['GREEN', '#198754', 'Verde'],
+            ['VERDE', '#198754', 'Verde'],
+            ['GRN', '#198754', 'Verde'],
+            ['ORANGE', '#fd7e14', 'Naranja'],
+            ['NARANJA', '#fd7e14', 'Naranja'],
+            ['ORG', '#fd7e14', 'Naranja'],
+            ['PURPLE', '#6f42c1', 'Morado'],
+            ['MORADO', '#6f42c1', 'Morado'],
+            ['LILAC', '#c8a2c8', 'Lila'],
+            ['LILA', '#c8a2c8', 'Lila'],
+            ['YELLOW', '#ffc107', 'Amarillo'],
+            ['AMARILLO', '#ffc107', 'Amarillo'],
+            ['YEL', '#ffc107', 'Amarillo'],
+            ['SILVER', '#adb5bd', 'Plata'],
+            ['PLATA', '#adb5bd', 'Plata'],
+            ['SLV', '#adb5bd', 'Plata'],
+            ['GOLD', '#d4af37', 'Dorado'],
+            ['DORADO', '#d4af37', 'Dorado'],
+            ['BEIGE', '#f5f5dc', 'Beige'],
+        ];
+
+        $shortSkuSuffixes = [
+            'RSG' => ['#b76e79', 'Rose Gold'],
+            'WHT' => ['#ffffff', 'Blanco'],
+            'BLK' => ['#212529', 'Negro'],
+            'GRY' => ['#6c757d', 'Gris'],
+            'BLU' => ['#0d6efd', 'Azul'],
+            'PNK' => ['#e83e8c', 'Rosa'],
+            'RED' => ['#dc3545', 'Rojo'],
+            'ORG' => ['#fd7e14', 'Naranja'],
+            'NE'  => ['#212529', 'Negro'],
+            'NG'  => ['#212529', 'Negro'],
+            'RS'  => ['#e83e8c', 'Rosa'],
+            'WH'  => ['#ffffff', 'Blanco'],
+            'BL'  => ['#0d6efd', 'Azul'],
+            'AZ'  => ['#0d6efd', 'Azul'],
+            'RD'  => ['#dc3545', 'Rojo'],
+            'GR'  => ['#198754', 'Verde'],
+            'W'   => ['#ffffff', 'Blanco'],
+            'N'   => ['#212529', 'Negro'],
+        ];
+
+        // 1. Buscar token al final del nombre oficial de Deltron
+        $words = preg_split('/[\s,\-\/]+/', $name);
+        $lastWord = end($words);
+        foreach ($colorMap as [$token, $hex, $label]) {
+            if ($lastWord === $token) {
+                return ['tipo' => 'COLOR', 'valor' => $label, 'hex' => $hex, 'token' => $token];
+            }
+        }
+
+        // 2. Comparar SKU con part_number para aislar el sufijo
+        if (!empty($pn)) {
+            $cleanPn = preg_replace('/[^A-Z0-9]/', '', $pn);
+            $pos = strpos($sku, $cleanPn);
+            if ($pos !== false) {
+                $suffix = substr($sku, $pos + strlen($cleanPn));
+                if (isset($shortSkuSuffixes[$suffix])) {
+                    [$hex, $label] = $shortSkuSuffixes[$suffix];
+                    return ['tipo' => 'COLOR', 'valor' => $label, 'hex' => $hex, 'token' => $suffix];
+                }
+            }
+        }
+
+        // 3. Sufijo directo al final del SKU
+        foreach ($shortSkuSuffixes as $suf => [$hex, $label]) {
+            if (str_ends_with($sku, $suf)) {
+                return ['tipo' => 'COLOR', 'valor' => $label, 'hex' => $hex, 'token' => $suf];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extrae el modelo base limpio, part number base y el titulo comercial del contenedor padre.
+     */
+    public static function extraerModeloBaseYNombrePadre(array $item, ?array $variante): array
+    {
+        $sku = strtoupper(trim($item['sku'] ?? ''));
+        $pn = strtoupper(trim($item['part_number'] ?? $sku));
+        $titulo = self::obtenerTituloComercialDeltron($item);
+
+        $basePn = $pn;
+        $token = $variante['token'] ?? null;
+
+        if ($token) {
+            if (str_ends_with($basePn, $token)) {
+                $basePn = substr($basePn, 0, -strlen($token));
+            }
+        }
+        $basePn = trim($basePn, " -_");
+        if (empty($basePn)) {
+            $basePn = $pn;
+        }
+
+        $nombrePadre = $titulo;
+        if ($token) {
+            $nombrePadre = preg_replace('/\b' . preg_quote($token, '/') . '\b/i', '', $nombrePadre);
+            $nombrePadre = preg_replace('/(\d+)' . preg_quote($token, '/') . '(?=[\s,]|$)/i', '$1', $nombrePadre);
+            if (!empty($variante['valor'])) {
+                $nombrePadre = preg_replace('/\b' . preg_quote($variante['valor'], '/') . '\b/i', '', $nombrePadre);
+            }
+        }
+
+        $nombrePadre = preg_replace('/\s*,\s*,\s*/', ', ', $nombrePadre);
+        $nombrePadre = preg_replace('/\s+/', ' ', $nombrePadre);
+        $nombrePadre = trim($nombrePadre, " ,-");
+
+        return [
+            'part_number_base' => $basePn,
+            'nombre_padre' => $nombrePadre,
+            'modelo_base' => $basePn
+        ];
+    }
+
+    /**
+     * Normaliza los textos de garantia de la API de Deltron
+     * a las opciones oficiales estandar de Unike Store ('12 meses', '24 meses', '36 meses', etc.).
+     */
+    public static function normalizarGarantiaDeltron(?string $warranty): string
+    {
+        if (empty($warranty)) {
+            return '12 meses';
+        }
+
+        $wUpper = strtoupper(trim($warranty));
+
+        if (str_contains($wUpper, '36 MESES') || str_contains($wUpper, '3 ANOS') || str_contains($wUpper, '3 AÑOS')) {
+            return '36 meses';
+        }
+        if (str_contains($wUpper, '24 MESES') || str_contains($wUpper, '2 ANOS') || str_contains($wUpper, '2 AÑOS')) {
+            return '24 meses';
+        }
+        if (str_contains($wUpper, '6 MESES')) {
+            return '6 meses';
+        }
+        if (str_contains($wUpper, '3 MESES') || str_contains($wUpper, '90 DIAS')) {
+            return '3 meses';
+        }
+        if (str_contains($wUpper, 'NO APLICA') || str_contains($wUpper, 'NO TIENE')) {
+            return 'No tiene';
+        }
+
+        // Casos como 'GARANTIA DEL REPRESENTANTE EN EL PERU', 'Garantia solo del fabricante', '12 meses'
+        return '12 meses';
+    }
+
+    /**
      * Obtiene todos los productos en oferta de Deltron con stock masivo en Lima que no existen en Unike.
      */
     public function getCandidatosOfertasAltoStock(): array
@@ -1408,6 +1770,12 @@ class DeltronApiService
             ->flip()
             ->toArray();
 
+        $existingPartNumbers = Producto::whereNotNull('partNumber')
+            ->pluck('partNumber')
+            ->map(fn($pn) => preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($pn))))
+            ->flip()
+            ->toArray();
+
         $grupos = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')->get()->keyBy('idGrupoProducto');
         $marcas = \App\Models\Catalogo\MarcaProducto::all();
 
@@ -1417,8 +1785,20 @@ class DeltronApiService
             $sku = strtoupper(trim($item['sku'] ?? ''));
             if (empty($sku)) continue;
 
-            // Verificar si ya existe
+            $pn = strtoupper(trim($item['part_number'] ?? ''));
+            $pnClean = preg_replace('/[^A-Z0-9]/', '', $pn);
+
+            $modeloReal = self::extraerModeloRealDesdeSpecs($item['specs_all_html'] ?? ($item['specs_html'] ?? ''));
+            $modClean = $modeloReal ? preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($modeloReal))) : '';
+
+            // Verificar si ya existe registrado en Unike
             if (isset($existingSkus[$sku]) || isset($existingModelos[$sku])) {
+                continue;
+            }
+            if (!empty($pnClean) && isset($existingPartNumbers[$pnClean])) {
+                continue;
+            }
+            if (!empty($modClean) && (isset($existingModelos[$modClean]) || isset($existingPartNumbers[$modClean]))) {
                 continue;
             }
 
@@ -1450,6 +1830,12 @@ class DeltronApiService
                 $idMarca = $this->emparejarMarca($item['brand_name'] ?? '', $marcas);
                 $marcaObj = $marcas->firstWhere('idMarca', $idMarca);
 
+                // Deteccion de variantes (color/modelo)
+                $variante = self::detectarVarianteDeltron($item);
+                $baseInfo = self::extraerModeloBaseYNombrePadre($item, $variante);
+                $basePn = $baseInfo['part_number_base'];
+                $familiaKey = $idMarca . '|' . $basePn;
+
                 // Obtener Foto 1 (Principal) valida
                 $foto1 = null;
                 $imgListado = $item['images']['image_listado'] ?? null;
@@ -1472,6 +1858,7 @@ class DeltronApiService
                 $candidatos[] = [
                     'sku' => $sku,
                     'part_number' => $item['part_number'] ?? $sku,
+                    'modelo_real' => $modeloReal,
                     'name' => self::obtenerTituloComercialDeltron($item),
                     'deltron_name' => self::cleanDeltronText($item['name'] ?? ''),
                     'brand_name' => $item['brand_name'] ?? ($marcaObj ? $marcaObj->nombreMarca : 'Teros'),
@@ -1487,8 +1874,16 @@ class DeltronApiService
                     'lima_hay_mas' => $limaHayMas,
                     'foto1_url' => $foto1,
                     'mini_code' => $item['mini_code'] ?? null,
-                    'warranty' => $item['warranty'] ?? '12 meses',
-                    'description' => !empty($item['description_large']) ? self::cleanDeltronText($item['description_large']) : ''
+                    'warranty' => self::normalizarGarantiaDeltron($item['warranty'] ?? null),
+                    'description' => self::construirDescripcionProducto($item),
+                    'es_variante' => ($variante !== null),
+                    'familia_key' => $familiaKey,
+                    'part_number_base' => $basePn,
+                    'modelo_base' => $baseInfo['modelo_base'],
+                    'nombre_padre' => $baseInfo['nombre_padre'],
+                    'tipo_variante' => $variante['tipo'] ?? null,
+                    'valor_variante' => $variante['valor'] ?? null,
+                    'codigo_color_hex' => $variante['hex'] ?? null,
                 ];
             }
         }
@@ -1497,7 +1892,221 @@ class DeltronApiService
     }
 
     /**
+     * Obtiene los productos candidatos del catalogo completo de Deltron que no existen en Unike,
+     * paginados de 100 en 100 y optimizados para minimo uso de memoria RAM.
+     */
+    public function getCandidatosCatalogoPaginado(array $filtros = [], int $page = 1, int $perPage = 100): array
+    {
+        @ini_set('memory_limit', '512M');
+
+        $cat = $this->getCatalogo();
+        if (empty($cat)) {
+            $snapshotPath = storage_path('app/deltron_catalogo_snapshot.json');
+            if (file_exists($snapshotPath)) {
+                $cat = @json_decode(file_get_contents($snapshotPath), true) ?: [];
+            }
+        }
+
+        if (empty($cat)) {
+            return [
+                'total' => 0,
+                'page' => $page,
+                'per_page' => $perPage,
+                'last_page' => 1,
+                'items' => [],
+            ];
+        }
+
+        // Cargar indices existentes de Unike de forma ligera
+        $existingSkus = \App\Models\Inventario\InventarioProveedorSku::whereNotNull('sku_proveedor')
+            ->pluck('sku_proveedor')
+            ->map(fn($s) => strtoupper(trim($s)))
+            ->flip()
+            ->toArray();
+
+        $existingModelos = Producto::whereNotNull('modelo')
+            ->pluck('modelo')
+            ->map(fn($m) => strtoupper(trim($m)))
+            ->flip()
+            ->toArray();
+
+        $existingPartNumbers = Producto::whereNotNull('partNumber')
+            ->pluck('partNumber')
+            ->map(fn($pn) => preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($pn))))
+            ->flip()
+            ->toArray();
+
+        $query = strtoupper(trim($filtros['query'] ?? ''));
+        $soloConStock = !empty($filtros['solo_con_stock']);
+        $filtroMarca = strtoupper(trim($filtros['marca'] ?? ''));
+
+        // Filtrado preliminar liviano
+        $candidatosCrudos = [];
+
+        foreach ($cat as $item) {
+            $sku = strtoupper(trim($item['sku'] ?? ''));
+            if (empty($sku)) continue;
+
+            $pn = strtoupper(trim($item['part_number'] ?? ''));
+            $pnClean = preg_replace('/[^A-Z0-9]/', '', $pn);
+
+            // Verificar si ya existe en Unike
+            if (isset($existingSkus[$sku]) || isset($existingModelos[$sku])) {
+                continue;
+            }
+            if (!empty($pnClean) && isset($existingPartNumbers[$pnClean])) {
+                continue;
+            }
+
+            // Calcular stock total
+            $totalStock = 0;
+            $limaStock = 0;
+            $limaHayMas = false;
+            foreach ($item['stock']['almacenes'] ?? [] as $alm) {
+                $cant = (int)($alm['cantidad'] ?? 0);
+                $totalStock += $cant;
+                $almName = strtoupper($alm['almacen_name'] ?? '');
+                if (str_contains($almName, 'LIMA')) {
+                    $limaStock += $cant;
+                    if (!empty($alm['hay_mas'])) {
+                        $limaHayMas = true;
+                    }
+                }
+            }
+
+            if ($soloConStock && $totalStock <= 0 && !$limaHayMas) {
+                continue;
+            }
+
+            $itemMarca = strtoupper(trim($item['brand_name'] ?? ''));
+            if ($filtroMarca !== '' && $itemMarca !== $filtroMarca) {
+                continue;
+            }
+
+            // Filtro de busqueda si se proporciona
+            if ($query !== '') {
+                $nombre = strtoupper($item['name'] ?? '');
+                $categoria = strtoupper($item['category_name'] ?? '');
+                if (
+                    !str_contains($sku, $query) &&
+                    !str_contains($pn, $query) &&
+                    !str_contains($nombre, $query) &&
+                    !str_contains($itemMarca, $query) &&
+                    !str_contains($categoria, $query)
+                ) {
+                    continue;
+                }
+            }
+
+            $candidatosCrudos[] = [
+                'raw' => $item,
+                'sku' => $sku,
+                'pn' => $pn,
+                'totalStock' => $totalStock,
+                'limaStock' => $limaStock,
+                'limaHayMas' => $limaHayMas,
+            ];
+        }
+
+        $total = count($candidatosCrudos);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min($page, $lastPage));
+        $offset = ($page - 1) * $perPage;
+
+        $sliced = array_slice($candidatosCrudos, $offset, $perPage);
+
+        // Procesar en detalle SOLO los 100 items de la pagina actual
+        $grupos = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')->get()->keyBy('idGrupoProducto');
+        $marcas = \App\Models\Catalogo\MarcaProducto::all();
+
+        $itemsProcesados = [];
+
+        foreach ($sliced as $c) {
+            $item = $c['raw'];
+            $sku = $c['sku'];
+            $pn = $c['pn'];
+            $totalStock = $c['totalStock'];
+            $limaStock = $c['limaStock'];
+            $limaHayMas = $c['limaHayMas'];
+
+            $modeloReal = self::extraerModeloRealDesdeSpecs($item['specs_all_html'] ?? ($item['specs_html'] ?? ''));
+
+            $clasif = $this->clasificarGrupoSugerido($item, $grupos);
+            $idMarca = $this->emparejarMarca($item['brand_name'] ?? '', $marcas);
+            $marcaObj = $marcas->firstWhere('idMarca', $idMarca);
+
+            // Deteccion de variantes (color/modelo)
+            $variante = self::detectarVarianteDeltron($item);
+            $baseInfo = self::extraerModeloBaseYNombrePadre($item, $variante);
+            $basePn = $baseInfo['part_number_base'];
+            $familiaKey = $idMarca . '|' . $basePn;
+
+            // Foto 1
+            $foto1 = null;
+            $imgListado = $item['images']['image_listado'] ?? null;
+            if (is_string($imgListado) && !empty($imgListado) && !str_contains($imgListado, 'blanco.jpg')) {
+                $foto1 = $imgListado;
+            }
+            if (!$foto1 && !empty($item['images']['images_carrusel']) && is_array($item['images']['images_carrusel'])) {
+                foreach ($item['images']['images_carrusel'] as $cr) {
+                    $cUrl = is_string($cr) ? $cr : ($cr['url'] ?? ($cr['image'] ?? null));
+                    if (is_string($cUrl) && !empty($cUrl) && !str_contains($cUrl, 'blanco.jpg')) {
+                        $foto1 = $cUrl;
+                        break;
+                    }
+                }
+            }
+            if (!$foto1) {
+                $foto1 = self::obtenerUrlCdnDeltron($sku);
+            }
+
+            $price = (float)($item['price'] ?? 0);
+            $pricePromo = isset($item['price_promo']) && $item['price_promo'] !== null ? (float)$item['price_promo'] : null;
+
+            $itemsProcesados[] = [
+                'sku' => $sku,
+                'part_number' => $item['part_number'] ?? $sku,
+                'modelo_real' => $modeloReal,
+                'name' => self::obtenerTituloComercialDeltron($item),
+                'deltron_name' => self::cleanDeltronText($item['name'] ?? ''),
+                'brand_name' => $item['brand_name'] ?? ($marcaObj ? $marcaObj->nombreMarca : 'Teros'),
+                'idMarca' => $idMarca,
+                'idGrupo' => $clasif['idGrupo'],
+                'nombreGrupo' => $clasif['nombreGrupo'],
+                'idCategoria' => $clasif['idCategoria'],
+                'nombreCategoria' => $clasif['nombreCategoria'],
+                'price' => $price,
+                'price_promo' => $pricePromo ?: ($item['promociones'][0]['precio'] ?? null),
+                'total_stock' => $totalStock,
+                'lima_stock' => $limaStock,
+                'lima_hay_mas' => $limaHayMas,
+                'foto1_url' => $foto1,
+                'mini_code' => $item['mini_code'] ?? null,
+                'warranty' => self::normalizarGarantiaDeltron($item['warranty'] ?? null),
+                'description' => self::construirDescripcionProducto($item),
+                'es_variante' => ($variante !== null),
+                'familia_key' => $familiaKey,
+                'part_number_base' => $basePn,
+                'modelo_base' => $baseInfo['modelo_base'],
+                'nombre_padre' => $baseInfo['nombre_padre'],
+                'tipo_variante' => $variante['tipo'] ?? null,
+                'valor_variante' => $variante['valor'] ?? null,
+                'codigo_color_hex' => $variante['hex'] ?? null,
+            ];
+        }
+
+        return [
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $lastPage,
+            'items' => $itemsProcesados,
+        ];
+    }
+
+    /**
      * Importa un micro-lote de productos seleccionados descargando la Foto 1 en WebP 800x800.
+     * Soporta la creacion automatica de productos contenedores Padre y sus variantes Hijas (Colores).
      */
     public function importarLoteOfertas(array $itemsAImportar): array
     {
@@ -1526,14 +2135,14 @@ class DeltronApiService
             }
 
             try {
-                \Illuminate\Support\Facades\DB::transaction(function () use ($itemData, $sku, $imgService, $destinationPath, $grupos, $almacenes, &$importados) {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($itemData, $sku, $imgService, $destinationPath, $grupos, $almacenes, $itemsAImportar, &$importados) {
                     $idGrupo = (int)($itemData['idGrupo'] ?? 25);
                     $grupoObj = $grupos->get($idGrupo);
                     $nombreGrupo = $grupoObj ? $grupoObj->nombreGrupo : 'Perifericos';
 
                     $idMarca = (int)($itemData['idMarca'] ?? 1);
                     $pn = substr(self::cleanDeltronText($itemData['part_number'] ?? $sku), 0, 50);
-                    
+
                     // Asegurar titulo comercial limpio
                     $nombre = !empty($itemData['name']) ? trim(self::cleanDeltronText($itemData['name'])) : '';
                     if (empty($nombre) || (mb_strlen($nombre) <= 30 && strtoupper($nombre) === $nombre)) {
@@ -1541,7 +2150,7 @@ class DeltronApiService
                     }
                     $nombre = substr($nombre, 0, 200);
 
-                    // Regla de negocio: Usar siempre el precio mas alto (precio lista B2B base, NO el precio de oferta/promocion)
+                    // Regla de negocio: Usar siempre el precio mas alto (precio lista B2B base, NO el de promo)
                     $precioLista = (float)($itemData['price'] ?? 0);
                     $precioPromo = (float)($itemData['price_promo'] ?? 0);
                     $precioDolar = max($precioLista, $precioPromo);
@@ -1549,9 +2158,80 @@ class DeltronApiService
                         $precioDolar = $precioLista > 0 ? $precioLista : $precioPromo;
                     }
 
+                    // Logica de variantes: comprobar si este item debe enlazarse a un Contenedor Padre
+                    $esVariante = !empty($itemData['es_variante']) && !empty($itemData['valor_variante']);
+                    $basePn = !empty($itemData['part_number_base']) ? trim($itemData['part_number_base']) : $pn;
+                    $nombrePadre = !empty($itemData['nombre_padre']) ? trim($itemData['nombre_padre']) : $nombre;
+                    $modeloBase = !empty($itemData['modelo_base']) ? trim($itemData['modelo_base']) : $basePn;
+
+                    $padre = null;
+                    if ($esVariante) {
+                        $padre = Producto::where('es_padre', 1)
+                            ->where('partNumber', $basePn)
+                            ->where('idMarca', $idMarca)
+                            ->first();
+
+                        if (!$padre) {
+                            $familiaKey = $itemData['familia_key'] ?? ($idMarca . '|' . $basePn);
+                            $coincidentesEnLote = array_filter($itemsAImportar, function($it) use ($familiaKey, $idMarca, $basePn) {
+                                $fk = $it['familia_key'] ?? ($idMarca . '|' . ($it['part_number_base'] ?? ($it['part_number'] ?? '')));
+                                return $fk === $familiaKey;
+                            });
+
+                            if (count($coincidentesEnLote) >= 2 || !empty($itemData['forzar_padre'])) {
+                                $lastIdPadre = Producto::max('idProducto') ?? 0;
+                                $idPadre = $lastIdPadre + 1;
+                                $codigoPadre = $this->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+
+                                $descPadre = !empty($itemData['description']) ? self::cleanDeltronText($itemData['description']) : $nombrePadre;
+                                $descPadre = self::recortarTextoEnLinea($descPadre, 5000);
+
+                                $padre = Producto::create([
+                                    'idProducto' => $idPadre,
+                                    'nombreProducto' => substr($nombrePadre, 0, 200),
+                                    'codigoProducto' => $codigoPadre,
+                                    'UPC' => '0',
+                                    'partNumber' => substr($basePn, 0, 50),
+                                    'idMarca' => $idMarca,
+                                    'idGrupo' => $idGrupo,
+                                    'modelo' => substr($modeloBase, 0, 70),
+                                    'precioDolar' => $precioDolar,
+                                    'gananciaExtra' => 0.00,
+                                    'garantia' => self::normalizarGarantiaDeltron($itemData['warranty'] ?? null),
+                                    'descripcionProducto' => $descPadre,
+                                    'imagenProducto1' => 'noimagen.webp',
+                                    'imagenProducto2' => null,
+                                    'imagenProducto3' => null,
+                                    'imagenProducto4' => null,
+                                    'estadoProductoWeb' => 'DISPONIBLE',
+                                    'stockMin' => 1,
+                                    'usar_tc_fijo' => 1,
+                                    'es_padre' => 1,
+                                    'idProductoPadre' => null,
+                                ]);
+                                $idPadre = $padre->idProducto;
+
+                                \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+                                    ['idProducto' => $idPadre],
+                                    [
+                                        'mostrarPrecioWeb' => true,
+                                        'tipo_variante' => $itemData['tipo_variante'] ?? 'COLOR'
+                                    ]
+                                );
+
+                                foreach ($almacenes as $alm) {
+                                    \App\Models\Inventario\Inventario::create([
+                                        'idProducto' => $idPadre,
+                                        'idAlmacen' => $alm->idAlmacen,
+                                        'stock' => 0
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+
                     $lastId = Producto::max('idProducto') ?? 0;
                     $idProducto = $lastId + 1;
-
                     $codigo = $this->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
 
                     // Descargar Foto 1 (Principal) en WebP 800x800
@@ -1573,24 +2253,38 @@ class DeltronApiService
                         }
                     }
 
-                    $desc = !empty($itemData['description']) ? self::cleanDeltronText($itemData['description']) : $nombre;
-                    if (strlen($desc) > 5000) {
-                        $desc = substr($desc, 0, 4997) . '...';
+                    // Titulo y relaciones segun si es variante de un padre o producto simple
+                    if ($padre) {
+                        $nombreFinal = substr($padre->nombreProducto . ' - ' . ($itemData['valor_variante'] ?? 'Color'), 0, 200);
+                        $esPadreVal = 0;
+                        $idPadreVal = $padre->idProducto;
+
+                        if ($padre->imagenProducto1 === 'noimagen.webp' && $foto1Final !== 'noimagen.webp') {
+                            $padre->imagenProducto1 = $foto1Final;
+                            $padre->save();
+                        }
+                    } else {
+                        $nombreFinal = $nombre;
+                        $esPadreVal = 0;
+                        $idPadreVal = null;
                     }
+
+                    $desc = !empty($itemData['description']) ? self::cleanDeltronText($itemData['description']) : $nombreFinal;
+                    $desc = self::recortarTextoEnLinea($desc, 5000);
 
                     // 1. Crear Producto
                     $prod = Producto::create([
                         'idProducto' => $idProducto,
-                        'nombreProducto' => $nombre,
+                        'nombreProducto' => $nombreFinal,
                         'codigoProducto' => $codigo,
                         'UPC' => '0',
                         'partNumber' => $pn,
                         'idMarca' => $idMarca,
                         'idGrupo' => $idGrupo,
-                        'modelo' => substr($sku, 0, 70),
+                        'modelo' => substr($itemData['modelo_real'] ?? ($pn ?: $sku), 0, 70),
                         'precioDolar' => $precioDolar,
                         'gananciaExtra' => 0.00,
-                        'garantia' => substr($itemData['warranty'] ?? '12 meses', 0, 50),
+                        'garantia' => self::normalizarGarantiaDeltron($itemData['warranty'] ?? null),
                         'descripcionProducto' => $desc,
                         'imagenProducto1' => $foto1Final,
                         'imagenProducto2' => null,
@@ -1599,12 +2293,22 @@ class DeltronApiService
                         'estadoProductoWeb' => 'DISPONIBLE',
                         'stockMin' => 1,
                         'usar_tc_fijo' => 1,
+                        'es_padre' => $esPadreVal,
+                        'idProductoPadre' => $idPadreVal,
                     ]);
+                    $idProducto = $prod->idProducto;
 
                     // 2. Crear DetalleProducto
+                    $detalleData = ['mostrarPrecioWeb' => true];
+                    if ($padre && !empty($itemData['valor_variante'])) {
+                        $detalleData['tipo_variante'] = $itemData['tipo_variante'] ?? 'COLOR';
+                        $detalleData['valor_variante'] = $itemData['valor_variante'];
+                        $detalleData['codigo_color_hex'] = $itemData['codigo_color_hex'] ?? null;
+                    }
+
                     \App\Models\Catalogo\DetalleProducto::updateOrCreate(
                         ['idProducto' => $idProducto],
-                        ['mostrarPrecioWeb' => true]
+                        $detalleData
                     );
 
                     // 3. Crear registros de inventario fisico en cero para cada almacen local
@@ -1649,9 +2353,12 @@ class DeltronApiService
                         'idProducto' => $idProducto,
                         'sku' => $sku,
                         'codigoProducto' => $codigo,
-                        'nombreProducto' => $nombre,
+                        'nombreProducto' => $nombreFinal,
                         'precioDolar' => $precioDolar,
-                        'foto1' => $foto1Final
+                        'foto1' => $foto1Final,
+                        'es_variante' => ($padre !== null),
+                        'idProductoPadre' => $padre ? $padre->idProducto : null,
+                        'codigoPadre' => $padre ? $padre->codigoProducto : null,
                     ];
                 });
             } catch (\Exception $e) {

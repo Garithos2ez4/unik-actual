@@ -6,7 +6,9 @@
             if (elem) {
                 const originalClass = elem.className;
                 elem.className = 'bi bi-check-lg text-success';
-                setTimeout(() => { elem.className = originalClass; }, 1500);
+                setTimeout(() => {
+                    elem.className = originalClass;
+                }, 1500);
             }
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
@@ -27,37 +29,39 @@
         if (promoInput) {
             promoInput.addEventListener('keyup', filterPromociones);
         }
+        filterPromociones();
 
-        // Listener para los botones de Ver Almacenes
-        document.querySelectorAll('.btn-check-stock').forEach(button => {
-            button.addEventListener('click', function() {
-                const sku = this.getAttribute('data-sku') || '';
-                const pn = this.getAttribute('data-pn') || '';
-                const title = this.getAttribute('data-title') || this.getAttribute('data-name') || 'Detalle del Producto';
-                const initialPrice = this.getAttribute('data-price') || '';
-
-                abrirModalAlmacenes(sku, pn, title, initialPrice, this);
-            });
-        });
-
-        // Listener para botones de Ver Combo / Detalle Promoción (API-0000025)
+        // Listener delegado para los botones de Ver Almacenes y Ficha Técnica
         document.addEventListener('click', function(e) {
-            const btn = e.target.closest('.btn-promo-detail');
-            if (btn) {
-                const promoId = btn.getAttribute('data-promo-id');
+            const btnAlm = e.target.closest('.btn-check-stock');
+            if (btnAlm) {
+                e.preventDefault();
+                const sku = btnAlm.getAttribute('data-sku') || '';
+                const pn = btnAlm.getAttribute('data-pn') || '';
+                const title = btnAlm.getAttribute('data-title') || btnAlm.getAttribute('data-name') || 'Detalle del Producto';
+                const initialPrice = btnAlm.getAttribute('data-price') || '';
+                abrirModalAlmacenes(sku, pn, title, initialPrice, btnAlm);
+                return;
+            }
+
+            const btnFicha = e.target.closest('.btn-view-ficha');
+            if (btnFicha) {
+                e.preventDefault();
+                const sku = btnFicha.getAttribute('data-sku') || '';
+                const pn = btnFicha.getAttribute('data-pn') || '';
+                abrirModalFichaSku(sku, pn, false, btnFicha);
+                return;
+            }
+
+            const btnPromo = e.target.closest('.btn-promo-detail');
+            if (btnPromo) {
+                e.preventDefault();
+                const promoId = btnPromo.getAttribute('data-promo-id');
                 if (promoId) {
                     abrirModalPromocionDetalle(promoId, false);
                 }
+                return;
             }
-        });
-
-        // Listener para los botones de Ver Ficha Técnica (API-0000027)
-        document.querySelectorAll('.btn-view-ficha').forEach(button => {
-            button.addEventListener('click', function() {
-                const sku = this.getAttribute('data-sku') || '';
-                const pn = this.getAttribute('data-pn') || '';
-                abrirModalFichaSku(sku, pn, false, this);
-            });
         });
 
         // Listener para forzar refresco de ficha técnica desde API Deltron
@@ -92,13 +96,19 @@
     });
 
     function filterPromociones() {
-        const term = document.getElementById('promoSearchInput').value.toLowerCase().trim();
+        const termInput = document.getElementById('promoSearchInput');
+        const term = termInput ? termInput.value.toLowerCase().trim() : '';
+        const soloConStock = document.getElementById('filterSoloConStock')?.checked ?? false;
         const rows = document.querySelectorAll('#promosTable tbody .promo-row');
         let visible = 0;
 
         rows.forEach(row => {
             const text = row.innerText.toLowerCase();
-            if (text.includes(term)) {
+            const matchesText = !term || text.includes(term);
+            const tieneStock = row.getAttribute('data-tiene-stock') === '1';
+            const matchesStock = !soloConStock || tieneStock;
+
+            if (matchesText && matchesStock) {
                 row.style.display = '';
                 visible++;
             } else {
@@ -138,7 +148,7 @@
 
         // Hacer petición AJAX a DeltronController::consultarTiempoReal
         const queryParam = sku || pn;
-        fetch(`/compras/deltron/consultar-tiempo-real?sku=${encodeURIComponent(queryParam)}&part_number=${encodeURIComponent(pn)}`)
+        fetch(`{{ route('compras.deltron.consultar') }}?sku=${encodeURIComponent(queryParam)}&part_number=${encodeURIComponent(pn)}`)
             .then(res => res.json())
             .then(data => {
                 document.getElementById('almLoading').style.display = 'none';
@@ -180,10 +190,10 @@
                         almPrecioPromoUsd.innerText = '$' + precioPromoVal.toFixed(2);
                         almPrecioPromoUsd.className = 'fs-4 fw-bold text-success';
                         almCardPromoSub.innerHTML = `+ IGV: <span class="fw-semibold text-dark">$${(precioPromoVal * 1.18).toFixed(2)}</span> <span class="badge bg-danger rounded-pill ms-1">Ahorro $${ahorro.toFixed(2)}</span>`;
-                        almCardPromoBox.className = 'p-2 border border-success rounded text-center bg-success bg-opacity-10 h-100 shadow-xs';
+                        almCardPromoBox.className = 'p-2 border border-warning rounded text-center bg-warning bg-opacity-10 h-100 shadow-xs';
                         almPrecioUsd.style.textDecoration = 'line-through';
                         almPrecioUsd.className = 'fs-4 fw-bold text-muted';
-                        
+
                         if (almPromoAlert) {
                             almPromoAlert.style.display = 'flex';
                             document.getElementById('almPromoDetails').innerText = `Precio especial $${precioPromoVal.toFixed(2)} USD (sin IGV) activo. Ahorro de $${ahorro.toFixed(2)} USD frente al costo de lista.`;
@@ -310,7 +320,7 @@
 
         modal.show();
 
-        const url = `/compras/deltron/promocion-detalle/${encodeURIComponent(promoId)}${forceRefresh ? '?force=1' : ''}`;
+        const url = `{{ route('compras.deltron.promocion.detalle') }}?promo_id=${encodeURIComponent(promoId)}${forceRefresh ? '&force=1' : ''}`;
 
         fetch(url)
             .then(res => res.json())
@@ -338,22 +348,30 @@
                         vigenciaContainer.innerHTML = '<span class="badge bg-success rounded-pill px-2"><i class="bi bi-check-circle me-1"></i> Vigente</span>';
                     }
 
-                    // Total combos
+                    // Total combos y Alerta si está agotado
                     const stockTotal = data.stock_total_promo ?? 0;
-                    document.getElementById('promoDetalleStockTotal').innerText = stockTotal;
+                    const stockEl = document.getElementById('promoDetalleStockTotal');
+                    if (stockEl) {
+                        stockEl.innerText = stockTotal;
+                        stockEl.className = stockTotal > 0 ? 'fw-bold text-primary my-2' : 'fw-bold text-danger my-2';
+                    }
+                    const alertAgotado = document.getElementById('promoAgotadoAlert');
+                    if (alertAgotado) {
+                        alertAgotado.style.display = stockTotal === 0 ? 'flex' : 'none';
+                    }
 
                     // Origen
                     const origenContainer = document.getElementById('promoDetalleOrigenBadge');
                     if (data.origen === 'base_de_datos') {
                         origenContainer.innerHTML = `
-                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 rounded-pill px-2 py-1">
+                            <span class="badge rounded-pill px-2 py-1" style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;">
                                 <i class="bi bi-database-check me-1"></i> Base de Datos (0 llamadas API)
                             </span>
                         `;
                         document.getElementById('promoDetalleActualizadoAt').innerText = data.actualizado_at ? 'Guardado: ' + data.actualizado_at : 'Reutilizado de BD';
                     } else {
                         origenContainer.innerHTML = `
-                            <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1">
+                            <span class="badge rounded-pill px-2 py-1" style="background-color: #e7f1ff; color: #0d6efd; border: 1px solid #b6d4fe;">
                                 <i class="bi bi-cloud-check me-1"></i> Deltron API en Vivo
                             </span>
                         `;
@@ -459,10 +477,11 @@
                     const mainRow = document.querySelector(`.promo-row[data-promo-id="${promoId}"]`);
                     if (mainRow) {
                         // Badge BD
+                        mainRow.setAttribute('data-tiene-stock', stockTotal > 0 ? '1' : '0');
                         const tdId = mainRow.querySelector('td:nth-child(1)');
                         if (tdId && !tdId.querySelector('.bi-check2')) {
                             const badgeBd = document.createElement('span');
-                            badgeBd.className = 'badge bg-success bg-opacity-25 text-success rounded-pill ms-1';
+                            badgeBd.className = 'badge bg-success text-white rounded-pill ms-1';
                             badgeBd.title = 'Detalle sincronizado en base de datos';
                             badgeBd.innerHTML = '<i class="bi bi-check2"></i> BD';
                             tdId.appendChild(badgeBd);
@@ -472,9 +491,11 @@
                         const divBadges = mainRow.querySelector('td:nth-child(2) div');
                         if (divBadges) {
                             divBadges.innerHTML = `
-                                ${precio > 0 ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="bi bi-tag-fill me-1"></i>Precio Promo: $${precio.toFixed(2)}</span>` : ''}
+                                ${stockTotal > 0 
+                                    ? `<span class="badge rounded-pill" style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;"><i class="bi bi-box-seam me-1"></i>Stock: ${stockTotal} combos</span>`
+                                    : `<span class="badge bg-danger text-white rounded-pill"><i class="bi bi-x-circle me-1"></i>Sin stock / Agotado</span>`}
+                                ${precio > 0 ? `<span class="badge rounded-pill" style="background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5;"><i class="bi bi-tag-fill me-1"></i>Precio Promo: $${precio.toFixed(2)}</span>` : ''}
                                 ${data.fecha_fin ? `<span class="badge bg-light text-secondary border"><i class="bi bi-calendar-event me-1"></i>Fin: ${data.fecha_fin.split(' ')[0]}</span>` : ''}
-                                <span class="badge ${stockTotal > 0 ? 'bg-primary' : 'bg-secondary'} bg-opacity-10 ${stockTotal > 0 ? 'text-primary' : 'text-muted'} border border-primary border-opacity-25"><i class="bi bi-box-seam me-1"></i>${stockTotal} combos disponibles</span>
                             `;
                         }
                     }
@@ -544,9 +565,9 @@
         const btnForce = document.getElementById('btnForceFichaRefresh');
         if (btnForce) {
             btnForce.disabled = forceRefresh;
-            btnForce.innerHTML = forceRefresh 
-                ? '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Consultando Deltron API...'
-                : '<i class="bi bi-arrow-clockwise me-1"></i> Actualizar desde Deltron API';
+            btnForce.innerHTML = forceRefresh ?
+                '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Consultando Deltron API...' :
+                '<i class="bi bi-arrow-clockwise me-1"></i> Actualizar desde Deltron API';
         }
 
         // Seleccionar por defecto la pestaña 1 (Especificaciones)
@@ -559,7 +580,7 @@
         modal.show();
 
         const queryParam = sku || pn;
-        const url = `/compras/deltron/ficha-sku/${encodeURIComponent(queryParam)}?part_number=${encodeURIComponent(pn || '')}${forceRefresh ? '&force=1' : ''}`;
+        const url = `{{ route('compras.deltron.ficha.sku') }}?sku=${encodeURIComponent(queryParam)}&part_number=${encodeURIComponent(pn || '')}${forceRefresh ? '&force=1' : ''}`;
 
         fetch(url)
             .then(res => res.json())
@@ -641,13 +662,13 @@
                     const origenBox = document.getElementById('fichaOrigenBadge');
                     if (data.origen === 'base_de_datos') {
                         origenBox.innerHTML = `
-                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 rounded-pill px-2 py-1">
+                            <span class="badge rounded-pill px-2 py-1" style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;">
                                 <i class="bi bi-database-check me-1"></i> Base de Datos (0 llamadas API)
                             </span>
                         `;
                     } else {
                         origenBox.innerHTML = `
-                            <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1">
+                            <span class="badge rounded-pill px-2 py-1" style="background-color: #e7f1ff; color: #0d6efd; border: 1px solid #b6d4fe;">
                                 <i class="bi bi-cloud-check me-1"></i> Deltron API en Vivo
                             </span>
                         `;
@@ -726,12 +747,18 @@
                     const imagesList = [];
 
                     if (data.images && data.images.listado) {
-                        imagesList.push({ url: data.images.listado, title: 'Imagen Principal de Catálogo' });
+                        imagesList.push({
+                            url: data.images.listado,
+                            title: 'Imagen Principal de Catálogo'
+                        });
                     }
                     if (data.images && Array.isArray(data.images.carrusel)) {
                         data.images.carrusel.forEach((u, i) => {
                             if (u && u !== data.images.listado) {
-                                imagesList.push({ url: u, title: `Vista Detallada ${i + 1}` });
+                                imagesList.push({
+                                    url: u,
+                                    title: `Vista Detallada ${i + 1}`
+                                });
                             }
                         });
                     }
@@ -909,9 +936,9 @@
             e.preventDefault();
             const esCatalogo = tipo === 'catalogo';
             const titulo = esCatalogo ? '¿Descargar Catálogo Completo de Deltron?' : '¿Sincronizar Inicio de Día?';
-            const desc = esCatalogo 
-                ? 'Esta acción descargará todo el catálogo de Deltron (25,000+ ítems), mapeará los SKUs oficiales, Mini Códigos y stock de tus productos. Puede tardar entre 20 y 40 segundos.'
-                : 'Esta acción actualizará el stock, precios vigentes y promociones del corte de hoy. Tarda unos 5 a 10 segundos.';
+            const desc = esCatalogo ?
+                'Esta acción descargará todo el catálogo de Deltron (25,000+ ítems), mapeará los SKUs oficiales, Mini Códigos y stock de tus productos. Puede tardar entre 20 y 40 segundos.' :
+                'Esta acción actualizará el stock, precios vigentes y promociones del corte de hoy. Tarda unos 5 a 10 segundos.';
 
             Swal.fire({
                 title: titulo,

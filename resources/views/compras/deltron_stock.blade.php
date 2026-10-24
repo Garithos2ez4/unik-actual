@@ -33,6 +33,11 @@
                     <i class="bi bi-box-arrow-in-down me-1"></i> Importar Ofertas (+100 Stock Lima)
                 </button>
 
+                <!-- Modal Importar Catálogo Completo (Por Lotes de 100) -->
+                <button type="button" class="btn btn-sm btn-primary text-white rounded-pill px-3 shadow-xs fw-semibold" onclick="abrirModalImportacionCatalogo()" title="Explorar e importar productos del catálogo completo de Deltron de 100 en 100">
+                    <i class="bi bi-collection-fill me-1"></i> Importar Catálogo Completo (100 en 100)
+                </button>
+
                 <!-- Modal Promociones y Recomendados -->
                 <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 shadow-xs fw-semibold" data-bs-toggle="modal" data-bs-target="#recomendadosModal" onclick="if(document.getElementById('tab-promos-link')) document.getElementById('tab-promos-link').click();" title="Ver promociones y oportunidades oficiales de Deltron">
                     <i class="bi bi-tag-fill text-warning me-1"></i> Promociones B2B 
@@ -397,6 +402,7 @@
 
 <!-- Modales de Soporte (Componentes) -->
 @include('compras.components.modal_importar_ofertas')
+@include('compras.components.modal_importar_catalogo')
 @include('compras.components.modal_almacenes')
 @include('compras.components.modal_historial')
 @include('compras.components.modal_ofertas')

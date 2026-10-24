@@ -10,6 +10,7 @@ use App\Services\ComprobanteServiceInterface;
 use App\Services\HeaderServiceInterface;
 use App\Services\DivisionPackServiceInterface;
 use App\Services\UnionPackServiceInterface;
+use App\Models\Catalogo\Producto;
 
 class IngresoController extends Controller
 {
@@ -101,6 +102,24 @@ class IngresoController extends Controller
         foreach ($userModel->Accesos as $acceso) {
             if ($acceso->idVista == 8) {
                 if ($datacomprobante) {
+                    // Verificacion: Ningun producto en detalle puede ser un producto contenedor padre (es_padre == 1)
+                    if (is_array($detalle)) {
+                        foreach ($detalle as $item) {
+                            $idProd = $item['producto'] ?? null;
+                            if ($idProd) {
+                                $producto = Producto::find($idProd);
+                                if ($producto && $producto->es_padre) {
+                                    $this->headerService->sendFlashAlerts(
+                                        'Producto no valido',
+                                        "El producto '{$producto->nombreProducto}' ({$producto->modelo}) es un contenedor Padre/Base de variantes y no puede recibir stock fisico directo. Debe ingresar el stock a sus variantes individuales de color o modelo.",
+                                        'warning',
+                                        'btn-danger'
+                                    );
+                                    return back();
+                                }
+                            }
+                        }
+                    }
 
                     $this->comprobanteService->updateComprobante(decrypt($comprobante), $datacomprobante, $detalle);
 

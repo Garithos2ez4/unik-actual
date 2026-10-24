@@ -11,6 +11,7 @@ use App\Repositories\IngresoProductoRepositoryInterface;
 use App\Repositories\InventarioRepositoryInterface;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use App\Models\Catalogo\Producto;
 
 class ComprobanteService implements ComprobanteServiceInterface
 {
@@ -94,6 +95,15 @@ class ComprobanteService implements ComprobanteServiceInterface
                 
                 $comprobante = $this->comprobanteRepository->update($id, $arrayComprobante);
                 foreach($details as $detail){
+                    $idProd = $detail['producto'] ?? null;
+                    if ($idProd) {
+                        $prod = Producto::find($idProd);
+                        if ($prod && $prod->es_padre) {
+                            // Los productos padre son contenedores virtuales y no reciben stock fisico
+                            continue;
+                        }
+                    }
+
                     $arrayDetalle = [
                     'idComprobante' => $id,
                     'idProducto' => $detail['producto'],
@@ -301,6 +311,11 @@ class ComprobanteService implements ComprobanteServiceInterface
         if($data){
             //Para actualizar stock
             $idProducto = $data['idProducto'];
+            $producto = Producto::find($idProducto);
+            if ($producto && $producto->es_padre) {
+                // Producto padre es solo un parametro/contenedor, no admite stock fisico
+                return;
+            }
             //Para el detalle del Comprobante
             $data['idDetalleComprobante'] = $this-> getNewIdDetalleComprobante();
             $detalle = $this->detalleComprobanteRepository->create($data);

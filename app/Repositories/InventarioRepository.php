@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use Illuminate\Support\Facades\DB;
 use App\Models\Inventario\Inventario;
+use App\Models\Catalogo\Producto;
 use Exception;
 
 class InventarioRepository implements InventarioRepositoryInterface
@@ -153,6 +154,12 @@ class InventarioRepository implements InventarioRepositoryInterface
     public function addStock(mixed $idProducto, mixed $idAlmacen)
     {
         try {
+            $producto = Producto::find($idProducto);
+            if ($producto && $producto->es_padre) {
+                // El producto padre es un contenedor y no almacena stock fisico directamente
+                return;
+            }
+
             $inventario = Inventario::where('idProducto', '=', $idProducto, 'and')
                 ->where('idAlmacen', '=', $idAlmacen, 'and')
                 ->first();
