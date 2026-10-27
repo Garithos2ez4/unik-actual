@@ -338,12 +338,16 @@
                     <i class="bi bi-palette me-1"></i>Variante: ${it.valor_variante}
                  </span>` : '';
 
+            const fotoPreview = (it.foto1_url && String(it.foto1_url).trim() !== '' && !String(it.foto1_url).includes('blanco.jpg'))
+                ? `<img src="${it.foto1_url}" alt="Foto" class="rounded border shadow-xs" style="width: 46px; height: 46px; object-fit: contain; background: #fff;" onerror="this.onerror=null; this.src='{{ asset('storage/noimagen.webp') }}';">`
+                : `<img src="{{ asset('storage/noimagen.webp') }}" alt="Foto" class="rounded border shadow-xs" style="width: 46px; height: 46px; object-fit: contain; opacity: 0.6;">`;
+
             tr.innerHTML = `
                 <td class="text-center">
                     <input class="form-check-input check-candidato-catalogo" type="checkbox" data-idx="${idx}" checked onchange="actualizarConteoCatalogo()">
                 </td>
                 <td class="text-center">
-                    <img src="${it.foto1_url}" alt="Foto" class="rounded border shadow-xs" style="width: 46px; height: 46px; object-fit: contain; background: #fff;" onerror="this.src='/storage/images/noimagen.webp'">
+                    ${fotoPreview}
                 </td>
                 <td>
                     <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-1">

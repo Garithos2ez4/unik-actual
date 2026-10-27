@@ -235,7 +235,17 @@
 
         // Buscar solo si el documento tiene 8 (DNI) o 11 (RUC) caracteres
         if (val.length === 8 || val.length === 11) {
-            fetch(`/formulario-envio/api/buscar-cliente/${val}`)
+            fetch(`/formulario-envio/api/buscar-cliente`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    token: '{{ $token }}',
+                    documento: val
+                })
+            })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {

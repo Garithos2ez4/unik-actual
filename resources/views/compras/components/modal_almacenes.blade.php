@@ -37,7 +37,7 @@
                 <!-- Contenido con Datos de Almacenes -->
                 <div id="almContent" style="display: none;">
                     <!-- Banner de Alerta si tiene Promoción Vigente (API-0000030) -->
-                    <div id="almPromoAlert" class="alert alert-warning py-2 px-3 mb-3 border-0 shadow-xs rounded-3 d-flex align-items-center justify-content-between" style="display: none;">
+                    <div id="almPromoAlert" class="alert alert-warning py-2 px-3 mb-3 border-0 shadow-xs rounded-3 align-items-center justify-content-between d-none" style="display: none;">
                         <div class="d-flex align-items-center">
                             <i class="bi bi-fire text-danger fs-4 me-2"></i>
                             <div>

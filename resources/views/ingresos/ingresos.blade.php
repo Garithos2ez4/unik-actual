@@ -21,7 +21,7 @@
         <div class="col-3 col-md-5 col-lg-3 text-end">
             <input type="month" class="form-control hidde-month" id="month" name="month" value="{{$fecha->format('Y-m')}}">
             <button class="btn btn-light border d-md-none" onclick="hiddeInputDate('month')">
-                <i class="bi bi-calendar3"></i> <!-- Ãcono de calendario -->
+                <i class="bi bi-calendar3"></i>
             </button>
         </div>
         <div class="col-10 col-lg-6">

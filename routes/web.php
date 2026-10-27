@@ -60,6 +60,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ScriptController;
 use App\Http\Controllers\TrasladoController;
 use App\Http\Controllers\FormularioPublicoController;
+use App\Http\Controllers\CatalogoPreciosPublicoController;
 
 Route::withoutMiddleware(['validate.session'])->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('login');
@@ -70,9 +71,18 @@ Route::withoutMiddleware(['validate.session'])->group(function () {
         Route::get('/api/provincias/{idDepartamento}', [FormularioPublicoController::class, 'provincias']);
         Route::get('/api/destinos/{idProvincia}', [FormularioPublicoController::class, 'destinos']);
         Route::get('/api/subagencias/{idAgencia}/{idDestino}', [FormularioPublicoController::class, 'subagencias']);
-        Route::get('/api/buscar-cliente/{documento}', [FormularioPublicoController::class, 'buscarCliente']);
+        Route::post('/api/buscar-cliente', [FormularioPublicoController::class, 'buscarCliente']);
+        Route::get('/api/buscar-cliente/{token}/{documento}', [FormularioPublicoController::class, 'buscarCliente']);
         Route::get('/{token}', [FormularioPublicoController::class, 'show'])->name('formulario.publico.show');
         Route::post('/{token}', [FormularioPublicoController::class, 'store'])->name('formulario.publico.store');
+    });
+
+    // Catálogo público de precios (PDF seguro con token cifrado)
+    Route::prefix('catalogo-precios')->group(function () {
+        Route::post('/generar-token', [CatalogoPreciosPublicoController::class, 'generarToken'])->name('catalogo.precios.token');
+        Route::get('/pdf/ver/{token}', [CatalogoPreciosPublicoController::class, 'verPdf'])->middleware('throttle:30,1')->name('catalogo.precios.pdf.ver');
+        Route::get('/pdf/descargar/{token}', [CatalogoPreciosPublicoController::class, 'descargarPdf'])->middleware('throttle:30,1')->name('catalogo.precios.pdf.descargar');
+        Route::get('/descargar/{token}', [CatalogoPreciosPublicoController::class, 'descargarPdf'])->middleware('throttle:30,1');
     });
 });
 

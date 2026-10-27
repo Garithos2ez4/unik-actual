@@ -13,7 +13,7 @@
     <div class="row mb-2 mt-3">
         <div class="col-6 col-md-3 col-lg-2 mb-2">
             <small>Marca</small>
-            <select class="form-select form-select-sm filtro-componente" name="filtro[marca]">
+            <select class="form-select form-select-sm filtro-componente" name="filtro[marca]" id="select-filtro-marca">
                 <option value="">Todos</option>
                 @foreach ($marcas as $marca)
                 <option value="{{ data_get($marca, 'idMarca') ?? data_get($marca, 'id') ?? '' }}" {{ request()->input('filtro.marca') == (data_get($marca, 'idMarca') ?? data_get($marca, 'id') ?? '') ? 'selected' : '' }}>

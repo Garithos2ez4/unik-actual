@@ -113,7 +113,7 @@ $gradientString = implode(', ', $gradientParts);
                                         class="w-100 rounded-3"
                                         alt="{{$prod->nombreProducto}}"
                                         title="{{$prod->nombreProducto}}"
-                                        onerror="this.src=this.getAttribute('data-fallback');"
+                                        onerror="this.onerror=null; this.src=this.getAttribute('data-fallback');"
                                         data-fallback="{{asset('storage/noimagen.webp')}}">
                                 </div>
                                 <div class="col-9 col-md-10">

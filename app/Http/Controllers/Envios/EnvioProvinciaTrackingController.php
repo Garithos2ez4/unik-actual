@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Envios;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Envios\EnvioProvincia;
+use App\Models\Envios\SolicitudEnvio;
 use App\Services\HeaderServiceInterface;
 use Illuminate\Support\Facades\DB;
 
@@ -35,7 +36,7 @@ class EnvioProvinciaTrackingController extends Controller
 
             $token = \Illuminate\Support\Str::random(32);
 
-            $solicitud = \App\Models\Envios\SolicitudEnvio::create([
+            $solicitud = SolicitudEnvio::create([
                 'idUser'           => $userModel->idUser,
                 'token'            => $token,
                 'estado'           => 'PENDIENTE',
@@ -70,13 +71,13 @@ class EnvioProvinciaTrackingController extends Controller
     {
         try {
             // Actualizar a EXPIRADO las solicitudes que ya pasaron su tiempo límite
-            \App\Models\Envios\SolicitudEnvio::where('estado', 'PENDIENTE')
+            SolicitudEnvio::where('estado', 'PENDIENTE')
                 ->whereNotNull('token_expires_at')
                 ->where('token_expires_at', '<', now())
                 ->update(['estado' => 'EXPIRADO']);
 
             // Solo traemos idUser y user para no cargar la bandeja (que es muy pesada)
-            $query = \App\Models\Envios\SolicitudEnvio::with(['Usuario:idUser,user']);
+            $query = SolicitudEnvio::with(['Usuario:idUser,user']);
 
             // Si pasan parametro ?estado=PROCESADO (u otro)
             if ($request->has('estado')) {
@@ -100,7 +101,7 @@ class EnvioProvinciaTrackingController extends Controller
     public function regenerarLink($id)
     {
         try {
-            $solicitud = \App\Models\Envios\SolicitudEnvio::findOrFail($id);
+            $solicitud = SolicitudEnvio::findOrFail($id);
             $token = \Illuminate\Support\Str::random(32);
 
             $solicitud->update([

@@ -255,8 +255,8 @@
         });
 
         items.forEach((item, idx) => {
-            const fotoPreview = item.foto1_url 
-                ? `<img src="${item.foto1_url}" class="rounded border shadow-xs" style="width: 48px; height: 48px; object-fit: contain; background: #fff;" onerror="this.src='{{ asset('storage/noimagen.webp') }}'">`
+            const fotoPreview = (item.foto1_url && String(item.foto1_url).trim() !== '' && !String(item.foto1_url).includes('blanco.jpg'))
+                ? `<img src="${item.foto1_url}" class="rounded border shadow-xs" style="width: 48px; height: 48px; object-fit: contain; background: #fff;" onerror="this.onerror=null; this.src='{{ asset('storage/noimagen.webp') }}';">`
                 : `<img src="{{ asset('storage/noimagen.webp') }}" class="rounded border shadow-xs" style="width: 48px; height: 48px; object-fit: contain; opacity: 0.6;">`;
 
             const precioBase = parseFloat(item.price || 0).toFixed(2);

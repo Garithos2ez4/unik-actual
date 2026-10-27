@@ -305,7 +305,7 @@
                 <!-- CONTENIDO DEL DETALLE -->
                 <div id="promoContent" style="display: none;">
                     <!-- ALERTA PROMOCIÓN AGOTADA -->
-                    <div id="promoAgotadoAlert" class="alert alert-danger py-2 px-3 mb-3 border-0 rounded-3 d-flex align-items-center justify-content-between shadow-xs" style="display: none;">
+                    <div id="promoAgotadoAlert" class="alert alert-danger py-2 px-3 mb-3 border-0 rounded-3 align-items-center justify-content-between shadow-xs d-none" style="display: none;">
                         <div class="d-flex align-items-center">
                             <i class="bi bi-x-circle-fill text-danger fs-4 me-2"></i>
                             <div>

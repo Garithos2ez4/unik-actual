@@ -114,6 +114,91 @@ class Producto extends Model
                 $producto->slugProducto = $slug;
             }
         });
+
+        static::saved(function ($producto) {
+            $producto->invalidarCacheWeb();
+        });
+
+        static::deleted(function ($producto) {
+            $producto->invalidarCacheWeb();
+        });
+    }
+
+    public function invalidarCacheWeb()
+    {
+        try {
+            $slug = $this->slugProducto;
+            $originalSlug = $this->getOriginal('slugProducto');
+            $id = $this->idProducto;
+            $codigo = $this->codigoProducto;
+
+            $keysToForget = [];
+            if (!empty($slug)) {
+                $keysToForget[] = "producto_getOne_slugProducto_{$slug}";
+            }
+            if (!empty($originalSlug) && $originalSlug !== $slug) {
+                $keysToForget[] = "producto_getOne_slugProducto_{$originalSlug}";
+            }
+            if (!empty($id)) {
+                $keysToForget[] = "producto_getOne_idProducto_{$id}";
+            }
+            if (!empty($codigo)) {
+                $keysToForget[] = "producto_getOne_codigoProducto_{$codigo}";
+            }
+
+            foreach ($keysToForget as $k) {
+                Cache::forget($k);
+            }
+
+            // Invalidation direct in cache table for wildcards and partial matches
+            if (!empty($slug)) {
+                \Illuminate\Support\Facades\DB::table('cache')
+                    ->where('key', 'LIKE', "%{$slug}%")
+                    ->delete();
+            }
+            if (!empty($originalSlug) && $originalSlug !== $slug) {
+                \Illuminate\Support\Facades\DB::table('cache')
+                    ->where('key', 'LIKE', "%{$originalSlug}%")
+                    ->delete();
+            }
+
+            // Invalidate category cache in WebUnik
+            if (!empty($this->idGrupo)) {
+                $idCategoria = \App\Models\Catalogo\GrupoProducto::where('idGrupoProducto', $this->idGrupo)->value('idCategoria');
+                if ($idCategoria) {
+                    Cache::forget("productos_categoria_{$idCategoria}");
+                    \Illuminate\Support\Facades\DB::table('cache')
+                        ->where('key', 'LIKE', "productos_categoria_{$idCategoria}%")
+                        ->delete();
+                }
+            }
+
+            // If it is a child variant, clear parent cache too
+            if (!empty($this->idProductoPadre)) {
+                $padreSlug = static::where('idProducto', $this->idProductoPadre)->value('slugProducto');
+                if ($padreSlug) {
+                    Cache::forget("producto_getOne_slugProducto_{$padreSlug}");
+                    \Illuminate\Support\Facades\DB::table('cache')
+                        ->where('key', 'LIKE', "%{$padreSlug}%")
+                        ->delete();
+                }
+            }
+
+            // If it is a parent, clear variants caches too
+            if (!empty($this->es_padre)) {
+                $hijosSlugs = static::where('idProductoPadre', $this->idProducto)->pluck('slugProducto');
+                foreach ($hijosSlugs as $hSlug) {
+                    if ($hSlug) {
+                        Cache::forget("producto_getOne_slugProducto_{$hSlug}");
+                        \Illuminate\Support\Facades\DB::table('cache')
+                            ->where('key', 'LIKE', "%{$hSlug}%")
+                            ->delete();
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Error invalidando cache web: " . $e->getMessage());
+        }
     }
     
     public function Publicacion()

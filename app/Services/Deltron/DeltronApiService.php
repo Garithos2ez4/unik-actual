@@ -1111,12 +1111,19 @@ class DeltronApiService
             }
         }
 
-        $productosPorModelo = Producto::whereNotNull('modelo')
+        $productosPorModelo = [];
+        $productosPorModeloLimpio = [];
+        $todosModelos = Producto::whereNotNull('modelo')
             ->where('modelo', '!=', '')
-            ->get()
-            ->keyBy(function ($p) {
-                return strtoupper(trim($p->modelo));
-            });
+            ->get();
+        foreach ($todosModelos as $p) {
+            $rawMod = strtoupper(trim($p->modelo));
+            $cleanMod = preg_replace('/[^A-Z0-9]/', '', $rawMod);
+            $productosPorModelo[$rawMod] = $p;
+            if (!empty($cleanMod)) {
+                $productosPorModeloLimpio[$cleanMod] = $p;
+            }
+        }
 
         // Precargar mapa de SKUs ya vinculados en inventario_proveedor_skus
         $productosPorSkuProveedor = [];
@@ -1188,20 +1195,44 @@ class DeltronApiService
                 }
             }
 
-            // 2. Si no coincidió por part_number, intentar por SKU Deltron (modelo)
+            // 2. Si no coincidió en partNumber, buscar si el partNumber de Deltron fue guardado como modelo en Unike
+            if (!$producto && !empty($partNumber)) {
+                $claveExacta = strtoupper(trim($partNumber));
+                $claveLimpia = preg_replace('/[^A-Z0-9]/', '', $claveExacta);
+
+                if (isset($productosPorModelo[$claveExacta])) {
+                    $producto = $productosPorModelo[$claveExacta];
+                } elseif (!empty($claveLimpia) && isset($productosPorModeloLimpio[$claveLimpia])) {
+                    $producto = $productosPorModeloLimpio[$claveLimpia];
+                }
+            }
+
+            // 3. Si no coincidió por part_number, intentar por SKU Deltron (modelo)
             if (!$producto && !empty($sku)) {
                 $claveSku = strtoupper(trim($sku));
-                $producto = $productosPorModelo->get($claveSku);
+                $claveSkuLimpia = preg_replace('/[^A-Z0-9]/', '', $claveSku);
 
-                // 3. Si no coincidió, buscar en nuestra tabla relacional de SKUs Deltron (inventario_proveedor_skus)
+                if (isset($productosPorModelo[$claveSku])) {
+                    $producto = $productosPorModelo[$claveSku];
+                } elseif (!empty($claveSkuLimpia) && isset($productosPorModeloLimpio[$claveSkuLimpia])) {
+                    $producto = $productosPorModeloLimpio[$claveSkuLimpia];
+                }
+
+                // 4. Si no coincidió, buscar en nuestra tabla relacional de SKUs Deltron (inventario_proveedor_skus)
                 if (!$producto && isset($productosPorSkuProveedor[$claveSku])) {
                     $producto = $productosPorSkuProveedor[$claveSku];
                 }
             }
 
             // Si el corte matutino (inicio-dia) no envió part_number, pero el producto ya existe en la BD local:
-            if ($producto && empty($partNumber) && !empty($producto->partNumber)) {
+            if ($producto && empty($partNumber) && !empty($producto->partNumber) && $producto->partNumber !== '0') {
                 $partNumber = $producto->partNumber;
+            }
+
+            // Si el producto en Unike tenía partNumber en '0' o vacío, pero Deltron provee el oficial:
+            if ($producto && ($producto->partNumber === '0' || empty($producto->partNumber)) && !empty($partNumber) && $partNumber !== '0') {
+                $producto->partNumber = $partNumber;
+                $producto->save();
             }
 
             if ($producto) {
@@ -1219,6 +1250,7 @@ class DeltronApiService
                 $invProveedor->stock = $stock;
                 $invProveedor->estado = 1;
                 $invProveedor->save();
+                $invProveedor->touch();
 
                 // Almacenar SKU, Mini Codigo y Precios oficiales de Deltron en la tabla relacional
                 if (!empty($sku)) {
@@ -1237,13 +1269,14 @@ class DeltronApiService
                     if (!empty($miniCodeItem)) {
                         $skuValues['mini_codigo'] = $miniCodeItem;
                     }
-                    \App\Models\Inventario\InventarioProveedorSku::updateOrCreate(
+                    $skuRecord = \App\Models\Inventario\InventarioProveedorSku::updateOrCreate(
                         [
                             'idInventarioProveedor' => $invProveedor->idInventarioProveedor,
                             'idProveedor' => $this->idProveedor,
                         ],
                         $skuValues
                     );
+                    $skuRecord->touch();
                 }
 
                 // NO modificamos precioDolar de Producto para preservar intactos los precios publicados en la tienda web
@@ -1764,17 +1797,25 @@ class DeltronApiService
             ->flip()
             ->toArray();
 
-        $existingModelos = Producto::whereNotNull('modelo')
-            ->pluck('modelo')
-            ->map(fn($m) => strtoupper(trim($m)))
-            ->flip()
-            ->toArray();
+        $existingModelos = [];
+        $existingModelosLimpios = [];
+        foreach (Producto::whereNotNull('modelo')->where('modelo', '!=', '')->pluck('modelo') as $m) {
+            $mUpper = strtoupper(trim($m));
+            $existingModelos[$mUpper] = true;
+            $mClean = preg_replace('/[^A-Z0-9]/', '', $mUpper);
+            if (!empty($mClean)) {
+                $existingModelosLimpios[$mClean] = true;
+            }
+        }
 
-        $existingPartNumbers = Producto::whereNotNull('partNumber')
-            ->pluck('partNumber')
-            ->map(fn($pn) => preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($pn))))
-            ->flip()
-            ->toArray();
+        $existingPartNumbers = [];
+        foreach (Producto::whereNotNull('partNumber')->where('partNumber', '!=', '')->where('partNumber', '!=', '0')->pluck('partNumber') as $pn) {
+            $pnUpper = strtoupper(trim($pn));
+            $pnClean = preg_replace('/[^A-Z0-9]/', '', $pnUpper);
+            if (!empty($pnClean)) {
+                $existingPartNumbers[$pnClean] = true;
+            }
+        }
 
         $grupos = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')->get()->keyBy('idGrupoProducto');
         $marcas = \App\Models\Catalogo\MarcaProducto::all();
@@ -1795,10 +1836,10 @@ class DeltronApiService
             if (isset($existingSkus[$sku]) || isset($existingModelos[$sku])) {
                 continue;
             }
-            if (!empty($pnClean) && isset($existingPartNumbers[$pnClean])) {
+            if (!empty($pnClean) && (isset($existingPartNumbers[$pnClean]) || isset($existingModelosLimpios[$pnClean]) || isset($existingModelos[$pn]))) {
                 continue;
             }
-            if (!empty($modClean) && (isset($existingModelos[$modClean]) || isset($existingPartNumbers[$modClean]))) {
+            if (!empty($modClean) && (isset($existingModelosLimpios[$modClean]) || isset($existingPartNumbers[$modClean]) || isset($existingModelos[$modeloReal]))) {
                 continue;
             }
 
@@ -1924,17 +1965,25 @@ class DeltronApiService
             ->flip()
             ->toArray();
 
-        $existingModelos = Producto::whereNotNull('modelo')
-            ->pluck('modelo')
-            ->map(fn($m) => strtoupper(trim($m)))
-            ->flip()
-            ->toArray();
+        $existingModelos = [];
+        $existingModelosLimpios = [];
+        foreach (Producto::whereNotNull('modelo')->where('modelo', '!=', '')->pluck('modelo') as $m) {
+            $mUpper = strtoupper(trim($m));
+            $existingModelos[$mUpper] = true;
+            $mClean = preg_replace('/[^A-Z0-9]/', '', $mUpper);
+            if (!empty($mClean)) {
+                $existingModelosLimpios[$mClean] = true;
+            }
+        }
 
-        $existingPartNumbers = Producto::whereNotNull('partNumber')
-            ->pluck('partNumber')
-            ->map(fn($pn) => preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($pn))))
-            ->flip()
-            ->toArray();
+        $existingPartNumbers = [];
+        foreach (Producto::whereNotNull('partNumber')->where('partNumber', '!=', '')->where('partNumber', '!=', '0')->pluck('partNumber') as $pn) {
+            $pnUpper = strtoupper(trim($pn));
+            $pnClean = preg_replace('/[^A-Z0-9]/', '', $pnUpper);
+            if (!empty($pnClean)) {
+                $existingPartNumbers[$pnClean] = true;
+            }
+        }
 
         $query = strtoupper(trim($filtros['query'] ?? ''));
         $soloConStock = !empty($filtros['solo_con_stock']);
@@ -1954,7 +2003,7 @@ class DeltronApiService
             if (isset($existingSkus[$sku]) || isset($existingModelos[$sku])) {
                 continue;
             }
-            if (!empty($pnClean) && isset($existingPartNumbers[$pnClean])) {
+            if (!empty($pnClean) && (isset($existingPartNumbers[$pnClean]) || isset($existingModelosLimpios[$pnClean]) || isset($existingModelos[$pn]))) {
                 continue;
             }
 

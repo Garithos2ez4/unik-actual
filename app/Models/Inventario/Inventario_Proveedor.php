@@ -45,6 +45,21 @@ class Inventario_Proveedor extends Model
         return $this->belongsTo(Producto::class,'idProducto','idProducto');
     }
 
+    public static function boot()
+    {
+        parent::boot();
+
+        static::saved(function ($inv) {
+            try {
+                if ($inv->Producto) {
+                    $inv->Producto->invalidarCacheWeb();
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        });
+    }
+
     public function skuApi()
     {
         return $this->hasOne(InventarioProveedorSku::class, 'idInventarioProveedor', 'idInventarioProveedor')

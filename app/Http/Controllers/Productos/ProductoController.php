@@ -249,6 +249,7 @@ class ProductoController extends Controller
 
         $producto->estadoProductoWeb = $nuevoEstado;
         $producto->save();
+        $producto->invalidarCacheWeb();
 
         return response()->json([
             'success' => true,
@@ -662,6 +663,7 @@ class ProductoController extends Controller
                 $video2 = $request->input('videoUrl2');
 
                 try {
+                    \DB::beginTransaction();
                     // Solo actualizar si el campo fue enviado (no está disabled)
                     if ($request->has('titulo')) {
                         $arrayProduct['nombreProducto'] = $titulo;
@@ -828,11 +830,12 @@ class ProductoController extends Controller
                     }
 
                     \DB::commit();
+                    $this->headerService->sendFlashAlerts('Producto actualizado', 'Los datos e imagenes se actualizaron correctamente.', 'success', 'btn-success');
                     return redirect()->back();
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     \DB::rollBack();
                     \Log::error('Error en updateProduct: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
-                    $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error valida peus hijo ', 'error', 'btn-danger');
+                    $this->headerService->sendFlashAlerts('Error en la operacion', 'Hubo un error al actualizar el producto: ' . $e->getMessage(), 'error', 'btn-danger');
                     return redirect()->back();
                 }
             }

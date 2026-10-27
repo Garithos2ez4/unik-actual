@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
@@ -6,7 +7,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Encoders\WebpEncoder;
 
 class ImageService
 {
@@ -39,9 +39,9 @@ class ImageService
                 return false;
             }
 
-            $encoded = $image->encode(new WebpEncoder(quality: $quality));
-            file_put_contents($webpFullPath, $encoded);
-            return true;
+            $encoded = (string) $image->toWebp($quality);
+            $res = file_put_contents($webpFullPath, $encoded);
+            return $res !== false;
         } catch (\Exception $e) {
             Log::error('Error procesando imagen ' . $filename . ': ' . $e->getMessage());
             return false;

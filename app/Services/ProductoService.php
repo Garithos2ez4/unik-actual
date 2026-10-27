@@ -241,17 +241,61 @@ class ProductoService implements ProductoServiceInterface
             $producto = $this->productoRepository->update($id, $array);
 
             if ($producto) {
-                if (!is_null($img1) || !is_null($img2) || !is_null($img3) || !is_null($img4)) {
-                    $this->imageVersions($id);
+                $destinationPath = \App\Services\Deltron\DeltronApiService::getDestinationPathProductos();
+                if (!is_dir($destinationPath)) {
+                    @mkdir($destinationPath, 0755, true);
                 }
-                is_null($img1) ? '' : $imgService->createImage($img1, $producto->idProducto . '_1', $this->path);
-                is_null($img2) ? '' : $imgService->createImage($img2, $producto->idProducto . '_2', $this->path);
-                is_null($img3) ? '' : $imgService->createImage($img3, $producto->idProducto . '_3', $this->path);
-                is_null($img4) ? '' : $imgService->createImage($img4, $producto->idProducto . '_4', $this->path);
+
+                $timestamp = time();
+                $imageUpdates = [];
+                $images = [
+                    1 => $img1,
+                    2 => $img2,
+                    3 => $img3,
+                    4 => $img4,
+                ];
+
+                foreach ($images as $num => $imgFile) {
+                    if (!is_null($imgFile)) {
+                        $saved = $imgService->createImage($imgFile, $producto->idProducto . '_' . $num, $destinationPath);
+                        if ($saved) {
+                            $fileName = 'IMGPRO' . $producto->idProducto . '_' . $num . '.webp';
+                            $fullDest = $destinationPath . '/' . $fileName;
+
+                            // Sincronizar en public_path('storage/productos') si es diferente
+                            $localPath = public_path('storage/productos');
+                            if (is_dir($localPath) && realpath($destinationPath) !== realpath($localPath)) {
+                                @copy($fullDest, $localPath . '/' . $fileName);
+                            }
+
+                            // Sincronizar en storage_path('app/public/productos') si es diferente
+                            $storageAppPath = storage_path('app/public/productos');
+                            if (is_dir($storageAppPath) && realpath($destinationPath) !== realpath($storageAppPath)) {
+                                @copy($fullDest, $storageAppPath . '/' . $fileName);
+                            }
+
+                            // Guardar en la BD con parametro ?v=timestamp para forzar refresco de cache
+                            $imageUpdates['imagenProducto' . $num] = 'productos/' . $fileName . '?v=' . $timestamp;
+                        } else {
+                            \Log::error("No se pudo guardar la imagen slot {$num} para el producto {$id}");
+                        }
+                    }
+                }
+
+                if (!empty($imageUpdates)) {
+                    $this->productoRepository->update($id, $imageUpdates);
+                }
+
+                // Invalidar cache web
+                $productoFresh = $this->productoRepository->getOne('idProducto', $id);
+                if ($productoFresh && method_exists($productoFresh, 'invalidarCacheWeb')) {
+                    $productoFresh->invalidarCacheWeb();
+                }
             }
 
             return $producto;
         } catch (Exception $e) {
+            \Log::error('Error en ProductoService::updateProduct: ' . $e->getMessage());
             throw new \InvalidArgumentException($e->getMessage());
         }
     }
@@ -414,14 +458,8 @@ class ProductoService implements ProductoServiceInterface
     private function generateImageVersion($path)
     {
         if ($path) {
-            $pos = strpos($path, '?v=');
-            if (!$pos) {
-                return $path . '?v=1';
-            } else {
-                $version =  (int) substr($path, $pos + 3);
-                $namepath = substr($path, 0, -1);
-                return $namepath . ($version + 1);
-            }
+            $basePath = strtok($path, '?');
+            return $basePath . '?v=' . time();
         }
         return $path;
     }

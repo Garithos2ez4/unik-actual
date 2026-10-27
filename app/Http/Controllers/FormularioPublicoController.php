@@ -12,6 +12,7 @@ use App\Models\Envios\Provincia;
 use App\Models\Envios\Destino;
 use App\Models\Envios\SubAgencia;
 use App\Models\Usuarios\TipoDocumento;
+use App\Models\Envios\SolicitudEnvio;
 use Carbon\Carbon;
 
 class FormularioPublicoController extends Controller
@@ -21,7 +22,7 @@ class FormularioPublicoController extends Controller
      */
     public function show($token)
     {
-        $solicitud = \App\Models\Envios\SolicitudEnvio::where('token', $token)->first();
+        $solicitud = SolicitudEnvio::where('token', $token)->first();
 
         if (!$solicitud) {
             return view('public.formulario_error', [
@@ -80,7 +81,7 @@ class FormularioPublicoController extends Controller
      */
     public function store(Request $request, $token)
     {
-        $solicitud = \App\Models\Envios\SolicitudEnvio::where('token', $token)->first();
+        $solicitud = SolicitudEnvio::where('token', $token)->first();
 
         if (!$solicitud || $solicitud->estado === 'PROCESADO') {
             return view('public.formulario_error', [
@@ -279,11 +280,48 @@ class FormularioPublicoController extends Controller
         return response()->json($subagencias);
     }
 
-    public function buscarCliente($documento)
+    public function buscarCliente(Request $request, $token = null, $documento = null)
     {
-        $cliente = \App\Models\Usuarios\Cliente::where('numeroDocumento', $documento)->first();
+        // Obtener token y documento desde la ruta, body o header
+        $token = $token ?: $request->input('token') ?: $request->header('X-Form-Token');
+        $documento = $documento ?: $request->input('documento');
+
+        // Si el documento viene cifrado con encrypt() de Laravel, desencriptarlo
+        if ($documento) {
+            try {
+                $documento = decrypt($documento);
+            } catch (\Exception $e) {
+                // Si no viene cifrado, se usa el valor original
+            }
+        }
+
+        if (!$token || !$documento) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token o documento no proporcionado'
+            ], 400);
+        }
+
+        // Validar que el token existe en solicitudes_envio, está PENDIENTE y no ha expirado
+        $solicitud = SolicitudEnvio::where('token', $token)->first();
+
+        if (!$solicitud || $solicitud->estado !== 'PENDIENTE') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este enlace no es válido o ya fue completado.'
+            ], 403);
+        }
+
+        if ($solicitud->token_expires_at && Carbon::now()->gt($solicitud->token_expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El tiempo de este enlace ha expirado.'
+            ], 403);
+        }
+
+        $cliente = Cliente::where('numeroDocumento', $documento)->first();
         if ($cliente) {
-            $ultimoEnvio = \App\Models\Envios\EnvioProvincia::with(['Detalle', 'Destino.Provincia'])
+            $ultimoEnvio = EnvioProvincia::with(['Detalle', 'Destino.Provincia'])
                 ->where('idCliente', $cliente->idCliente)
                 ->orderBy('idEnvioProvincia', 'desc')
                 ->first();

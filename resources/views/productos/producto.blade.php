@@ -18,7 +18,7 @@
     </div>
 
     <br>
-    <form action="{{route('updateproduct',[encrypt($producto->idProducto)])}}" method="POST" enctype="multipart/form-data">
+    <form id="formProducto" action="{{route('updateproduct',[encrypt($producto->idProducto)])}}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row">
             <div class="col-10 col-lg-6 flex-column justify-content-center">
@@ -29,7 +29,7 @@
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
                 @include('productos.components.btn_templates')
-                @include('productos.components.modal_crear_padre')
+                @include('productos.components.btn_crear_padre')
                 <h5 class="d-inline"><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
             </div>
         </div>
@@ -41,6 +41,7 @@
             <div class="mb-2 col-6 text-end">
                 <button type="button" class="btn btn-secondary text-light me-2" onclick="confirmarCopia()">Copiar <i class="bi bi-copy"></i></button>
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
+                <button type="submit" form="formProducto" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="mb-3 col-12 col-lg-6">
                 <label class="form-label">Titulo</label>
@@ -97,7 +98,7 @@
             </div>
             <div class="mb-2 col-6 col-lg-8 text-end">
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
-                <button type="submit" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
+                <button type="submit" form="formProducto" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="col-6 col-md-6">
                 <div class="row">
@@ -256,6 +257,7 @@
                 @foreach ($user->Accesos as $access)
                 @if($access->idVista == 7)
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
+                <button type="submit" form="formProducto" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
                 @endif
                 @endforeach
             </div>
@@ -282,6 +284,7 @@
             </div>
             <div class="col-6 mb-2 text-end">
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
+                <button type="submit" form="formProducto" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="mb-3">
                 <label for="video1">URL del Video de Unike Store (Opcional)</label>
@@ -304,26 +307,27 @@
             </div>
             <div class="col-6 mb-2 text-end">
                 <button type="button" class="btn btn-info text-light btn-edit">Editar <i class="bi bi-pencil"></i></button>
+                <button type="submit" form="formProducto" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="col-md-6">
                 <h5>Imagenes</h5>
-                <label for="desc-producto" class="form-label"><i class="bi bi-exclamation-circle-fill" data-bs-toggle="tooltip" data-bs-placement="top" title="Las imagenes tardan en actualizar"></i> Imagenes en formato 800 x 800px o 1000 x 1000px (1:1)</label>
+                <label for="desc-producto" class="form-label"><i class="bi bi-exclamation-circle-fill" data-bs-toggle="tooltip" data-bs-placement="top" title="Las imagenes se actualizan inmediatamente"></i> Imagenes permitidas unicamente en formato 800 x 800 px o 1000 x 1000 px (1:1)</label>
                 <div class="row">
                     <div class="col-6 mb-3 img-div" id="previewImage1" data-bs-toggle="tooltip" data-bs-placement="top" title="Imagen de cabecera">
-                        <input class="d-none input-edit img-input" name="imgone" type="file" accept="image/*" id="imgone-product" onchange="changeImage(event,this,'previewImage1','triggerImage1')" disabled>
-                        <img src="{{$producto->publicImages()[0]}}" alt="Click to upload" id="triggerImage1" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; object-fit: cover;">
+                        <input class="d-none input-edit img-input" name="imgone" type="file" accept="image/*" id="imgone-product" disabled>
+                        <img src="{{$producto->publicImages()[0]}}" onerror="this.onerror=null;this.src='{{ asset('storage/noimagen.webp') }}';" alt="Click to upload" id="triggerImage1" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; aspect-ratio: 1/1; object-fit: contain; background: #fff;">
                     </div>
                     <div class="col-6 mb-3 img-div" id="previewImage2">
-                        <input class="d-none input-edit img-input" name="imgtwo" type="file" accept="image/*" id="imgtwo-product" onchange="changeImage(event,this,'previewImage2','triggerImage2')" disabled>
-                        <img src="{{$producto->publicImages()[1]}}" alt="Click to upload" id="triggerImage2" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; object-fit: cover;">
+                        <input class="d-none input-edit img-input" name="imgtwo" type="file" accept="image/*" id="imgtwo-product" disabled>
+                        <img src="{{$producto->publicImages()[1]}}" onerror="this.onerror=null;this.src='{{ asset('storage/noimagen.webp') }}';" alt="Click to upload" id="triggerImage2" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; aspect-ratio: 1/1; object-fit: contain; background: #fff;">
                     </div>
                     <div class="col-6 img-div" id="previewImage3">
-                        <input class="d-none input-edit img-input" name="imgtree" type="file" accept="image/*" id="imgtree-product" onchange="changeImage(event,this,'previewImage3','triggerImage3')" disabled>
-                        <img src="{{$producto->publicImages()[2]}}" alt="Click to upload" id="triggerImage3" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; object-fit: cover;">
+                        <input class="d-none input-edit img-input" name="imgtree" type="file" accept="image/*" id="imgtree-product" disabled>
+                        <img src="{{$producto->publicImages()[2]}}" onerror="this.onerror=null;this.src='{{ asset('storage/noimagen.webp') }}';" alt="Click to upload" id="triggerImage3" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; aspect-ratio: 1/1; object-fit: contain; background: #fff;">
                     </div>
                     <div class="col-6 img-div" id="previewImage4">
-                        <input class="d-none input-edit img-input" name="imgfour" type="file" accept="image/*" id="imgfour-product" onchange="changeImage(event,this,'previewImage4','triggerImage4')" disabled>
-                        <img src="{{$producto->publicImages()[3]}}" alt="Click to upload" id="triggerImage4" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; object-fit: cover;">
+                        <input class="d-none input-edit img-input" name="imgfour" type="file" accept="image/*" id="imgfour-product" disabled>
+                        <img src="{{$producto->publicImages()[3]}}" onerror="this.onerror=null;this.src='{{ asset('storage/noimagen.webp') }}';" alt="Click to upload" id="triggerImage4" class="w-100 border border-secondary rounded-3 img-preview" style="cursor: pointer; aspect-ratio: 1/1; object-fit: contain; background: #fff;">
                     </div>
                 </div>
             </div>
@@ -369,7 +373,7 @@
                 @endif
             </div>
             <div class="col-6 text-center">
-                <button type="submit" class="btn btn-success" id="btnSave" disabled>Guardar <i class="bi bi-floppy"></i></button>
+                <button type="submit" form="formProducto" class="btn btn-success" id="btnSave" disabled>Guardar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="col-3">
             </div>
@@ -383,6 +387,7 @@
     <br>
 </div>
 
+@include('productos.components.modal_crear_padre')
 @include('productos.components.modal_herramientas_servicio')
 
 <script>
@@ -395,7 +400,7 @@
             parseFloat("{{ optional($producto->liquidacion)->precio_liquidacion }}") : null
     };
 </script>
-<script src="{{ asset('js/update-product-scripts.js') }}?v=1.04"></script>
+<script src="{{ asset('js/update-product-scripts.js') }}?v=1.07"></script>
 @include('productos.logic.producto_scripts')
 
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.01"></script>

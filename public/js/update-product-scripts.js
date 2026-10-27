@@ -180,11 +180,15 @@ segmentosFormulario.forEach(function (segmento) {
 
 
 });
-document.getElementById('usar_tc_fijo').addEventListener('change', disableSave);
+const switchTcFijo = document.getElementById('usar_tc_fijo');
+if (switchTcFijo) {
+    switchTcFijo.addEventListener('change', disableSave);
+}
 function disableSave() {
     const btnSave = document.getElementById('btnSave');
     const btnEdit = document.querySelectorAll('.input-edit');
 
+    if (!btnSave) return;
     const allDisabled = Array.from(btnEdit).every(btn => btn.disabled);
 
     btnSave.disabled = allDisabled;
@@ -211,6 +215,16 @@ dropAreas.forEach(function (dropArea) {
     let img = dropArea.querySelector('.img-preview');
 
     img.addEventListener('click', function () {
+        if (input.disabled) {
+            // Si el input está desactivado, activar modo edición en la sección
+            let segmento = dropArea.closest('.editButton');
+            let btnEdit = segmento ? segmento.querySelector('.btn-edit') : null;
+            if (btnEdit) {
+                btnEdit.click();
+            } else {
+                input.disabled = false;
+            }
+        }
         input.click();
     });
 
@@ -258,6 +272,13 @@ function handleDrop(event, input, img) {
     const files = dt.files;
 
     if (files.length) {
+        if (input.disabled) {
+            let segmento = input.closest('.editButton');
+            let btnEdit = segmento ? segmento.querySelector('.btn-edit') : null;
+            if (btnEdit) btnEdit.click();
+            else input.disabled = false;
+        }
+
         const newDt = new DataTransfer();
         newDt.items.add(files[0]);
         input.files = newDt.files; // Asignar los archivos al input usando un DataTransfer persistente
@@ -279,7 +300,6 @@ function changeImage(event, input, img) {
     }
 
     if (file) {
-
         const reader = new FileReader();
 
         reader.onload = function (e) {
@@ -287,27 +307,31 @@ function changeImage(event, input, img) {
             image.src = e.target.result;
 
             image.onload = function () {
-                // Permitir imagenes cuadradas (1:1) de 800 x 800 px (Deltron) o 1000 x 1000 px (Unike)
-                const isSquare = (image.width === image.height);
-                const isAllowedDimension = (image.width >= 800 && image.width <= 1000);
+                const isAllowedExact = (image.width === 800 && image.height === 800) || (image.width === 1000 && image.height === 1000);
 
-                if (!isSquare || !isAllowedDimension) {
-                    alert('La imagen no coincide con las dimensiones permitidas: debe ser cuadrada (1:1) de 800 x 800 o 1000 x 1000 píxeles. (Actual: ' + image.width + ' x ' + image.height + ')');
-                    input.value = ''; // Limpiar el input si no coincide
+                if (!isAllowedExact) {
+                    alert('La imagen no coincide con las dimensiones permitidas: debe ser exactamente de 800 x 800 o 1000 x 1000 píxeles. (Actual: ' + image.width + ' x ' + image.height + ')');
+                    input.value = '';
                     if (typeof disableSave === 'function') disableSave();
                     return;
                 }
 
-                // Si la imagen cumple con las dimensiones, actualiza la vista previa
+                // Actualiza la vista previa
                 if (imgElement) imgElement.src = e.target.result;
+                input.disabled = false;
                 if (typeof disableSave === 'function') disableSave();
-            }
+
+                // Asegurar que el botón Actualizar de la sección se muestre
+                let segmento = input.closest('.editButton');
+                let btnSaveSection = segmento ? segmento.querySelector('.btn-save-section') : null;
+                if (btnSaveSection) btnSaveSection.style.display = 'inline-block';
+            };
 
             image.onerror = function () {
                 alert('El archivo seleccionado no es una imagen válida.');
                 input.value = '';
                 if (typeof disableSave === 'function') disableSave();
-            }
+            };
         };
 
         reader.readAsDataURL(file);
@@ -315,6 +339,20 @@ function changeImage(event, input, img) {
         if (typeof disableSave === 'function') disableSave();
     }
 }
+
+// Hook de seguridad en submit del formulario para asegurar que inputs con archivo no estén deshabilitados
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('formProducto');
+    if (form) {
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('.img-input').forEach(function (inp) {
+                if (inp.files && inp.files.length > 0) {
+                    inp.disabled = false;
+                }
+            });
+        });
+    }
+});
 
 function validateForm() {
     let isValid = true;
