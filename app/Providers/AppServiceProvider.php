@@ -215,6 +215,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (app()->environment('production') || (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'unikstoreperu.com'))) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         Carbon::setLocale('es');
         Paginator::useBootstrapFive();
         

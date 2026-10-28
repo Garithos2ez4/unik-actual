@@ -656,6 +656,9 @@ class FalabellaController extends Controller
                 $errors = [];
                 $processedPackages = [];
 
+                // Liberar la conexión a base de datos de inmediato antes del bucle de peticiones HTTP
+                \Illuminate\Support\Facades\DB::disconnect();
+
                 foreach ($orders as $order) {
                     foreach ($order->items as $item) {
                         // Evitar duplicados por PackageId

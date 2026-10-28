@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <form method="POST" action="{{ route('insertingreso',[encrypt($documento->idComprobante)]) }}" data-comprobante="{{$documento->idComprobante}}" id="form-create-doc">
+    <form method="POST" enctype="multipart/form-data" action="{{ secure_url('/ingreso/insertingreso/' . encrypt($documento->idComprobante)) }}" data-comprobante="{{$documento->idComprobante}}" id="form-create-doc">
         @csrf
         
         @if ($validate)

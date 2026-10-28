@@ -128,6 +128,7 @@ class BotFalabellaPrices extends Command
             if ($index < $total - 1) {
                 $sleepTime = rand(10, 30);
                 $this->line("   [Zzz] Esperando $sleepTime segundos...");
+                \Illuminate\Support\Facades\DB::disconnect();
                 sleep($sleepTime);
             }
             $index++;

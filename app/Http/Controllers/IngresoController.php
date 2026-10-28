@@ -11,6 +11,7 @@ use App\Services\HeaderServiceInterface;
 use App\Services\DivisionPackServiceInterface;
 use App\Services\UnionPackServiceInterface;
 use App\Models\Catalogo\Producto;
+use Illuminate\Support\Facades\Log;
 
 class IngresoController extends Controller
 {
@@ -95,44 +96,132 @@ class IngresoController extends Controller
 
     public function insertIngreso(Request $request, $comprobante)
     {
+        Log::info("=== [insertIngreso] NUEVA PETICION RECIBIDA ===");
+        Log::info("[insertIngreso] Metodo: " . $request->method() . " | IP: " . $request->ip() . " | URL: " . $request->fullUrl());
+        Log::info("[insertIngreso] PHP Configs -> max_input_vars: " . ini_get('max_input_vars') . " | max_execution_time: " . ini_get('max_execution_time') . " | memory_limit: " . ini_get('memory_limit') . " | post_max_size: " . ini_get('post_max_size'));
+        Log::info("[insertIngreso] Content-Length header: " . ($request->header('Content-Length') ?? 'N/A'));
+        Log::info("[insertIngreso] Total campos POST recibidos: " . count($request->all()));
+
+        // Si por error de redireccion o recarga del navegador llega como GET, redirigir al documento registrado
+        if ($request->isMethod('get')) {
+            Log::warning("[insertIngreso] Peticion llego como GET para comprobante enc: {$comprobante}. Redirigiendo a vista documento.");
+            return redirect()->route('documento', ['id' => $comprobante, 'bool' => 0]);
+        }
+
+        @ini_set('memory_limit', '512M');
+        @ini_set('max_execution_time', '300');
+        @set_time_limit(300);
+
+        $idComprobanteDecrypted = null;
+        try {
+            $idComprobanteDecrypted = decrypt($comprobante);
+            Log::info("[insertIngreso] idComprobante descifrado: {$idComprobanteDecrypted}");
+        } catch (\Throwable $e) {
+            Log::error("[insertIngreso] Error al descifrar parametro comprobante: " . $e->getMessage());
+        }
+
         $userModel = $this->headerService->getModelUser();
+        Log::info("[insertIngreso] Usuario: " . ($userModel ? ($userModel->idUser . ' - ' . $userModel->user) : 'NULL'));
+
+        // Si el frontend envió los miles de campos empaquetados en 1 sola variable para evitar bloqueos del servidor:
+        if ($request->has('compressed_form_data')) {
+            $parsedData = [];
+            parse_str($request->input('compressed_form_data'), $parsedData);
+            $request->merge($parsedData);
+            Log::info("[insertIngreso] Datos descomprimidos desde compressed_form_data exitosamente. Comprobante: " . json_encode($request->input('comprobante')) . " | Total productos en detalle: " . count($request->input('detalle') ?? []));
+        }
+
         $datacomprobante = $request->input('comprobante');
         $detalle = $request->input('detalle');
 
-        foreach ($userModel->Accesos as $acceso) {
-            if ($acceso->idVista == 8) {
-                if ($datacomprobante) {
-                    // Verificacion: Ningun producto en detalle puede ser un producto contenedor padre (es_padre == 1)
-                    if (is_array($detalle)) {
-                        foreach ($detalle as $item) {
-                            $idProd = $item['producto'] ?? null;
-                            if ($idProd) {
-                                $producto = Producto::find($idProd);
-                                if ($producto && $producto->es_padre) {
-                                    $this->headerService->sendFlashAlerts(
-                                        'Producto no valido',
-                                        "El producto '{$producto->nombreProducto}' ({$producto->modelo}) es un contenedor Padre/Base de variantes y no puede recibir stock fisico directo. Debe ingresar el stock a sus variantes individuales de color o modelo.",
-                                        'warning',
-                                        'btn-danger'
-                                    );
-                                    return back();
-                                }
-                            }
-                        }
-                    }
+        Log::info("[insertIngreso] comprobante data: " . json_encode($datacomprobante));
 
-                    $this->comprobanteService->updateComprobante(decrypt($comprobante), $datacomprobante, $detalle);
+        if (!is_array($detalle)) {
+            Log::warning("[insertIngreso] 'detalle' NO ES ARRAY o es NULL. Tipo: " . gettype($detalle));
+        } else {
+            Log::info("[insertIngreso] 'detalle' contiene " . count($detalle) . " producto(s).");
+            foreach ($detalle as $idx => $item) {
+                $cantIngreso = isset($item['ingreso']) && is_array($item['ingreso']) ? count($item['ingreso']) : 0;
+                Log::info("[insertIngreso] Detalle [{$idx}]: idProducto=" . ($item['producto'] ?? 'NULL') . ", medida=" . ($item['medida'] ?? 'NULL') . ", pUnit=" . ($item['preciounitario'] ?? 'NULL') . ", pTotal=" . ($item['preciototal'] ?? 'NULL') . ", series en 'ingreso'=" . $cantIngreso);
+            }
+        }
 
-                    return redirect(route('documentos', [now()->format('Y-m')]));
-                } else {
-
-                    $this->headerService->sendFlashAlerts('Datos Faltantes', 'Revisa los campos', 'info', 'btn-warning');
-                    return back();
+        $tienePermisoVista8 = false;
+        if ($userModel && $userModel->Accesos) {
+            foreach ($userModel->Accesos as $acceso) {
+                if ($acceso->idVista == 8) {
+                    $tienePermisoVista8 = true;
+                    break;
                 }
             }
         }
-        $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
-        return redirect()->route('dashboard', ['user' => $userModel]);
+        Log::info("[insertIngreso] Permiso idVista=8: " . ($tienePermisoVista8 ? 'SI' : 'NO'));
+
+        if (!$tienePermisoVista8) {
+            Log::warning("[insertIngreso] RECHAZADO: Usuario no cuenta con permiso idVista=8. Redirigiendo a dashboard.");
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'No tienes permiso para ingresar a esta pestaña'], 403);
+            }
+            $this->headerService->sendFlashAlerts('Acceso denegado', 'No tienes permiso para ingresar a esta pestaña', 'warning', 'btn-danger');
+            return redirect()->route('dashboard', ['user' => $userModel]);
+        }
+
+        if (!$datacomprobante) {
+            Log::warning("[insertIngreso] RECHAZADO: 'comprobante' esta vacio o nulo en el request! Keys recibidas: " . json_encode(array_keys($request->all())));
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Faltan datos del comprobante (Moneda, Almacén, etc.)'], 422);
+            }
+            $this->headerService->sendFlashAlerts('Datos Faltantes', 'Revisa los campos del comprobante', 'info', 'btn-warning');
+            return back();
+        }
+
+        // Verificacion: Ningun producto en detalle puede ser un producto contenedor padre (es_padre == 1)
+        if (is_array($detalle)) {
+            foreach ($detalle as $item) {
+                $idProd = $item['producto'] ?? null;
+                if ($idProd) {
+                    $producto = Producto::find($idProd);
+                    if ($producto && $producto->es_padre) {
+                        Log::warning("[insertIngreso] RECHAZADO: El producto {$producto->nombreProducto} es contenedor padre.");
+                        $msgPadre = "El producto '{$producto->nombreProducto}' ({$producto->modelo}) es un contenedor Padre/Base de variantes y no puede recibir stock fisico directo.";
+                        if ($request->ajax() || $request->wantsJson()) {
+                            return response()->json(['status' => 'error', 'message' => $msgPadre], 422);
+                        }
+                        $this->headerService->sendFlashAlerts('Producto no valido', $msgPadre, 'warning', 'btn-danger');
+                        return back();
+                    }
+                }
+            }
+        }
+
+        try {
+            Log::info("[insertIngreso] Ejecutando comprobanteService->updateComprobante...");
+            $tInicio = microtime(true);
+            $this->comprobanteService->updateComprobante($idComprobanteDecrypted, $datacomprobante, $detalle ?? []);
+            $duracion = round(microtime(true) - $tInicio, 3);
+            Log::info("[insertIngreso] updateComprobante COMPLETADO EXITOSAMENTE en {$duracion}s. Redirigiendo a documentos...");
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Comprobante y series registrados correctamente',
+                    'redirect' => route('documento', ['id' => $comprobante, 'bool' => 0])
+                ]);
+            }
+
+            return redirect()->route('documento', ['id' => $comprobante, 'bool' => 0]);
+        } catch (\Throwable $e) {
+            Log::error("[insertIngreso] EXCEPCION en updateComprobante: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+            Log::error("[insertIngreso] Stacktrace:\n" . $e->getTraceAsString());
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ocurrio un error en el servidor: ' . $e->getMessage()
+                ], 500);
+            }
+            $this->headerService->sendFlashAlerts('Error al registrar', 'Ocurrio un error en el servidor: ' . $e->getMessage(), 'error', 'btn-danger');
+            return back();
+        }
     }
 
     public function searchIngreso(Request $request)

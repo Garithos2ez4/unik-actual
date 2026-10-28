@@ -717,19 +717,30 @@
                     elUsd.innerText = precio > 0 ? '$' + precio.toFixed(2) : '-';
                     elIgv.innerText = precio > 0 ? '$' + (precio * 1.18).toFixed(2) : '-';
 
+                    const cardPromoTitle = document.getElementById('fichaCardPromoTitle');
                     if (tienePromo) {
                         const ahorro = precio - precioPromo;
                         elPromoUsd.innerText = '$' + precioPromo.toFixed(2);
-                        elPromoUsd.className = 'fs-4 fw-bold text-success';
-                        elPromoSub.innerHTML = `+ IGV: <span class="fw-semibold text-dark">$${(precioPromo * 1.18).toFixed(2)}</span> <span class="badge bg-danger rounded-pill ms-1">Ahorro $${ahorro.toFixed(2)}</span>`;
-                        cardPromoBox.className = 'p-3 border border-success rounded-3 bg-success bg-opacity-10 shadow-xs text-center h-100';
+                        elPromoUsd.className = 'fs-4 fw-bold';
+                        elPromoUsd.style.cssText = 'color: #059669 !important;';
+                        elPromoSub.innerHTML = `+ IGV: <span class="fw-semibold" style="color: #374151;">$${(precioPromo * 1.18).toFixed(2)}</span> <span class="badge bg-danger rounded-pill ms-1">Ahorro $${ahorro.toFixed(2)}</span>`;
+                        cardPromoBox.className = 'p-3 rounded-3 shadow-xs text-center h-100';
+                        cardPromoBox.style.cssText = 'background-color: #ecfdf5 !important; border: 1px solid #a7f3d0 !important;';
+                        if (cardPromoTitle) {
+                            cardPromoTitle.style.cssText = 'font-size: 0.75rem; color: #047857 !important;';
+                        }
                         elUsd.style.textDecoration = 'line-through';
                         elUsd.className = 'fs-4 fw-bold text-muted';
                     } else {
                         elPromoUsd.innerText = '-';
                         elPromoUsd.className = 'fs-4 fw-bold text-muted';
+                        elPromoUsd.style.cssText = '';
                         elPromoSub.innerText = 'Sin promoción vigente';
                         cardPromoBox.className = 'p-3 border rounded-3 bg-white shadow-xs text-center h-100';
+                        cardPromoBox.style.cssText = '';
+                        if (cardPromoTitle) {
+                            cardPromoTitle.style.cssText = 'font-size: 0.75rem; color: #6c757d;';
+                        }
                         elUsd.style.textDecoration = 'none';
                         elUsd.className = 'fs-4 fw-bold text-dark';
                     }

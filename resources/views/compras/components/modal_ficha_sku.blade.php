@@ -133,8 +133,8 @@
 
                         <!-- Precio Promo -->
                         <div class="col-6 col-md-3">
-                            <div class="p-3 border rounded-3 bg-white shadow-xs text-center h-100" id="fichaCardPromoBox">
-                                <small class="text-muted d-block fw-semibold mb-1" style="font-size: 0.75rem;">
+                            <div class="p-3 border rounded-3 bg-white shadow-xs text-center h-100" id="fichaCardPromoBox" style="transition: all 0.25s ease;">
+                                <small class="text-muted d-block fw-semibold mb-1" id="fichaCardPromoTitle" style="font-size: 0.75rem;">
                                     <i class="bi bi-lightning-charge text-danger me-1"></i> PRECIO PROMOCION
                                 </small>
                                 <span class="fs-4 fw-bold text-muted" id="fichaPrecioPromoUsd">-</span>

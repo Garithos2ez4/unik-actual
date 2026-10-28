@@ -145,11 +145,10 @@ class CatalogoPreciosPublicoController extends Controller
     /**
      * Obtiene y procesa los productos aplicando:
      * 1. Excluye estados web AGOTADO y DESCONTINUADO
-     * 2. Logica exacta de stock de lista_producto.blade.php:
+     * 2. Logica exacta de stock fisico de lista_producto.blade.php:
      *    - Serializados: RegistroProducto sin estados excluidos ['ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO']
      *    - No serializados: Inventario sum(stock)
-     *    - Proveedor Deltron (idProveedor == 1)
-     *    - Stock total > 0
+     *    - Stock fisico total > 0 (excluye stock de proveedores externos)
      * 3. Mascara de stock (> 10 si stock > 10)
      * 4. Calculo estricto de precio en Soles (Backend) via PreciosService
      */
@@ -157,7 +156,6 @@ class CatalogoPreciosPublicoController extends Controller
     {
         $query = Producto::with([
             'Inventario',
-            'Inventario_Proveedor',
             'liquidacion',
             'MarcaProducto',
             'GrupoProducto'
@@ -184,14 +182,15 @@ class CatalogoPreciosPublicoController extends Controller
 
         $productoIds = $productos->pluck('idProducto')->toArray();
 
-        // Obtener series activas por producto en una sola consulta optimizada
+        // Obtener series activas por producto en una sola consulta optimizada (identico a lista_producto.blade.php)
         $seriesPorProducto = \Illuminate\Support\Facades\DB::table('RegistroProducto as rp')
             ->join('DetalleComprobante as dc', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
             ->whereIn('dc.idProducto', $productoIds)
+            ->whereNotIn('rp.estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO'])
             ->select(
                 'dc.idProducto',
-                \Illuminate\Support\Facades\DB::raw("COUNT(*) as total_series"),
-                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN rp.estado NOT IN ('ENTREGADO', 'INVALIDO', 'ELIMINADO', 'DIVIDIDO', 'REUNIDO', 'GARANTIA', 'DEFECTUOSO', 'ABIERTO') THEN 1 ELSE 0 END) as series_validas")
+                \Illuminate\Support\Facades\DB::raw("COUNT(*) as total_series_activas"),
+                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN rp.estado NOT IN ('GARANTIA', 'DEFECTUOSO', 'ABIERTO') THEN 1 ELSE 0 END) as series_validas")
             )
             ->groupBy('dc.idProducto')
             ->get()
@@ -208,22 +207,15 @@ class CatalogoPreciosPublicoController extends Controller
 
         foreach ($productos as $p) {
             $seriesInfo = $seriesPorProducto->get($p->idProducto);
-            $esSerializado = $seriesInfo && $seriesInfo->total_series > 0;
+            $esSerializado = $seriesInfo && $seriesInfo->total_series_activas > 0;
 
             if ($esSerializado) {
-                $stockFisico = (int) $seriesInfo->series_validas;
+                $stockTotal = (int) $seriesInfo->series_validas;
             } else {
-                $stockFisico = (int) ($p->Inventario ? $p->Inventario->sum('stock') : 0);
+                $stockTotal = (int) ($p->Inventario ? $p->Inventario->sum('stock') : 0);
             }
 
-            // Proveedor solo Deltron (idProveedor == 1)
-            $stockProv = ($p->Inventario_Proveedor && $p->Inventario_Proveedor->idProveedor == 1)
-                ? (int) $p->Inventario_Proveedor->stock
-                : 0;
-
-            $stockTotal = $stockFisico + $stockProv;
-
-            // Filtro obligatorio: Solo productos con Stock total > 0
+            // Filtro obligatorio: Solo productos con Stock fisico > 0 en tiendas
             if ($stockTotal <= 0) {
                 continue;
             }

@@ -75,6 +75,9 @@ class MercadoLibreScraperService
             $productos = [];
             $intentos = 0;
 
+            // Liberar la conexión a base de datos antes del procesamiento de peticiones HTTP
+            \Illuminate\Support\Facades\DB::disconnect();
+
             foreach ($itemsToProcess as $itemId) {
                 if (count($productos) >= $maxResultados || $intentos >= $maxIntentos) {
                     break;

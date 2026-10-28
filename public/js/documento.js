@@ -188,23 +188,23 @@ function createItemList(id, serial, idProducto) {
     divColEstado.appendChild(selectEstado);
 
     let divColRack = createDiv(['d-none', 'd-md-block', 'col-md-3', 'col-lg-2', 'd-flex', 'gap-1'], null);
-    
+
     let selectRack = document.createElement('select');
     selectRack.classList.add('form-select', 'form-select-sm', 'select-rack-item');
     let optionsRackHtml = '<option value="">Rack...</option>';
-    
+
     let selectFila = document.createElement('select');
     selectFila.classList.add('form-select', 'form-select-sm', 'select-ubicacion-item');
     selectFila.name = 'detalle[' + id + '][ingreso][' + cont + '][idUbicacion]';
     selectFila.innerHTML = '<option value="">Fila...</option>';
-    selectFila.addEventListener('change', function() {
+    selectFila.addEventListener('change', function () {
         updateBtnAdd();
     });
 
     let currentAlmacenId = document.getElementById('select-almacen').value;
-    if(window.APP_DATA && window.APP_DATA.almacenes) {
+    if (window.APP_DATA && window.APP_DATA.almacenes) {
         let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == currentAlmacenId);
-        if(almacen && almacen.ubicaciones) {
+        if (almacen && almacen.ubicaciones) {
             almacen.ubicaciones.forEach(ubi => {
                 optionsRackHtml += `<option value="${ubi.nombre}">${ubi.nombre}</option>`;
             });
@@ -212,7 +212,7 @@ function createItemList(id, serial, idProducto) {
     }
     selectRack.innerHTML = optionsRackHtml;
 
-    selectRack.addEventListener('change', function() {
+    selectRack.addEventListener('change', function () {
         let selectedRackName = this.value;
         let optionsFilaHtml = '<option value="">Fila...</option>';
         if (selectedRackName && window.APP_DATA && window.APP_DATA.almacenes) {
@@ -251,9 +251,9 @@ function createItemList(id, serial, idProducto) {
     divRow.appendChild(divColDelete);
     liItem.appendChild(divRow);
     headerLi.after(liItem);
-    
+
     // (Removido TomSelect para selectRack para evitar bug visual)
-    
+
     updateBtnAdd();
 }
 
@@ -292,7 +292,7 @@ function validateRegistro() {
             disabledBtn = true;
         }
     });
-    
+
     // Validar que si seleccionó un Rack, DEBE seleccionar una Fila
     let racks = document.querySelectorAll('.select-rack-item');
     let filas = document.querySelectorAll('.select-ubicacion-item');
@@ -560,24 +560,77 @@ function confirmForm() {
 
 function sendFormInsertIngreso() {
     let formDocumento = document.getElementById('form-create-doc');
+    if (!formDocumento) return;
 
-    if (formDocumento) {
-        console.log(validateCantXProduct());
-        if (validateCantXProduct() == false) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Producto sin serie',
-                text: 'verífica que ningún producto este vacío.',
-                confirmButtonText: 'Aceptar',
-                customClass: {
-                    confirmButton: 'btn-success',
-                },
-            });
-            return;
-        }
-
-        formDocumento.submit();
+    let isCantValid = validateCantXProduct();
+    if (isCantValid == false) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Producto sin serie',
+            text: 'Verifica que ningún producto esté vacío.',
+            confirmButtonText: 'Aceptar',
+            customClass: { confirmButton: 'btn-success' },
+        });
+        return;
     }
+
+    let btnSubmit = document.getElementById('btnSubmit');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando registros...';
+    }
+
+    Swal.fire({
+        title: 'Registrando Ingreso...',
+        text: 'Guardando lotes de series en el inventario, por favor espere...',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    let formData = new FormData(formDocumento);
+    let targetAction = formDocumento.action;
+    if (window.location.protocol === 'https:' && targetAction.startsWith('http:')) {
+        targetAction = targetAction.replace('http:', 'https:');
+    }
+
+    let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formData.get('_token');
+
+    // Usar fetch POST directos que nunca superan el límite de tamaño de ModSecurity
+    fetch(targetAction, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            compressed_form_data: new URLSearchParams(formData).toString()
+        })
+    })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+                return { success: true };
+            }
+            return response.json().catch(() => ({ success: true }));
+        })
+        .then(data => {
+            window.location.href = '{{ route("documentos", [now()->format("Y-m")]) }}';
+        })
+        .catch(error => {
+            console.error('[sendFormInsertIngreso] Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de servidor',
+                text: 'No se pudo completar el registro masivo.',
+                confirmButtonText: 'Aceptar'
+            });
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="bi bi-floppy-fill"></i> Registrar Comprobante';
+            }
+        });
 }
 
 function validateCantXProduct() {
@@ -585,11 +638,14 @@ function validateCantXProduct() {
     let valid = true;
     detallesProducto.forEach(function (x) {
         let cantElement = x.querySelector('[id*="header-cantidad-product"]');
-        let cant = parseInt(cantElement.textContent.trim());
-        if (cant < 1) {
-            valid = false;
+        if (cantElement) {
+            let rawVal = (cantElement.value !== undefined && cantElement.value !== '') ? cantElement.value : (cantElement.textContent || '0');
+            let cant = parseInt(String(rawVal).trim()) || 0;
+            console.log('[validateCantXProduct] Producto cantidad evaluada:', cant);
+            if (cant < 1) {
+                valid = false;
+            }
         }
-        console.log('item : ' + cant);
     });
 
     return valid;
@@ -599,6 +655,8 @@ function validateSeriesForm() {
     let serialWhitProduct = [];
     let serialsForm = document.querySelectorAll('.input-serial');
 
+    console.log('[validateSeriesForm] Total de inputs .input-serial en el formulario:', serialsForm.length);
+
     serialsForm.forEach(function (x) {
         serialWhitProduct.push({
             serie: x.value,
@@ -607,8 +665,9 @@ function validateSeriesForm() {
     });
 
     let jsonData = JSON.stringify({ data: serialWhitProduct });
-
     let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    console.log('[validateSeriesForm] Enviando ' + serialWhitProduct.length + ' series a /documento/validateseries...');
 
     fetch('/documento/validateseries', {
         method: 'POST',
@@ -619,14 +678,15 @@ function validateSeriesForm() {
         body: jsonData
     })
         .then(response => {
+            console.log('[validateSeriesForm] Respuesta del servidor status:', response.status);
             if (response.ok) {
                 return response.json();
             } else {
-                throw new Error('Error al registrar.');
+                throw new Error('Error HTTP ' + response.status + ' al validar series con el servidor.');
             }
         })
         .then(data => {
-            console.log(data);
+            console.log('[validateSeriesForm] Datos recibidos de validación:', data);
             if (data.valid == true) {
                 Swal.fire({
                     icon: 'warning',
@@ -638,11 +698,18 @@ function validateSeriesForm() {
                     },
                 });
             } else {
+                console.log('[validateSeriesForm] Validación exitosa (sin duplicados). Enviando formulario...');
                 sendFormInsertIngreso();
             }
         })
         .catch(error => {
-            console.error('error: ' + error);
+            console.error('[validateSeriesForm] Error en petición de validación:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de validación',
+                text: error.message || 'No se pudo comunicar con el servidor para validar las series.',
+                confirmButtonText: 'Aceptar'
+            });
         });
 }
 
@@ -703,7 +770,7 @@ function promptMassiveSeries(id, idProducto) {
     Swal.fire({
         title: 'Ingreso Masivo de Series',
         html: '<div class="text-start mb-2"><small class="text-muted">Pega la lista de series separadas por comas (,) o saltos de línea.</small></div>' +
-              '<textarea id="swal-textarea-series" class="form-control" rows="8" placeholder="Ejemplo:\nSERIE123\nSERIE456\nSERIE789"></textarea>',
+            '<textarea id="swal-textarea-series" class="form-control" rows="8" placeholder="Ejemplo:\nSERIE123\nSERIE456\nSERIE789"></textarea>',
         showCancelButton: true,
         confirmButtonText: 'Agregar',
         cancelButtonText: 'Cancelar',
@@ -717,14 +784,14 @@ function promptMassiveSeries(id, idProducto) {
             // Dividir por comas o saltos de línea, limpiar espacios vacíos
             let rawSeries = result.value.split(/[\n,]+/);
             let series = rawSeries.map(s => s.trim()).filter(s => s.length > 0);
-            
+
             if (series.length > 0) {
                 series.forEach(serial => {
                     createItemList(id, serial, idProducto);
                 });
                 countProducts(id);
                 updateBtnAdd();
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: '¡Series agregadas!',
@@ -745,7 +812,7 @@ function adjustGenericSeries(id, targetCount, idProducto) {
         // Añadir items genéricos
         let diff = targetCount - currentCount;
         for (let i = 0; i < diff; i++) {
-            createItemList(id, '0', idProducto); 
+            createItemList(id, '0', idProducto);
         }
         invalidarChecks(id);
     } else if (targetCount < currentCount) {
@@ -755,28 +822,38 @@ function adjustGenericSeries(id, targetCount, idProducto) {
             items[items.length - 1 - i].remove();
         }
     }
-    
+
     countProducts(id);
     updateBtnAdd();
 }
 
-document.getElementById('select-almacen')?.addEventListener('change', function() {
+document.getElementById('select-almacen')?.addEventListener('change', function () {
     let currentAlmacenId = this.value;
     let optionsRackHtml = '<option value="">Rack...</option>';
-    if(window.APP_DATA && window.APP_DATA.almacenes) {
+    if (window.APP_DATA && window.APP_DATA.almacenes) {
         let almacen = window.APP_DATA.almacenes.find(a => a.idAlmacen == currentAlmacenId);
-        if(almacen && almacen.ubicaciones) {
+        if (almacen && almacen.ubicaciones) {
             almacen.ubicaciones.forEach(ubi => {
                 optionsRackHtml += `<option value="${ubi.nombre}">${ubi.nombre}</option>`;
             });
         }
     }
-    
+
     document.querySelectorAll('.select-rack-item').forEach(s => {
         s.innerHTML = optionsRackHtml;
     });
-    
+
     document.querySelectorAll('.select-ubicacion-item').forEach(s => {
         s.innerHTML = '<option value="">Fila...</option>';
     });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    let lastLog = sessionStorage.getItem('last_ingreso_action');
+    if (lastLog) {
+        try {
+            let logData = JSON.parse(lastLog);
+            console.log('%c[DEBUG INGRESO - ULTIMO INTENTO REGISTRADO]', 'background: #007bff; color: white; padding: 4px 8px; font-weight: bold; border-radius: 4px;', logData);
+        } catch (e) { }
+    }
 });

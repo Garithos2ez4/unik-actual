@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\ComprobanteServiceInterface;
+use Illuminate\Support\Facades\Log;
 
 class DocumentoController extends Controller
 {
@@ -19,7 +20,7 @@ class DocumentoController extends Controller
         $this->comprobanteService = $comprobanteService;
     }
     
-    public function index($id,$bool){
+    public function index($id, $bool = null){
         //variables de la cabecera
         $userModel = $this->headerService->getModelUser();
         //variables propias del controlador
@@ -32,7 +33,6 @@ class DocumentoController extends Controller
         
         $conteoEstados = $registros->groupBy('estado')->map->count();
         $totalItems = $registros->count();
-        
         
         $estados = [['value' => 'NUEVO', 'name' => 'Nuevo'],
                     ['value' => 'ABIERTO', 'name' => 'Abierto'],
@@ -50,43 +50,47 @@ class DocumentoController extends Controller
         $usuarios = \App\Models\Usuarios\Usuario::all();
         $estadosComprobante = ['REGISTRADO', 'PENDIENTE', 'INVALIDO', 'ELIMINADO'];
 
-        if($documento->estado == "PENDIENTE"){
+        if ($documento->estado == "PENDIENTE") {
             $bool = true;
+        } else {
+            $bool = false;
         }
 
-        foreach($userModel->Accesos as $acceso){
-            if($acceso->idVista == 8 && $bool){
-                return view('documento.comprobante',['user' => $userModel,
-                'documento' => $documento,
-                'ubicaciones' => $ubicaciones,
-                'estados' => $estados,
-                'medidas' => $medidas,
-                'adquisiciones' => $adquisiciones,
-                'validate' => $bool,
-                'conteoEstados' => $conteoEstados,
-                'totalItems' => $totalItems,
-                'proveedores' => $proveedores,
-                'tiposComprobante' => $tiposComprobante,
-                'usuarios' => $usuarios,
-                'estadosComprobante' => $estadosComprobante,
+        foreach ($userModel->Accesos as $acceso) {
+            if ($acceso->idVista == 8 && $bool) {
+                return view('documento.comprobante', [
+                    'user' => $userModel,
+                    'documento' => $documento,
+                    'ubicaciones' => $ubicaciones,
+                    'estados' => $estados,
+                    'medidas' => $medidas,
+                    'adquisiciones' => $adquisiciones,
+                    'validate' => $bool,
+                    'conteoEstados' => $conteoEstados,
+                    'totalItems' => $totalItems,
+                    'proveedores' => $proveedores,
+                    'tiposComprobante' => $tiposComprobante,
+                    'usuarios' => $usuarios,
+                    'estadosComprobante' => $estadosComprobante,
                 ]);
             }
 
-            if($acceso->idVista == 2 && !$bool){
-                return view('documento.comprobante',['user' => $userModel,
-                'documento' => $documento,
-                'ubicaciones' => $ubicaciones,
-                'estados' => $estados,
-                'medidas' => $medidas,
-                'adquisiciones' => $adquisiciones,
-                'validate' => $bool,
-                'pdf' => $registrosFiltrados,
-                'conteoEstados' => $conteoEstados,
-                'totalItems' => $totalItems,
-                'proveedores' => $proveedores,
-                'tiposComprobante' => $tiposComprobante,
-                'usuarios' => $usuarios,
-                'estadosComprobante' => $estadosComprobante,
+            if (($acceso->idVista == 2 || $acceso->idVista == 8) && !$bool) {
+                return view('documento.comprobante', [
+                    'user' => $userModel,
+                    'documento' => $documento,
+                    'ubicaciones' => $ubicaciones,
+                    'estados' => $estados,
+                    'medidas' => $medidas,
+                    'adquisiciones' => $adquisiciones,
+                    'validate' => $bool,
+                    'pdf' => $registrosFiltrados,
+                    'conteoEstados' => $conteoEstados,
+                    'totalItems' => $totalItems,
+                    'proveedores' => $proveedores,
+                    'tiposComprobante' => $tiposComprobante,
+                    'usuarios' => $usuarios,
+                    'estadosComprobante' => $estadosComprobante,
                 ]);
             }
         }
@@ -194,24 +198,28 @@ class DocumentoController extends Controller
         return response()->json($results);
     }
     
-   public function validateSeries(Request $request)
-{
-    
-    $rawJson = json_decode($request->getContent());
-    
-    $data = $rawJson->data ?? [];
+    public function validateSeries(Request $request)
+    {
+        Log::info("[validateSeries] Recibida peticion en /documento/validateseries");
+        $rawJson = json_decode($request->getContent());
+        $data = $rawJson->data ?? [];
+        Log::info("[validateSeries] Total de series a validar: " . count($data));
 
-    if (empty($data)) {
-        return response()->json(['error' => 'Faltan parámetros'], 400); 
+        if (empty($data)) {
+            Log::warning("[validateSeries] Array 'data' vacio o nulo.");
+            return response()->json(['error' => 'Faltan parámetros'], 400); 
+        }
+
+        $tStart = microtime(true);
+        $validSeries = $this->comprobanteService->validateSeriesAjax($data);
+        $tDur = round(microtime(true) - $tStart, 3);
+        Log::info("[validateSeries] Validacion completada en {$tDur}s. Series duplicadas encontradas: " . count($validSeries));
+
+        if (count($validSeries) > 0) {
+            Log::warning("[validateSeries] Se encontraron series ya registradas: " . json_encode($validSeries));
+            return response()->json(['valid' => true, 'series' => $validSeries]);
+        } else {
+            return response()->json(['valid' => false]);
+        }
     }
-
-    $validSeries = $this->comprobanteService->validateSeriesAjax($data);
-
-    if (count($validSeries) > 0) {
-        return response()->json(['valid' => true, 'series' => $validSeries]);
-    } else {
-        return response()->json(['valid' => false]);
-    }
-
-}
 }

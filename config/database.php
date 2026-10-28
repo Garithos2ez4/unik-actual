@@ -58,8 +58,15 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_TIMEOUT => 5,
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET SESSION wait_timeout = 60, SESSION interactive_timeout = 60',
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+            ], function ($value) {
+                return $value !== null && $value !== '';
+            }) : [
+                PDO::ATTR_PERSISTENT => false,
+            ],
         ],
 
         'mariadb' => [

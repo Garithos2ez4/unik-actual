@@ -242,10 +242,7 @@ class DeltronController extends Controller
             }
 
             // Guardar inmediatamente en la tabla Inventario_Proveedor de la base de datos
-            $modeloReal = null;
-            if ($detalle) {
-                $modeloReal = $detalle['modelo_real'] ?? \App\Services\Deltron\DeltronApiService::extraerModeloRealDesdeSpecs($detalle['specs_html'] ?? '');
-            }
+            $modeloReal = $detalle ? \App\Services\Deltron\DeltronTextHelper::extraerModeloDesdeItem($detalle) : null;
             $productoDb = $this->deltronService->buscarProductoEnUnike($query, $partNumber, $modeloReal);
 
             $guardadoEnBd = ($productoDb !== null);

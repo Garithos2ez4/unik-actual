@@ -9,11 +9,11 @@ Artisan::command('inspire', function () {
 
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('exchange:update-daily')->dailyAt('11:00');
-Schedule::command('bot:falabella-prices')->dailyAt('10:00');
+Schedule::command('exchange:update-daily')->dailyAt('11:00')->withoutOverlapping();
+Schedule::command('bot:falabella-prices')->dailyAt('10:00')->withoutOverlapping();
 // Sincronización oficial Deltron B2B:
 // 1. Catálogo completo en horario de baja demanda (02:00 AM) - Base de datos con tránsito, specs, imágenes, precios y stock.
-Schedule::command('deltron:sync --tipo=catalogo')->dailyAt('02:00');
+Schedule::command('deltron:sync --tipo=catalogo')->dailyAt('02:00')->withoutOverlapping();
 
 // 2. Corte de inicio de día (06:00 AM - 4h después) - Refresco ligero de precios y stock matutino.
-Schedule::command('deltron:sync --tipo=inicio-dia')->dailyAt('06:00');
+Schedule::command('deltron:sync --tipo=inicio-dia')->dailyAt('06:00')->withoutOverlapping();

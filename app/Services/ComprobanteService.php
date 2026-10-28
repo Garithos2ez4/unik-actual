@@ -11,6 +11,7 @@ use App\Repositories\IngresoProductoRepositoryInterface;
 use App\Repositories\InventarioRepositoryInterface;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Catalogo\Producto;
 
 class ComprobanteService implements ComprobanteServiceInterface
@@ -80,44 +81,58 @@ class ComprobanteService implements ComprobanteServiceInterface
     }
     
     public function updateComprobante($id,array $inputs,array $details){
-          if ($id && $inputs) {
+        Log::info("[ComprobanteService::updateComprobante] Iniciando para ID={$id}. Inputs: " . json_encode($inputs) . " | Details count: " . count($details));
+        if ($id && $inputs) {
             if (empty($details)) {
-                // Elimina si no hay detalles
+                Log::warning("[ComprobanteService::updateComprobante] 'details' vacio. Se eliminara comprobante ID={$id}.");
                 $this->comprobanteRepository->remove($id);
             } else {
-                // Actualiza el comprobante si hay detalles
-                $arrayComprobante = [
-                    'moneda' => $inputs['moneda'],
-                    'adquisicion' => $inputs['adquisicion'],
-                    'totalCompra' => $inputs['total'],
-                    'estado' => 'REGISTRADO',
-                ];
-                
-                $comprobante = $this->comprobanteRepository->update($id, $arrayComprobante);
-                foreach($details as $detail){
-                    $idProd = $detail['producto'] ?? null;
-                    if ($idProd) {
-                        $prod = Producto::find($idProd);
-                        if ($prod && $prod->es_padre) {
-                            // Los productos padre son contenedores virtuales y no reciben stock fisico
-                            continue;
-                        }
-                    }
-
-                    $arrayDetalle = [
-                    'idComprobante' => $id,
-                    'idProducto' => $detail['producto'],
-                    'medida' => $detail['medida'],
-                    'precioUnitario' => $detail['preciounitario'],
-                    'precioCompra' => $detail['preciototal'],
+                \Illuminate\Support\Facades\DB::beginTransaction();
+                try {
+                    // Actualiza el comprobante si hay detalles
+                    $arrayComprobante = [
+                        'moneda' => $inputs['moneda'],
+                        'adquisicion' => $inputs['adquisicion'],
+                        'totalCompra' => $inputs['total'],
+                        'estado' => 'REGISTRADO',
                     ];
                     
-                    $registros = $detail['ingreso'];
-                    $almacen = $inputs['almacen'];
-                    
-                    $this->insertDetalleComprobante($arrayDetalle,$registros,$almacen);
+                    Log::info("[ComprobanteService::updateComprobante] Actualizando comprobante ID={$id} a REGISTRADO...");
+                    $comprobante = $this->comprobanteRepository->update($id, $arrayComprobante);
+                    foreach($details as $detailIdx => $detail){
+                        $idProd = $detail['producto'] ?? null;
+                        if ($idProd) {
+                            $prod = Producto::find($idProd);
+                            if ($prod && $prod->es_padre) {
+                                Log::warning("[ComprobanteService::updateComprobante] Detalle #{$detailIdx} es producto padre ID={$idProd}. Omitiendo.");
+                                continue;
+                            }
+                        }
+
+                        $arrayDetalle = [
+                            'idComprobante' => $id,
+                            'idProducto' => $detail['producto'],
+                            'medida' => $detail['medida'],
+                            'precioUnitario' => $detail['preciounitario'],
+                            'precioCompra' => $detail['preciototal'],
+                        ];
+                        
+                        $registros = $detail['ingreso'] ?? [];
+                        $almacen = $inputs['almacen'];
+                        
+                        Log::info("[ComprobanteService::updateComprobante] Procesando detalle #{$detailIdx}: idProducto={$detail['producto']}, almacen={$almacen}, series count=" . count($registros));
+                        $this->insertDetalleComprobante($arrayDetalle, $registros, $almacen);
+                    }
+                    \Illuminate\Support\Facades\DB::commit();
+                    Log::info("[ComprobanteService::updateComprobante] DB::commit exitoso para comprobante ID={$id}.");
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\DB::rollBack();
+                    Log::error("[ComprobanteService::updateComprobante] DB::rollBack por excepcion: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+                    throw $e;
                 }
             }
+        } else {
+            Log::warning("[ComprobanteService::updateComprobante] ID ({$id}) o inputs vacios.");
         }
     }
     public function updateRegisteredComprobante($id, $data, array $detalles = [])
@@ -307,48 +322,131 @@ class ComprobanteService implements ComprobanteServiceInterface
         return $this->comprobanteRepository->getEstadosByMonth($carbonMonth);
     }
 
-    private function insertDetalleComprobante(array $data, array $registros,$idAlmacen){
-        if($data){
-            //Para actualizar stock
+    private function insertDetalleComprobante(array $data, array $registros, $idAlmacen){
+        if ($data) {
             $idProducto = $data['idProducto'];
             $producto = Producto::find($idProducto);
             if ($producto && $producto->es_padre) {
-                // Producto padre es solo un parametro/contenedor, no admite stock fisico
+                Log::warning("[insertDetalleComprobante] Producto padre detectado (ID={$idProducto}). No admite stock fisico.");
                 return;
             }
-            //Para el detalle del Comprobante
-            $data['idDetalleComprobante'] = $this-> getNewIdDetalleComprobante();
+
+            $data['idDetalleComprobante'] = $this->getNewIdDetalleComprobante();
+            Log::info("[insertDetalleComprobante] Creando DetalleComprobante ID={$data['idDetalleComprobante']} para Producto ID={$idProducto}. Total series en payload: " . count($registros));
             $detalle = $this->detalleComprobanteRepository->create($data);
-            if($detalle && $idAlmacen){
-                foreach($registros as $registro){
-                    if($registro['serialnumber'] == 0){
-                        $validate = null;
-                        $registro['serialnumber'] = $this->generateSerial($idProducto);
-                    }else{
-                        $validate = $this->productoRepository->validateSerial($idProducto,$registro['serialnumber']);
+            if ($detalle && $idAlmacen && !empty($registros)) {
+                // Pre-calcular correlativo para series generadas automáticamente una sola vez
+                $hasGenericSerial = false;
+                foreach ($registros as $r) {
+                    $s = $r['serialnumber'] ?? null;
+                    if ($s === 0 || $s === '0' || empty($s)) {
+                        $hasGenericSerial = true;
+                        break;
                     }
-                    
-                    if(!$validate){
-                        $arrayRegistro = [
-                        'idDetalleComprobante' => $data['idDetalleComprobante'],
-                        'numeroSerie' => $registro['serialnumber'],
-                        'estado' => $registro['estado'],
-                        'observacion' => $registro['observacion'] ?? null,
-                        'idAlmacen' => $idAlmacen,
-                        'ubicacion_especifica' => $registro['idUbicacion'] ?? null
-                        ];
-                        try {
-                            $this->insertRegistro($arrayRegistro);
-                            $this->addStock($idProducto, $idAlmacen);
-                            // Validar estado del producto (por si estaba AGOTADO)
-                            $this->productoService->validateState($idProducto, true);
-                        } catch (Exception $e) {
-                            // Manejo de errores: puedes registrar el error o mostrar un mensaje
-                            // Log::error('Error al insertar registro: ' . $e->getMessage());
-                        }
-                    }
-                    
                 }
+
+                $parcialCode = '';
+                $serialCounter = 0;
+                if ($hasGenericSerial && $producto) {
+                    $modelOrCode = !empty($producto->modelo) ? $producto->modelo : $producto->codigoProducto;
+                    $cleanedModel = preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($modelOrCode));
+                    $parcialCode = 'UNK-' . $cleanedModel;
+                    $validateCode = $this->registroProductoRepository->searchList('numeroSerie', $parcialCode);
+                    $serialCounter = 100000 + count($validateCode);
+                    Log::info("[insertDetalleComprobante] Series genericas detectadas. Prefijo={$parcialCode}, contador inicial={$serialCounter}");
+                }
+
+                $nextIdRegistro = $this->getNewIdRegistro();
+                $nextIdIngreso = $this->getNewIdIngreso();
+                $user = $this->headerService->getModelUser();
+                $idUser = $user ? $user->idUser : 1;
+
+                Log::info("[insertDetalleComprobante] Iniciando insercion de registros. nextIdRegistro={$nextIdRegistro}, nextIdIngreso={$nextIdIngreso}, idUser={$idUser}");
+
+                $itemsAgregados = 0;
+                $tLoopStart = microtime(true);
+                $batchRegistros = [];
+                $batchIngresos = [];
+                $nowTimestamp = now();
+
+                foreach ($registros as $registro) {
+                    $serial = $registro['serialnumber'] ?? null;
+                    if ($serial === 0 || $serial === '0' || empty($serial)) {
+                        $serialCounter++;
+                        $serialFinal = $parcialCode . '-' . $serialCounter;
+                        $validate = null;
+                    } else {
+                        $serialFinal = $serial;
+                        $validate = $this->productoRepository->validateSerial($idProducto, $serialFinal);
+                    }
+
+                    if (!$validate) {
+                        $idReg = $nextIdRegistro++;
+                        $idIng = $nextIdIngreso++;
+
+                        $ubicacionEspecifica = (!empty($registro['idUbicacion']) && is_numeric($registro['idUbicacion']))
+                            ? (int)$registro['idUbicacion']
+                            : null;
+
+                        $batchRegistros[] = [
+                            'idRegistro' => $idReg,
+                            'idDetalleComprobante' => $data['idDetalleComprobante'],
+                            'numeroSerie' => $serialFinal,
+                            'estado' => (!empty($registro['estado'])) ? $registro['estado'] : 'NUEVO',
+                            'observacion' => (!empty($registro['observacion'])) ? $registro['observacion'] : null,
+                            'idAlmacen' => $idAlmacen,
+                            'ubicacion_especifica' => $ubicacionEspecifica,
+                            'fechaMovimiento' => $nowTimestamp,
+                        ];
+
+                        $batchIngresos[] = [
+                            'idIngreso' => $idIng,
+                            'idRegistro' => $idReg,
+                            'idUser' => $idUser,
+                            'fechaIngreso' => $nowTimestamp,
+                        ];
+
+                        $itemsAgregados++;
+                    } else {
+                        Log::warning("[insertDetalleComprobante] Serie ya existente rechazada: {$serialFinal}");
+                    }
+                }
+
+                // Inserción en bloques (chunks) de 250 registros para velocidad extrema y evitar saturar MySQL
+                if (!empty($batchRegistros)) {
+                    foreach (array_chunk($batchRegistros, 250) as $chunkReg) {
+                        \App\Models\Inventario\RegistroProducto::insert($chunkReg);
+                    }
+                    foreach (array_chunk($batchIngresos, 250) as $chunkIng) {
+                        \App\Models\Inventario\IngresoProducto::insert($chunkIng);
+                    }
+                }
+
+                $durLoop = round(microtime(true) - $tLoopStart, 3);
+                Log::info("[insertDetalleComprobante] Insercion en bucle completada. Items agregados: {$itemsAgregados} / " . count($registros) . " en {$durLoop}s");
+
+                // Incrementar el stock del producto en el almacén una sola vez por todo el lote
+                if ($itemsAgregados > 0) {
+                    $inventario = \App\Models\Inventario\Inventario::where('idProducto', $idProducto)
+                        ->where('idAlmacen', $idAlmacen)
+                        ->first();
+                    if (!$inventario) {
+                        $inventario = \App\Models\Inventario\Inventario::create([
+                            'idProducto' => $idProducto,
+                            'idAlmacen' => $idAlmacen,
+                            'stock' => 0
+                        ]);
+                    }
+                    $inventario->increment('stock', $itemsAgregados);
+                    Log::info("[insertDetalleComprobante] Stock incrementado en {$itemsAgregados} para Producto ID={$idProducto} en Almacen ID={$idAlmacen}.");
+
+                    // Validar estado del producto (por si estaba AGOTADO, pasar a DISPONIBLE) una sola vez
+                    $this->productoService->validateState($idProducto, true);
+                } else {
+                    Log::warning("[insertDetalleComprobante] ALERTA: No se agrego ningun item (itemsAgregados = 0).");
+                }
+            } else {
+                Log::warning("[insertDetalleComprobante] No se insertaron series: detalle=" . ($detalle ? 'OK' : 'NULL') . ", idAlmacen={$idAlmacen}, registros vacios=" . (empty($registros) ? 'SI' : 'NO'));
             }
         }
     }

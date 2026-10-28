@@ -18,6 +18,8 @@ class FalabellaOrderSyncService
         'return_delivered_to_seller',
     ];
 
+    protected static array $sellerSkuCache = [];
+
     public function __construct(
         protected FalabellaApiService $falabellaApiService
     ) {}
@@ -81,21 +83,26 @@ class FalabellaOrderSyncService
 
                 // Intento de rescate de SKU numerico si no viene
                 if ($sellerSku && (!is_numeric($falabellaSku) || blank($falabellaSku) || $falabellaSku === '-')) {
-                    try {
-                        $productResponse = $this->falabellaApiService->getProducts([
-                            'SkuSellerList' => json_encode([$sellerSku])
-                        ]);
-                        $apiProducts = $this->falabellaApiService->extractProducts($productResponse);
+                    if (isset(self::$sellerSkuCache[$sellerSku])) {
+                        $falabellaSku = self::$sellerSkuCache[$sellerSku];
+                    } else {
+                        try {
+                            $productResponse = $this->falabellaApiService->getProducts([
+                                'SkuSellerList' => json_encode([$sellerSku])
+                            ]);
+                            $apiProducts = $this->falabellaApiService->extractProducts($productResponse);
 
-                        if (!empty($apiProducts)) {
-                            $normalizedProd = $apiProducts[0]['_normalized'] ?? [];
-                            $skuLimpio = trim((string) ($normalizedProd['falabella_sku'] ?? '-'));
-                            if ($skuLimpio !== '-' && is_numeric($skuLimpio)) {
-                                $falabellaSku = $skuLimpio;
+                            if (!empty($apiProducts)) {
+                                $normalizedProd = $apiProducts[0]['_normalized'] ?? [];
+                                $skuLimpio = trim((string) ($normalizedProd['falabella_sku'] ?? '-'));
+                                if ($skuLimpio !== '-' && is_numeric($skuLimpio)) {
+                                    $falabellaSku = $skuLimpio;
+                                    self::$sellerSkuCache[$sellerSku] = $falabellaSku;
+                                }
                             }
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::warning("Error obteniendo ShopSku para {$sellerSku}: " . $e->getMessage());
                         }
-                    } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::warning("Error obteniendo ShopSku para {$sellerSku}: " . $e->getMessage());
                     }
                 }
 

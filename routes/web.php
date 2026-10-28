@@ -170,7 +170,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/ingreso/deleteingreso', [IngresoController::class, 'deleteIngreso'])->name('deleteingreso');
     Route::post('/ingreso/updateregistro', [IngresoController::class, 'updateRegistro'])->name('updateregistro');
     Route::post('/ingreso/insertcomprobante', [IngresoController::class, 'insertComprobante'])->name('insertcomprobante');
-    Route::post('/ingreso/insertingreso/{comprobante}', [IngresoController::class, 'insertIngreso'])->name('insertingreso');
+    Route::match(['get', 'post'], '/ingreso/insertingreso/{comprobante}', [IngresoController::class, 'insertIngreso'])->name('insertingreso');
 
     Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios');
     Route::get('/usuario/nuevo', [UsuarioController::class, 'create'])->name('nuevousuario');
@@ -242,7 +242,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/traslado/search-multiple-series', [TrasladoController::class, 'searchMultipleSeries'])->name('traslado.searchmultipleseries');
 
     Route::get('/documento/searchdocument', [DocumentoController::class, 'searchDocument'])->name('searchdocument');
-    Route::get('/documento/{id}/{bool}', [DocumentoController::class, 'index'])->name('documento');
+    Route::get('/documento/{id}/{bool?}', [DocumentoController::class, 'index'])->name('documento');
     Route::get('/documentos/{date}', [DocumentoController::class, 'list'])->name('documentos');
     Route::post('/documento/deletecomprobante', [DocumentoController::class, 'deleteComprobante'])->name('deletecomprobante');
     Route::post('/documento/editcomprobante', [DocumentoController::class, 'editComprobante'])->name('editcomprobante');

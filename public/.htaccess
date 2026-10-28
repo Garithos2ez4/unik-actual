@@ -19,3 +19,20 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Aumentar límites para ingresos masivos de stock
+<IfModule mod_php.c>
+    php_value max_input_vars 50000
+    php_value max_execution_time 300
+    php_value memory_limit 512M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value max_input_vars 50000
+    php_value max_execution_time 300
+    php_value memory_limit 512M
+</IfModule>
+<IfModule mod_php8.c>
+    php_value max_input_vars 50000
+    php_value max_execution_time 300
+    php_value memory_limit 512M
+</IfModule>
