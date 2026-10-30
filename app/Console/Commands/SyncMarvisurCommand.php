@@ -66,12 +66,42 @@ class SyncMarvisurCommand extends Command
 
             $sucursales = $json['data']['Table'];
 
-            // --- BORRADO LÓGICO ---
-            SubAgencia::where('idAgencia', $agencia->idAgencia)->update(['estado' => 0]);
-
+            $idsVistos = [];
             $nuevas = 0;
-            $existentes_actualizadas = 0;
+            $actualizadas = 0;
+            $sinCambios = 0;
             $omitidas = 0;
+
+            $excepciones = [
+                'AGUAYTIA' => 'PADRE ABAD',
+                'BAGUA CHICA' => 'BAGUA',
+                'CANTA CALLAO' => 'CALLAO',
+                'CAÑETE' => 'SAN VICENTE DE CAÑETE',
+                'CERRO DE PASCO' => 'CHAUPIMARCA',
+                'CERRO JULI' => 'JOSE LUIS BUSTAMANTE Y RIVERO',
+                'CHINCHA' => 'CHINCHA ALTA',
+                'CIUDAD DE DIOS' => 'PACASMAYO',
+                'CONO NORTE' => 'CERRO COLORADO',
+                'CORPORATIVOS' => 'LIMA',
+                'FIORI' => 'SAN MARTIN DE PORRES',
+                'GARCI CARBAJAL' => 'AREQUIPA',
+                'HUAYCAN' => 'ATE',
+                'LAS MALVINAS' => 'LIMA',
+                'MANCHAY' => 'PACHACAMAC',
+                'MARVI' => 'LA VICTORIA',
+                'MARVI EXPRESS' => 'LA VICTORIA',
+                'MAZUKO' => 'INAMBARI',
+                'PEDREGAL' => 'MAJES',
+                'PEDRO RUIZ GALLO' => 'JAZAN',
+                'PUCALLPA' => 'CALLERIA',
+                'QUILLABAMBA' => 'SANTA ANA',
+                'TALARA' => 'PARIÑAS',
+                'TINGO MARIA' => 'RUPA-RUPA',
+                'VILLA MARIA' => 'VILLA MARIA DEL TRIUNFO',
+                'SAN VICENTE DE CAÑETE' => 'SAN VICENTE DE CAÑETE',
+                'RUPA RUPA' => 'RUPA-RUPA',
+                'LA VICTORIA(LIMA)' => 'LA VICTORIA',
+            ];
 
             foreach ($sucursales as $item) {
                 $sucursalName = trim($item['titulo'] ?? '');
@@ -95,98 +125,106 @@ class SyncMarvisurCommand extends Command
                     continue;
                 }
 
-                // 3. Identificar el nombre del destino a buscar
-                // Si contiene "LIMA", lo mapeamos automáticamente al destino "LIMA"
-                $destinoName = str_contains(strtoupper($sucursalName), 'LIMA') ? 'LIMA' : $sucursalName;
+                // 3. Buscar el destino:
+                // Prioridad A: Usar el distrito oficial provisto directamente por Marvisur
+                $distritoMarvi = trim($item['distrito'] ?? '');
+                $provinciaMarvi = trim($item['provincia'] ?? '');
+                $distritoLimpio = preg_replace('/\s*\(.*?\)\s*/', '', $distritoMarvi);
 
-                // Limpieza de números romanos y sufijos de Marvisur (ej: ATE II -> ATE)
-                $destinoName = preg_replace('/\s+(II|III|IV|V|ALMACEN|EXPRESS|CORPORATIVOS)$/i', '', $destinoName);
-                $destinoName = trim($destinoName);
-
-                $excepciones = [
-                    'AGUAYTIA' => 'PADRE ABAD',
-                    'BAGUA CHICA' => 'BAGUA',
-                    'CANTA CALLAO' => 'CALLAO',
-                    'CAÑETE' => 'SAN VICENTE DE CAÑETE',
-                    'CERRO DE PASCO' => 'CHAUPIMARCA',
-                    'CERRO JULI' => 'JOSE LUIS BUSTAMANTE Y RIVERO',
-                    'CHINCHA' => 'CHINCHA ALTA',
-                    'CIUDAD DE DIOS' => 'PACASMAYO',
-                    'CONO NORTE' => 'CERRO COLORADO',
-                    'CORPORATIVOS' => 'LIMA',
-                    'FIORI' => 'SAN MARTIN DE PORRES',
-                    'GARCI CARBAJAL' => 'AREQUIPA',
-                    'HUAYCAN' => 'ATE',
-                    'LAS MALVINAS' => 'LIMA',
-                    'MANCHAY' => 'PACHACAMAC',
-                    'MARVI' => 'LA VICTORIA',
-                    'MARVI EXPRESS' => 'LA VICTORIA',
-                    'MAZUKO' => 'INAMBARI',
-                    'PEDREGAL' => 'MAJES',
-                    'PEDRO RUIZ GALLO' => 'JAZAN',
-                    'PUCALLPA' => 'CALLERIA',
-                    'QUILLABAMBA' => 'SANTA ANA',
-                    'TALARA' => 'PARIÑAS',
-                    'TINGO MARIA' => 'RUPA-RUPA',
-                    'VILLA MARIA' => 'VILLA MARIA DEL TRIUNFO',
-                ];
-
-                if (array_key_exists(strtoupper($destinoName), $excepciones)) {
-                    $destinoName = $excepciones[strtoupper($destinoName)];
-                }
+                $distritoBusqueda = $excepciones[strtoupper($distritoMarvi)] 
+                    ?? ($excepciones[strtoupper($distritoLimpio)] ?? $distritoLimpio);
+                $provinciaBusqueda = $excepciones[strtoupper($provinciaMarvi)] ?? $provinciaMarvi;
 
                 $destino = null;
 
-                // Intentar buscar por Provincia y Distrito primero para evitar homónimos
-                if (!empty($item['provincia'])) {
-                    $provinciaStr = trim($item['provincia']);
-                    $destino = Destino::whereHas('Provincia', function($q) use ($provinciaStr) {
-                        $q->where('nombre', $provinciaStr);
-                    })->where('nombre', $destinoName)->first();
+                if (!empty($distritoBusqueda)) {
+                    $q = Destino::select('destinos.*')
+                        ->join('provincias', 'destinos.idProvincia', '=', 'provincias.idProvincia')
+                        ->whereRaw('UPPER(destinos.nombre) = ?', [strtoupper($distritoBusqueda)]);
+                    if (!empty($provinciaBusqueda)) {
+                        $destino = (clone $q)->whereRaw('UPPER(provincias.nombre) = ?', [strtoupper($provinciaBusqueda)])->first();
+                    }
+                    if (!$destino) {
+                        $destino = $q->first();
+                    }
                 }
 
-                // Si no se encontró (o no enviaron provincia), buscar solo por el destino como fallback
+                // Prioridad B (fallback): Inferir destino desde el título de la sucursal
                 if (!$destino) {
-                    $destino = Destino::where('nombre', $destinoName)->first();
+                    $destinoName = preg_replace('/\s+([IVXLCDM]+|ALMACEN|EXPRESS|CORPORATIVOS)$/i', '', $sucursalName);
+                    $destinoName = $excepciones[strtoupper($destinoName)] ?? $destinoName;
+
+                    if (!empty($provinciaBusqueda)) {
+                        $destino = Destino::whereHas('Provincia', function($q) use ($provinciaBusqueda) {
+                            $q->where('nombre', $provinciaBusqueda);
+                        })->whereRaw('UPPER(nombre) = ?', [strtoupper($destinoName)])->first();
+                    }
+                    if (!$destino) {
+                        $destino = Destino::whereRaw('UPPER(nombre) = ?', [strtoupper($destinoName)])->first();
+                    }
                 }
 
                 if (!$destino) {
-                    $this->warn("Destino no encontrado para: {$sucursalName} (Provincia Marvisur: " . ($item['provincia'] ?? 'N/A') . ")");
+                    $this->warn("Destino no encontrado para: {$sucursalName} (Distrito Marvisur: {$distritoMarvi}, Provincia: {$provinciaMarvi})");
                     $omitidas++;
                     continue;
                 }
 
                 // 4. Crear o actualizar SubAgencia
-                $subAgenciaExistente = SubAgencia::where('idAgencia', $agencia->idAgencia)
+                $subAgencia = SubAgencia::where('idAgencia', $agencia->idAgencia)
                     ->where('idDestino', $destino->idDestino)
                     ->where('nombre_oficina', $sucursalName)
                     ->first();
 
-                if (!$subAgenciaExistente) {
-                    SubAgencia::create([
+                if (!$subAgencia) {
+                    // Buscar si existía pero con idDestino previo para reubicarlo
+                    $subAgencia = SubAgencia::where('idAgencia', $agencia->idAgencia)
+                        ->where('nombre_oficina', $sucursalName)
+                        ->whereNotIn('idSubAgencia', $idsVistos ?: [0])
+                        ->first();
+                }
+
+                if (!$subAgencia) {
+                    $subAgencia = SubAgencia::create([
                         'idAgencia' => $agencia->idAgencia,
                         'idDestino' => $destino->idDestino,
                         'nombre_oficina' => $sucursalName,
-                        'direccion' => substr($direccionFinal, 0, 255), // Limitar a 255 chars
-                        'telefono' => substr($telefonoFinal, 0, 50),
-                        'estado' => 1
-                    ]);
-                    $nuevas++;
-                    $this->line("Creado: {$sucursalName} en Destino: {$destino->nombre}");
-                } else {
-                    // Actualizamos la data rica
-                    $subAgenciaExistente->update([
                         'direccion' => substr($direccionFinal, 0, 255),
                         'telefono' => substr($telefonoFinal, 0, 50),
                         'estado' => 1
                     ]);
-                    $existentes_actualizadas++;
+                    $idsVistos[] = $subAgencia->idSubAgencia;
+                    $nuevas++;
+                    $this->line("Creado: {$sucursalName} en Destino: {$destino->nombre}");
+                } else {
+                    $subAgencia->fill([
+                        'idDestino' => $destino->idDestino,
+                        'direccion' => substr($direccionFinal, 0, 255),
+                        'telefono' => substr($telefonoFinal, 0, 50),
+                        'estado' => 1
+                    ]);
+                    $idsVistos[] = $subAgencia->idSubAgencia;
+
+                    if ($subAgencia->isDirty()) {
+                        $subAgencia->save();
+                        $actualizadas++;
+                    } else {
+                        $sinCambios++;
+                    }
                 }
             }
 
+            // Desactivar solo las sub-agencias que ya no existen en Marvisur
+            $desactivadas = SubAgencia::where('idAgencia', $agencia->idAgencia)
+                ->where('estado', 1)
+                ->whereNotIn('idSubAgencia', $idsVistos ?: [0])
+                ->update(['estado' => 0]);
+
             $this->info("¡Sincronización Completada!");
             $this->info("- Nuevas Sub-Agencias: {$nuevas}");
-            $this->info("- Actualizadas con Dirección: {$existentes_actualizadas}");
+            $this->info("- Actualizadas con cambios: {$actualizadas}");
+            $this->info("- Sin cambios: {$sinCambios}");
+            $this->info("- Desactivadas: {$desactivadas}");
             $this->info("- Omitidas (Sin destino): {$omitidas}");
 
         } catch (\Exception $e) {

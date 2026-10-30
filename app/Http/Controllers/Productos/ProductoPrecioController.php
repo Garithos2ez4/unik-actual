@@ -131,6 +131,7 @@ class ProductoPrecioController extends Controller
             $producto->precioDolar = $request->precioDolar;
         }
         $producto->save();
+        $producto->invalidarCacheWeb();
 
         return response()->json([
             'success' => true,

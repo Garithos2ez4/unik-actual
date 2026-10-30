@@ -177,7 +177,29 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @php $hasRecomendados = false; @endphp
+                                    @php 
+                                        $hasRecomendados = false;
+                                        $mapaPorSkuCache = [];
+                                        foreach (\App\Models\Inventario\InventarioProveedorSku::whereNotNull('sku_proveedor')->get(['sku_proveedor', 'idInventarioProveedor']) as $s) {
+                                            $c = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($s->sku_proveedor)));
+                                            if (!empty($c)) $mapaPorSkuCache[$c] = $s->idInventarioProveedor;
+                                        }
+
+                                        $mapaPorModeloCache = [];
+                                        $mapaPorPnCache = [];
+                                        foreach (\App\Models\Catalogo\Producto::all(['idProducto', 'modelo', 'partNumber']) as $p) {
+                                            if (!empty($p->modelo)) {
+                                                $c = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($p->modelo)));
+                                                if (!empty($c)) $mapaPorModeloCache[$c] = $p->idProducto;
+                                            }
+                                            if (!empty($p->partNumber) && $p->partNumber !== '0') {
+                                                $c = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($p->partNumber)));
+                                                if (!empty($c)) $mapaPorPnCache[$c] = $p->idProducto;
+                                            }
+                                        }
+
+                                        $deltronPrefixesModal = ['ACCPU', 'MON', 'MEM', 'SSD', 'HDD', 'VGA', 'UPS', 'CAB', 'CON', 'SUP', 'PRO', 'PAD', 'ACC', 'KB', 'MO', 'MN', 'NB', 'TB', 'CS', 'PS', 'PW', 'AU', 'HP', 'PR', 'SP', 'WC', 'SW', 'RT', 'MB'];
+                                    @endphp
                                     @foreach($historial as $log)
                                     @if(!empty($log->recomendados_json))
                                     @php
@@ -188,11 +210,6 @@
                                     <tr>
                                         <td class="ps-4 text-muted small">{{ $log->fecha_ejecucion->format('d/m/Y h:i A') }}</td>
                                         <td>
-                                            <span class="fw-bold text-dark d-block" style="max-width: 380px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $rec['titulo'] ?? '' }}">
-                                                {{ $rec['titulo'] ?? 'Producto Deltron' }}
-                                            </span>
-                                        </td>
-                                        <td>
                                             @php
                                                 $pnFinal = !empty($rec['part_number']) ? $rec['part_number'] : null;
                                                 if (!$pnFinal && !empty($rec['sku'])) {
@@ -201,7 +218,52 @@
                                                         $pnFinal = $foundSku->part_number;
                                                     }
                                                 }
+
+                                                $cleanSkuModal = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($rec['sku'] ?? '')));
+                                                $cleanPnModal = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($pnFinal ?? '')));
+                                                $idProductoExistente = null;
+
+                                                if (!empty($cleanSkuModal) && isset($mapaPorSkuCache[$cleanSkuModal])) {
+                                                    $idProductoExistente = $mapaPorSkuCache[$cleanSkuModal];
+                                                } elseif (!empty($cleanPnModal) && isset($mapaPorPnCache[$cleanPnModal])) {
+                                                    $idProductoExistente = $mapaPorPnCache[$cleanPnModal];
+                                                } elseif (!empty($cleanPnModal) && isset($mapaPorModeloCache[$cleanPnModal])) {
+                                                    $idProductoExistente = $mapaPorModeloCache[$cleanPnModal];
+                                                } elseif (!empty($cleanSkuModal)) {
+                                                    if (isset($mapaPorModeloCache[$cleanSkuModal])) {
+                                                        $idProductoExistente = $mapaPorModeloCache[$cleanSkuModal];
+                                                    } elseif (isset($mapaPorPnCache[$cleanSkuModal])) {
+                                                        $idProductoExistente = $mapaPorPnCache[$cleanSkuModal];
+                                                    } else {
+                                                        foreach ($deltronPrefixesModal as $pre) {
+                                                            if (str_starts_with($cleanSkuModal, $pre)) {
+                                                                $sub = substr($cleanSkuModal, strlen($pre));
+                                                                if (strlen($sub) >= 3) {
+                                                                    if (isset($mapaPorModeloCache[$sub])) {
+                                                                        $idProductoExistente = $mapaPorModeloCache[$sub];
+                                                                        break;
+                                                                    } elseif (isset($mapaPorPnCache[$sub])) {
+                                                                        $idProductoExistente = $mapaPorPnCache[$sub];
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             @endphp
+                                            <div class="d-flex align-items-center">
+                                                <span class="fw-bold text-dark text-truncate" style="max-width: 330px;" title="{{ $rec['titulo'] ?? '' }}">
+                                                    {{ $rec['titulo'] ?? 'Producto Deltron' }}
+                                                </span>
+                                                @if($idProductoExistente)
+                                                    <span class="badge bg-success-subtle text-success border border-success rounded-pill ms-2 px-2 py-1 small text-nowrap" title="Registrado en tu tienda con ID {{ $idProductoExistente }}">
+                                                        <i class="bi bi-check-circle me-1"></i>En Catálogo
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td>
                                             @if(!empty($pnFinal))
                                                 <span class="fw-bold text-primary font-monospace">{{ $pnFinal }}</span>
                                                 <i class="bi bi-clipboard btn-copy-mini ms-1" title="Copiar Part Number" onclick="copyToClipboard('{{ $pnFinal }}', this)"></i>
@@ -216,13 +278,19 @@
                                             </span>
                                         </td>
                                         <td class="text-center pe-4 text-nowrap">
+                                            @if($idProductoExistente)
+                                                <a href="{{ route('producto', $idProductoExistente) }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1 shadow-xs me-1" title="Ver producto registrado en catálogo (ID: {{ $idProductoExistente }})">
+                                                    <i class="bi bi-box-seam"></i> Ver Catálogo
+                                                </a>
+                                            @elseif(!empty($rec['sku']))
+                                                <a href="{{ route('createproducto') }}?from_deltron={{ urlencode($rec['sku']) }}" target="_blank" class="btn btn-sm btn-success rounded-pill px-2 py-1 shadow-xs me-1" title="Crear este producto en Unike Store">
+                                                    <i class="bi bi-plus-circle"></i> Crear
+                                                </a>
+                                            @endif
                                             @if(!empty($rec['sku']))
-                                            <a href="{{ route('createproducto') }}?from_deltron={{ urlencode($rec['sku']) }}" target="_blank" class="btn btn-sm btn-success rounded-pill px-2 py-1 shadow-xs me-1" title="Crear este producto en Unike Store">
-                                                <i class="bi bi-plus-circle"></i> Crear
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 me-1" onclick="abrirModalFichaSku('{{ $rec['sku'] }}', '{{ $pnFinal ?? '' }}', false, this)" title="Ver ficha técnica y Part Number oficial en Deltron">
-                                                <i class="bi bi-file-earmark-text"></i> Ficha
-                                            </button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 me-1" onclick="abrirModalFichaSku('{{ $rec['sku'] }}', '{{ $pnFinal ?? '' }}', false, this)" title="Ver ficha técnica y Part Number oficial en Deltron">
+                                                    <i class="bi bi-file-earmark-text"></i> Ficha
+                                                </button>
                                             @endif
                                             <a href="{{ route('calculadora.cotizador') }}?search={{ urlencode($pnFinal ?: ($rec['sku'] ?? '')) }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1">
                                                 <i class="bi bi-calculator"></i> Cotizar

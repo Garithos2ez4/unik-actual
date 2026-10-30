@@ -754,6 +754,11 @@ class DeltronApiService
         return $this->importService->importarLoteOfertas($itemsAImportar);
     }
 
+    public function completarFotosProducto(Producto $producto): array
+    {
+        return $this->importService->completarFotosProducto($producto);
+    }
+
     /* =========================================================================
      * PROXIES ESTATICOS HACIA DeltronTextHelper (100% COMPATIBILIDAD RETROACTIVA)
      * ========================================================================= */

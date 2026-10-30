@@ -60,12 +60,17 @@ class SyncEmtrafesaCommand extends Command
 
             $sucursales = $json;
 
-            // --- BORRADO LÓGICO ---
-            SubAgencia::where('idAgencia', $agencia->idAgencia)->update(['estado' => 0]);
-
+            $idsVistos = [];
             $nuevas = 0;
-            $existentes_actualizadas = 0;
+            $actualizadas = 0;
+            $sinCambios = 0;
             $omitidas = 0;
+
+            // Aliases explícitos para sucursales que no traen formato estándar
+            $sucursalAliases = [
+                'LIMA PUENTE PIEDRA' => ['distrito' => 'PUENTE PIEDRA', 'provincia' => 'LIMA'],
+                'JAEN TERMINAL' => ['distrito' => 'JAEN', 'provincia' => 'JAEN'],
+            ];
 
             foreach ($sucursales as $item) {
                 $sucursalName = trim($item['Nombre'] ?? '');
@@ -75,34 +80,37 @@ class SyncEmtrafesaCommand extends Command
                     continue;
                 }
 
-                // Extraer dirección y ubicación (Dep-Prov-Dist)
-                // Formato esperado: "DIRECCION - DEPARTAMENTO-PROVINCIA-DISTRITO"
-                $parts = explode(' - ', $direccionCompleta);
-                $direccion = 'S/N';
-                $ubicacionStr = '';
-
-                if (count($parts) >= 2) {
-                    // El último elemento suele ser el Dep-Prov-Dist
-                    $ubicacionStr = array_pop($parts);
-                    // Lo que queda es la dirección (volvemos a unir si había " - " en la calle)
-                    $direccion = implode(' - ', $parts);
-                } else {
-                    $direccion = $direccionCompleta;
-                }
-
                 $provinciaStr = '';
                 $distritoStr = '';
-                
-                // Parsear ubicacionStr (ej: "LA LIBERTAD-TRUJILLO-TRUJILLO")
-                if (!empty($ubicacionStr)) {
-                    $ubiParts = explode('-', $ubicacionStr);
-                    if (count($ubiParts) >= 3) {
-                        $provinciaStr = trim($ubiParts[1]);
-                        $distritoStr = trim($ubiParts[2]);
-                    } elseif (count($ubiParts) == 2) {
-                        // Por si acaso viene solo Prov-Dist
-                        $provinciaStr = trim($ubiParts[0]);
-                        $distritoStr = trim($ubiParts[1]);
+                $direccion = $direccionCompleta;
+
+                // 1. Verificar si tiene alias explícito
+                if (isset($sucursalAliases[strtoupper($sucursalName)])) {
+                    $distritoStr = $sucursalAliases[strtoupper($sucursalName)]['distrito'];
+                    $provinciaStr = $sucursalAliases[strtoupper($sucursalName)]['provincia'];
+                } else {
+                    // Extraer dirección y ubicación (Dep-Prov-Dist)
+                    // Formato esperado: "DIRECCION - DEPARTAMENTO-PROVINCIA-DISTRITO"
+                    $parts = explode(' - ', $direccionCompleta);
+
+                    if (count($parts) >= 2) {
+                        $ubicacionStr = array_pop($parts);
+                        $direccion = implode(' - ', $parts);
+
+                        $ubiParts = explode('-', $ubicacionStr);
+                        if (count($ubiParts) >= 3) {
+                            $provinciaStr = trim($ubiParts[1]);
+                            $distritoStr = trim($ubiParts[2]);
+                        } elseif (count($ubiParts) == 2) {
+                            $provinciaStr = trim($ubiParts[0]);
+                            $distritoStr = trim($ubiParts[1]);
+                        }
+                    }
+
+                    // Si no se extrajo distrito y el nombre empieza con "LIMA "
+                    if (empty($distritoStr) && str_starts_with(strtoupper($sucursalName), 'LIMA ')) {
+                        $distritoStr = trim(substr($sucursalName, 5));
+                        $provinciaStr = 'LIMA';
                     }
                 }
 
@@ -121,9 +129,10 @@ class SyncEmtrafesaCommand extends Command
                     $destino = Destino::where('nombre', $distritoStr)->first();
                 }
 
-                // Si aún no se encuentra, intentamos por el nombre de la sucursal (ej: "CHICLAYO")
+                // Si aún no se encuentra, intentamos por el nombre de la sucursal (ej: "HUARMEY", "CHICLAYO")
                 if (!$destino) {
-                    $destino = Destino::where('nombre', $sucursalName)->first();
+                    $nombreLimpio = preg_replace('/\s*\(.*?\)\s*/', '', $sucursalName);
+                    $destino = Destino::where('nombre', $nombreLimpio)->first();
                 }
 
                 // Si aún no se encuentra, intentamos cruzar Nombre Sucursal con la Provincia extraída
@@ -134,19 +143,26 @@ class SyncEmtrafesaCommand extends Command
                 }
 
                 if (!$destino) {
-                    $this->warn("Destino no encontrado para: {$sucursalName} (Ubicación Emtrafesa: {$ubicacionStr})");
+                    $this->warn("Destino no encontrado para: {$sucursalName} (Ubicación Emtrafesa: {$direccionCompleta})");
                     $omitidas++;
                     continue;
                 }
 
                 // 4. Crear o actualizar SubAgencia
-                $subAgenciaExistente = SubAgencia::where('idAgencia', $agencia->idAgencia)
+                $subAgencia = SubAgencia::where('idAgencia', $agencia->idAgencia)
                     ->where('idDestino', $destino->idDestino)
                     ->where('nombre_oficina', $sucursalName)
                     ->first();
 
-                if (!$subAgenciaExistente) {
-                    SubAgencia::create([
+                if (!$subAgencia) {
+                    $subAgencia = SubAgencia::where('idAgencia', $agencia->idAgencia)
+                        ->where('nombre_oficina', $sucursalName)
+                        ->whereNotIn('idSubAgencia', $idsVistos ?: [0])
+                        ->first();
+                }
+
+                if (!$subAgencia) {
+                    $subAgencia = SubAgencia::create([
                         'idAgencia' => $agencia->idAgencia,
                         'idDestino' => $destino->idDestino,
                         'nombre_oficina' => $sucursalName,
@@ -154,20 +170,37 @@ class SyncEmtrafesaCommand extends Command
                         'telefono' => '', // Emtrafesa no expone teléfonos aquí
                         'estado' => 1
                     ]);
+                    $idsVistos[] = $subAgencia->idSubAgencia;
                     $nuevas++;
                     $this->line("Creado: {$sucursalName} en Destino: {$destino->nombre}");
                 } else {
-                    $subAgenciaExistente->update([
+                    $subAgencia->fill([
+                        'idDestino' => $destino->idDestino,
                         'direccion' => substr($direccion, 0, 255),
                         'estado' => 1
                     ]);
-                    $existentes_actualizadas++;
+                    $idsVistos[] = $subAgencia->idSubAgencia;
+
+                    if ($subAgencia->isDirty()) {
+                        $subAgencia->save();
+                        $actualizadas++;
+                    } else {
+                        $sinCambios++;
+                    }
                 }
             }
 
+            // Desactivar solo las sub-agencias que ya no existen en Emtrafesa
+            $desactivadas = SubAgencia::where('idAgencia', $agencia->idAgencia)
+                ->where('estado', 1)
+                ->whereNotIn('idSubAgencia', $idsVistos ?: [0])
+                ->update(['estado' => 0]);
+
             $this->info("¡Sincronización Completada!");
             $this->info("- Nuevas Sub-Agencias: {$nuevas}");
-            $this->info("- Actualizadas con Dirección: {$existentes_actualizadas}");
+            $this->info("- Actualizadas con cambios: {$actualizadas}");
+            $this->info("- Sin cambios: {$sinCambios}");
+            $this->info("- Desactivadas: {$desactivadas}");
             $this->info("- Omitidas (Sin destino): {$omitidas}");
 
         } catch (\Exception $e) {

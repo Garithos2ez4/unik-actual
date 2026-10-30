@@ -106,6 +106,16 @@
                     checkbox.checked = !isChecked; // revertir
                     Swal.fire('Error', data.message, 'error');
                 } else {
+                    // Actualizar visualmente la celda de Estado Actual en la fila
+                    const tr = checkbox.closest('tr');
+                    if (tr && data.nuevo_estado) {
+                        const estadoCell = tr.cells[2];
+                        if (estadoCell) {
+                            const badgeClass = data.nuevo_estado === 'NUEVO' ? 'bg-success' : (data.nuevo_estado === 'EN_USO' ? 'bg-warning text-dark' : 'bg-secondary');
+                            estadoCell.innerHTML = `<span class="badge ${badgeClass}">${data.nuevo_estado}</span>`;
+                        }
+                    }
+
                     // Pequeño toast o notificación visual opcional
                     const Toast = Swal.mixin({
                         toast: true,
@@ -116,7 +126,7 @@
                     });
                     Toast.fire({
                         icon: 'success',
-                        title: 'Serie actualizada'
+                        title: data.message || 'Serie actualizada'
                     });
                 }
             })
@@ -416,3 +426,49 @@
     }
 </script>
 
+
+
+<script>
+    // Completar fotos faltantes del producto desde Deltron
+    (function () {
+        const btn = document.getElementById('btnCompletarFotos');
+        if (!btn) return;
+
+        btn.addEventListener('click', async function () {
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Buscando fotos...';
+
+            try {
+                const urlFotos = "{{ Route::has('producto.completar_fotos') ? route('producto.completar_fotos', $producto->idProducto) : url('/producto/'.$producto->idProducto.'/completar-fotos') }}";
+                const res = await fetch(urlFotos, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await res.json().catch(() => ({ success: false, message: 'Respuesta inválida del servidor.' }));
+
+                if (data.success && data.agregadas > 0) {
+                    // Refrescar las vistas previas sin recargar la página
+                    (data.imagenes || []).forEach((src, i) => {
+                        const img = document.getElementById('triggerImage' + (i + 1));
+                        if (img) img.src = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+                    });
+                    await Swal.fire({ icon: 'success', title: 'Fotos completadas', text: data.message, timer: 2500, showConfirmButton: false });
+                    const quedanVacias = (data.imagenes || []).some(s => s.includes('noimagen.webp'));
+                    if (!quedanVacias) btn.remove(); else { btn.disabled = false; btn.innerHTML = original; }
+                } else {
+                    Swal.fire({ icon: data.success ? 'info' : 'warning', title: data.success ? 'Sin cambios' : 'No se pudo completar', text: data.message || 'Sin información.' });
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo contactar con el servidor.' });
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        });
+    })();
+</script>

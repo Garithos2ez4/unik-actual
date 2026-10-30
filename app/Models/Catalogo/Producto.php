@@ -23,7 +23,7 @@ class Producto extends Model
 
     public $incrementing = false;
 
-    protected $guarded = ['idProducto'];
+    protected $guarded = [];
     
     protected $fillable = ['idProducto',
                             'idMarca',
@@ -82,6 +82,13 @@ class Producto extends Model
         parent::boot();
 
         static::creating(function ($producto) {
+            if (empty($producto->idProducto)) {
+                $producto->idProducto = ((int) static::max('idProducto')) + 1;
+            }
+            if (!isset($producto->UPC) || $producto->UPC === null || $producto->UPC === '') {
+                $producto->UPC = '0';
+            }
+
             $baseSlug = Str::slug($producto->nombreProducto ?: 'producto');
             $slug = $baseSlug;
             $counter = 1;

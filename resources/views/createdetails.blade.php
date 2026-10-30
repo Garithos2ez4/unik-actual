@@ -7,10 +7,13 @@
     <br>
     <br>
     <div class="row ">
-        <div class="col-8">
+        <div class="col-md-7 col-12 mb-2 mb-md-0">
             <h2><a href="{{route('producto',[encrypt($producto->idProducto)])}}" class="text-secondary"><i class="bi bi-arrow-left-circle"></i></a> ESPECIFICACIONES <em class="text-secondary fw-normal">({{$producto->codigoProducto}})</em></h2>
         </div>
-        <div class="col-4 text-end">
+        <div class="col-md-5 col-12 text-md-end d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+            <button type="button" id="btnAutollenarSpecs" data-url="{{ Route::has('producto.autollenar_specs') ? route('producto.autollenar_specs', $producto->idProducto) : url('/producto/'.$producto->idProducto.'/autollenar-specs') }}" class="btn btn-outline-primary shadow-sm" title="Consultar y rellenar automáticamente las especificaciones técnicas desde la ficha oficial de Deltron">
+                <i class="bi bi-cloud-arrow-down-fill me-1"></i> Llenar con Deltron
+            </button>
             <a class="btn bg-sistema-uno text-light" href="{{route('productos',[encrypt($producto->GrupoProducto->idCategoria),encrypt($producto->idGrupo)])}}">Productos <i class="bi bi-box-fill"></i></a>
         </div>
     </div>

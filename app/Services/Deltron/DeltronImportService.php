@@ -670,6 +670,15 @@ class DeltronImportService
                         ]
                     );
 
+                    // 6. Autollenar especificaciones técnicas desde la ficha de Deltron
+                    //    (solo snapshot local: no consume el límite horario de la API en lotes masivos)
+                    try {
+                        $specMapper = new DeltronSpecMapperService($this->getApiService());
+                        $specMapper->llenarEspecificacionesProducto($prod, $sku, true);
+                    } catch (\Throwable $e) {
+                        Log::warning("No se pudieron autollenar specs para {$sku}: " . $e->getMessage());
+                    }
+
                     $importados[] = [
                         'idProducto' => $idProducto,
                         'sku' => $sku,
@@ -698,6 +707,244 @@ class DeltronImportService
             'importados_count' => count($importados),
             'importados' => $importados,
             'errores' => $errores
+        ];
+    }
+
+    /**
+     * Completa las fotos secundarias (2, 3 y 4) de un producto (saltándose la Foto 1 que ya se descarga en la importación masiva,
+     * salvo que la Foto 1 esté vacía). Ordena las imágenes secundarias (_1, _2, _3) y procesa en memoria con mínimo uso de RAM.
+     *
+     * @return array{success:bool,message:string,agregadas:int,slots:array,sku:?string}
+     */
+    public function completarFotosProducto(Producto $producto): array
+    {
+        // 1. Resolver SKU Deltron del producto
+        $sku = null;
+        $inv = Inventario_Proveedor::where('idProducto', $producto->idProducto)->first();
+        if ($inv) {
+            $sku = InventarioProveedorSku::where('idInventarioProveedor', $inv->idInventarioProveedor)
+                ->whereNotNull('sku_proveedor')
+                ->where('sku_proveedor', '!=', '')
+                ->value('sku_proveedor');
+        }
+        if (!$sku) {
+            return [
+                'success' => false,
+                'message' => 'Este producto no tiene un SKU de Deltron vinculado, no se pueden buscar fotos.',
+                'agregadas' => 0,
+                'slots' => [],
+                'sku' => null,
+            ];
+        }
+        $skuClean = strtoupper(trim($sku));
+
+        // 2. Determinar qué slots llenar:
+        // Se salta siempre la Foto 1 (a menos que esté vacía con noimagen.webp) y se completan los slots 2, 3 y 4.
+        // Si los slots 2..4 ya tenían imágenes (p.ej. una duplicada previa), los reemplaza con la secuencia correcta _1, _2, _3.
+        $default = asset('storage/noimagen.webp');
+        $actuales = $producto->publicImages();
+        $faltaFoto1 = ($actuales[0] ?? $default) === $default;
+
+        $slotsSecundariosVacios = [];
+        for ($s = 2; $s <= 4; $s++) {
+            if (($actuales[$s - 1] ?? $default) === $default) {
+                $slotsSecundariosVacios[] = $s;
+            }
+        }
+        // Si todos los secundarios están ocupados y el usuario pulsa el botón, refresca los slots 2, 3 y 4
+        $slotsSecundarios = !empty($slotsSecundariosVacios) ? $slotsSecundariosVacios : [2, 3, 4];
+
+        // 3. Obtener metadatos de imágenes de forma ultraligera (primero desde el JSON local en disco sin parsear HTML)
+        $imagesMeta = null;
+        $snapshotPath = storage_path('app/deltron_fichas/' . $skuClean . '.json');
+        if (is_file($snapshotPath)) {
+            $saved = @json_decode(@file_get_contents($snapshotPath), true);
+            if (!empty($saved['images'])) {
+                $imagesMeta = $saved['images'];
+            }
+        }
+        if (!$imagesMeta) {
+            try {
+                $raw = $this->getApiService()->getProductoPorSku($skuClean);
+                if (is_array($raw) && !empty($raw['images'])) {
+                    $imagesMeta = [
+                        'listado' => $raw['images']['image_listado'] ?? null,
+                        'carrusel' => $raw['images']['images_carrusel'] ?? [],
+                    ];
+                }
+            } catch (Exception $e) {
+                Log::warning("Completar fotos {$skuClean}: aviso al consultar API Deltron: " . $e->getMessage());
+            }
+        }
+
+        // 4. Construir lista ordenada de URLs SECUNDARIAS (excluyendo siempre la portada / Foto 1)
+        $secundariasOrdenadas = [];
+        $secundariasSinIndice = [];
+        $foto1Candidata = null;
+
+        if (!empty($imagesMeta['listado']) && is_string($imagesMeta['listado']) && !str_contains($imagesMeta['listado'], 'blanco.jpg')) {
+            $foto1Candidata = $imagesMeta['listado'];
+        }
+
+        foreach (($imagesMeta['carrusel'] ?? []) as $c) {
+            $cUrl = is_string($c) ? $c : ($c['url'] ?? ($c['image'] ?? null));
+            if (!is_string($cUrl) || !str_starts_with($cUrl, 'http') || str_contains($cUrl, 'blanco.jpg')) {
+                continue;
+            }
+            $base = basename(parse_url($cUrl, PHP_URL_PATH) ?: $cUrl);
+
+            // Detectar si es la portada / Foto 1 ({SKU}_{timestamp}.jpg sin subíndice o 00_portada o is_main)
+            $esPortada = !empty($c['is_main'])
+                || preg_match('/^00_portada/i', $base)
+                || preg_match('/^' . preg_quote($skuClean, '/') . '_\d{6,}\./i', $base);
+
+            if ($esPortada) {
+                $foto1Candidata ??= $cUrl;
+                continue; // Saltar la Foto 1 para no duplicarla en el slot 2
+            }
+
+            if (preg_match('/_(\d+)_\d{6,}\./', $base, $m) || preg_match('/^0*([1-9]\d*)_/', $base, $m)) {
+                $idx = (int) $m[1];
+                $secundariasOrdenadas[$idx] = $cUrl;
+            } else {
+                $secundariasSinIndice[] = $cUrl;
+            }
+        }
+
+        ksort($secundariasOrdenadas, SORT_NUMERIC);
+        $urlsSecundarias = array_values($secundariasOrdenadas);
+        foreach ($secundariasSinIndice as $u) {
+            if (!in_array($u, $urlsSecundarias, true)) {
+                $urlsSecundarias[] = $u;
+            }
+        }
+
+        // Agregar fallback del CDN de Deltron: solo _1.jpg, _2.jpg, _3.jpg, _4.jpg (nunca {sku}.jpg que es la Foto 1)
+        $cdnBase = DeltronTextHelper::obtenerUrlCdnDeltron($skuClean);
+        if ($cdnBase) {
+            $foto1Candidata ??= $cdnBase;
+            if (count($urlsSecundarias) < count($slotsSecundarios)) {
+                for ($n = 1; $n <= 4; $n++) {
+                    $uCdn = preg_replace('/\.jpg$/i', "_{$n}.jpg", $cdnBase);
+                    if (!in_array($uCdn, $urlsSecundarias, true)) {
+                        $urlsSecundarias[] = $uCdn;
+                    }
+                }
+            }
+        }
+
+        // 5. Descargar y convertir en memoria (1 imagen a la vez para consumo mínimo de RAM)
+        $destinationPath = DeltronTextHelper::getDestinationPathProductos();
+        if (!is_dir($destinationPath)) {
+            @mkdir($destinationPath, 0755, true);
+        }
+        $manager = new \Intervention\Image\ImageManager(\Intervention\Image\Drivers\Gd\Driver::class);
+        $timestamp = time();
+        $updates = [];
+        $slotsLlenados = [];
+        $hashesVistos = [];
+
+        $procesarSlot = function (int $slot, array &$poolUrls) use (
+            $producto, $manager, $destinationPath, $timestamp, &$updates, &$slotsLlenados, &$hashesVistos
+        ): bool {
+            while (!empty($poolUrls)) {
+                $url = array_shift($poolUrls);
+                try {
+                    $resp = \Illuminate\Support\Facades\Http::withoutVerifying()
+                        ->connectTimeout(4)
+                        ->timeout(8)
+                        ->get($url);
+
+                    if (!$resp->successful()) {
+                        continue;
+                    }
+                    $body = $resp->body();
+                    unset($resp);
+
+                    if (strlen($body) < 1500) {
+                        unset($body);
+                        continue;
+                    }
+
+                    $hash = md5($body);
+                    if (isset($hashesVistos[$hash])) {
+                        unset($body);
+                        continue;
+                    }
+
+                    $fileName = 'IMGPRO' . $producto->idProducto . '_' . $slot . '.webp';
+                    $fullDest = $destinationPath . '/' . $fileName;
+
+                    $image = $manager->read($body);
+                    unset($body);
+                    $encoded = (string) $image->toWebp(80);
+                    unset($image);
+
+                    if (@file_put_contents($fullDest, $encoded) === false) {
+                        unset($encoded);
+                        continue;
+                    }
+                    unset($encoded);
+
+                    foreach ([public_path('storage/productos'), storage_path('app/public/productos')] as $extra) {
+                        if (is_dir($extra) && realpath($destinationPath) !== realpath($extra)) {
+                            @copy($fullDest, $extra . '/' . $fileName);
+                        }
+                    }
+
+                    $hashesVistos[$hash] = true;
+                    $updates['imagenProducto' . $slot] = 'productos/' . $fileName . '?v=' . $timestamp;
+                    $slotsLlenados[] = $slot;
+                    return true;
+                } catch (\Throwable $e) {
+                    continue;
+                }
+            }
+            return false;
+        };
+
+        // Si por alguna razón la Foto 1 estaba vacía, llenarla primero con la portada
+        if ($faltaFoto1 && $foto1Candidata) {
+            $pool1 = [$foto1Candidata];
+            $procesarSlot(1, $pool1);
+        }
+
+        // Llenar los slots secundarios (2, 3 y 4) empezando desde la imagen _1 de Deltron
+        foreach ($slotsSecundarios as $slot) {
+            if (empty($urlsSecundarias)) {
+                break;
+            }
+            $procesarSlot($slot, $urlsSecundarias);
+        }
+
+        unset($manager);
+        gc_collect_cycles();
+
+        if (empty($updates)) {
+            return [
+                'success' => false,
+                'message' => "Deltron no tiene fotos adicionales (2, 3, 4) disponibles para el SKU {$skuClean}.",
+                'agregadas' => 0,
+                'slots' => [],
+                'sku' => $skuClean,
+            ];
+        }
+
+        foreach ($updates as $campo => $valor) {
+            $producto->{$campo} = $valor;
+        }
+        $producto->save();
+        if (method_exists($producto, 'invalidarCacheWeb')) {
+            $producto->invalidarCacheWeb();
+        }
+
+        $n = count($slotsLlenados);
+        return [
+            'success' => true,
+            'message' => "Se completaron {$n} foto(s) en los espacios: " . implode(', ', $slotsLlenados) . '.',
+            'agregadas' => $n,
+            'slots' => $slotsLlenados,
+            'sku' => $skuClean,
         ];
     }
 }

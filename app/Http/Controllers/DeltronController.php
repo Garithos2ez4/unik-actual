@@ -175,6 +175,53 @@ class DeltronController extends Controller
     }
 
     /**
+     * Completa las fotos faltantes (2, 3 y 4) de un producto con las imágenes oficiales de Deltron.
+     */
+    public function completarFotosProducto(Request $request, $idProducto)
+    {
+        $producto = Producto::find($idProducto);
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado.'], 404);
+        }
+
+        try {
+            @set_time_limit(120);
+            $resultado = $this->deltronService->completarFotosProducto($producto);
+
+            $producto->refresh();
+            $resultado['imagenes'] = $producto->publicImages();
+
+            return response()->json($resultado, $resultado['success'] ? 200 : 422);
+        } catch (Exception $e) {
+            Log::error('Completar fotos producto ' . $idProducto . ': ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al completar las fotos: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Autollena las especificaciones técnicas del producto desde la ficha oficial de Deltron.
+     */
+    public function autollenarSpecsProducto(Request $request, $idProducto)
+    {
+        $producto = Producto::find($idProducto);
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado.'], 404);
+        }
+
+        try {
+            @set_time_limit(60);
+            $specMapper = app(\App\Services\Deltron\DeltronSpecMapperService::class);
+            $sku = $request->input('sku');
+            $resultado = $specMapper->llenarEspecificacionesProducto($producto, $sku);
+
+            return response()->json($resultado, $resultado['success'] ? 200 : 422);
+        } catch (\Exception $e) {
+            Log::error('Autollenar specs producto ' . $idProducto . ': ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al autollenar especificaciones: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Dispara la sincronización manual vía Artisan command (deltron:sync).
      */
     public function syncManual(Request $request)

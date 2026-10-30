@@ -124,7 +124,7 @@ class EnvioProvinciaExportController extends Controller
         }
 
         // Cargar la plantilla oficial de Shalom (preserva metadata, versión, hojas ocultas, validaciones)
-        $templatePath = storage_path('Formato-Pro-Masivo-2026_06_12_13.xlsx');
+        $templatePath = storage_path('Formato-Pro-Masivo-2026_10_23_14.xlsx');
         if (!file_exists($templatePath)) {
             abort(500, 'Plantilla de Shalom no encontrada. Coloque el archivo en storage/');
         }
@@ -133,10 +133,13 @@ class EnvioProvinciaExportController extends Controller
         $sheet = $spreadsheet->getSheet(0); // Hoja1
 
         // Limpiar fila de ejemplo (fila 2) que trae la plantilla
-        for ($col = 1; $col <= 13; $col++) {
-            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+        foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'M'] as $colLetter) {
             $sheet->setCellValue($colLetter . '2', '');
         }
+        $sheet->setCellValue('I2', '=IF(H2="SOBRE",0.1,IF(H2="PAQUETE XXS",0.15,IF(H2="PAQUETE XS",0.2,IF(H2="PAQUETE S",0.3,IF(H2="PAQUETE M",0.3,IF(H2="PAQUETE L",0.42,""))))))');
+        $sheet->setCellValue('J2', '=IF(H2="SOBRE",0.1,IF(H2="PAQUETE XXS",0.1,IF(H2="PAQUETE XS",0.15,IF(H2="PAQUETE S",0.3,IF(H2="PAQUETE M",0.24,IF(H2="PAQUETE L",0.3,""))))))');
+        $sheet->setCellValue('K2', '=IF(H2="SOBRE",0.15,IF(H2="PAQUETE XXS",0.1,IF(H2="PAQUETE XS",0.12,IF(H2="PAQUETE S",0.12,IF(H2="PAQUETE M",0.2,IF(H2="PAQUETE L",0.23,""))))))');
+        $sheet->setCellValue('L2', '=IF(H2="SOBRE",0,IF(H2="PAQUETE XXS",0.25,IF(H2="PAQUETE XS",0.5,IF(H2="PAQUETE S",2,IF(H2="PAQUETE M",5,IF(H2="PAQUETE L",10,""))))))');
 
         // Cargar nombres de subagencias de Shalom desde la Hoja2 del Excel cargado para mapeo exacto
         $shalomNamesMap = [];
@@ -187,7 +190,7 @@ class EnvioProvinciaExportController extends Controller
                 'ç' => 'c',
                 'è' => 'e',
                 'é' => 'e',
-                'â' => 'e',
+                'ê' => 'e',
                 'ë' => 'e',
                 'ì' => 'i',
                 'í' => 'i',
@@ -214,20 +217,47 @@ class EnvioProvinciaExportController extends Controller
             return trim($str);
         };
 
-        if ($spreadsheet->getSheetCount() > 1) {
-            $sheet2 = $spreadsheet->getSheet(1); // Hoja2
+        $sheet2 = $spreadsheet->getSheetByName('Hoja2') ?? ($spreadsheet->getSheetCount() > 1 ? $spreadsheet->getSheet($spreadsheet->getSheetCount() - 1) : null);
+        $maxRowB = 513;
+        $maxRowC = 501;
+        if ($sheet2) {
             $highestRow = $sheet2->getHighestRow();
+            $maxRowB = 0;
+            $maxRowC = 0;
             for ($r = 1; $r <= $highestRow; $r++) {
-                $nameVal = $sheet2->getCell('B' . $r)->getValue();
-                if ($nameVal) {
-                    $trimmed = trim($nameVal);
-                    if ($trimmed !== '') {
-                        $normalized = $normalize($trimmed);
-                        $shalomNamesMap[$normalized] = $trimmed;
-                    }
+                $valB = $sheet2->getCell('B' . $r)->getValue();
+                if ($valB !== null && trim((string)$valB) !== '') {
+                    $maxRowB = $r;
+                    $trimmedB = trim((string)$valB);
+                    $shalomNamesMap[$normalize($trimmedB)] = $trimmedB;
+                }
+                $valC = $sheet2->getCell('C' . $r)->getValue();
+                if ($valC !== null && trim((string)$valC) !== '') {
+                    $maxRowC = $r;
+                    $trimmedC = trim((string)$valC);
+                    $shalomNamesMap[$normalize($trimmedC)] = $trimmedC;
                 }
             }
         }
+
+        // Equivalencias de sedes renombradas en el nuevo formato de Shalom
+        $renamedTerminals = [
+            'JR AGUILAR' => 'JR MAYRO',
+            'HUARAZ' => 'AV. 27 DE NOVIEMBRE CO',
+            'HUARAZ CO' => 'AV. 27 DE NOVIEMBRE CO',
+            'HUANCAVELICA' => 'BARRIO STA ANA CO',
+            'MARISCAL NIETO' => 'CALLE TACNA',
+            'UCHUMAYO' => 'CONGATA',
+            'IQUITOS CO JR. PABLO ROSSELL' => 'IQUITOS CO JR. BOLOGNESI',
+            'IQUITOS JR FRANCISCO BOLOGNESI' => 'IQUITOS JR PABLO ROSSEL',
+            'JAEN' => 'JAEN CO',
+            'OVALO ORQUIDEAS CO' => 'MOYOBAMBA  CO',
+            'SICUANI CO OVALO SAN ANDRES' => 'SICUANI AV CONFEDERACION CO',
+            'AV BERTELLO SMP' => 'SMP AV BERTELLO',
+            'TAMBOPATA AV LA JOYA CO' => 'TAMBOPATA AV UCAYALI  CO',
+            'JR CESAR VALLEJO' => 'URB UNIVERSAL',
+            'AV PARRA 379 CO' => 'AV PARRA 379',
+        ];
 
         // Escribir datos de envíos
         $row = 2;
@@ -252,26 +282,42 @@ class EnvioProvinciaExportController extends Controller
             $cantidad = 1;
 
             $destinoRaw = optional($envio->SubAgencia)->nombre_oficina ?? optional($envio->Destino)->nombre ?? '';
-            $partes = explode(' / ', $destinoRaw);
+            // El formato de nombre_oficina en Shalom es "DEPARTAMENTO / PROVINCIA / DISTRITO / NOMBRE_SEDE"
+            // Usamos límite 4 por si el nombre de la sede contiene " / " (ej. "AV LOS PRECURSORES / LAS AMERICAS")
+            $partes = explode(' / ', $destinoRaw, 4);
             $destino = trim(end($partes));
             $zona = trim(optional($envio->Destino)->nombre ?? '');
 
-            // Shalom a veces añade " - NOMBRE_ZONA" al final del nombre de la sucursal en su API, pero en su Excel lo omiten.
-            $suffix = " - " . $zona;
-            if (!empty($zona) && substr($destino, -strlen($suffix)) === $suffix) {
-                $destino = trim(substr($destino, 0, -strlen($suffix)));
+            $destinoNorm = $normalize($destino);
+            if (isset($renamedTerminals[$destinoNorm])) {
+                $destino = $renamedTerminals[$destinoNorm];
+                $destinoNorm = $normalize($destino);
             }
 
-            // Intentar buscar match exacto o parcial en la lista de shalom_excel.txt
-            if (!empty($shalomNamesMap)) {
+            // Intentar buscar match exacto antes de recortar sufijo de zona (ej. "CACHIMAYO - SAN SEBASTIAN")
+            if (!empty($shalomNamesMap) && isset($shalomNamesMap[$destinoNorm])) {
+                $destino = $shalomNamesMap[$destinoNorm];
+            } else {
+                // Shalom a veces añade " - NOMBRE_ZONA" al final del nombre de la sucursal en su API, pero en su Excel lo omiten.
+                $suffix = " - " . $zona;
+                if (!empty($zona) && substr($destino, -strlen($suffix)) === $suffix) {
+                    $destino = trim(substr($destino, 0, -strlen($suffix)));
+                }
                 $destinoNorm = $normalize($destino);
-                if (isset($shalomNamesMap[$destinoNorm])) {
-                    $destino = $shalomNamesMap[$destinoNorm];
-                } else {
-                    foreach ($shalomNamesMap as $normKey => $exactValue) {
-                        if (strpos($normKey, $destinoNorm) !== false || strpos($destinoNorm, $normKey) !== false) {
-                            $destino = $exactValue;
-                            break;
+                if (isset($renamedTerminals[$destinoNorm])) {
+                    $destino = $renamedTerminals[$destinoNorm];
+                    $destinoNorm = $normalize($destino);
+                }
+
+                if (!empty($shalomNamesMap)) {
+                    if (isset($shalomNamesMap[$destinoNorm])) {
+                        $destino = $shalomNamesMap[$destinoNorm];
+                    } else {
+                        foreach ($shalomNamesMap as $normKey => $exactValue) {
+                            if (strpos($normKey, $destinoNorm) !== false || strpos($destinoNorm, $normKey) !== false) {
+                                $destino = $exactValue;
+                                break;
+                            }
                         }
                     }
                 }
@@ -301,14 +347,42 @@ class EnvioProvinciaExportController extends Controller
                 $sheet->setCellValue('K' . $row, floatval($largo));
                 $sheet->setCellValue('L' . $row, floatval($peso));
             } else {
-                $sheet->setCellValue('I' . $row, '=IF(H'.$row.'="SOBRE",0.2,IF(H'.$row.'="PAQUETE XXS",0.15,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.25,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.4,0.1))))))');
-                $sheet->setCellValue('J' . $row, '=IF(H'.$row.'="SOBRE",0.15,IF(H'.$row.'="PAQUETE XXS",0.2,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.25,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.4,0.1))))))');
-                $sheet->setCellValue('K' . $row, '=IF(H'.$row.'="SOBRE",0.2,IF(H'.$row.'="PAQUETE XXS",0.2,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.25,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.4,0.1))))))');
-                $sheet->setCellValue('L' . $row, '=IF(H'.$row.'="SOBRE",0.5,IF(H'.$row.'="PAQUETE XXS",2,IF(H'.$row.'="PAQUETE XS",3,IF(H'.$row.'="PAQUETE S",5,IF(H'.$row.'="PAQUETE M",10,IF(H'.$row.'="PAQUETE L",15,7))))))');
+                $sheet->setCellValue('I' . $row, '=IF(H'.$row.'="SOBRE",0.1,IF(H'.$row.'="PAQUETE XXS",0.15,IF(H'.$row.'="PAQUETE XS",0.2,IF(H'.$row.'="PAQUETE S",0.3,IF(H'.$row.'="PAQUETE M",0.3,IF(H'.$row.'="PAQUETE L",0.42,""))))))');
+                $sheet->setCellValue('J' . $row, '=IF(H'.$row.'="SOBRE",0.1,IF(H'.$row.'="PAQUETE XXS",0.1,IF(H'.$row.'="PAQUETE XS",0.15,IF(H'.$row.'="PAQUETE S",0.3,IF(H'.$row.'="PAQUETE M",0.24,IF(H'.$row.'="PAQUETE L",0.3,""))))))');
+                $sheet->setCellValue('K' . $row, '=IF(H'.$row.'="SOBRE",0.15,IF(H'.$row.'="PAQUETE XXS",0.1,IF(H'.$row.'="PAQUETE XS",0.12,IF(H'.$row.'="PAQUETE S",0.12,IF(H'.$row.'="PAQUETE M",0.2,IF(H'.$row.'="PAQUETE L",0.23,""))))))');
+                $sheet->setCellValue('L' . $row, '=IF(H'.$row.'="SOBRE",0,IF(H'.$row.'="PAQUETE XXS",0.25,IF(H'.$row.'="PAQUETE XS",0.5,IF(H'.$row.'="PAQUETE S",2,IF(H'.$row.'="PAQUETE M",5,IF(H'.$row.'="PAQUETE L",10,""))))))');
             }
             $sheet->setCellValue('M' . $row, intval($cantidad));
 
             $row++;
+        }
+
+        // Asegurar validaciones desplegables de ORIGEN (F) y DESTINO (G) hacia Hoja2
+        if ($sheet2 && $maxRowB > 0 && $maxRowC > 0) {
+            $validationRows = max(51, $row);
+            for ($vRow = 2; $vRow <= $validationRows; $vRow++) {
+                $dvF = $sheet->getCell('F' . $vRow)->getDataValidation();
+                $dvF->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $dvF->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $dvF->setAllowBlank(false);
+                $dvF->setShowInputMessage(false);
+                $dvF->setShowErrorMessage(true);
+                $dvF->setShowDropDown(true);
+                $dvF->setErrorTitle('Error de escritura');
+                $dvF->setError('Valor fuera de lista');
+                $dvF->setFormula1("'Hoja2'!B1:B" . $maxRowB);
+
+                $dvG = $sheet->getCell('G' . $vRow)->getDataValidation();
+                $dvG->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+                $dvG->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+                $dvG->setAllowBlank(false);
+                $dvG->setShowInputMessage(false);
+                $dvG->setShowErrorMessage(true);
+                $dvG->setShowDropDown(true);
+                $dvG->setErrorTitle('Error de escritura');
+                $dvG->setError('Valor fuera de lista');
+                $dvG->setFormula1("'Hoja2'!C2:C" . $maxRowC);
+            }
         }
 
         // Generar archivo .xlsx (mismo formato que la plantilla original)

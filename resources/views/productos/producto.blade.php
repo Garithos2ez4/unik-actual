@@ -310,7 +310,12 @@
                 <button type="submit" form="formProducto" class="btn btn-success text-light btn-save-section ms-1" style="display: none;">Actualizar <i class="bi bi-floppy"></i></button>
             </div>
             <div class="col-md-6">
-                <h5>Imagenes</h5>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                    <h5 class="mb-0">Imagenes</h5>
+                    <button type="button" id="btnCompletarFotos" class="btn btn-sm btn-outline-primary rounded-pill" title="Descargar las fotos secundarias (2, 3 y 4) desde Deltron saltándose la foto 1">
+                        <i class="bi bi-images me-1"></i> Completar fotos
+                    </button>
+                </div>
                 <label for="desc-producto" class="form-label"><i class="bi bi-exclamation-circle-fill" data-bs-toggle="tooltip" data-bs-placement="top" title="Las imagenes se actualizan inmediatamente"></i> Imagenes permitidas unicamente en formato 800 x 800 px o 1000 x 1000 px (1:1)</label>
                 <div class="row">
                     <div class="col-6 mb-3 img-div" id="previewImage1" data-bs-toggle="tooltip" data-bs-placement="top" title="Imagen de cabecera">

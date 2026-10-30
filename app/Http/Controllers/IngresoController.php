@@ -96,12 +96,6 @@ class IngresoController extends Controller
 
     public function insertIngreso(Request $request, $comprobante)
     {
-        Log::info("=== [insertIngreso] NUEVA PETICION RECIBIDA ===");
-        Log::info("[insertIngreso] Metodo: " . $request->method() . " | IP: " . $request->ip() . " | URL: " . $request->fullUrl());
-        Log::info("[insertIngreso] PHP Configs -> max_input_vars: " . ini_get('max_input_vars') . " | max_execution_time: " . ini_get('max_execution_time') . " | memory_limit: " . ini_get('memory_limit') . " | post_max_size: " . ini_get('post_max_size'));
-        Log::info("[insertIngreso] Content-Length header: " . ($request->header('Content-Length') ?? 'N/A'));
-        Log::info("[insertIngreso] Total campos POST recibidos: " . count($request->all()));
-
         // Si por error de redireccion o recarga del navegador llega como GET, redirigir al documento registrado
         if ($request->isMethod('get')) {
             Log::warning("[insertIngreso] Peticion llego como GET para comprobante enc: {$comprobante}. Redirigiendo a vista documento.");

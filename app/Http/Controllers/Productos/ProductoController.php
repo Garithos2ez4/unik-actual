@@ -582,6 +582,18 @@ class ProductoController extends Controller
                                             ]
                                         );
                                     }
+
+                                    // Autollenar automáticamente las especificaciones técnicas desde la API de Deltron
+                                    try {
+                                        $deltronSku = trim($request->input('deltron_sku'));
+                                        $prodModel = \App\Models\Catalogo\Producto::find($idProducto);
+                                        if ($prodModel && !empty($deltronSku)) {
+                                            $specMapper = app(\App\Services\Deltron\DeltronSpecMapperService::class);
+                                            $specMapper->llenarEspecificacionesProducto($prodModel, $deltronSku);
+                                        }
+                                    } catch (\Exception $e) {
+                                        \Log::warning('No se pudieron autollenar especificaciones desde Deltron: ' . $e->getMessage());
+                                    }
                                 }
                             } catch (Exception $e) {
                                 \Log::error('Error en insert/validate: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
@@ -959,24 +971,34 @@ class ProductoController extends Controller
         $deltronService = app()->make(\App\Services\Deltron\DeltronApiService::class);
         $codigoPadre = $deltronService->generarSiguienteCodigoProducto($grupo->idGrupoProducto, $grupo->nombreGrupo);
 
-        $padre = Producto::create([
-            'idMarca' => $request->input('idMarca'),
-            'idGrupo' => $request->input('idGrupo'),
-            'codigoProducto' => $codigoPadre,
-            'nombreProducto' => trim($request->input('nombreProducto')),
-            'modelo' => trim($request->input('modelo')),
-            'partNumber' => trim($request->input('partNumber') ?: $request->input('modelo')),
-            'precioDolar' => floatval($request->input('precioDolar', 0)),
-            'gananciaExtra' => 0.00,
-            'garantia' => $request->input('garantia', '12 meses'),
-            'descripcionProducto' => $request->input('descripcionProducto', ''),
-            'imagenProducto1' => $request->input('imagenProducto1') ?: "asset('storage/images/noimagen.webp')",
-            'estadoProductoWeb' => 'DISPONIBLE',
-            'stockMin' => 1,
-            'usar_tc_fijo' => 1,
-            'es_padre' => 1,
-            'idProductoPadre' => null,
-        ]);
+        $lastId = (int) Producto::max('idProducto');
+        $idNuevoPadre = $lastId + 1;
+
+        $imgPadre = $request->input('imagenProducto1');
+        if (empty($imgPadre) || str_contains($imgPadre, 'noimagen.webp')) {
+            $imgPadre = 'noimagen.webp';
+        }
+
+        $padre = new Producto();
+        $padre->idProducto = $idNuevoPadre;
+        $padre->idMarca = $request->input('idMarca');
+        $padre->idGrupo = $request->input('idGrupo');
+        $padre->codigoProducto = $codigoPadre;
+        $padre->UPC = '0';
+        $padre->nombreProducto = trim($request->input('nombreProducto'));
+        $padre->modelo = trim($request->input('modelo'));
+        $padre->partNumber = trim($request->input('partNumber') ?: $request->input('modelo'));
+        $padre->precioDolar = floatval($request->input('precioDolar', 0));
+        $padre->gananciaExtra = 0.00;
+        $padre->garantia = $request->input('garantia', '12 meses');
+        $padre->descripcionProducto = $request->input('descripcionProducto', '');
+        $padre->imagenProducto1 = $imgPadre;
+        $padre->estadoProductoWeb = 'DISPONIBLE';
+        $padre->stockMin = 1;
+        $padre->usar_tc_fijo = 1;
+        $padre->es_padre = 1;
+        $padre->idProductoPadre = null;
+        $padre->save();
 
         \App\Models\Catalogo\DetalleProducto::updateOrCreate(
             ['idProducto' => $padre->idProducto],

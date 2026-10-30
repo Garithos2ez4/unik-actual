@@ -4,11 +4,123 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 
 class ShalomTarifaController extends Controller
 {
+    /**
+     * Obtiene una sesión válida de pro.shalom.pe junto con cookies, XSRF-TOKEN, api-secret y response-key.
+     */
+    protected function getProShalomSession(): array
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/service_order/create');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36');
+        $sessionResponse = curl_exec($ch);
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
+
+        $headersRaw = substr((string)$sessionResponse, 0, $headerSize);
+        $htmlBody = substr((string)$sessionResponse, $headerSize);
+
+        preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $headersRaw, $matches);
+        $cookies = [];
+        $xsrfToken = '';
+        foreach ($matches[1] as $item) {
+            parse_str($item, $cookie);
+            $cookies = array_merge($cookies, $cookie);
+            if (strpos($item, 'XSRF-TOKEN=') === 0) {
+                $xsrfToken = substr($item, 11);
+            }
+        }
+
+        $cookieString = '';
+        foreach ($cookies as $k => $v) {
+            if (!in_array(strtolower($k), ['expires', 'max-age', 'path', 'httponly', 'secure', 'samesite'])) {
+                $cookieString .= $k . '=' . $v . '; ';
+            }
+        }
+
+        $apiSecret = '90d8df9a6868ab19d4784cd55a1687f160f9e5cf0d93e6dff23e3d0ab3bfdc6b';
+        if (preg_match('/<meta[^>]+name=["\']api-secret["\'][^>]+content=["\']([^"\']+)["\']/i', $htmlBody, $mSecret)) {
+            $apiSecret = $mSecret[1];
+        }
+
+        $responseKey = 'F9XKLGh8dsvoXASZnYwU9qX2OCVM5nkVFJDkMxyjNEY=';
+        if (preg_match('/<meta[^>]+name=["\']response-key["\'][^>]+content=["\']([^"\']+)["\']/i', $htmlBody, $mKey)) {
+            $responseKey = $mKey[1];
+        }
+
+        return [
+            'cookieString' => $cookieString,
+            'xsrfToken' => urldecode($xsrfToken),
+            'apiSecret' => $apiSecret,
+            'responseKey' => $responseKey,
+        ];
+    }
+
+    /**
+     * Genera las cabeceras firmadas (HMAC-SHA256) requeridas por pro.shalom.pe
+     */
+    protected function buildSignedHeaders(string $method, string $path, array $session, array $extraHeaders = []): array
+    {
+        $timestamp = (string) time();
+        $nonce = substr(base_convert((string) mt_rand(), 10, 36) . base_convert((string) mt_rand(), 10, 36), 0, 8);
+        $cleanPath = ltrim($path, '/');
+        $payload = strtoupper($method) . $cleanPath . $timestamp . $nonce;
+        $signature = hash_hmac('sha256', $payload, $session['apiSecret']);
+
+        $headers = array_merge([
+            'Accept: application/json',
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Origin: https://pro.shalom.pe',
+            'Referer: https://pro.shalom.pe/envia_ya/service_order/create',
+            'X-Requested-With: XMLHttpRequest',
+            'X-API-KEY: pk_over_5pg91gO6CSgmT627cf2sC8B7dqjxcLFQhW7HhnitKq3',
+            'X-TIMESTAMP: ' . $timestamp,
+            'X-NONCE: ' . $nonce,
+            'X-SIGNATURE: ' . $signature,
+        ], $extraHeaders);
+
+        if (!empty($session['xsrfToken'])) {
+            $headers[] = 'X-XSRF-TOKEN: ' . $session['xsrfToken'];
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Desencripta la respuesta de pro.shalom.pe si viene con encrypted: true
+     */
+    protected function decodeProShalomResponse(string $rawBody, string $responseKeyB64): ?array
+    {
+        $json = json_decode($rawBody, true);
+        if (!is_array($json)) {
+            return null;
+        }
+
+        if (!empty($json['encrypted']) && !empty($json['data']) && is_string($json['data'])) {
+            $raw = base64_decode($json['data'], true);
+            $key = base64_decode($responseKeyB64, true);
+            if ($raw !== false && $key !== false && strlen($raw) > 16) {
+                $iv = substr($raw, 0, 16);
+                $cipher = substr($raw, 16);
+                $decrypted = openssl_decrypt($cipher, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+                if ($decrypted !== false) {
+                    $decJson = json_decode($decrypted, true);
+                    if (is_array($decJson)) {
+                        return $decJson;
+                    }
+                }
+            }
+        }
+
+        return $json;
+    }
+
     /**
      * Obtiene la lista de terminales desde el JSON de respaldo
      */
@@ -20,7 +132,10 @@ class ShalomTarifaController extends Controller
         }
 
         $json = json_decode(file_get_contents($path), true);
-        
+        if (isset($json['data']) && is_array($json['data'])) {
+            $json = $json['data'];
+        }
+
         $terminals = [];
         foreach ($json as $item) {
             if (isset($item['ter_id']) && isset($item['nombre'])) {
@@ -29,7 +144,6 @@ class ShalomTarifaController extends Controller
                     'nombre' => $item['nombre']
                 ];
             } elseif (isset($item['ter_id']) && isset($item['lugar'])) {
-                // Fallback por si la propiedad se llama 'lugar'
                 $terminals[] = [
                     'id' => $item['ter_id'],
                     'nombre' => $item['lugar']
@@ -37,8 +151,7 @@ class ShalomTarifaController extends Controller
             }
         }
 
-        // Ordenar alfabéticamente
-        usort($terminals, function($a, $b) {
+        usort($terminals, function ($a, $b) {
             return strcmp($a['nombre'], $b['nombre']);
         });
 
@@ -64,41 +177,14 @@ class ShalomTarifaController extends Controller
         $height = $request->input('height', 0);
 
         try {
-            // 1. Obtener una nueva sesión de Shalom
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/service_order/create');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_HEADER, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            $sessionResponse = curl_exec($ch);
-            curl_close($ch);
+            $session = $this->getProShalomSession();
+            $path = '/envia_ya/tariff/calculate';
+            $headers = $this->buildSignedHeaders('POST', $path, $session, [
+                'Content-Type: application/json',
+            ]);
 
-            // Extraer Cookies
-            preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $sessionResponse, $matches);
-            $cookies = array();
-            $xsrfToken = '';
-            foreach($matches[1] as $item) {
-                parse_str($item, $cookie);
-                $cookies = array_merge($cookies, $cookie);
-                if (strpos($item, 'XSRF-TOKEN=') === 0) {
-                    $xsrfToken = substr($item, 11);
-                }
-            }
-
-            // Construir la cabecera de Cookie
-            $cookieString = '';
-            foreach ($cookies as $k => $v) {
-                if($k != 'expires' && $k != 'Max-Age' && $k != 'path' && $k != 'httponly') {
-                    $cookieString .= $k . '=' . $v . '; ';
-                }
-            }
-            
-            // Decodificar XSRF-TOKEN
-            $decodedXsrf = urldecode($xsrfToken);
-
-            // 2. Realizar el POST a la API de Calculate
             $ch2 = curl_init();
-            curl_setopt($ch2, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/tariff/calculate');
+            curl_setopt($ch2, CURLOPT_URL, 'https://pro.shalom.pe' . $path);
             curl_setopt($ch2, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch2, CURLOPT_POST, 1);
             curl_setopt($ch2, CURLOPT_POSTFIELDS, json_encode([
@@ -109,29 +195,15 @@ class ShalomTarifaController extends Controller
                 'length' => (float)$length,
                 'weight' => (float)$weight
             ]));
-            
-            $headers = [
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Origin: https://pro.shalom.pe',
-                'Referer: https://pro.shalom.pe/envia_ya/service_order/create',
-                'X-Requested-With: XMLHttpRequest',
-            ];
-            
-            if ($decodedXsrf) {
-                $headers[] = 'X-XSRF-TOKEN: ' . $decodedXsrf;
-            }
-
             curl_setopt($ch2, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch2, CURLOPT_COOKIE, $cookieString);
+            curl_setopt($ch2, CURLOPT_COOKIE, $session['cookieString']);
             curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
-            
+
             $res2 = curl_exec($ch2);
             $httpcode = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
             curl_close($ch2);
 
-            $responseJson = json_decode($res2, true);
+            $responseJson = $this->decodeProShalomResponse((string)$res2, $session['responseKey']);
 
             if ($httpcode == 200 && isset($responseJson['success']) && $responseJson['success'] == true) {
                 return response()->json([
@@ -160,7 +232,6 @@ class ShalomTarifaController extends Controller
         $cachePath = storage_path('app/shalom_restricciones.json');
         $cacheMaxAge = 86400; // 24 horas
 
-        // Intentar leer del caché
         if (file_exists($cachePath) && (time() - filemtime($cachePath)) < $cacheMaxAge) {
             $cached = json_decode(file_get_contents($cachePath), true);
             if ($cached && isset($cached['data'])) {
@@ -169,67 +240,25 @@ class ShalomTarifaController extends Controller
         }
 
         try {
-            // 1. Obtener una nueva sesión de Shalom
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/service_order/create');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_HEADER, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            $sessionResponse = curl_exec($ch);
-            curl_close($ch);
+            $session = $this->getProShalomSession();
+            $path = '/envia_ya/service_order/restricciones-categorias';
+            $headers = $this->buildSignedHeaders('GET', $path, $session);
 
-            // Extraer Cookies
-            preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $sessionResponse, $matches);
-            $cookies = array();
-            $xsrfToken = '';
-            foreach($matches[1] as $item) {
-                parse_str($item, $cookie);
-                $cookies = array_merge($cookies, $cookie);
-                if (strpos($item, 'XSRF-TOKEN=') === 0) {
-                    $xsrfToken = substr($item, 11);
-                }
-            }
-
-            // Construir la cabecera de Cookie
-            $cookieString = '';
-            foreach ($cookies as $k => $v) {
-                if($k != 'expires' && $k != 'Max-Age' && $k != 'path' && $k != 'httponly') {
-                    $cookieString .= $k . '=' . $v . '; ';
-                }
-            }
-            
-            // Decodificar XSRF-TOKEN
-            $decodedXsrf = urldecode($xsrfToken);
-
-            // 2. Realizar el GET a la API de Restricciones
             $ch2 = curl_init();
-            curl_setopt($ch2, CURLOPT_URL, 'https://pro.shalom.pe/envia_ya/service_order/restricciones-categorias');
+            curl_setopt($ch2, CURLOPT_URL, 'https://pro.shalom.pe' . $path);
             curl_setopt($ch2, CURLOPT_RETURNTRANSFER, 1);
-            
-            $headers = [
-                'Accept: application/json',
-                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer: https://pro.shalom.pe/envia_ya/service_order/create',
-                'X-Requested-With: XMLHttpRequest',
-            ];
-            
-            if ($decodedXsrf) {
-                $headers[] = 'X-XSRF-TOKEN: ' . $decodedXsrf;
-            }
-
             curl_setopt($ch2, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch2, CURLOPT_COOKIE, $cookieString);
+            curl_setopt($ch2, CURLOPT_COOKIE, $session['cookieString']);
             curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
-            
+
             $res2 = curl_exec($ch2);
             $httpcode = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
             curl_close($ch2);
 
             if ($httpcode == 200) {
-                $json = json_decode($res2, true);
+                $json = $this->decodeProShalomResponse((string)$res2, $session['responseKey']);
 
                 if (isset($json['valor']) && $json['valor'] === true && isset($json['data'])) {
-                    // Guardar en caché
                     file_put_contents($cachePath, json_encode([
                         'data' => $json['data'],
                         'cached_at' => now()->toDateTimeString()
@@ -239,7 +268,6 @@ class ShalomTarifaController extends Controller
                 }
             }
 
-            // Fallback si la API falla (ej. error 401, timeout, cambio de seguridad en Shalom)
             if (file_exists($cachePath)) {
                 $cached = json_decode(file_get_contents($cachePath), true);
                 if ($cached && isset($cached['data'])) {
@@ -250,7 +278,6 @@ class ShalomTarifaController extends Controller
             return response()->json(['success' => false, 'message' => 'Error HTTP ' . $httpcode . ' al consultar restricciones, y no hay caché disponible.']);
 
         } catch (\Exception $e) {
-            // Si falla la ejecución
             if (file_exists($cachePath)) {
                 $cached = json_decode(file_get_contents($cachePath), true);
                 if ($cached && isset($cached['data'])) {

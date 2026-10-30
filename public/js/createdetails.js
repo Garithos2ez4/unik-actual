@@ -161,6 +161,72 @@ document.addEventListener('DOMContentLoaded', function() {
     // Agregar un evento para el botón
     btnAdd.addEventListener('click', addDiv);
 
-    let selectedOptions = select.options[select.selectedIndex];
-    selectedOptions.forEach('click',addDiv);
+    // Autollenar especificaciones desde la API de Deltron
+    const btnAutollenar = document.getElementById('btnAutollenarSpecs');
+    if (btnAutollenar) {
+        btnAutollenar.addEventListener('click', async function () {
+            const confirmResult = await Swal.fire({
+                title: '¿Autollenar especificaciones?',
+                text: 'Se consultará la ficha técnica en Deltron y se asignarán los valores a las características de este producto.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, autollenar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#0d6efd'
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            const url = btnAutollenar.getAttribute('data-url');
+            if (!url) return;
+
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                || document.querySelector('input[name="_token"]')?.value;
+
+            const originalHtml = btnAutollenar.innerHTML;
+            btnAutollenar.disabled = true;
+            btnAutollenar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Consultando Deltron...';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': token
+                    }
+                });
+
+                const data = await response.json().catch(() => ({ success: false, message: 'Respuesta inválida del servidor.' }));
+
+                if (data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Especificaciones importadas!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Aviso',
+                        text: data.message || 'No se pudieron importar especificaciones.'
+                    });
+                    btnAutollenar.disabled = false;
+                    btnAutollenar.innerHTML = originalHtml;
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo comunicar con el servidor para obtener los datos de Deltron.'
+                });
+                btnAutollenar.disabled = false;
+                btnAutollenar.innerHTML = originalHtml;
+            }
+        });
+    }
 });

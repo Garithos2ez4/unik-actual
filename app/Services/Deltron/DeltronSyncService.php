@@ -110,6 +110,21 @@ class DeltronSyncService
 
                 $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanSkuNorm])->first();
                 if ($p) return $p;
+
+                // 5. SKU Deltron despojando prefijos de categoría conocidos (ej. KBTE4064N -> TE4064N -> TE-4064N)
+                $deltronPrefixes = ['ACCPU', 'MON', 'MEM', 'SSD', 'HDD', 'VGA', 'UPS', 'CAB', 'CON', 'SUP', 'PRO', 'PAD', 'ACC', 'KB', 'MO', 'MN', 'NB', 'TB', 'CS', 'PS', 'PW', 'AU', 'HP', 'PR', 'SP', 'WC', 'SW', 'RT', 'MB'];
+                foreach ($deltronPrefixes as $prefix) {
+                    if (str_starts_with($cleanSkuNorm, $prefix)) {
+                        $sub = substr($cleanSkuNorm, strlen($prefix));
+                        if (strlen($sub) >= 3) {
+                            $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$sub])->first();
+                            if ($p) return $p;
+
+                            $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$sub])->first();
+                            if ($p) return $p;
+                        }
+                    }
+                }
             }
         }
 
@@ -437,6 +452,29 @@ class DeltronSyncService
                 if (!$producto && isset($productosPorSkuProveedor[$claveSku])) {
                     $producto = $productosPorSkuProveedor[$claveSku];
                 }
+
+                // 5. Si no coincidió, buscar despojando prefijos de categoría habituales de Deltron (ej. KBTE4064N -> TE4064N)
+                if (!$producto) {
+                    $deltronPrefixes = ['ACCPU', 'MON', 'MEM', 'SSD', 'HDD', 'VGA', 'UPS', 'CAB', 'CON', 'SUP', 'PRO', 'PAD', 'ACC', 'KB', 'MO', 'MN', 'NB', 'TB', 'CS', 'PS', 'PW', 'AU', 'HP', 'PR', 'SP', 'WC', 'SW', 'RT', 'MB'];
+                    foreach ($deltronPrefixes as $prefix) {
+                        if (str_starts_with($claveSkuLimpia, $prefix)) {
+                            $sub = substr($claveSkuLimpia, strlen($prefix));
+                            if (strlen($sub) >= 3) {
+                                if (isset($productosPorModeloLimpio[$sub])) {
+                                    $producto = $productosPorModeloLimpio[$sub];
+                                    break;
+                                } elseif (isset($productosPorParteLimpia[$sub])) {
+                                    $producto = $productosPorParteLimpia[$sub];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($producto && !empty($sku)) {
+                $productosPorSkuProveedor[strtoupper(trim($sku))] = $producto;
             }
 
             // Si el corte matutino (inicio-dia) no envio part_number, pero el producto ya existe en la BD local:
