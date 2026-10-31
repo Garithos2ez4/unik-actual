@@ -229,6 +229,145 @@ class ProductoService implements ProductoServiceInterface
             throw new \InvalidArgumentException($e->getMessage());
         }
     }
+
+    /**
+     * Reemplaza (recicla) un producto fantasma conservando su idProducto.
+     * Solo permitido si el producto nunca tuvo ningún ingreso en IngresoProducto.
+     */
+    public function replaceProduct($idProducto, $array, $proveedor, $img1, $img2, $img3, $img4)
+    {
+        $idProducto = (int) $idProducto;
+        $productoExistente = \App\Models\Catalogo\Producto::find($idProducto);
+
+        if (!$productoExistente) {
+            throw new \InvalidArgumentException("El producto ID #{$idProducto} no existe.");
+        }
+
+        if (!$productoExistente->esReemplazable()) {
+            throw new \InvalidArgumentException("El producto {$productoExistente->codigoProducto} (ID #{$idProducto}) ya registra ingresos en almacén y no puede ser reemplazado.");
+        }
+
+        if (!empty($array['modelo']) && $this->productoRepository->existsByModelo($array['modelo'], $idProducto)) {
+            throw new \InvalidArgumentException('Ya existe otro producto con el modelo "' . $array['modelo'] . '". No se permite duplicados.');
+        }
+
+        // Si se mantiene en el mismo grupo, conserva su codigoProducto original; si cambia de grupo, genera el nuevo correlativo
+        $nuevoGrupoId = (int) ($array['idGrupo'] ?? $productoExistente->idGrupo);
+        if ($nuevoGrupoId === (int) $productoExistente->idGrupo && !empty($productoExistente->codigoProducto)) {
+            $array['codigoProducto'] = $productoExistente->codigoProducto;
+        } else {
+            if (!empty($array['codigoProducto'])) {
+                $array['codigoProducto'] = $this->generarCodigo($array['codigoProducto']);
+            } else {
+                $grupoObj = \App\Models\Catalogo\GrupoProducto::find($nuevoGrupoId);
+                $classifier = app(\App\Services\Deltron\DeltronClassifierService::class);
+                $array['codigoProducto'] = $classifier->generarSiguienteCodigoProducto($nuevoGrupoId, $grupoObj ? $grupoObj->nombreGrupo : 'General');
+            }
+        }
+
+        if (($proveedor['stock'] ?? 0) <= 0 && ($array['estadoProductoWeb'] ?? '') !== 'DESCONTINUADO') {
+            $array['estadoProductoWeb'] = 'AGOTADO';
+        }
+
+        $array['es_padre'] = 0;
+        $array['idProductoPadre'] = null;
+        if (!array_key_exists('videoUrl1', $array) && array_key_exists('video1_url', $array)) {
+            $array['videoUrl1'] = $array['video1_url'];
+            unset($array['video1_url']);
+        }
+        if (!array_key_exists('videoUrl2', $array) && array_key_exists('video2_url', $array)) {
+            $array['videoUrl2'] = $array['video2_url'];
+            unset($array['video2_url']);
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($idProducto, $productoExistente, $array, $proveedor, $img1, $img2, $img3, $img4) {
+            // 1. Limpiar tablas satélite del producto anterior
+            \App\Models\Catalogo\Caracteristicas_Producto::where('idProducto', $idProducto)->delete();
+            \App\Models\Inventario\Liquidacion::where('idProducto', $idProducto)->delete();
+            \App\Models\Precios\PrecioTienda::where('idProducto', $idProducto)->delete();
+            \App\Models\Precios\HistorialPrecioTienda::where('idProducto', $idProducto)->delete();
+            \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)->delete();
+
+            \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+                ['idProducto' => $idProducto],
+                [
+                    'mostrarPrecioWeb' => true,
+                    'precio_pase' => null,
+                    'tipo_variante' => null,
+                    'valor_variante' => null,
+                    'codigo_color_hex' => null,
+                ]
+            );
+
+            // 2. Asegurar inventario físico en 0 para todos los almacenes
+            $tieneInv = \App\Models\Inventario\Inventario::where('idProducto', $idProducto)->exists();
+            if ($tieneInv) {
+                \App\Models\Inventario\Inventario::where('idProducto', $idProducto)->update(['stock' => 0, 'idUbicacionExacta' => null]);
+            } else {
+                $this->insertInventory($idProducto);
+            }
+
+            // 3. Limpiar SKUs anteriores de proveedor y actualizar Inventario_Proveedor
+            $invProv = \App\Models\Inventario\Inventario_Proveedor::where('idProducto', $idProducto)->first();
+            if ($invProv) {
+                \App\Models\Inventario\InventarioProveedorSku::where('idInventarioProveedor', $invProv->idInventarioProveedor)->delete();
+                $invProv->idProveedor = (int) ($proveedor['idProveedor'] ?? 1);
+                $invProv->stock = (int) ($proveedor['stock'] ?? 0);
+                $invProv->estado = 'VIGENTE';
+                $invProv->save();
+            } else {
+                $this->createSeguimiento($idProducto, [
+                    'idProveedor' => $proveedor['idProveedor'] ?? 1,
+                    'stock' => $proveedor['stock'] ?? 0,
+                ]);
+            }
+
+            // 4. Procesar imágenes (y limpiar archivos antiguos de los slots no utilizados)
+            $imgService = new ImageService();
+            $destinationPath = \App\Services\Deltron\DeltronTextHelper::getDestinationPathProductos();
+            if (!is_dir($destinationPath)) {
+                @mkdir($destinationPath, 0755, true);
+            }
+            $localPath = public_path('storage/productos');
+            $storageAppPath = storage_path('app/public/productos');
+
+            $timestamp = time();
+            $images = [1 => $img1, 2 => $img2, 3 => $img3, 4 => $img4];
+
+            foreach ($images as $num => $imgFile) {
+                $fileName = 'IMGPRO' . $idProducto . '_' . $num . '.webp';
+                $fullDest = $destinationPath . '/' . $fileName;
+
+                if (!is_null($imgFile) && $imgFile !== '') {
+                    $saved = $imgService->createImage($imgFile, $idProducto . '_' . $num, $destinationPath);
+                    if ($saved) {
+                        if (is_dir($localPath) && realpath($destinationPath) !== realpath($localPath)) {
+                            @copy($fullDest, $localPath . '/' . $fileName);
+                        }
+                        if (is_dir($storageAppPath) && realpath($destinationPath) !== realpath($storageAppPath)) {
+                            @copy($fullDest, $storageAppPath . '/' . $fileName);
+                        }
+                        $array['imagenProducto' . $num] = 'productos/' . $fileName . '?v=' . $timestamp;
+                        continue;
+                    }
+                }
+
+                // Si no se envió imagen para este slot, borrar archivo viejo para que no quede foto del producto anterior
+                foreach ([$fullDest, $localPath . '/' . $fileName, $storageAppPath . '/' . $fileName] as $oldFile) {
+                    if (is_file($oldFile)) {
+                        @unlink($oldFile);
+                    }
+                }
+                $array['imagenProducto' . $num] = ($num === 1) ? 'noimagen.webp' : null;
+            }
+
+            // 5. Actualizar fila del Producto (dispara regeneración de slugProducto e invalidación de caché web)
+            $productoExistente->fill($array);
+            $productoExistente->save();
+
+            return $idProducto;
+        });
+    }
     public function updateProduct($id, $array, $img1, $img2, $img3, $img4)
     {
         $imgService = new ImageService();
@@ -526,5 +665,95 @@ class ProductoService implements ProductoServiceInterface
     public function existsByModelo(string $modelo, $excludeId = null): bool
     {
         return $this->productoRepository->existsByModelo($modelo, $excludeId);
+    }
+
+    public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon
+    {
+        return $this->productoRepository->getFechaUltimoIngreso($idProducto);
+    }
+
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int
+    {
+        return $this->productoRepository->countFantasmasAutoReciclables($mesesGarantiaLaptop);
+    }
+
+    public function esLaptopConGarantiaVencida($producto, int $meses = 12): bool
+    {
+        $prodModel = is_numeric($producto) ? $this->productoRepository->getOne('idProducto', $producto) : $producto;
+        if (!$prodModel || !empty($prodModel->es_padre)) {
+            return false;
+        }
+
+        // 1. Debe ser Laptop (Grupos 1: Gamer, 2: Empresarial, 3: Hogar o Categoría 1 excluyendo accesorios)
+        $idGrupo = (int) $prodModel->idGrupo;
+        $esLaptop = in_array($idGrupo, [1, 2, 3], true)
+            || (optional($prodModel->GrupoProducto)->idCategoria === 1 && !in_array($idGrupo, [4, 5, 69, 92, 101], true));
+
+        if (!$esLaptop) {
+            return false;
+        }
+
+        // 2. Debe tener stock físico en 0 en todos los almacenes
+        $stockFisico = (int) \App\Models\Inventario\Inventario::where('idProducto', $prodModel->idProducto)->sum('stock');
+        if ($stockFisico > 0) {
+            return false;
+        }
+
+        // 3. Obtener fecha de último ingreso
+        $ultimoIngreso = $this->productoRepository->getFechaUltimoIngreso($prodModel->idProducto);
+        if (!$ultimoIngreso) {
+            return true; // Sin ingresos previos
+        }
+
+        // 4. Último ingreso debe tener más de $meses de antigüedad (ej. 12 meses)
+        return $ultimoIngreso->lt(now()->subMonths($meses));
+    }
+
+    public function esReemplazable($producto, int $mesesGarantiaLaptop = 12): bool
+    {
+        $prodModel = is_numeric($producto) ? $this->productoRepository->getOne('idProducto', $producto) : $producto;
+        if (!$prodModel || !empty($prodModel->es_padre)) {
+            return false;
+        }
+
+        // Caso 1: Nunca tuvo ingresos
+        if (!$this->productoRepository->tieneIngresos($prodModel->idProducto)) {
+            return true;
+        }
+
+        // Caso 2: Laptop con garantía de 12 meses vencida y sin stock
+        return $this->esLaptopConGarantiaVencida($prodModel, $mesesGarantiaLaptop);
+    }
+
+    public function getMotivoReemplazo($producto, int $mesesGarantiaLaptop = 12): ?array
+    {
+        $prodModel = is_numeric($producto) ? $this->productoRepository->getOne('idProducto', $producto) : $producto;
+        if (!$prodModel || !empty($prodModel->es_padre)) {
+            return null;
+        }
+
+        $ultimoIngreso = $this->productoRepository->getFechaUltimoIngreso($prodModel->idProducto);
+        if (!$ultimoIngreso) {
+            return [
+                'tipo' => 'sin_ingresos',
+                'titulo' => 'Sin Ingresos en Almacén',
+                'descripcion' => 'Este producto nunca tuvo ingresos en almacén.',
+                'badge' => 'Sin ingresos (Reemplazable)',
+                'color' => 'warning'
+            ];
+        }
+
+        if ($this->esLaptopConGarantiaVencida($prodModel, $mesesGarantiaLaptop)) {
+            $mesesTranscurridos = (int) $ultimoIngreso->diffInMonths(now());
+            return [
+                'tipo' => 'laptop_garantia_vencida',
+                'titulo' => 'Garantía Vencida (+12 meses)',
+                'descripcion' => "Último ingreso registrado el {$ultimoIngreso->format('d/m/Y')} (hace {$mesesTranscurridos} meses) y stock actual en 0.",
+                'badge' => "Garantía vencida (+{$mesesTranscurridos}m)",
+                'color' => 'danger'
+            ];
+        }
+
+        return null;
     }
 }

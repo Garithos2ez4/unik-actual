@@ -32,4 +32,13 @@ interface ProductoRepositoryInterface
     public function getEmptyPagination($perPage = 10);
     /** Verifica si ya existe un producto con el mismo modelo (case-insensitive) */
     public function existsByModelo(string $modelo, $excludeId = null): bool;
+
+    /** Consultas de reemplazo y reciclaje de productos */
+    public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon;
+    public function tieneIngresos(int $idProducto): bool;
+    public function queryReemplazables(int $mesesGarantiaLaptop = 12);
+    public function queryLaptopsGarantiaVencida(int $meses = 12);
+    public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12);
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int;
+    public function obtenerSiguienteFantasmaAutoReciclable(int $mesesGarantiaLaptop = 12): ?\App\Models\Catalogo\Producto;
 }

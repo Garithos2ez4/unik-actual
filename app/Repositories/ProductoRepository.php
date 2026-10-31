@@ -381,4 +381,123 @@ class ProductoRepository implements ProductoRepositoryInterface
             throw new \InvalidArgumentException("La columna '$column' no es válida para búsquedas.");
         }
     }
+
+    public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon
+    {
+        $ultimoIngreso = DB::table('DetalleComprobante as dc')
+            ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+            ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+            ->where('dc.idProducto', $idProducto)
+            ->max('ip.fechaIngreso');
+
+        return $ultimoIngreso ? \Carbon\Carbon::parse($ultimoIngreso) : null;
+    }
+
+    public function tieneIngresos(int $idProducto): bool
+    {
+        return DB::table('DetalleComprobante as dc')
+            ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+            ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+            ->where('dc.idProducto', $idProducto)
+            ->exists();
+    }
+
+    public function queryReemplazables(int $mesesGarantiaLaptop = 12)
+    {
+        return Producto::where('Producto.es_padre', 0)
+            ->where(function ($sub) use ($mesesGarantiaLaptop) {
+                // Caso 1: Nunca tuvo ningún ingreso en IngresoProducto
+                $sub->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('DetalleComprobante as dc')
+                        ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                        ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+                        ->whereColumn('dc.idProducto', 'Producto.idProducto');
+                })
+                // Caso 2: Laptops con garantía comercial vencida (> 12 meses del último ingreso) y sin stock físico
+                ->orWhere(function ($qLaptop) use ($mesesGarantiaLaptop) {
+                    $fechaLimite = now()->subMonths($mesesGarantiaLaptop)->format('Y-m-d');
+                    $qLaptop->whereIn('Producto.idGrupo', [1, 2, 3])
+                        ->whereNotExists(function ($qStock) {
+                            $qStock->select(DB::raw(1))
+                                ->from('Inventario as inv')
+                                ->whereColumn('inv.idProducto', 'Producto.idProducto')
+                                ->where('inv.stock', '>', 0);
+                        })
+                        ->whereNotExists(function ($qReciente) use ($fechaLimite) {
+                            $qReciente->select(DB::raw(1))
+                                ->from('DetalleComprobante as dc')
+                                ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                                ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+                                ->whereColumn('dc.idProducto', 'Producto.idProducto')
+                                ->where('ip.fechaIngreso', '>=', $fechaLimite);
+                        });
+                });
+            });
+    }
+
+    public function queryLaptopsGarantiaVencida(int $meses = 12)
+    {
+        $fechaLimite = now()->subMonths($meses)->format('Y-m-d');
+
+        return Producto::where('Producto.es_padre', 0)
+            ->whereIn('Producto.idGrupo', [1, 2, 3])
+            ->whereNotExists(function ($qStock) {
+                $qStock->select(DB::raw(1))
+                    ->from('Inventario as inv')
+                    ->whereColumn('inv.idProducto', 'Producto.idProducto')
+                    ->where('inv.stock', '>', 0);
+            })
+            ->whereExists(function ($qHist) {
+                $qHist->select(DB::raw(1))
+                    ->from('DetalleComprobante as dc')
+                    ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                    ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+                    ->whereColumn('dc.idProducto', 'Producto.idProducto');
+            })
+            ->whereNotExists(function ($qReciente) use ($fechaLimite) {
+                $qReciente->select(DB::raw(1))
+                    ->from('DetalleComprobante as dc')
+                    ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                    ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+                    ->whereColumn('dc.idProducto', 'Producto.idProducto')
+                    ->where('ip.fechaIngreso', '>=', $fechaLimite);
+            });
+    }
+
+    public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12)
+    {
+        return $this->queryReemplazables($mesesGarantiaLaptop)
+            ->whereNull('Producto.idProductoPadre')
+            ->where(function ($q) {
+                $q->whereIn('Producto.estadoProductoWeb', ['AGOTADO', 'DESCONTINUADO'])
+                    ->orWhereNotExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('Inventario_Proveedor as ip')
+                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                            ->where('ip.stock', '>', 0);
+                    })
+                    ->orWhereNotExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('Inventario_Proveedor as ip')
+                            ->join('inventario_proveedor_skus as ips', 'ips.idInventarioProveedor', '=', 'ip.idInventarioProveedor')
+                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                            ->whereNotNull('ips.sku_proveedor')
+                            ->where('ips.sku_proveedor', '!=', '');
+                    });
+            });
+    }
+
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int
+    {
+        return (int) $this->queryFantasmasAutoReciclables($mesesGarantiaLaptop)->count();
+    }
+
+    public function obtenerSiguienteFantasmaAutoReciclable(int $mesesGarantiaLaptop = 12): ?Producto
+    {
+        return $this->queryFantasmasAutoReciclables($mesesGarantiaLaptop)
+            ->orderByRaw("CASE WHEN estadoProductoWeb IN ('AGOTADO','DESCONTINUADO') THEN 0 ELSE 1 END")
+            ->orderBy('idProducto', 'asc')
+            ->first();
+    }
 }

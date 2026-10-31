@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models\Catalogo;
+
 use App\Models\Ventas\DetalleComprobante;
 use App\Models\Inventario\Inventario;
 use App\Models\Precios\PrecioTienda;
@@ -16,50 +18,49 @@ use Illuminate\Support\Str;
 class Producto extends Model
 {
     public $timestamps = false;
- 
+
     protected $table = 'Producto';
-    
+
     protected $primaryKey = 'idProducto';
 
     public $incrementing = false;
 
     protected $guarded = [];
-    
-    protected $fillable = ['idProducto',
-                            'idMarca',
-                            'idGrupo',
-                            'nombreProducto',
-                            'codigoProducto',
-                            'UPC',
-                            'partNumber',
-                            'numeroSerie',
-                            'modelo',
-                            'precioDolar',
-                            'gananciaExtra',
-                            'garantia',
-                            'descripcionProducto',
-                            'imagenProducto1',
-                            'imagenProducto2',
-                            'imagenProducto3',
-                            'imagenProducto4',
-                            'videoUrl1',   // Test Url 1     
-                            'videoUrl2',   // Test Url 2
-                            'estadoProductoWeb',
-                            'stockMin',
-                            'slugProducto',
-                            'usar_tc_fijo', // Valor true o false (1 o 0) para usar un determinado tipo de cambio
-                            'tc_fijo',
-                            // Sistema de variantes (Padre-Hijo). Atributos descriptivos en DetalleProducto.
-                            'idProductoPadre',
-                            'es_padre'
-                            ];
 
-    
-    protected $hidden = [
-        
+    protected $fillable = [
+        'idProducto',
+        'idMarca',
+        'idGrupo',
+        'nombreProducto',
+        'codigoProducto',
+        'UPC',
+        'partNumber',
+        'numeroSerie',
+        'modelo',
+        'precioDolar',
+        'gananciaExtra',
+        'garantia',
+        'descripcionProducto',
+        'imagenProducto1',
+        'imagenProducto2',
+        'imagenProducto3',
+        'imagenProducto4',
+        'videoUrl1',   // Test Url 1     
+        'videoUrl2',   // Test Url 2
+        'estadoProductoWeb',
+        'stockMin',
+        'slugProducto',
+        'usar_tc_fijo', // Valor true o false (1 o 0) para usar un determinado tipo de cambio
+        'tc_fijo',
+        // Sistema de variantes (Padre-Hijo). Atributos descriptivos en DetalleProducto.
+        'idProductoPadre',
+        'es_padre'
     ];
 
-    
+
+    protected $hidden = [];
+
+
     protected $casts = [
         'idProducto' => 'int',
         'idMarca' => 'int',
@@ -76,7 +77,7 @@ class Producto extends Model
     protected $attributes = [
         'usar_tc_fijo' => true, // Por defecto usa el TC de la API de SUNAT
     ];
-    
+
     public static function boot()
     {
         parent::boot();
@@ -138,6 +139,7 @@ class Producto extends Model
             $originalSlug = $this->getOriginal('slugProducto');
             $id = $this->idProducto;
             $codigo = $this->codigoProducto;
+            $originalCodigo = $this->getOriginal('codigoProducto');
 
             $keysToForget = [];
             if (!empty($slug)) {
@@ -151,6 +153,9 @@ class Producto extends Model
             }
             if (!empty($codigo)) {
                 $keysToForget[] = "producto_getOne_codigoProducto_{$codigo}";
+            }
+            if (!empty($originalCodigo) && $originalCodigo !== $codigo) {
+                $keysToForget[] = "producto_getOne_codigoProducto_{$originalCodigo}";
             }
 
             foreach ($keysToForget as $k) {
@@ -169,9 +174,10 @@ class Producto extends Model
                     ->delete();
             }
 
-            // Invalidate category cache in WebUnik
-            if (!empty($this->idGrupo)) {
-                $idCategoria = \App\Models\Catalogo\GrupoProducto::where('idGrupoProducto', $this->idGrupo)->value('idCategoria');
+            // Invalidate category cache in WebUnik (current and previous group if changed)
+            $gruposAInvalidar = array_unique(array_filter([$this->idGrupo, $this->getOriginal('idGrupo')]));
+            foreach ($gruposAInvalidar as $gId) {
+                $idCategoria = \App\Models\Catalogo\GrupoProducto::where('idGrupoProducto', $gId)->value('idCategoria');
                 if ($idCategoria) {
                     Cache::forget("productos_categoria_{$idCategoria}");
                     \Illuminate\Support\Facades\DB::table('cache')
@@ -207,7 +213,7 @@ class Producto extends Model
             \Illuminate\Support\Facades\Log::warning("Error invalidando cache web: " . $e->getMessage());
         }
     }
-    
+
     public function Publicacion()
     {
         return $this->hasMany(Publicacion::class, 'idProducto', 'idProducto');
@@ -217,7 +223,7 @@ class Producto extends Model
     {
         return $this->hasMany(Caracteristicas_Producto::class, 'idProducto', 'idProducto');
     }
-    
+
     public function DetalleComprobante()
     {
         return $this->hasMany(DetalleComprobante::class, 'idProducto', 'idProducto');
@@ -225,14 +231,14 @@ class Producto extends Model
 
     public function MarcaProducto()
     {
-        return $this->belongsTo(MarcaProducto::class,'idMarca','idMarca');
+        return $this->belongsTo(MarcaProducto::class, 'idMarca', 'idMarca');
     }
-    
+
     public function GrupoProducto()
     {
         return $this->belongsTo(GrupoProducto::class, 'idGrupo', 'idGrupoProducto');
     }
-    
+
     public function Inventario()
     {
         return $this->hasMany(Inventario::class, 'idProducto', 'idProducto');
@@ -251,37 +257,93 @@ class Producto extends Model
     public function HistorialPrecioTienda()
     {
         return $this->hasMany(HistorialPrecioTienda::class, 'idProducto', 'idProducto')
-                     ->orderByDesc('created_at');
+            ->orderByDesc('created_at');
     }
-    
+
     public function Inventario_Proveedor()
     {
         return $this->belongsTo(Inventario_Proveedor::class, 'idProducto', 'idProducto');
     }
-    
+
     public function publicImages()
     {
         $default = asset('storage/noimagen.webp');
         $baseDir = dirname(base_path());
         $prodImagesPath = $baseDir . '/public_html/images/';
 
-        $checkExists = function ($img) use ($prodImagesPath) {
-            if (!$img) return false;
-            $filePath = strtok($img, '?');
-            return file_exists(public_path('storage/' . $filePath)) 
-                || file_exists(storage_path('app/public/' . $filePath))
-                || (!app()->environment('local') && file_exists($prodImagesPath . $filePath));
+        $formatImage = function ($img) use ($default, $prodImagesPath) {
+            if (!$img || $img === 'noimagen.webp') return $default;
+
+            $parts = explode('?', $img, 2);
+            $cleanPath = ltrim($parts[0], '/');
+            $existingQuery = $parts[1] ?? null;
+
+            $localPath1 = public_path('storage/' . $cleanPath);
+            $localPath2 = storage_path('app/public/' . $cleanPath);
+            $prodPath   = $prodImagesPath . $cleanPath;
+
+            $version = null;
+            $exists = false;
+
+            if (file_exists($localPath1)) {
+                $version = filemtime($localPath1);
+                $exists = true;
+            } elseif (file_exists($localPath2)) {
+                $version = filemtime($localPath2);
+                $exists = true;
+            } elseif (!app()->environment('local') && file_exists($prodPath)) {
+                $version = filemtime($prodPath);
+                $exists = true;
+            }
+
+            if (!$exists) {
+                if ($existingQuery && !app()->environment('local')) {
+                    return asset('storage/' . $cleanPath) . '?' . $existingQuery;
+                }
+                return $default;
+            }
+
+            if (!$version && $existingQuery) {
+                return asset('storage/' . $cleanPath) . '?' . $existingQuery;
+            }
+
+            if (!$version) {
+                if (!empty($this->updated_at)) {
+                    $version = strtotime((string) $this->updated_at) ?: null;
+                }
+                if (!$version) {
+                    $version = time();
+                }
+            }
+
+            return asset('storage/' . $cleanPath) . '?v=' . $version;
         };
 
-        $imagen1 = $checkExists($this->imagenProducto1) ? asset('storage/' . $this->imagenProducto1) : $default;
-        $imagen2 = $checkExists($this->imagenProducto2) ? asset('storage/' . $this->imagenProducto2) : $default;
-        $imagen3 = $checkExists($this->imagenProducto3) ? asset('storage/' . $this->imagenProducto3) : $default;
-        $imagen4 = $checkExists($this->imagenProducto4) ? asset('storage/' . $this->imagenProducto4) : $default;
-
-        return [$imagen1, $imagen2, $imagen3, $imagen4];
+        return [
+            $formatImage($this->imagenProducto1),
+            $formatImage($this->imagenProducto2),
+            $formatImage($this->imagenProducto3),
+            $formatImage($this->imagenProducto4),
+        ];
     }
-       public function registros() {
-        return $this->hasMany(RegistroProducto::class, 'idProducto', 'idProducto');
+    public function registros()
+    {
+        return $this->hasManyThrough(
+            RegistroProducto::class,
+            DetalleComprobante::class,
+            'idProducto',
+            'idDetalleComprobante',
+            'idProducto',
+            'idDetalleComprobante'
+        );
+    }
+
+    /**
+     * Candado de seguridad: Delega la validación de reemplazo a la capa de servicio (ProductoService).
+     */
+    public function esReemplazable(int $mesesGarantiaLaptop = 12): bool
+    {
+        return app(\App\Services\ProductoServiceInterface::class)->esReemplazable($this, $mesesGarantiaLaptop);
     }
 
     /**
@@ -379,9 +441,10 @@ class Producto extends Model
 
         return (int) Inventario::where('idProducto', $this->idProducto)->sum('stock');
     }
-    
-    
-    public function estadoColor(){
+
+
+    public function estadoColor()
+    {
         if ($this->estadoProductoWeb == 'DISPONIBLE') {
             return 'text-success';
         } elseif ($this->estadoProductoWeb == 'OFERTA') {
@@ -390,11 +453,12 @@ class Producto extends Model
             return 'text-danger text-decoration-line-through';
         }
     }
-    
-    public function displayImg($img){
-        if($img == "asset('storage/images/noimagen.webp')"){
+
+    public function displayImg($img)
+    {
+        if ($img == "asset('storage/images/noimagen.webp')") {
             return "d-none";
-        }else{
+        } else {
             return "";
         }
     }
@@ -408,11 +472,11 @@ class Producto extends Model
     {
         $idCategoria = optional($this->GrupoProducto)->idCategoria;
         $idGrupo = $this->idGrupo;
-        
-        return PlataformaMapper::whereHas('plataforma', function($q) use ($plataformaNombre) {
-                $q->where('nombrePlataforma', 'like', "%{$plataformaNombre}%");
-            })
-            ->where(function($query) use ($idCategoria, $idGrupo) {
+
+        return PlataformaMapper::whereHas('plataforma', function ($q) use ($plataformaNombre) {
+            $q->where('nombrePlataforma', 'like', "%{$plataformaNombre}%");
+        })
+            ->where(function ($query) use ($idCategoria, $idGrupo) {
                 if ($idCategoria) {
                     $query->orWhere('idCategoria', $idCategoria);
                 }
@@ -426,12 +490,12 @@ class Producto extends Model
     {
         $idCategoria = optional($this->GrupoProducto)->idCategoria;
         $idGrupo = $this->idGrupo;
-        
-        return PlataformaMapper::whereHas('plataforma', function($q) use ($plataformaNombre) {
-                $q->where('nombrePlataforma', 'like', "%{$plataformaNombre}%");
-            })
+
+        return PlataformaMapper::whereHas('plataforma', function ($q) use ($plataformaNombre) {
+            $q->where('nombrePlataforma', 'like', "%{$plataformaNombre}%");
+        })
             ->where('tipo_template', 'completo')
-            ->where(function($query) use ($idCategoria, $idGrupo) {
+            ->where(function ($query) use ($idCategoria, $idGrupo) {
                 if ($idCategoria) {
                     $query->orWhere('idCategoria', $idCategoria);
                 }

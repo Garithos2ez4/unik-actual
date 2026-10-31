@@ -424,6 +424,21 @@ class DeltronApiService
                     return $saved;
                 }
             }
+
+            // 3.1 Si el SKU no fue encontrado directamente, intentar resolverlo desde el catalogo snapshot
+            // (ocurre cuando el usuario ingresa un Part Number ej: DJ2Z8AT#ABM o un mini código en vez del SKU Deltron)
+            $itemSnap = $this->buscarItemEnCatalogoSnapshot($cleanSku);
+            if ($itemSnap) {
+                $skuReal = strtoupper(trim($itemSnap['sku'] ?? ''));
+                if (!empty($skuReal) && $skuReal !== $cleanSku) {
+                    $fichaReal = $this->getOrFetchFichaSku($skuReal, $forceRefresh);
+                    if ($fichaReal) {
+                        return $fichaReal;
+                    }
+                }
+                return $this->construirFichaDesdeItemCatalogo($itemSnap);
+            }
+
             return null;
         }
 
@@ -594,6 +609,216 @@ class DeltronApiService
     }
 
     /**
+     * Busca un item en el snapshot local del catálogo de Deltron por SKU, Part Number o Mini Código.
+     * Permite resolver casos donde el usuario introduce un Part Number comercial (ej: DJ2Z8AT#ABM)
+     * en lugar del SKU interno de Deltron (ej: NBHPDJ2Z8AT).
+     */
+    public function buscarItemEnCatalogoSnapshot(string $criterio): ?array
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $criterioClean = strtoupper(trim($criterio));
+        if (empty($criterioClean)) {
+            return null;
+        }
+
+        $criterioAlpha = preg_replace('/[^A-Z0-9]/', '', $criterioClean);
+        $cacheKey = "deltron_snap_item_" . ($criterioAlpha ?: md5($criterioClean));
+
+        if (Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && !empty($cached)) {
+                return $cached;
+            }
+        }
+
+        $snapshotPath = storage_path('app/deltron_catalogo_snapshot.json');
+        if (!file_exists($snapshotPath)) {
+            return null;
+        }
+
+        // 1. Verificación rápida en texto crudo antes de alocar 150MB de RAM en json_decode
+        $raw = @file_get_contents($snapshotPath);
+        if (!$raw) {
+            return null;
+        }
+
+        $rawUpper = strtoupper($raw);
+        $encontradoEnTexto = str_contains($rawUpper, $criterioClean)
+            || (!empty($criterioAlpha) && strlen($criterioAlpha) >= 4 && str_contains($rawUpper, $criterioAlpha));
+
+        if (!$encontradoEnTexto) {
+            return null;
+        }
+
+        // 2. Decodificación segura en memoria
+        $items = @json_decode($raw, true);
+        unset($raw, $rawUpper);
+
+        if (!is_array($items) || empty($items)) {
+            return null;
+        }
+
+        // 3. Coincidencia exacta por SKU, Part Number o Mini Código
+        foreach ($items as $it) {
+            $sku = strtoupper(trim($it['sku'] ?? ''));
+            $pn = strtoupper(trim($it['part_number'] ?? ''));
+            $mini = strtoupper(trim($it['mini_code'] ?? ''));
+
+            if ($sku === $criterioClean || $pn === $criterioClean || $mini === $criterioClean) {
+                Cache::put($cacheKey, $it, now()->addHours(24));
+                return $it;
+            }
+        }
+
+        // 4. Coincidencia alfanumérica por Part Number (ej: DJ2Z8AT#ABM vs DJ2Z8ATABM)
+        if (!empty($criterioAlpha) && strlen($criterioAlpha) >= 4) {
+            foreach ($items as $it) {
+                $pn = strtoupper(trim($it['part_number'] ?? ''));
+                $pnAlpha = preg_replace('/[^A-Z0-9]/', '', $pn);
+                if ($pnAlpha === $criterioAlpha) {
+                    Cache::put($cacheKey, $it, now()->addHours(24));
+                    return $it;
+                }
+            }
+        }
+
+        // 5. Coincidencia si el Part Number está contenido en el SKU o viceversa
+        if (!empty($criterioAlpha) && strlen($criterioAlpha) >= 5) {
+            foreach ($items as $it) {
+                $sku = strtoupper(trim($it['sku'] ?? ''));
+                $skuAlpha = preg_replace('/[^A-Z0-9]/', '', $sku);
+                $pn = strtoupper(trim($it['part_number'] ?? ''));
+                $pnAlpha = preg_replace('/[^A-Z0-9]/', '', $pn);
+
+                if (str_contains($skuAlpha, $criterioAlpha) || str_contains($pnAlpha, $criterioAlpha)) {
+                    Cache::put($cacheKey, $it, now()->addHours(24));
+                    return $it;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Construye y almacena una ficha completa estándar a partir de un item del catálogo snapshot.
+     */
+    public function construirFichaDesdeItemCatalogo(array $raw): array
+    {
+        $cleanSku = strtoupper(trim($raw['sku'] ?? ''));
+        $name = DeltronTextHelper::stripEmojis($raw['name'] ?? '');
+        $partNumber = DeltronTextHelper::stripEmojis($raw['part_number'] ?? '');
+        $miniCode = DeltronTextHelper::stripEmojis($raw['mini_code'] ?? '');
+        $brandName = DeltronTextHelper::stripEmojis($raw['brand_name'] ?? '');
+        $categoryName = DeltronTextHelper::stripEmojis($raw['category_name'] ?? '');
+        $subcategoryName = DeltronTextHelper::stripEmojis($raw['subcategory_name'] ?? '');
+        $warranty = DeltronTextHelper::normalizarGarantiaDeltron($raw['warranty'] ?? '');
+        $status = DeltronTextHelper::stripEmojis($raw['status'] ?? '');
+        $descLarge = DeltronTextHelper::cleanDeltronText($raw['description_large'] ?? '');
+        $descSmall = DeltronTextHelper::cleanDeltronText($raw['description_small'] ?? '');
+        $specsHtml = DeltronTextHelper::stripEmojis($raw['specs']['specs_all_html'] ?? ($raw['specs_html'] ?? ''));
+        $specsTexto = DeltronTextHelper::parseSpecsHtmlToText($specsHtml);
+
+        $descCompleta = $descLarge ?: $descSmall;
+        if (!empty($descCompleta) && !empty($specsTexto)) {
+            $descCompleta .= "\n\n" . $specsTexto;
+        } elseif (!empty($specsTexto)) {
+            $descCompleta = $specsTexto;
+        }
+
+        $price = isset($raw['price']) ? (float) $raw['price'] : null;
+        $pricePromo = isset($raw['price_promo']) ? (float) $raw['price_promo'] : null;
+        $tienePromo = ($pricePromo !== null && $price !== null && $pricePromo < $price);
+        $ahorro = $tienePromo ? round($price - $pricePromo, 2) : 0;
+
+        $almacenes = $raw['stock']['almacenes'] ?? [];
+        $stockTotal = 0;
+        $hayMas = !empty($raw['stock']['hay_mas']) || !empty($raw['hay_mas']);
+        if (is_array($almacenes)) {
+            foreach ($almacenes as &$alm) {
+                $alm['almacen_name'] = DeltronTextHelper::stripEmojis($alm['almacen_name'] ?? '');
+                $stockTotal += (int) ($alm['cantidad'] ?? 0);
+                if (!empty($alm['hay_mas'])) {
+                    $hayMas = true;
+                }
+            }
+            unset($alm);
+        }
+
+        $images = [
+            'listado' => $raw['images']['image_listado'] ?? null,
+            'carrusel' => []
+        ];
+        if (!empty($raw['images']['images_carrusel']) && is_array($raw['images']['images_carrusel'])) {
+            foreach ($raw['images']['images_carrusel'] as $img) {
+                $url = is_string($img) ? $img : ($img['url'] ?? null);
+                if ($url && !str_contains($url, 'blanco.jpg')) {
+                    $images['carrusel'][] = [
+                        'url' => $url,
+                        'is_main' => !empty($img['is_main'])
+                    ];
+                }
+            }
+        }
+
+        $modeloReal = DeltronTextHelper::extraerModeloRealDesdeSpecs($specsHtml) ?: DeltronTextHelper::extraerModeloDesdeItem($raw);
+
+        $prodDb = $this->buscarProductoEnUnike($cleanSku, $partNumber, $modeloReal);
+        $vinculadoBd = ($prodDb !== null);
+        $idProducto = $prodDb ? $prodDb->idProducto : null;
+
+        $ficha = [
+            'sku' => $cleanSku,
+            'part_number' => $partNumber,
+            'modelo_real' => $modeloReal,
+            'mini_code' => $miniCode,
+            'name' => $name,
+            'brand_name' => $brandName,
+            'category_name' => $categoryName,
+            'subcategory_name' => $subcategoryName,
+            'warranty' => $warranty,
+            'status' => $status,
+            'price' => $price,
+            'price_promo' => $pricePromo,
+            'price_con_igv' => $price ? round($price * 1.18, 2) : null,
+            'price_promo_con_igv' => $pricePromo ? round($pricePromo * 1.18, 2) : null,
+            'tiene_promo' => $tienePromo,
+            'ahorro' => $ahorro,
+            'stock_total' => $stockTotal,
+            'hay_mas' => $hayMas,
+            'almacenes' => $almacenes,
+            'transito_total' => 0,
+            'transito_items' => [],
+            'promociones' => [],
+            'images' => $images,
+            'specs_html' => $specsHtml,
+            'specs_texto' => $specsTexto,
+            'descripcion_larga' => $descLarge,
+            'descripcion_corta' => $descSmall,
+            'descripcion_completa' => $descCompleta,
+            'vinculado_bd' => $vinculadoBd,
+            'idProducto' => $idProducto,
+            'origen' => 'catalogo_deltron',
+            'actualizado_at' => now()->format('d/m/Y h:i A')
+        ];
+
+        $safeFilename = preg_replace('/[^A-Z0-9_-]/', '_', $cleanSku);
+        $cacheKey = "deltron_ficha_{$safeFilename}";
+        $storageDir = storage_path('app/deltron_fichas');
+        $snapshotPath = $storageDir . '/' . $safeFilename . '.json';
+
+        if (!file_exists($storageDir)) {
+            @mkdir($storageDir, 0755, true);
+        }
+        @file_put_contents($snapshotPath, json_encode($ficha, JSON_UNESCAPED_UNICODE));
+        Cache::put($cacheKey, $ficha, now()->addHours(24));
+
+        return $ficha;
+    }
+
+    /**
      * Consulta el stock por almacen de un producto en tiempo real.
      */
     public function getStock(string $sku): ?array
@@ -749,9 +974,14 @@ class DeltronApiService
         return $this->importService->getCandidatosCatalogoPaginado($filtros, $page, $perPage);
     }
 
-    public function importarLoteOfertas(array $itemsAImportar): array
+    public function importarLoteOfertas(array $itemsAImportar, bool $reciclarFantasmas = false): array
     {
-        return $this->importService->importarLoteOfertas($itemsAImportar);
+        return $this->importService->importarLoteOfertas($itemsAImportar, $reciclarFantasmas);
+    }
+
+    public function reemplazarProductoConSkuDeltron(Producto $producto, string $sku, ?int $idGrupoOverride = null): array
+    {
+        return $this->importService->reemplazarProductoConSkuDeltron($producto, $sku, $idGrupoOverride);
     }
 
     public function completarFotosProducto(Producto $producto): array

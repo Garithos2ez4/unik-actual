@@ -410,4 +410,6 @@
 
 <!-- Lógica JavaScript (Componentes) -->
 @include('compras.logic.logic')
+@include('compras.logic.modal_importar_ofertas')
+@include('compras.logic.modal_importar_catalogo')
 @endsection

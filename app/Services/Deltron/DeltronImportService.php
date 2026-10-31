@@ -427,9 +427,10 @@ class DeltronImportService
 
     /**
      * Importa un micro-lote de productos seleccionados descargando la Foto 1 en WebP 800x800.
-     * Soporta la creacion automatica de productos contenedores Padre y sus variantes Hijas (Colores).
+     * Soporta la creacion automatica de productos contenedores Padre y sus variantes Hijas (Colores),
+     * asi como el reciclaje opcional de IDs de productos fantasma (sin ingresos en IngresoProducto).
      */
-    public function importarLoteOfertas(array $itemsAImportar): array
+    public function importarLoteOfertas(array $itemsAImportar, bool $reciclarFantasmas = false): array
     {
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
@@ -447,16 +448,23 @@ class DeltronImportService
             $sku = strtoupper(trim($itemData['sku'] ?? ''));
             if (empty($sku)) continue;
 
-            // Verificar duplicados en caliente
-            $duplicado = Producto::where('modelo', $sku)->exists() || 
-                InventarioProveedorSku::where('sku_proveedor', $sku)->exists();
+            // Verificar duplicados en caliente (excluyendo el propio producto si es un reemplazo directo)
+            $replaceTargetId = !empty($itemData['replace_id']) ? (int) $itemData['replace_id'] : null;
+            $duplicado = Producto::where('modelo', $sku)
+                ->when($replaceTargetId, fn($q) => $q->where('idProducto', '!=', $replaceTargetId))
+                ->exists() ||
+                InventarioProveedorSku::where('sku_proveedor', $sku)
+                    ->when($replaceTargetId, function ($q) use ($replaceTargetId) {
+                        $q->whereHas('inventarioProveedor', fn($sq) => $sq->where('idProducto', '!=', $replaceTargetId));
+                    })
+                    ->exists();
 
             if ($duplicado) {
                 continue;
             }
 
             try {
-                DB::transaction(function () use ($itemData, $sku, $imgService, $destinationPath, $grupos, $almacenes, $itemsAImportar, &$importados) {
+                DB::transaction(function () use ($itemData, $sku, $imgService, $destinationPath, $grupos, $almacenes, $itemsAImportar, $reciclarFantasmas, &$importados) {
                     $idGrupo = (int)($itemData['idGrupo'] ?? 25);
                     $grupoObj = $grupos->get($idGrupo);
                     $nombreGrupo = $grupoObj ? $grupoObj->nombreGrupo : 'Perifericos';
@@ -551,9 +559,32 @@ class DeltronImportService
                         }
                     }
 
-                    $lastId = Producto::max('idProducto') ?? 0;
-                    $idProducto = $lastId + 1;
-                    $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+                    // Resolver si reciclamos un Producto Fantasma o creamos un ID nuevo
+                    $ghostProd = null;
+                    $codigoAnterior = null;
+
+                    if (!empty($itemData['replace_id'])) {
+                        $candGhost = Producto::find((int) $itemData['replace_id']);
+                        if ($candGhost && $candGhost->esReemplazable()) {
+                            $ghostProd = $candGhost;
+                        }
+                    } elseif ($reciclarFantasmas && !$padre) {
+                        $ghostProd = app(\App\Repositories\ProductoRepositoryInterface::class)->obtenerSiguienteFantasmaAutoReciclable(12);
+                    }
+
+                    if ($ghostProd) {
+                        $idProducto = $ghostProd->idProducto;
+                        $codigoAnterior = $ghostProd->codigoProducto;
+                        if ((int) $ghostProd->idGrupo === $idGrupo && !empty($ghostProd->codigoProducto)) {
+                            $codigo = $ghostProd->codigoProducto;
+                        } else {
+                            $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+                        }
+                    } else {
+                        $lastId = Producto::max('idProducto') ?? 0;
+                        $idProducto = $lastId + 1;
+                        $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+                    }
 
                     // Descargar Foto 1 (Principal) en WebP 800x800
                     $foto1Url = $itemData['foto1_url'] ?? null;
@@ -561,17 +592,37 @@ class DeltronImportService
                         $foto1Url = DeltronTextHelper::obtenerUrlCdnDeltron($sku);
                     }
                     $foto1Final = 'noimagen.webp';
+                    $timestamp = time();
 
                     if (!empty($foto1Url) && is_string($foto1Url) && !str_contains($foto1Url, 'blanco.jpg')) {
                         try {
                             $saved = $imgService->createImage($foto1Url, $idProducto . '_1', $destinationPath);
                             if ($saved) {
-                                $foto1Final = 'productos/IMGPRO' . $idProducto . '_1.webp';
+                                $foto1Final = 'productos/IMGPRO' . $idProducto . '_1.webp' . ($ghostProd ? '?v=' . $timestamp : '');
                             }
                         } catch (Exception $imgEx) {
                             Log::warning("No se pudo procesar Foto 1 de Deltron para {$sku}: " . $imgEx->getMessage());
                             $foto1Final = 'noimagen.webp';
                         }
+                    }
+
+                    // Si es reciclaje, limpiar archivos de imagenes antiguas de slots 2, 3 y 4 y tablas satelite
+                    if ($ghostProd) {
+                        $localPath = public_path('storage/productos');
+                        $storageAppPath = storage_path('app/public/productos');
+                        for ($slotNum = 2; $slotNum <= 4; $slotNum++) {
+                            $fName = 'IMGPRO' . $idProducto . '_' . $slotNum . '.webp';
+                            foreach ([$destinationPath . '/' . $fName, $localPath . '/' . $fName, $storageAppPath . '/' . $fName] as $oldImg) {
+                                if (is_file($oldImg)) {
+                                    @unlink($oldImg);
+                                }
+                            }
+                        }
+                        \App\Models\Catalogo\Caracteristicas_Producto::where('idProducto', $idProducto)->delete();
+                        \App\Models\Inventario\Liquidacion::where('idProducto', $idProducto)->delete();
+                        \App\Models\Precios\PrecioTienda::where('idProducto', $idProducto)->delete();
+                        \App\Models\Precios\HistorialPrecioTienda::where('idProducto', $idProducto)->delete();
+                        \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)->delete();
                     }
 
                     // Titulo y relaciones segun si es variante de un padre o producto simple
@@ -593,9 +644,7 @@ class DeltronImportService
                     $desc = !empty($itemData['description']) ? DeltronTextHelper::cleanDeltronText($itemData['description']) : $nombreFinal;
                     $desc = DeltronTextHelper::recortarTextoEnLinea($desc, 5000);
 
-                    // 1. Crear Producto
-                    $prod = Producto::create([
-                        'idProducto' => $idProducto,
+                    $atributosProducto = [
                         'nombreProducto' => $nombreFinal,
                         'codigoProducto' => $codigo,
                         'UPC' => '0',
@@ -611,16 +660,35 @@ class DeltronImportService
                         'imagenProducto2' => null,
                         'imagenProducto3' => null,
                         'imagenProducto4' => null,
+                        'videoUrl1' => null,
+                        'videoUrl2' => null,
                         'estadoProductoWeb' => 'DISPONIBLE',
                         'stockMin' => 1,
                         'usar_tc_fijo' => 1,
+                        'tc_fijo' => null,
                         'es_padre' => $esPadreVal,
                         'idProductoPadre' => $idPadreVal,
-                    ]);
-                    $idProducto = $prod->idProducto;
+                    ];
 
-                    // 2. Crear DetalleProducto
-                    $detalleData = ['mostrarPrecioWeb' => true];
+                    // 1. Crear o Actualizar Producto (si se reciclo un ID fantasma)
+                    if ($ghostProd) {
+                        $ghostProd->fill($atributosProducto);
+                        $ghostProd->save();
+                        $prod = $ghostProd;
+                    } else {
+                        $atributosProducto['idProducto'] = $idProducto;
+                        $prod = Producto::create($atributosProducto);
+                        $idProducto = $prod->idProducto;
+                    }
+
+                    // 2. Crear/Actualizar DetalleProducto
+                    $detalleData = [
+                        'mostrarPrecioWeb' => true,
+                        'precio_pase' => null,
+                        'tipo_variante' => null,
+                        'valor_variante' => null,
+                        'codigo_color_hex' => null,
+                    ];
                     if ($padre && !empty($itemData['valor_variante'])) {
                         $detalleData['tipo_variante'] = $itemData['tipo_variante'] ?? 'COLOR';
                         $detalleData['valor_variante'] = $itemData['valor_variante'];
@@ -632,27 +700,42 @@ class DeltronImportService
                         $detalleData
                     );
 
-                    // 3. Crear registros de inventario fisico en cero para cada almacen local
-                    foreach ($almacenes as $alm) {
-                        Inventario::create([
-                            'idProducto' => $idProducto,
-                            'idAlmacen' => $alm->idAlmacen,
-                            'stock' => 0
-                        ]);
+                    // 3. Asegurar registros de inventario fisico en cero para cada almacen local
+                    if ($ghostProd && Inventario::where('idProducto', $idProducto)->exists()) {
+                        Inventario::where('idProducto', $idProducto)->update(['stock' => 0, 'idUbicacionExacta' => null]);
+                    } else {
+                        foreach ($almacenes as $alm) {
+                            Inventario::create([
+                                'idProducto' => $idProducto,
+                                'idAlmacen' => $alm->idAlmacen,
+                                'stock' => 0
+                            ]);
+                        }
                     }
 
-                    // 4. Crear Inventario_Proveedor (Deltron)
-                    $lastInvProv = Inventario_Proveedor::max('idInventarioProveedor') ?? 0;
-                    $idInvProv = $lastInvProv + 1;
+                    // 4. Crear o Actualizar Inventario_Proveedor (Deltron)
                     $stockProv = (int)($itemData['lima_stock'] ?? ($itemData['total_stock'] ?? 1));
+                    $invProvExistente = Inventario_Proveedor::where('idProducto', $idProducto)->first();
 
-                    Inventario_Proveedor::create([
-                        'idInventarioProveedor' => $idInvProv,
-                        'idProducto' => $idProducto,
-                        'idProveedor' => 1,
-                        'stock' => max(1, $stockProv),
-                        'estado' => 'VIGENTE'
-                    ]);
+                    if ($invProvExistente) {
+                        $idInvProv = $invProvExistente->idInventarioProveedor;
+                        InventarioProveedorSku::where('idInventarioProveedor', $idInvProv)->delete();
+                        $invProvExistente->idProveedor = 1;
+                        $invProvExistente->stock = max(1, $stockProv);
+                        $invProvExistente->estado = 'VIGENTE';
+                        $invProvExistente->save();
+                    } else {
+                        $lastInvProv = Inventario_Proveedor::max('idInventarioProveedor') ?? 0;
+                        $idInvProv = $lastInvProv + 1;
+
+                        Inventario_Proveedor::create([
+                            'idInventarioProveedor' => $idInvProv,
+                            'idProducto' => $idProducto,
+                            'idProveedor' => 1,
+                            'stock' => max(1, $stockProv),
+                            'estado' => 'VIGENTE'
+                        ]);
+                    }
 
                     // 5. Vincular SKU proveedor
                     InventarioProveedorSku::updateOrCreate(
@@ -683,6 +766,8 @@ class DeltronImportService
                         'idProducto' => $idProducto,
                         'sku' => $sku,
                         'codigoProducto' => $codigo,
+                        'codigoAnterior' => $codigoAnterior,
+                        'reciclado' => ($ghostProd !== null),
                         'nombreProducto' => $nombreFinal,
                         'precioDolar' => $precioDolar,
                         'foto1' => $foto1Final,
@@ -945,6 +1030,154 @@ class DeltronImportService
             'agregadas' => $n,
             'slots' => $slotsLlenados,
             'sku' => $skuClean,
+        ];
+    }
+
+    /**
+     * Reemplaza un producto fantasma (sin ingresos en IngresoProducto) con un SKU de Deltron,
+     * conservando el idProducto original y completando fotos y especificaciones.
+     */
+    public function reemplazarProductoConSkuDeltron(Producto $producto, string $sku, ?int $idGrupoOverride = null): array
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $prodService = app(\App\Services\ProductoServiceInterface::class);
+        if (!$prodService->esReemplazable($producto)) {
+            return [
+                'success' => false,
+                'message' => "El producto {$producto->codigoProducto} (ID #{$producto->idProducto}) no cumple los requisitos para ser reemplazado (cuenta con stock en almacén o ingresos con garantía vigente).",
+            ];
+        }
+
+        $skuClean = strtoupper(trim($sku));
+        if (empty($skuClean)) {
+            return [
+                'success' => false,
+                'message' => 'Debes ingresar un SKU o Part Number válido de Deltron.',
+            ];
+        }
+
+        // Si el usuario ingresó un Part Number (ej. DJ2Z8AT#ABM) o Mini Código, resolver el SKU oficial de Deltron
+        $itemCatalog = $this->getApiService()->buscarItemEnCatalogoSnapshot($skuClean);
+        $skuReal = $itemCatalog ? strtoupper(trim($itemCatalog['sku'] ?? $skuClean)) : $skuClean;
+
+        // Verificar que el SKU no esté ya vinculado a OTRO producto distinto
+        $skuEnUso = InventarioProveedorSku::where(function ($q) use ($skuReal, $skuClean) {
+                $q->where('sku_proveedor', $skuReal)
+                  ->orWhere('sku_proveedor', $skuClean)
+                  ->orWhere('part_number', $skuClean);
+            })
+            ->whereHas('inventarioProveedor', function ($q) use ($producto) {
+                $q->where('idProducto', '!=', $producto->idProducto);
+            })
+            ->first();
+
+        if ($skuEnUso) {
+            $prodDuplicado = optional($skuEnUso->inventarioProveedor)->Producto;
+            $codDup = $prodDuplicado ? $prodDuplicado->codigoProducto : ('ID #' . optional($skuEnUso->inventarioProveedor)->idProducto);
+            return [
+                'success' => false,
+                'message' => "El SKU/PN {$skuClean} ya se encuentra vinculado al producto {$codDup}.",
+            ];
+        }
+
+        $ficha = $this->getApiService()->getOrFetchFichaSku($skuReal);
+        if (!$ficha && $itemCatalog) {
+            $ficha = $this->getApiService()->construirFichaDesdeItemCatalogo($itemCatalog);
+        }
+
+        if (!$ficha) {
+            return [
+                'success' => false,
+                'message' => "No se encontró información en Deltron para el SKU/PN: {$skuClean}.",
+            ];
+        }
+
+        $skuReal = strtoupper(trim($ficha['sku'] ?? $skuClean));
+        $pn = trim($ficha['part_number'] ?? $skuReal);
+
+        $grupos = GrupoProducto::with('CategoriaProducto')->get()->keyBy('idGrupoProducto');
+        $marcas = MarcaProducto::all();
+
+        if ($idGrupoOverride && $grupos->has($idGrupoOverride)) {
+            $grupoObj = $grupos->get($idGrupoOverride);
+            $idGrupo = (int) $idGrupoOverride;
+            $nombreGrupo = $grupoObj->nombreGrupo;
+        } else {
+            $clasif = $this->classifierService->clasificarGrupoSugerido($ficha, $grupos);
+            $idGrupo = (int) $clasif['idGrupo'];
+            $nombreGrupo = $clasif['nombreGrupo'];
+        }
+
+        $idMarca = $this->classifierService->emparejarMarca($ficha['brand_name'] ?? '', $marcas);
+
+        $foto1 = null;
+        if (!empty($ficha['images']['listado']) && !str_contains($ficha['images']['listado'], 'blanco.jpg')) {
+            $foto1 = $ficha['images']['listado'];
+        } elseif (!empty($ficha['images']['carrusel']) && is_array($ficha['images']['carrusel'])) {
+            foreach ($ficha['images']['carrusel'] as $c) {
+                $cUrl = is_string($c) ? $c : ($c['url'] ?? ($c['image'] ?? null));
+                if ($cUrl && !str_contains($cUrl, 'blanco.jpg')) {
+                    $foto1 = $cUrl;
+                    break;
+                }
+            }
+        }
+
+        $itemData = [
+            'replace_id' => $producto->idProducto,
+            'sku' => $skuReal,
+            'part_number' => $pn,
+            'modelo_real' => $ficha['modelo_real'] ?? DeltronTextHelper::extraerModeloRealDesdeSpecs($ficha['specs_html'] ?? ''),
+            'name' => $ficha['name'] ?? DeltronTextHelper::obtenerTituloComercialDeltron($ficha),
+            'brand_name' => $ficha['brand_name'] ?? '',
+            'idMarca' => $idMarca,
+            'idGrupo' => $idGrupo,
+            'nombreGrupo' => $nombreGrupo,
+            'price' => (float) ($ficha['price'] ?? 0),
+            'price_promo' => !empty($ficha['price_promo']) ? (float) $ficha['price_promo'] : null,
+            'total_stock' => (int) ($ficha['stock_total'] ?? 0),
+            'lima_stock' => (int) ($ficha['stock_total'] ?? 0),
+            'lima_hay_mas' => !empty($ficha['hay_mas']),
+            'foto1_url' => $foto1,
+            'mini_code' => $ficha['mini_code'] ?? ($ficha['mini_codigo'] ?? null),
+            'warranty' => DeltronTextHelper::normalizarGarantiaDeltron($ficha['warranty'] ?? null),
+            'description' => $ficha['descripcion_completa'] ?? DeltronTextHelper::construirDescripcionProducto($ficha),
+            'es_variante' => false,
+        ];
+
+        $loteRes = $this->importarLoteOfertas([$itemData], false);
+        if (empty($loteRes['importados'])) {
+            $errMsg = $loteRes['errores'][0]['error'] ?? 'No se pudo completar el reemplazo del producto.';
+            return [
+                'success' => false,
+                'message' => $errMsg,
+            ];
+        }
+
+        $producto->refresh();
+
+        // Completar fotos secundarias (2, 3 y 4) y especificaciones desde la ficha
+        try {
+            $this->completarFotosProducto($producto);
+        } catch (\Throwable $e) {
+            Log::warning("Aviso completando fotos tras reemplazo ID {$producto->idProducto}: " . $e->getMessage());
+        }
+
+        try {
+            $specMapper = new DeltronSpecMapperService($this->getApiService());
+            $specMapper->llenarEspecificacionesProducto($producto, $skuReal, false);
+        } catch (\Throwable $e) {
+            Log::warning("Aviso llenando specs tras reemplazo ID {$producto->idProducto}: " . $e->getMessage());
+        }
+
+        $impInfo = $loteRes['importados'][0];
+
+        return [
+            'success' => true,
+            'message' => "Producto ID #{$producto->idProducto} reemplazado exitosamente por {$impInfo['nombreProducto']} ({$impInfo['codigoProducto']}).",
+            'producto' => $impInfo,
         ];
     }
 }

@@ -7,6 +7,7 @@ interface ProductoServiceInterface
     public function getOneProductByColumn($column,$data);
     public function searchProducts($input,$count,$filtros);
     public function insertProduct($array,$proveedor,$img1,$img2,$img3,$img4);
+    public function replaceProduct($idProducto,$array,$proveedor,$img1,$img2,$img3,$img4);
     public function updateProduct($id,$array,$img1,$img2,$img3,$img4);
     public function validateState($id, $allowAutoAvailable = false);
     public function insertOrUpdateCaracteristicas($id,$arrayCreate,$arrayUpdate);
@@ -30,4 +31,11 @@ interface ProductoServiceInterface
     public function filtroEstados($column,$data);
     public function getYoutubeVideoId(?string $url): ?string;
     public function existsByModelo(string $modelo, $excludeId = null): bool;
+
+    /** Reglas de negocio para reemplazo y reciclaje de productos */
+    public function esReemplazable($producto, int $mesesGarantiaLaptop = 12): bool;
+    public function esLaptopConGarantiaVencida($producto, int $meses = 12): bool;
+    public function getMotivoReemplazo($producto, int $mesesGarantiaLaptop = 12): ?array;
+    public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon;
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int;
 }

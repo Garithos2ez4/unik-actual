@@ -98,6 +98,8 @@ class ProductoController extends Controller
                 $almacenes = \App\Models\Inventario\Almacen::with('Ubicaciones')->get();
 
                 $tcSunat = (float)$this->calculadoraService->getTasaCambio();
+                $esProductoReemplazable = $this->productoService->esReemplazable($producto);
+                $motivoReemplazo = $this->productoService->getMotivoReemplazo($producto);
 
                 return view('productos.producto', [
                     'user' => $userModel,
@@ -108,7 +110,9 @@ class ProductoController extends Controller
                     'almacenes' => $almacenes,
                     'tc' => $tcSunat,
                     'igv' => $this->calculadoraService->getIgv(),
-                    'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio
+                    'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio,
+                    'esProductoReemplazable' => $esProductoReemplazable,
+                    'motivoReemplazo' => $motivoReemplazo,
                 ]);
             }
         }
@@ -137,6 +141,14 @@ class ProductoController extends Controller
                 $productoCopiar = null;
                 if ($request->has('copy_from')) {
                     $productoCopiar = $this->productoService->getOneProductByColumn('idProducto', $request->copy_from);
+                }
+
+                $productoReemplazar = null;
+                if ($request->filled('replace_id')) {
+                    $candReplace = Producto::find((int) $request->input('replace_id'));
+                    if ($candReplace && $candReplace->esReemplazable()) {
+                        $productoReemplazar = $candReplace;
+                    }
                 }
 
                 $deltronData = null;
@@ -208,6 +220,7 @@ class ProductoController extends Controller
                     'igv' => $this->calculadoraService->getIgv(),
                     'tasaFija' => $this->calculadoraService->getTasaFija()->tasaCambio,
                     'productoCopiar' => $productoCopiar,
+                    'productoReemplazar' => $productoReemplazar,
                     'deltronData' => $deltronData,
                     'deltronMarcaId' => $deltronMarcaId,
                     'deltronImages' => $deltronImages ?? []
@@ -311,6 +324,10 @@ class ProductoController extends Controller
 
         if ($request->boolean('solo_padres', false)) {
             $queryBuilder->where('es_padre', 1);
+        }
+
+        if ($request->boolean('solo_reemplazables', false)) {
+            $queryBuilder->reemplazables();
         }
 
         $results = $queryBuilder->take(20)->get();
@@ -442,11 +459,19 @@ class ProductoController extends Controller
                     $ganancia = 0;
                 }
 
+                $replaceId = $request->filled('replace_id') ? (int) $request->input('replace_id') : null;
+
                 if (isset($nombre, $upc, $modelo, $partnumber)) {
-                    $validateNombre = $this->productoService->getOneProductByColumn('nombreProducto', $nombre);
-                    $validateUpc = $this->productoService->getOneProductByColumn('UPC', $upc);
-                    $validateModelo = $this->productoService->existsByModelo($modelo);
-                    $validatePartNumber = $this->productoService->getOneProductByColumn('partNumber', $partnumber);
+                    $validateNombre = Producto::where('nombreProducto', $nombre)
+                        ->when($replaceId, fn($q) => $q->where('idProducto', '!=', $replaceId))
+                        ->first();
+                    $validateUpc = Producto::where('UPC', $upc)
+                        ->when($replaceId, fn($q) => $q->where('idProducto', '!=', $replaceId))
+                        ->first();
+                    $validateModelo = $this->productoService->existsByModelo($modelo, $replaceId);
+                    $validatePartNumber = Producto::where('partNumber', $partnumber)
+                        ->when($replaceId, fn($q) => $q->where('idProducto', '!=', $replaceId))
+                        ->first();
                 } else {
                     $this->headerService->sendFlashAlerts('Error en los datos', 'Revisa los campos enviados', 'error', 'btn-danger');
                     return back()->withInput();
@@ -546,7 +571,11 @@ class ProductoController extends Controller
                                 $arrayProveedor['stock'] = $stockproveedor;
                                 $arrayProveedor['idProveedor'] = $proveedor;
 
-                                $success = $this->productoService->insertProduct($arrayProduct, $arrayProveedor, $img1, $img2, $img3, $img4);
+                                if ($replaceId) {
+                                    $success = $this->productoService->replaceProduct($replaceId, $arrayProduct, $arrayProveedor, $img1, $img2, $img3, $img4);
+                                } else {
+                                    $success = $this->productoService->insertProduct($arrayProduct, $arrayProveedor, $img1, $img2, $img3, $img4);
+                                }
                                 $idProducto = $success;
 
                                 $this->productoService->validateState($idProducto);

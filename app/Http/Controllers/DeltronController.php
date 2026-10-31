@@ -506,7 +506,8 @@ class DeltronController extends Controller
                 'status' => 'ok',
                 'total' => count($candidatos),
                 'items' => $candidatos,
-                'grupos' => $grupos
+                'grupos' => $grupos,
+                'fantasmas_disponibles' => app(\App\Services\ProductoServiceInterface::class)->countFantasmasAutoReciclables(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -550,7 +551,8 @@ class DeltronController extends Controller
                 'per_page' => $resultado['per_page'],
                 'last_page' => $resultado['last_page'],
                 'items' => $resultado['items'],
-                'grupos' => $grupos
+                'grupos' => $grupos,
+                'fantasmas_disponibles' => app(\App\Services\ProductoServiceInterface::class)->countFantasmasAutoReciclables(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -574,7 +576,9 @@ class DeltronController extends Controller
         }
 
         try {
-            $resultado = $this->deltronService->importarLoteOfertas($items);
+            $reciclarFantasmas = $request->boolean('reciclar_fantasmas', false);
+            $resultado = $this->deltronService->importarLoteOfertas($items, $reciclarFantasmas);
+            $resultado['fantasmas_disponibles'] = app(\App\Services\ProductoServiceInterface::class)->countFantasmasAutoReciclables();
             return response()->json([
                 'status' => 'ok',
                 'data' => $resultado
@@ -583,6 +587,33 @@ class DeltronController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error al importar lote: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reemplaza un producto fantasma (sin ingresos en IngresoProducto) con los datos, fotos y specs de un SKU de Deltron.
+     */
+    public function reemplazarProductoConDeltron(Request $request, $idProducto)
+    {
+        $producto = Producto::find($idProducto);
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado.'], 404);
+        }
+
+        $sku = trim($request->input('sku', ''));
+        $idGrupoOverride = $request->filled('idGrupo') ? (int) $request->input('idGrupo') : null;
+
+        try {
+            @ini_set('memory_limit', '512M');
+            @set_time_limit(180);
+            $resultado = $this->deltronService->reemplazarProductoConSkuDeltron($producto, $sku, $idGrupoOverride);
+            return response()->json($resultado, $resultado['success'] ? 200 : 422);
+        } catch (\Throwable $e) {
+            Log::error("Error al reemplazar producto {$idProducto} con Deltron SKU {$sku}: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al reemplazar el producto: ' . $e->getMessage()
             ], 500);
         }
     }

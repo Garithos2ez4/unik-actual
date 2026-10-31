@@ -26,8 +26,24 @@
                     PRODUCTO: <span class="text-secondary">{{$producto->codigoProducto}}</span>
                 </h3>
                 <span class="text-muted">Mini Código: {{$producto->idProducto}}</span>
+                @if($esProductoReemplazable ?? false)
+                    @if(isset($motivoReemplazo) && $motivoReemplazo['tipo'] === 'laptop_garantia_vencida')
+                        <span class="badge bg-danger-subtle text-danger-emphasis border border-danger ms-2" title="{{ $motivoReemplazo['descripcion'] }}">
+                            <i class="bi bi-shield-x me-1"></i>{{ $motivoReemplazo['badge'] }}
+                        </span>
+                    @else
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning ms-2" title="{{ $motivoReemplazo['descripcion'] ?? 'Este producto nunca tuvo ingresos en IngresoProducto y su ID puede ser reemplazado' }}">
+                            <i class="bi bi-recycle me-1"></i>{{ $motivoReemplazo['badge'] ?? 'Sin ingresos (Reemplazable)' }}
+                        </span>
+                    @endif
+                @endif
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
+                @if($esProductoReemplazable ?? false)
+                    <button type="button" class="btn btn-warning fw-semibold me-1" onclick="abrirModalReemplazarProducto()" title="Reemplazar este producto conservando su ID ({{$producto->idProducto}})">
+                        <i class="bi bi-arrow-repeat"></i> <span class="d-none d-lg-inline">Reemplazar Producto</span>
+                    </button>
+                @endif
                 @include('productos.components.btn_templates')
                 @include('productos.components.btn_crear_padre')
                 <h5 class="d-inline"><a class="btn btn-secondary" href="{{route('details',[$producto->idProducto])}}"><i class="bi bi-layers"></i> <span class="d-none d-lg-inline">Especificaciones</span></a></h5>
@@ -407,6 +423,7 @@
 </script>
 <script src="{{ asset('js/update-product-scripts.js') }}?v=1.07"></script>
 @include('productos.logic.producto_scripts')
+@include('productos.logic.producto_reemplazar')
 
 <script src="{{ asset('js/modo-pack-scripts.js') }}?v=1.01"></script>
 

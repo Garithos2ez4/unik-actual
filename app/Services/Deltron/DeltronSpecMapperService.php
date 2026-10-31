@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Log;
 class DeltronSpecMapperService
 {
     protected DeltronApiService $apiService;
+    protected DeltronClassifierService $classifierService;
 
-    public function __construct(DeltronApiService $apiService)
+    public function __construct(DeltronApiService $apiService, ?DeltronClassifierService $classifierService = null)
     {
         $this->apiService = $apiService;
+        $this->classifierService = $classifierService ?? new DeltronClassifierService();
     }
 
     /**
@@ -538,12 +540,15 @@ class DeltronSpecMapperService
                 if (stripos($v, 'RGB') !== false || stripos($v, 'SI') !== false) return 'RGB';
                 break;
 
-            case 72: // Conexión
-                if (stripos($v, 'INALAMBRIC') !== false || stripos($v, 'INALÁMBRIC') !== false || stripos($v, 'BLUETOOTH') !== false || stripos($v, '2.4') !== false) {
-                    return 'Inalambrico';
+            case 72: // Conexión (alineado con Falabella: 'Bluetooth', 'Inalámbrico', 'USB')
+                if (stripos($v, 'BLUETOOTH') !== false || preg_match('/\bBT\b/i', $v)) {
+                    return 'Bluetooth';
+                }
+                if (stripos($v, 'INALAMBRIC') !== false || stripos($v, 'INALÁMBRIC') !== false || stripos($v, 'WIRELESS') !== false || stripos($v, '2.4') !== false) {
+                    return 'Inalámbrico';
                 }
                 if (stripos($v, 'CABLE') !== false || stripos($v, 'USB') !== false) {
-                    return 'Cable';
+                    return 'USB';
                 }
                 break;
 
@@ -674,6 +679,20 @@ class DeltronSpecMapperService
             }
         }
 
+        // 4. Delegar enriquecimiento y normalización modular por categoría (ej. Periféricos -> Falabella-ready)
+        if ($idGrupo) {
+            $categoryClassifier = $this->classifierService->resolveClassifierForGrupo($idGrupo);
+            if ($categoryClassifier) {
+                $resultado = $categoryClassifier->enrichAndNormalizeSpecs(
+                    $idGrupo,
+                    $resultado,
+                    $rawSpecs,
+                    $textoAnalisis,
+                    $sugerenciasPorChar
+                );
+            }
+        }
+
         return $resultado;
     }
 
@@ -712,7 +731,9 @@ class DeltronSpecMapperService
             }
         }
 
-        if (empty($sku)) {
+        $categoryClassifier = $this->classifierService->resolveClassifierForGrupo((int) $producto->idGrupo);
+
+        if (empty($sku) && !$categoryClassifier) {
             return [
                 'success' => false,
                 'message' => 'No se encontró un SKU de Deltron vinculado a este producto para obtener sus especificaciones.',
@@ -724,14 +745,18 @@ class DeltronSpecMapperService
         // 2. Obtener ficha oficial de Deltron
         // En modo soloCache (importación masiva) solo se usa el snapshot local para no agotar
         // el límite de la API de Deltron (60 llamadas/hora).
-        if ($soloCache) {
-            $safeFilename = preg_replace('/[^A-Z0-9_-]/', '_', strtoupper(trim($sku)));
-            $snapshotPath = storage_path('app/deltron_fichas/' . $safeFilename . '.json');
-            $ficha = file_exists($snapshotPath) ? @json_decode(@file_get_contents($snapshotPath), true) : null;
-        } else {
-            $ficha = $this->apiService->getOrFetchFichaSku($sku);
+        $ficha = null;
+        if (!empty($sku)) {
+            if ($soloCache) {
+                $safeFilename = preg_replace('/[^A-Z0-9_-]/', '_', strtoupper(trim($sku)));
+                $snapshotPath = storage_path('app/deltron_fichas/' . $safeFilename . '.json');
+                $ficha = file_exists($snapshotPath) ? @json_decode(@file_get_contents($snapshotPath), true) : null;
+            } else {
+                $ficha = $this->apiService->getOrFetchFichaSku($sku);
+            }
         }
-        if (!$ficha || (empty($ficha['specs_html']) && empty($ficha['descripcion_completa']))) {
+
+        if ((!$ficha || (empty($ficha['specs_html']) && empty($ficha['descripcion_completa']))) && !$categoryClassifier) {
             return [
                 'success' => false,
                 'message' => "La API de Deltron no devolvió especificaciones técnicas para el SKU {$sku}.",
@@ -741,11 +766,13 @@ class DeltronSpecMapperService
         }
 
         // 3. Extraer y mapear especificaciones
-        $rawSpecsHtml = $this->parseSpecsHtml($ficha['specs_html'] ?? '');
-        $rawSpecsText = $this->parseSpecsText(($ficha['descripcion_completa'] ?? '') . "\n" . ($ficha['specs_texto'] ?? ''));
+        $rawSpecsHtml = $ficha ? $this->parseSpecsHtml($ficha['specs_html'] ?? '') : [];
+        $rawSpecsText = $ficha ? $this->parseSpecsText(($ficha['descripcion_completa'] ?? '') . "\n" . ($ficha['specs_texto'] ?? '')) : [];
         $rawSpecs = array_merge($rawSpecsText, $rawSpecsHtml); // HTML sobrescribe/prioriza
 
-        $textoCompleto = ($ficha['name'] ?? '') . "\n" .
+        $textoCompleto = ($producto->nombreProducto ?? '') . "\n" .
+                         ($producto->descripcionProducto ?? '') . "\n" .
+                         ($ficha['name'] ?? '') . "\n" .
                          ($ficha['descripcion_completa'] ?? '') . "\n" .
                          ($ficha['descripcion_larga'] ?? '') . "\n" .
                          ($ficha['specs_texto'] ?? '');
@@ -771,6 +798,7 @@ class DeltronSpecMapperService
 
         // 4. Filtrar por características permitidas:
         //    - Las configuradas en el grupo del producto
+        //    - Las definidas en el clasificador modular de su categoría (alineadas con los Mappers de Falabella)
         //    - Las que el producto ya tenga asignadas actualmente en Caracteristicas_Producto
         //    - Las universales aplicables a cualquier producto informático/electrónico
         $idsGrupo = \App\Models\Catalogo\Caracteristicas_Grupo::where('idGrupoProducto', $producto->idGrupo)
@@ -778,13 +806,17 @@ class DeltronSpecMapperService
             ->map(fn ($id) => (int) $id)
             ->all();
 
+        $idsClassifier = $categoryClassifier
+            ? $categoryClassifier->getAllowedCaracteristicasForGrupo((int) $producto->idGrupo)
+            : [];
+
         $idsUniversales = [10, 11, 12, 13, 14, 27, 41, 51, 52, 53, 63];
         $idsExistentes = Caracteristicas_Producto::where('idProducto', $producto->idProducto)
             ->pluck('idCaracteristica')
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        $idsPermitidos = array_unique(array_merge($idsGrupo, $idsExistentes, $idsUniversales));
+        $idsPermitidos = array_unique(array_merge($idsGrupo, $idsClassifier, $idsExistentes, $idsUniversales));
         if (!empty($idsPermitidos)) {
             $specsMapeadas = array_intersect_key($specsMapeadas, array_flip($idsPermitidos));
         }

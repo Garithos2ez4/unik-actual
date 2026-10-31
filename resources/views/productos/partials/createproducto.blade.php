@@ -32,9 +32,46 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     @endif
+
+    <!-- Selector / Banner de Reemplazo de Producto Fantasma (Sin ingresos en IngresoProducto) -->
+    <div class="card border-warning shadow-xs mb-3" style="background-color: #fffdf5;">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-recycle fs-4 text-warning me-2"></i>
+                    <div>
+                        <div class="fw-bold text-dark small" id="replaceBannerTitle">
+                            @if(isset($productoReemplazar) && $productoReemplazar)
+                                Reemplazando Producto ID #{{ $productoReemplazar->idProducto }} ({{ $productoReemplazar->codigoProducto }})
+                            @else
+                                ¿Deseas reciclar el ID de un producto sin ingresos (Fantasma)? <span class="text-muted fw-normal">(Opcional)</span>
+                            @endif
+                        </div>
+                        <div class="text-muted" style="font-size: 0.78rem;" id="replaceBannerSubtitle">
+                            @if(isset($productoReemplazar) && $productoReemplazar)
+                                Producto actual: <strong>{{ $productoReemplazar->nombreProducto }}</strong> — Se sobrescribirá conservando el ID #{{ $productoReemplazar->idProducto }}.
+                            @else
+                                Si seleccionas un producto que nunca tuvo ingresos en almacén, se sobrescribirá conservando su IDPRODUCTO.
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2" style="min-width: 310px;">
+                    <div class="position-relative flex-grow-1">
+                        <input type="text" id="buscadorProductoFantasma" class="form-control form-control-sm border-warning" placeholder="Buscar producto sin ingresos por código o nombre..." autocomplete="off">
+                        <div id="resultadosProductoFantasma" class="list-group position-absolute w-100 shadow d-none" style="z-index: 1050; max-height: 240px; overflow-y: auto;"></div>
+                    </div>
+                    <button type="button" id="btnQuitarReemplazo" class="btn btn-sm btn-outline-danger {{ isset($productoReemplazar) && $productoReemplazar ? '' : 'd-none' }}" onclick="limpiarSeleccionReemplazo()" title="Cancelar reemplazo y crear nuevo ID">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <br>
     <form action="{{route('createdetails')}}" id="form-create" method="POST" enctype="multipart/form-data">
         @csrf
+        <input type="hidden" name="replace_id" id="replace_id_input" value="{{ old('replace_id', optional($productoReemplazar ?? null)->idProducto ?? '') }}">
         @if(isset($deltronData) && $deltronData)
         <input type="hidden" name="deltron_sku" value="{{ $deltronData['sku'] ?? '' }}">
         <input type="hidden" name="deltron_pn" value="{{ $deltronData['part_number'] ?? '' }}">
@@ -514,16 +551,5 @@
     </div>
 </div>
 </div>
-<script>
-    window.APP_DATA = {
-        tc: {{ $tc ?? '0' }},
-        tasaFija: {{ $tasaFija ?? '0' }},
-        isDeltronImport: {{ isset($deltronData) && $deltronData ? 'true' : 'false' }},
-        defaultImage: "{{ asset('storage/1000x1000image.webp') }}",
-        codigos: @json($codigos->mapWithKeys(function($cod) {
-            return [$cod->codigoProducto => $cod->idGrupo];
-        }))
-    };
-</script>
-<script src="{{ asset('js/create-product-scripts.js') }}?v=1.07"></script>
+@include('productos.logic.create_scripts')
 @endsection

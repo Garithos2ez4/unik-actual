@@ -204,6 +204,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/producto/createdetails', [ProductoController::class, 'createDetails'])->name('createdetails');
     Route::post('/producto/{idProducto}/completar-fotos', [DeltronController::class, 'completarFotosProducto'])->name('producto.completar_fotos');
     Route::post('/producto/{idProducto}/autollenar-specs', [DeltronController::class, 'autollenarSpecsProducto'])->name('producto.autollenar_specs');
+    Route::post('/producto/{idProducto}/reemplazar-deltron', [DeltronController::class, 'reemplazarProductoConDeltron'])->name('producto.reemplazar_deltron');
     Route::post('/producto/updateproduct/{id}', [ProductoController::class, 'updateProduct'])->name('updateproduct');
     Route::post('/producto/insertorupdatedetails', [ProductoController::class, 'insertOrUpdateDetails'])->name('insertorupdatedetails');
     Route::post('/producto/deletedetail/{idProducto}', [ProductoController::class, 'deleteDetail'])->name('deletedetail');
