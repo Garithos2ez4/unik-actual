@@ -370,6 +370,8 @@ class DeltronSyncService
             }
         }
 
+        $maxInvProvId = (int) (Inventario_Proveedor::max('idInventarioProveedor') ?? 0);
+
         foreach ($deltronItems as $item) {
             // Normalizar campos segun la estructura de Deltron Partner API
             $sku = $item['sku'] ?? ($item['codigo'] ?? null);
@@ -495,8 +497,9 @@ class DeltronSyncService
                 // Actualizar o crear registro en Inventario_Proveedor (1:1 con Producto)
                 $invProveedor = Inventario_Proveedor::where('idProducto', $producto->idProducto)->first();
                 if (!$invProveedor) {
+                    $maxInvProvId = max($maxInvProvId + 1, (int) (Inventario_Proveedor::max('idInventarioProveedor') ?? 0) + 1);
                     $invProveedor = new Inventario_Proveedor();
-                    $invProveedor->idInventarioProveedor = $producto->idProducto;
+                    $invProveedor->idInventarioProveedor = $maxInvProvId;
                     $invProveedor->idProducto = $producto->idProducto;
                 }
                 $invProveedor->idProveedor = $this->idProveedor;

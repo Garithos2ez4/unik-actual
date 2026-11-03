@@ -173,28 +173,45 @@
         document.getElementById('manualIdCliente').value = '';
         document.getElementById('manualNombreCliente').value = '';
         document.getElementById('manualDireccion').value = '';
-        document.getElementById('manualMontoTotal').value = '';
+        document.getElementById('manualTotalProductos').value = '0.00';
+        document.getElementById('manualCostoEnvio').value = '10.00';
+        document.getElementById('manualMontoTotal').value = '10.00';
         document.getElementById('manualLat').value = '-12.055775';
         document.getElementById('manualLng').value = '-77.037733';
         productosAgregados = [];
-        renderProductos();
 
         if (editData) {
             document.getElementById('manualModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i> Editar Entrega WhatsApp';
             document.getElementById('manualEditId').value = editData.id;
             document.getElementById('manualIdCliente').value = editData.idCliente || '';
             document.getElementById('manualNombreCliente').value = editData.nombre || '';
-            document.getElementById('manualDireccion').value = editData.direccion || '';
-            document.getElementById('manualMontoTotal').value = editData.monto_total || editData.total || '';
+            document.getElementById('manualDireccion').value = (editData.direccion && editData.direccion !== 'No especificada') ? editData.direccion : '';
+            document.getElementById('manualCostoEnvio').value = parseFloat(editData.costo_envio || 0).toFixed(2);
             document.getElementById('manualLat').value = editData.latitud || editData.lat || '-12.055775';
             document.getElementById('manualLng').value = editData.longitud || editData.lng || '-77.037733';
-            if (editData.productos) {
-                productosAgregados = editData.productos;
-                renderProductos();
+
+            if (editData.productos && Array.isArray(editData.productos)) {
+                productosAgregados = editData.productos.map(p => ({
+                    idProducto: p.idProducto,
+                    nombre: p.nombre,
+                    cantidad: parseInt(p.cantidad) || 1,
+                    precio: parseFloat(p.precio) || 0
+                }));
+
+                // Compatibilidad con pedidos antiguos donde el precio unitario se guardó en 0
+                const sumaProductos = productosAgregados.reduce((acc, item) => acc + (item.cantidad * item.precio), 0);
+                const totalGuardado = parseFloat(editData.monto_total || editData.total || 0);
+                const envioGuardado = parseFloat(editData.costo_envio || 0);
+                if ( productosAgregados.length > 0 && sumaProductos === 0 && totalGuardado > 0 ) {
+                    const restante = Math.max(0, totalGuardado - envioGuardado);
+                    productosAgregados[0].precio = +(restante / productosAgregados[0].cantidad).toFixed(2);
+                }
             }
         } else {
             document.getElementById('manualModalTitle').innerHTML = '<i class="bi bi-whatsapp me-2"></i> Nueva Entrega WhatsApp';
         }
+
+        renderProductos();
 
         const modalEl = document.getElementById('manualModal');
         if (!manualModalInstance) {
@@ -202,6 +219,25 @@
         }
 
         manualModalInstance.show();
+    }
+
+    function obtenerDireccionDesdeMapa(soloSiVacio = false) {
+        if (typeof google === 'undefined' || !google.maps) return;
+        const dirInput = document.getElementById('manualDireccion');
+        if (soloSiVacio && dirInput.value.trim() !== '' && dirInput.value.trim() !== 'No especificada') {
+            return;
+        }
+
+        const lat = parseFloat(document.getElementById('manualLat').value);
+        const lng = parseFloat(document.getElementById('manualLng').value);
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, function(results, status) {
+            if (status === 'OK' && results && results[0]) {
+                dirInput.value = results[0].formatted_address;
+            }
+        });
     }
 
     function initManualMap() {
@@ -218,6 +254,9 @@
                 lng
             });
             google.maps.event.trigger(manualMap, "resize");
+            if (document.getElementById('manualEditId').value && !document.getElementById('manualDireccion').value.trim()) {
+                obtenerDireccionDesdeMapa(true);
+            }
             return;
         }
 
@@ -243,11 +282,13 @@
             const pos = manualMarker.getPosition();
             document.getElementById('manualLat').value = pos.lat();
             document.getElementById('manualLng').value = pos.lng();
+            obtenerDireccionDesdeMapa(true);
         });
         manualMap.addListener('click', function(e) {
             manualMarker.setPosition(e.latLng);
             document.getElementById('manualLat').value = e.latLng.lat();
             document.getElementById('manualLng').value = e.latLng.lng();
+            obtenerDireccionDesdeMapa(true);
         });
 
         manualAutocomplete = new google.maps.places.Autocomplete(
@@ -268,6 +309,10 @@
             document.getElementById('manualLat').value = loc.lat();
             document.getElementById('manualLng').value = loc.lng();
         });
+
+        if (document.getElementById('manualEditId').value && !document.getElementById('manualDireccion').value.trim()) {
+            obtenerDireccionDesdeMapa(true);
+        }
     }
 
     // ========================
@@ -355,10 +400,14 @@
                             } else {
                                 data.forEach(p => {
                                     const item = document.createElement('div');
-                                    item.className = 'list-group-item';
-                                    item.innerHTML = '<strong>' + p.nombreProducto + '</strong> <small class="text-muted">(' + (p.codigoProducto || 'Sin código') + ')</small>';
+                                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                                    const precioSug = parseFloat(p.precioSugerido || 0);
+                                    const badgePrecio = precioSug > 0
+                                        ? '<span class="badge bg-light text-dark border ms-2">S/ ' + precioSug.toFixed(2) + '</span>'
+                                        : '';
+                                    item.innerHTML = '<div><strong>' + p.nombreProducto + '</strong> <small class="text-muted">(' + (p.codigoProducto || 'Sin código') + ')</small></div>' + badgePrecio;
                                     item.addEventListener('click', () => {
-                                        agregarProducto(p.idProducto, p.nombreProducto);
+                                        agregarProducto(p.idProducto, p.nombreProducto, precioSug);
                                         resultsContainer.classList.add('d-none');
                                         searchInput.value = '';
                                     });
@@ -378,12 +427,18 @@
         }
     });
 
-    function agregarProducto(idProducto, nombre) {
-        if (productosAgregados.find(p => p.idProducto === idProducto)) return;
+    function agregarProducto(idProducto, nombre, precioSugerido = 0) {
+        const existente = productosAgregados.find(p => p.idProducto === idProducto);
+        if (existente) {
+            existente.cantidad += 1;
+            renderProductos();
+            return;
+        }
         productosAgregados.push({
             idProducto,
             nombre,
-            cantidad: 1
+            cantidad: 1,
+            precio: parseFloat(precioSugerido) || 0
         });
         renderProductos();
     }
@@ -393,44 +448,103 @@
         renderProductos();
     }
 
+    function actualizarCantidadProducto(index, val) {
+        const cant = Math.max(1, parseInt(val) || 1);
+        productosAgregados[index].cantidad = cant;
+        const subInput = document.getElementById('subtotalProd_' + index);
+        if (subInput) {
+            subInput.value = (cant * (parseFloat(productosAgregados[index].precio) || 0)).toFixed(2);
+        }
+        recalcularTotalesManual();
+    }
+
+    function actualizarPrecioProducto(index, val) {
+        const precio = Math.max(0, parseFloat(val) || 0);
+        productosAgregados[index].precio = precio;
+        const subInput = document.getElementById('subtotalProd_' + index);
+        if (subInput) {
+            subInput.value = ((parseInt(productosAgregados[index].cantidad) || 1) * precio).toFixed(2);
+        }
+        recalcularTotalesManual();
+    }
+
+    function recalcularTotalesManual() {
+        const subtotalProductos = productosAgregados.reduce((acc, p) => {
+            return acc + ((parseInt(p.cantidad) || 1) * (parseFloat(p.precio) || 0));
+        }, 0);
+
+        const costoEnvioInput = document.getElementById('manualCostoEnvio');
+        const costoEnvio = Math.max(0, parseFloat(costoEnvioInput ? costoEnvioInput.value : 0) || 0);
+        const montoTotal = subtotalProductos + costoEnvio;
+
+        const totalProdEl = document.getElementById('manualTotalProductos');
+        if (totalProdEl) totalProdEl.value = subtotalProductos.toFixed(2);
+
+        const montoTotalEl = document.getElementById('manualMontoTotal');
+        if (montoTotalEl) montoTotalEl.value = montoTotal.toFixed(2);
+    }
+
     function renderProductos() {
         const container = document.getElementById('productosSeleccionados');
         if (!container) return;
         if (productosAgregados.length === 0) {
             container.innerHTML = '<small class="text-muted">No se han agregado productos.</small>';
+            recalcularTotalesManual();
             return;
         }
-        let html = '';
+        let html = '<div class="d-flex justify-content-end gap-2 px-2 mb-1 text-muted" style="font-size: 11px; font-weight: 600;">' +
+            '<div style="width: 65px;" class="text-center">Cant.</div>' +
+            '<div style="width: 115px;" class="text-center">P. Unit. (S/)</div>' +
+            '<div style="width: 115px;" class="text-center">Total Prod. (S/)</div>' +
+            '<div style="width: 32px;"></div>' +
+            '</div>';
+
         productosAgregados.forEach((p, i) => {
-            html += '<div class="producto-item d-flex align-items-center justify-content-between">' +
+            const cant = parseInt(p.cantidad) || 1;
+            const precio = parseFloat(p.precio) || 0;
+            const subtotal = (cant * precio).toFixed(2);
+
+            html += '<div class="producto-item d-flex align-items-center justify-content-between gap-2">' +
                 '<div class="flex-grow-1"><strong class="small">' + p.nombre + '</strong></div>' +
                 '<div class="d-flex align-items-center gap-2">' +
-                '<input type="number" class="form-control form-control-sm" style="width: 70px;" value="' + p.cantidad + '" min="1" onchange="productosAgregados[' + i + '].cantidad = parseInt(this.value)">' +
-                '<button class="btn btn-sm btn-outline-danger" onclick="removerProducto(' + i + ')"><i class="bi bi-x"></i></button>' +
+                '<input type="number" class="form-control form-control-sm text-center" style="width: 65px;" value="' + cant + '" min="1" oninput="actualizarCantidadProducto(' + i + ', this.value)" title="Cantidad">' +
+                '<div class="input-group input-group-sm" style="width: 115px;">' +
+                '<span class="input-group-text">S/</span>' +
+                '<input type="number" class="form-control" step="0.01" min="0" value="' + precio.toFixed(2) + '" oninput="actualizarPrecioProducto(' + i + ', this.value)" title="Precio Unitario">' +
+                '</div>' +
+                '<div class="input-group input-group-sm" style="width: 115px;">' +
+                '<span class="input-group-text bg-light">S/</span>' +
+                '<input type="number" class="form-control bg-light fw-bold" id="subtotalProd_' + i + '" step="0.01" value="' + subtotal + '" readonly title="Total del Producto">' +
+                '</div>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger" style="width: 32px;" onclick="removerProducto(' + i + ')" title="Quitar"><i class="bi bi-x"></i></button>' +
                 '</div></div>';
         });
         container.innerHTML = html;
+        recalcularTotalesManual();
     }
 
     // ========================
     // Guardar Entrega Manual
     // ========================
     function saveManual() {
+        recalcularTotalesManual();
         const editId = document.getElementById('manualEditId').value;
         const payload = {
             idCliente: document.getElementById('manualIdCliente').value,
-            direccion: document.getElementById('manualDireccion').value,
+            direccion: document.getElementById('manualDireccion').value.trim(),
             latitud: document.getElementById('manualLat').value,
             longitud: document.getElementById('manualLng').value,
+            costo_envio: document.getElementById('manualCostoEnvio').value,
             monto_total: document.getElementById('manualMontoTotal').value,
             productos: productosAgregados.map(p => ({
                 idProducto: p.idProducto,
-                cantidad: p.cantidad
+                cantidad: parseInt(p.cantidad) || 1,
+                precio: parseFloat(p.precio) || 0
             }))
         };
 
-        if (!payload.idCliente || !payload.direccion || !payload.monto_total) {
-            alert('Por favor completa los campos obligatorios (Cliente, Dirección, Monto).');
+        if (!payload.idCliente || !payload.direccion || payload.direccion === 'No especificada') {
+            alert('Por favor completa el Cliente y una Dirección de Entrega válida.');
             return;
         }
 
@@ -482,20 +596,47 @@
 
     function completeManual(id) {
         if (!confirm('¿Marcar este pedido como despachado? Ya no aparecerá en la ruta Flex.')) return;
-        fetch(`{{ url('/dashboard/logistica/delivery-flex/manual-complete') }}/${id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert(data.message || 'Error al actualizar el estado.');
-            }
-        });
+
+        const token = '{{ csrf_token() }}';
+        const primaryUrl = '{{ route("delivery.flex.completeManual", ":id") }}'.replace(':id', id);
+        const fallbackUrl = '{{ url("/dashboard/logistica/delivery-flex/manual") }}/' + id + '/complete';
+
+        const sendReq = (url) => {
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token
+                }
+            });
+        };
+
+        sendReq(primaryUrl)
+            .then(async (r) => {
+                if (r.status === 404) {
+                    return sendReq(fallbackUrl);
+                }
+                return r;
+            })
+            .then(async (r) => {
+                const data = await r.json().catch(() => null);
+                if (!r.ok) {
+                    throw new Error((data && data.message) ? data.message : `Error HTTP ${r.status}`);
+                }
+                return data;
+            })
+            .then(data => {
+                if (data && data.success) {
+                    window.location.reload();
+                } else {
+                    alert((data && data.message) || 'Error al actualizar el estado.');
+                }
+            })
+            .catch(err => {
+                console.error('Error al despachar:', err);
+                alert('No se pudo marcar como despachado: ' + err.message);
+            });
     }
 
     function deleteManual(pedidoWebId) {

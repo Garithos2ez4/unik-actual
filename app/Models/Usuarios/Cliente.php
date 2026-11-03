@@ -49,5 +49,19 @@ class Cliente extends Model
      {
         return $this->hasMany(Garantia::class,'idCliente','idCliente');
      }
-    
+
+     public function getDocumentoAttribute()
+     {
+        return $this->numeroDocumento;
+     }
+
+     public function getApellidosAttribute()
+     {
+        return trim(($this->apellidoPaterno ?? '') . ' ' . ($this->apellidoMaterno ?? ''));
+     }
+
+     public function getEmailAttribute()
+     {
+        return $this->correo;
+     }
 }

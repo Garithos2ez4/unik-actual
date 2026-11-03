@@ -37,5 +37,7 @@ interface ProductoServiceInterface
     public function esLaptopConGarantiaVencida($producto, int $meses = 12): bool;
     public function getMotivoReemplazo($producto, int $mesesGarantiaLaptop = 12): ?array;
     public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon;
+    public function getFechaUltimaVenta(int $idProducto): ?\Carbon\Carbon;
+    public function tieneVentaConGarantiaVigente($producto, int $mesesGarantia = 12): bool;
     public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int;
 }

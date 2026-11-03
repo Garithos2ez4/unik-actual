@@ -279,6 +279,22 @@
         totalCatalogoErrorCount = 0;
 
         document.getElementById('panelProgresoImportacionCatalogo').classList.remove('d-none');
+        document.getElementById('spinnerProgresoCatalogo')?.classList.remove('d-none');
+        document.getElementById('iconoExitoProgresoCatalogo')?.classList.add('d-none');
+        document.getElementById('btnPausarImportacionCatalogo')?.classList.remove('d-none');
+        
+        const contProg = document.getElementById('contenedorEstadoProgresoCatalogo');
+        if (contProg) {
+            contProg.classList.remove('text-success', 'text-warning');
+            contProg.classList.add('text-primary');
+        }
+        const barraProg = document.getElementById('barraProgresoImportacionCatalogo');
+        if (barraProg) {
+            barraProg.classList.remove('bg-success', 'bg-warning');
+            barraProg.classList.add('progress-bar-striped', 'progress-bar-animated', 'bg-primary');
+            barraProg.style.width = '0%';
+        }
+
         document.getElementById('btnEjecutarImportacionCatalogo').disabled = true;
         document.getElementById('btnCerrarModalCatalogo').disabled = true;
         document.getElementById('btnCerrarFooterCatalogo').disabled = true;
@@ -366,18 +382,53 @@
 
         // Finalización
         importacionCatalogoEnCurso = false;
-        document.getElementById('textoEstadoProgresoCatalogo').innerText = `Proceso finalizado: ${totalCatalogoExitoCount} creados, ${totalCatalogoErrorCount} errores.`;
-        document.getElementById('barraProgresoImportacionCatalogo').classList.remove('progress-bar-animated');
+        importacionCatalogoPausada = false;
+
+        document.getElementById('spinnerProgresoCatalogo')?.classList.add('d-none');
+        document.getElementById('iconoExitoProgresoCatalogo')?.classList.remove('d-none');
+        document.getElementById('btnPausarImportacionCatalogo')?.classList.add('d-none');
+
+        const contProgFin = document.getElementById('contenedorEstadoProgresoCatalogo');
+        if (contProgFin) {
+            contProgFin.classList.remove('text-primary');
+            contProgFin.classList.add(totalCatalogoErrorCount === 0 ? 'text-success' : 'text-warning');
+        }
+
+        document.getElementById('textoEstadoProgresoCatalogo').innerText = totalCatalogoErrorCount === 0
+            ? `¡Importación finalizada con éxito! ${totalCatalogoExitoCount} creados.`
+            : `Proceso finalizado: ${totalCatalogoExitoCount} creados, ${totalCatalogoErrorCount} errores.`;
+
+        const barraFin = document.getElementById('barraProgresoImportacionCatalogo');
+        if (barraFin) {
+            barraFin.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-primary');
+            barraFin.classList.add(totalCatalogoErrorCount === 0 ? 'bg-success' : 'bg-warning');
+            barraFin.style.width = '100%';
+        }
+        document.getElementById('textoPorcentajeProgresoCatalogo').innerText = '100%';
+
         document.getElementById('btnCerrarModalCatalogo').disabled = false;
         document.getElementById('btnCerrarFooterCatalogo').disabled = false;
-        document.getElementById('btnEjecutarImportacionCatalogo').disabled = false;
+        actualizarConteoCatalogo();
+
+        consola.innerHTML += `<div class="text-success fw-bold mt-1">[✓ FINALIZADO] Todos los lotes han sido procesados al 100%.</div>`;
+        consola.scrollTop = consola.scrollHeight;
 
         Swal.fire({
             title: '¡Importación de Lote Completada!',
             html: `Se crearon exitosamente <b>${totalCatalogoExitoCount} productos</b> en tu catálogo con Foto WebP y especificaciones técnicas.<br>` +
                   (totalCatalogoErrorCount > 0 ? `<span class="text-danger">Hubo ${totalCatalogoErrorCount} errores.</span>` : ''),
             icon: totalCatalogoExitoCount > 0 ? 'success' : 'warning',
-            confirmButtonText: 'Entendido'
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-arrow-clockwise me-1"></i> Actualizar Página',
+            cancelButtonText: 'Seguir en el Catálogo',
+            customClass: {
+                confirmButton: 'btn btn-primary rounded-pill px-4',
+                cancelButton: 'btn btn-outline-secondary rounded-pill px-3'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.reload();
+            }
         });
     }
 </script>

@@ -70,8 +70,9 @@
                     <div id="panelProgresoImportacion" class="card border-danger border-2 shadow-sm mb-3 d-none">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="fw-bold text-danger d-flex align-items-center">
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span class="fw-bold text-danger d-flex align-items-center" id="contenedorEstadoProgreso">
+                                    <span class="spinner-border spinner-border-sm me-2" id="spinnerProgresoOfertas" role="status" aria-hidden="true"></span>
+                                    <i class="bi bi-check-circle-fill text-success fs-5 me-2 d-none" id="iconoExitoProgresoOfertas"></i>
                                     <span id="textoEstadoProgreso">Iniciando importación masiva...</span>
                                 </span>
                                 <span class="fw-bold text-dark font-monospace" id="textoPorcentajeProgreso">0%</span>

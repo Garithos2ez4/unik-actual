@@ -252,6 +252,22 @@
         totalImportadosErrorCount = 0;
 
         document.getElementById('panelProgresoImportacion').classList.remove('d-none');
+        document.getElementById('spinnerProgresoOfertas')?.classList.remove('d-none');
+        document.getElementById('iconoExitoProgresoOfertas')?.classList.add('d-none');
+        document.getElementById('btnPausarImportacion')?.classList.remove('d-none');
+
+        const contProgOf = document.getElementById('contenedorEstadoProgreso');
+        if (contProgOf) {
+            contProgOf.classList.remove('text-success', 'text-warning');
+            contProgOf.classList.add('text-danger');
+        }
+        const barraProgOf = document.getElementById('barraProgresoImportacion');
+        if (barraProgOf) {
+            barraProgOf.classList.remove('bg-success', 'bg-warning');
+            barraProgOf.classList.add('progress-bar-striped', 'progress-bar-animated', 'bg-danger');
+            barraProgOf.style.width = '0%';
+        }
+
         document.getElementById('btnEjecutarImportacion').disabled = true;
         document.getElementById('btnCerrarModalImportar').disabled = true;
         document.getElementById('btnCerrarFooter').disabled = true;
@@ -336,9 +352,38 @@
 
         // Finalización
         importacionEnCurso = false;
+        importacionPausada = false;
+
+        document.getElementById('spinnerProgresoOfertas')?.classList.add('d-none');
+        document.getElementById('iconoExitoProgresoOfertas')?.classList.remove('d-none');
+        document.getElementById('btnPausarImportacion')?.classList.add('d-none');
+
+        const contProgFinOf = document.getElementById('contenedorEstadoProgreso');
+        if (contProgFinOf) {
+            contProgFinOf.classList.remove('text-danger');
+            contProgFinOf.classList.add(totalImportadosErrorCount === 0 ? 'text-success' : 'text-warning');
+        }
+
+        document.getElementById('textoEstadoProgreso').innerText = totalImportadosErrorCount === 0
+            ? `¡Importación masiva completada con éxito! ${totalImportadosExitoCount} creados.`
+            : `Proceso finalizado: ${totalImportadosExitoCount} creados, ${totalImportadosErrorCount} errores.`;
+
+        const barraFinOf = document.getElementById('barraProgresoImportacion');
+        if (barraFinOf) {
+            barraFinOf.classList.remove('progress-bar-animated', 'progress-bar-striped', 'bg-danger');
+            barraFinOf.classList.add(totalImportadosErrorCount === 0 ? 'bg-success' : 'bg-warning');
+            barraFinOf.style.width = '100%';
+        }
+        document.getElementById('textoPorcentajeProgreso').innerText = '100%';
+
         document.getElementById('btnCerrarModalImportar').disabled = false;
         document.getElementById('btnCerrarFooter').disabled = false;
-        document.getElementById('textoEstadoProgreso').innerText = '¡Importación masiva completada con éxito!';
+        if (typeof actualizarConteoSeleccionados === 'function') {
+            actualizarConteoSeleccionados();
+        }
+
+        consola.innerHTML += `<div class="text-success fw-bold mt-1">[✓ FINALIZADO] Todos los lotes han sido procesados al 100%.</div>`;
+        consola.scrollTop = consola.scrollHeight;
 
         Swal.fire({
             title: '¡Importación Completada!',
@@ -346,12 +391,17 @@
                   `<span class="badge bg-success fs-6 px-3 py-2 me-1">${totalImportadosExitoCount} Productos Creados</span>` +
                   (totalImportadosErrorCount > 0 ? `<span class="badge bg-danger fs-6 px-3 py-2">${totalImportadosErrorCount} Fallos</span>` : ''),
             icon: 'success',
-            confirmButtonText: 'Aceptar y Actualizar',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-arrow-clockwise me-1"></i> Aceptar y Actualizar',
+            cancelButtonText: 'Seguir en esta ventana',
             customClass: {
-                confirmButton: 'btn btn-primary rounded-pill px-4'
+                confirmButton: 'btn btn-primary rounded-pill px-4',
+                cancelButton: 'btn btn-outline-secondary rounded-pill px-3'
             }
-        }).then(() => {
-            window.location.reload();
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.reload();
+            }
         });
     }
 

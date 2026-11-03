@@ -601,8 +601,57 @@ class DeltronImportService
                                 $foto1Final = 'productos/IMGPRO' . $idProducto . '_1.webp' . ($ghostProd ? '?v=' . $timestamp : '');
                             }
                         } catch (Exception $imgEx) {
-                            Log::warning("No se pudo procesar Foto 1 de Deltron para {$sku}: " . $imgEx->getMessage());
+                            Log::warning("No se pudo procesar Foto 1 inicial de Deltron para {$sku}: " . $imgEx->getMessage());
                             $foto1Final = 'noimagen.webp';
+                        }
+                    }
+
+                    // Fallback si la URL estática del CDN dio 404 (productos nuevos con sufijo timestamp en Deltron)
+                    if ($foto1Final === 'noimagen.webp') {
+                        $fallbackUrls = [];
+                        try {
+                            $rawSku = $this->getApiService()->getProductoPorSku($sku);
+                            if (is_array($rawSku) && !empty($rawSku['images'])) {
+                                $lUrl = $rawSku['images']['image_listado'] ?? null;
+                                if (is_string($lUrl) && str_starts_with($lUrl, 'http') && !str_contains($lUrl, 'blanco.jpg')) {
+                                    $fallbackUrls[] = $lUrl;
+                                }
+                                foreach (($rawSku['images']['images_carrusel'] ?? []) as $cItem) {
+                                    $cUrl = is_string($cItem) ? $cItem : ($cItem['url'] ?? ($cItem['image'] ?? null));
+                                    if (is_string($cUrl) && str_starts_with($cUrl, 'http') && !str_contains($cUrl, 'blanco.jpg')) {
+                                        $fallbackUrls[] = $cUrl;
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            // Continúa al respaldo web
+                        }
+
+                        if (empty($fallbackUrls)) {
+                            $webImgs = DeltronTextHelper::extraerImagenesDesdeWebDeltron($sku);
+                            if (!empty($webImgs['listado'])) {
+                                $fallbackUrls[] = $webImgs['listado'];
+                            }
+                            foreach (($webImgs['carrusel'] ?? []) as $wUrl) {
+                                if (!in_array($wUrl, $fallbackUrls, true)) {
+                                    $fallbackUrls[] = $wUrl;
+                                }
+                            }
+                        }
+
+                        foreach ($fallbackUrls as $candidateUrl) {
+                            if ($candidateUrl === $foto1Url) {
+                                continue;
+                            }
+                            try {
+                                $saved = $imgService->createImage($candidateUrl, $idProducto . '_1', $destinationPath);
+                                if ($saved) {
+                                    $foto1Final = 'productos/IMGPRO' . $idProducto . '_1.webp' . ($ghostProd ? '?v=' . $timestamp : '');
+                                    break;
+                                }
+                            } catch (\Throwable $e) {
+                                continue;
+                            }
                         }
                     }
 
@@ -839,26 +888,61 @@ class DeltronImportService
         // Si todos los secundarios están ocupados y el usuario pulsa el botón, refresca los slots 2, 3 y 4
         $slotsSecundarios = !empty($slotsSecundariosVacios) ? $slotsSecundariosVacios : [2, 3, 4];
 
-        // 3. Obtener metadatos de imágenes de forma ultraligera (primero desde el JSON local en disco sin parsear HTML)
+        // 3. Obtener metadatos de imágenes verificando que realmente existan URLs válidas en el carrusel
+        $tieneCarruselValido = function (?array $meta): bool {
+            if (empty($meta) || !is_array($meta)) {
+                return false;
+            }
+            foreach (($meta['carrusel'] ?? []) as $c) {
+                $u = is_string($c) ? $c : ($c['url'] ?? ($c['image'] ?? null));
+                if (is_string($u) && str_starts_with($u, 'http') && !str_contains($u, 'blanco.jpg')) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
         $imagesMeta = null;
+        $savedFicha = null;
         $snapshotPath = storage_path('app/deltron_fichas/' . $skuClean . '.json');
         if (is_file($snapshotPath)) {
-            $saved = @json_decode(@file_get_contents($snapshotPath), true);
-            if (!empty($saved['images'])) {
-                $imagesMeta = $saved['images'];
+            $savedFicha = @json_decode(@file_get_contents($snapshotPath), true);
+            if (is_array($savedFicha) && $tieneCarruselValido($savedFicha['images'] ?? null)) {
+                $imagesMeta = $savedFicha['images'];
             }
         }
-        if (!$imagesMeta) {
+
+        // 3.1 Si el JSON local proviene del snapshot masivo (con carrusel vacío), consultar la API individual del SKU
+        if (!$tieneCarruselValido($imagesMeta)) {
             try {
                 $raw = $this->getApiService()->getProductoPorSku($skuClean);
                 if (is_array($raw) && !empty($raw['images'])) {
-                    $imagesMeta = [
+                    $apiMeta = [
                         'listado' => $raw['images']['image_listado'] ?? null,
                         'carrusel' => $raw['images']['images_carrusel'] ?? [],
                     ];
+                    if ($tieneCarruselValido($apiMeta) || (!empty($apiMeta['listado']) && !str_contains((string) $apiMeta['listado'], 'blanco.jpg'))) {
+                        $imagesMeta = $apiMeta;
+                        if (is_array($savedFicha)) {
+                            $savedFicha['images'] = $imagesMeta;
+                            @file_put_contents($snapshotPath, json_encode($savedFicha, JSON_UNESCAPED_UNICODE));
+                        }
+                    }
                 }
             } catch (Exception $e) {
                 Log::warning("Completar fotos {$skuClean}: aviso al consultar API Deltron: " . $e->getMessage());
+            }
+        }
+
+        // 3.2 Respaldo Web (producto_v2.php): cuando el API no reporta las fotos con timestamp pero la web sí las muestra
+        if (!$tieneCarruselValido($imagesMeta)) {
+            $webMeta = DeltronTextHelper::extraerImagenesDesdeWebDeltron($skuClean);
+            if ($tieneCarruselValido($webMeta) || !empty($webMeta['listado'])) {
+                $imagesMeta = $webMeta;
+                if (is_array($savedFicha)) {
+                    $savedFicha['images'] = $imagesMeta;
+                    @file_put_contents($snapshotPath, json_encode($savedFicha, JSON_UNESCAPED_UNICODE));
+                }
             }
         }
 
@@ -881,7 +965,8 @@ class DeltronImportService
             // Detectar si es la portada / Foto 1 ({SKU}_{timestamp}.jpg sin subíndice o 00_portada o is_main)
             $esPortada = !empty($c['is_main'])
                 || preg_match('/^00_portada/i', $base)
-                || preg_match('/^' . preg_quote($skuClean, '/') . '_\d{6,}\./i', $base);
+                || preg_match('/^' . preg_quote($skuClean, '/') . '_\d{6,}\./i', $base)
+                || ($foto1Candidata !== null && $cUrl === $foto1Candidata);
 
             if ($esPortada) {
                 $foto1Candidata ??= $cUrl;
@@ -902,6 +987,10 @@ class DeltronImportService
             if (!in_array($u, $urlsSecundarias, true)) {
                 $urlsSecundarias[] = $u;
             }
+        }
+
+        if (!$foto1Candidata && !empty($urlsSecundarias)) {
+            $foto1Candidata = array_shift($urlsSecundarias);
         }
 
         // Agregar fallback del CDN de Deltron: solo _1.jpg, _2.jpg, _3.jpg, _4.jpg (nunca {sku}.jpg que es la Foto 1)
@@ -988,10 +1077,16 @@ class DeltronImportService
             return false;
         };
 
-        // Si por alguna razón la Foto 1 estaba vacía, llenarla primero con la portada
-        if ($faltaFoto1 && $foto1Candidata) {
-            $pool1 = [$foto1Candidata];
-            $procesarSlot(1, $pool1);
+        // Si por alguna razón la Foto 1 estaba vacía, llenarla primero con la portada (y si falla, usar la primera secundaria disponible)
+        if ($faltaFoto1) {
+            $llenoSlot1 = false;
+            if ($foto1Candidata) {
+                $pool1 = [$foto1Candidata];
+                $llenoSlot1 = $procesarSlot(1, $pool1);
+            }
+            if (!$llenoSlot1 && !empty($urlsSecundarias)) {
+                $procesarSlot(1, $urlsSecundarias);
+            }
         }
 
         // Llenar los slots secundarios (2, 3 y 4) empezando desde la imagen _1 de Deltron
@@ -1044,9 +1139,19 @@ class DeltronImportService
 
         $prodService = app(\App\Services\ProductoServiceInterface::class);
         if (!$prodService->esReemplazable($producto)) {
+            $ultimaVenta = method_exists($prodService, 'getFechaUltimaVenta') ? $prodService->getFechaUltimaVenta((int) $producto->idProducto) : null;
+            $mesesGarantia = method_exists($prodService, 'obtenerMesesGarantiaProducto') ? $prodService->obtenerMesesGarantiaProducto($producto, 12) : 12;
+            if ($ultimaVenta && $ultimaVenta->copy()->addMonths($mesesGarantia)->isFuture()) {
+                $expira = $ultimaVenta->copy()->addMonths($mesesGarantia)->format('d/m/Y');
+                return [
+                    'success' => false,
+                    'message' => "El producto {$producto->codigoProducto} (ID #{$producto->idProducto}) registra una venta del {$ultimaVenta->format('d/m/Y')} con garantía vigente hasta el {$expira} y no puede ser reemplazado.",
+                ];
+            }
+
             return [
                 'success' => false,
-                'message' => "El producto {$producto->codigoProducto} (ID #{$producto->idProducto}) no cumple los requisitos para ser reemplazado (cuenta con stock en almacén o ingresos con garantía vigente).",
+                'message' => "El producto {$producto->codigoProducto} (ID #{$producto->idProducto}) no cumple los requisitos para ser reemplazado (cuenta con stock en almacén o garantía vigente).",
             ];
         }
 

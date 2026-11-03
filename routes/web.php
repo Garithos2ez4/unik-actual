@@ -106,7 +106,8 @@ Route::middleware(['validate.session'])->group(function () {
     // Delivery Flex
     Route::get('/dashboard/logistica/delivery-flex', [DeliveryFlexController::class, 'index'])->name('delivery.flex');
     Route::post('/dashboard/logistica/delivery-flex/reorder', [DeliveryFlexController::class, 'reorder'])->name('delivery.flex.reorder');
-    Route::post('/dashboard/logistica/delivery-flex/manual-complete/{id}', [DeliveryFlexController::class, 'completeManual'])->name('delivery.flex.completeManual');
+    Route::match(['get', 'post'], '/dashboard/logistica/delivery-flex/manual-complete/{id}', [DeliveryFlexController::class, 'completeManual'])->name('delivery.flex.completeManual');
+    Route::match(['get', 'post', 'put'], '/dashboard/logistica/delivery-flex/manual/{id}/complete', [DeliveryFlexController::class, 'completeManual'])->name('delivery.flex.completeManualAlt');
     Route::post('/dashboard/logistica/delivery-flex/manual', [DeliveryFlexController::class, 'storeManual'])->name('delivery.flex.store');
     Route::put('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'updateManual'])->name('delivery.flex.update');
     Route::delete('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'destroyManual'])->name('delivery.flex.destroy');

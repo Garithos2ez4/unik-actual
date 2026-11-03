@@ -123,7 +123,7 @@ class DeliveryFlexController extends Controller
 
         // 2. Pedidos Web con delivery a domicilio (ventas por WhatsApp u otros)
         $pedidosWeb = PedidoWeb::with(['direccion', 'detalles.producto', 'cliente'])
-            ->where('estado', 'pendiente')
+            ->whereIn('estado', ['pendiente', 'PENDIENTE'])
             ->whereHas('direccion')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -232,9 +232,44 @@ class DeliveryFlexController extends Controller
             return response()->json([]);
         }
 
-        $productos = Producto::where('nombreProducto', 'like', "%{$query}%")
+        $tc = (float) app(\App\Services\CalculadoraServiceInterface::class)->getTasaCambio();
+        $tasaFijaGlobal = (float) optional(app(\App\Services\CalculadoraServiceInterface::class)->getTasaFija())->tasaCambio ?: $tc;
+        $preciosService = new \App\Services\PreciosService();
+
+        $productos = Producto::with(['PrecioTienda', 'liquidacion'])
+            ->where(function ($q) use ($query) {
+                $q->where('nombreProducto', 'like', "%{$query}%")
+                  ->orWhere('codigoProducto', 'like', "%{$query}%")
+                  ->orWhere('modelo', 'like', "%{$query}%");
+            })
             ->limit(10)
-            ->get(['idProducto', 'nombreProducto', 'codigoProducto']);
+            ->get()
+            ->map(function ($p) use ($tc, $tasaFijaGlobal, $preciosService) {
+                $precioSugerido = 0;
+
+                if ($p->estadoProductoWeb === 'LIQUIDACION' && $p->liquidacion && $p->liquidacion->precio_liquidacion > 0) {
+                    $precioSugerido = (float) $p->liquidacion->precio_liquidacion;
+                } elseif ($p->PrecioTienda && $p->PrecioTienda->precioTienda > 0) {
+                    $precioSugerido = (float) $p->PrecioTienda->precioTienda;
+                } elseif ($p->precioDolar > 0) {
+                    $usarTcSunat = $p->usar_tc_fijo ?? true;
+                    $tcUsar = $usarTcSunat ? $tc : (($p->tc_fijo ?? 0) > 0 ? (float) $p->tc_fijo : $tasaFijaGlobal);
+                    $precioCalc = $preciosService->getPrecioCalculado(
+                        $p->precioDolar,
+                        $p->idGrupo,
+                        'DOLAR',
+                        $p->estadoProductoWeb
+                    );
+                    $precioSugerido = round(($precioCalc + ($p->gananciaExtra ?? 0)) * $tcUsar, 2);
+                }
+
+                return [
+                    'idProducto' => $p->idProducto,
+                    'nombreProducto' => $p->nombreProducto,
+                    'codigoProducto' => $p->codigoProducto,
+                    'precioSugerido' => $precioSugerido,
+                ];
+            });
 
         return response()->json($productos);
     }
@@ -268,10 +303,12 @@ class DeliveryFlexController extends Controller
             'direccion' => 'required|string|max:255',
             'latitud' => 'required|numeric',
             'longitud' => 'required|numeric',
+            'costo_envio' => 'nullable|numeric|min:0',
             'monto_total' => 'required|numeric|min:0',
-            'productos' => 'nullable|array',
+            'productos' => 'required|array|min:1',
             'productos.*.idProducto' => 'required|integer',
             'productos.*.cantidad' => 'required|integer|min:1',
+            'productos.*.precio' => 'required|numeric|min:0',
         ]);
 
         // 1. Calcular costo de envío
@@ -279,14 +316,21 @@ class DeliveryFlexController extends Controller
             (float)$request->latitud,
             (float)$request->longitud
         );
-        $costoEnvio = $this->openRouteService->calcularCosto($distanciaKm);
+        $costoEnvio = $request->filled('costo_envio')
+            ? (float)$request->costo_envio
+            : $this->openRouteService->calcularCosto($distanciaKm);
+
+        $subtotalProductos = collect($request->productos)->sum(function ($prod) {
+            return ((int)$prod['cantidad']) * ((float)($prod['precio'] ?? 0));
+        });
+        $montoTotal = round($subtotalProductos + $costoEnvio, 2);
 
         // 2. Crear PedidoWeb
         $pedido = PedidoWeb::create([
             'idCliente' => $request->idCliente,
             'codigoTransaccion' => 'WSP-' . time(),
             'pasarela' => 'whatsapp',
-            'total' => $request->monto_total,
+            'total' => $montoTotal,
             'estado' => 'pendiente',
             'tipo_entrega' => 'domicilio',
             'costo_envio' => $costoEnvio
@@ -301,15 +345,13 @@ class DeliveryFlexController extends Controller
         ]);
 
         // 5. Crear detalles del pedido (productos)
-        if ($request->has('productos') && is_array($request->productos)) {
-            foreach ($request->productos as $prod) {
-                DetallePedidoWeb::create([
-                    'idPedidoWeb' => $pedido->idPedidoWeb,
-                    'idProducto' => $prod['idProducto'],
-                    'cantidad' => $prod['cantidad'],
-                    'precio' => 0 // Always 0 since total is in Monto Total
-                ]);
-            }
+        foreach ($request->productos as $prod) {
+            DetallePedidoWeb::create([
+                'idPedidoWeb' => $pedido->idPedidoWeb,
+                'idProducto' => $prod['idProducto'],
+                'cantidad' => (int)$prod['cantidad'],
+                'precio' => (float)($prod['precio'] ?? 0)
+            ]);
         }
 
         return response()->json(['success' => true, 'message' => 'Entrega manual creada correctamente.']);
@@ -327,7 +369,8 @@ class DeliveryFlexController extends Controller
                 return [
                     'idProducto' => $d->idProducto,
                     'nombre' => optional($d->producto)->nombreProducto ?? 'Producto desconocido',
-                    'cantidad' => $d->cantidad,
+                    'cantidad' => (int) $d->cantidad,
+                    'precio' => (float) ($d->precio ?? 0),
                 ];
             });
 
@@ -336,8 +379,9 @@ class DeliveryFlexController extends Controller
                 'data' => [
                     'id' => $pedido->idPedidoWeb,
                     'idCliente' => $pedido->idCliente,
-                    'nombre' => optional($pedido->cliente)->nombre . ' ' . optional($pedido->cliente)->apellidoPaterno,
-                    'monto_total' => $pedido->monto_total,
+                    'nombre' => trim(optional($pedido->cliente)->nombre . ' ' . optional($pedido->cliente)->apellidoPaterno),
+                    'costo_envio' => (float) ($pedido->costo_envio ?? 0),
+                    'monto_total' => (float) ($pedido->total ?? 0),
                     'direccion' => optional($pedido->direccion)->direccion,
                     'latitud' => optional($pedido->direccion)->latitud,
                     'longitud' => optional($pedido->direccion)->longitud,
@@ -351,29 +395,38 @@ class DeliveryFlexController extends Controller
 
     public function updateManual(Request $request, $id)
     {
-        $pedido = PedidoWeb::where('idPedidoWeb', $id)
-            ->where('pasarela', 'whatsapp')
-            ->firstOrFail();
+        $pedido = PedidoWeb::where('idPedidoWeb', $id)->firstOrFail();
 
         $request->validate([
             'idCliente' => 'required|integer',
             'direccion' => 'required|string|max:255',
             'latitud' => 'required|numeric',
             'longitud' => 'required|numeric',
+            'costo_envio' => 'nullable|numeric|min:0',
             'monto_total' => 'required|numeric|min:0',
-            'productos' => 'nullable|array',
+            'productos' => 'required|array|min:1',
+            'productos.*.idProducto' => 'required|integer',
+            'productos.*.cantidad' => 'required|integer|min:1',
+            'productos.*.precio' => 'required|numeric|min:0',
         ]);
 
-        // Recalcular envío
+        // Recalcular envío si no se envió explícitamente
         $distanciaKm = $this->openRouteService->calcularDistancia(
             (float)$request->latitud,
             (float)$request->longitud
         );
-        $costoEnvio = $this->openRouteService->calcularCosto($distanciaKm);
+        $costoEnvio = $request->filled('costo_envio')
+            ? (float)$request->costo_envio
+            : $this->openRouteService->calcularCosto($distanciaKm);
+
+        $subtotalProductos = collect($request->productos)->sum(function ($prod) {
+            return ((int)$prod['cantidad']) * ((float)($prod['precio'] ?? 0));
+        });
+        $montoTotal = round($subtotalProductos + $costoEnvio, 2);
 
         $pedido->update([
             'idCliente' => $request->idCliente,
-            'total' => $request->monto_total,
+            'total' => $montoTotal,
             'costo_envio' => $costoEnvio
         ]);
 
@@ -387,16 +440,14 @@ class DeliveryFlexController extends Controller
         }
 
         // Actualizar productos
-        if ($request->has('productos') && is_array($request->productos)) {
-            DetallePedidoWeb::where('idPedidoWeb', $pedido->idPedidoWeb)->delete();
-            foreach ($request->productos as $prod) {
-                DetallePedidoWeb::create([
-                    'idPedidoWeb' => $pedido->idPedidoWeb,
-                    'idProducto' => $prod['idProducto'],
-                    'cantidad' => $prod['cantidad'],
-                    'precio' => 0
-                ]);
-            }
+        DetallePedidoWeb::where('idPedidoWeb', $pedido->idPedidoWeb)->delete();
+        foreach ($request->productos as $prod) {
+            DetallePedidoWeb::create([
+                'idPedidoWeb' => $pedido->idPedidoWeb,
+                'idProducto' => $prod['idProducto'],
+                'cantidad' => (int)$prod['cantidad'],
+                'precio' => (float)($prod['precio'] ?? 0)
+            ]);
         }
 
         return response()->json(['success' => true, 'message' => 'Entrega actualizada correctamente.']);
@@ -407,9 +458,7 @@ class DeliveryFlexController extends Controller
      */
     public function destroyManual($id)
     {
-        $pedido = PedidoWeb::where('idPedidoWeb', $id)
-            ->where('pasarela', 'whatsapp')
-            ->firstOrFail();
+        $pedido = PedidoWeb::where('idPedidoWeb', $id)->firstOrFail();
 
         // Eliminar dependencias
         DetallePedidoWeb::where('idPedidoWeb', $pedido->idPedidoWeb)->delete();
@@ -428,14 +477,37 @@ class DeliveryFlexController extends Controller
      */
     public function completeManual($id)
     {
-        $pedido = PedidoWeb::where('idPedidoWeb', $id)
-            ->where('pasarela', 'whatsapp')
-            ->firstOrFail();
+        try {
+            $cleanId = (int) preg_replace('/[^0-9]/', '', (string) $id);
+            $pedido = PedidoWeb::find($cleanId);
+            if (!$pedido) {
+                $pedido = PedidoWeb::where('idPedidoWeb', $cleanId)->first();
+            }
 
-        $pedido->estado = 'despachado';
-        $pedido->save();
+            if (!$pedido) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Pedido #{$id} no encontrado en el sistema."
+                ], 404);
+            }
 
-        return response()->json(['success' => true, 'message' => 'Pedido marcado como despachado.']);
+            $pedido->estado = 'despachado';
+            $pedido->save();
+
+            // Eliminar de las rutas guardadas de Flex para que no quede huérfana
+            \App\Models\Ecommerce\MercadoLibreFlexRoute::where('ml_order_id', 'WSP-' . $cleanId)->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pedido marcado como despachado correctamente.'
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en completeManual: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al despachar el pedido: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

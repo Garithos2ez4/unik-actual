@@ -645,9 +645,11 @@ class LaptopsClassifier implements DeltronCategoryClassifierInterface
      */
     protected function enrichAccesorioLaptopSpecs(int $idGrupo, array $specs, array $rawSpecs, string $textoAnalisis): array
     {
-        if (empty($specs[14])) {
-            $specs[14] = 'Negro';
-        }
+        // 1. Color (ID 14): Detectar desde el valor de Deltron o inferir del título/texto
+        $colorRaw = (string) ($specs[14] ?? ($rawSpecs['COLOR'] ?? ($rawSpecs['COLORES'] ?? '')));
+        $specs[14] = $this->resolveColorAccesorio($colorRaw, $textoAnalisis);
+
+        // 2. Dimensiones y Peso por defecto solo si no se extrajeron de Deltron
         if (empty($specs[11])) $specs[11] = '4 cm';
         if (empty($specs[12])) $specs[12] = '26 cm';
         if (empty($specs[13])) $specs[13] = '36 cm';
@@ -660,6 +662,44 @@ class LaptopsClassifier implements DeltronCategoryClassifierInterface
         }
 
         return $specs;
+    }
+
+    /**
+     * Resuelve el color para accesorios analizando primero el valor directo y luego el título/descripción.
+     */
+    protected function resolveColorAccesorio(string $rawColor, string $textoAnalisis): string
+    {
+        $fuente = mb_strtolower(trim($rawColor . ' ' . $textoAnalisis));
+
+        if (str_contains($fuente, 'platead') || str_contains($fuente, 'silver') || str_contains($fuente, 'plata')) {
+            return 'Plateado';
+        }
+        if (str_contains($fuente, 'blanco') || str_contains($fuente, 'white')) {
+            return 'Blanco';
+        }
+        if (str_contains($fuente, 'rojo') || str_contains($fuente, 'red')) {
+            return 'Rojo';
+        }
+        if (str_contains($fuente, 'azul') || str_contains($fuente, 'blue') || str_contains($fuente, 'navy') || str_contains($fuente, 'celeste')) {
+            return 'Azul';
+        }
+        if (str_contains($fuente, 'rosad') || str_contains($fuente, 'rosa') || str_contains($fuente, 'pink') || str_contains($fuente, 'rose gold')) {
+            return 'Rosado';
+        }
+        if (str_contains($fuente, 'verde') || str_contains($fuente, 'green')) {
+            return 'Verde';
+        }
+        if (str_contains($fuente, 'dorad') || str_contains($fuente, 'gold')) {
+            return 'Dorado';
+        }
+        if (str_contains($fuente, 'gris') || str_contains($fuente, 'grey') || str_contains($fuente, 'gray') || str_contains($fuente, 'grafito')) {
+            return 'Gris';
+        }
+        if (str_contains($fuente, 'negro') || str_contains($fuente, 'black')) {
+            return 'Negro';
+        }
+
+        return 'Negro';
     }
 }
 

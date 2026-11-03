@@ -35,7 +35,9 @@ interface ProductoRepositoryInterface
 
     /** Consultas de reemplazo y reciclaje de productos */
     public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon;
+    public function getFechaUltimaVenta(int $idProducto): ?\Carbon\Carbon;
     public function tieneIngresos(int $idProducto): bool;
+    public function tieneVentaConGarantiaVigente(int $idProducto, int $mesesGarantia = 12): bool;
     public function queryReemplazables(int $mesesGarantiaLaptop = 12);
     public function queryLaptopsGarantiaVencida(int $meses = 12);
     public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12);

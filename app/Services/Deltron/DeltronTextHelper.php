@@ -287,6 +287,97 @@ class DeltronTextHelper
     }
 
     /**
+     * Extrae las URLs reales de imágenes (con timestamp o rutas nuevas del CDN) directamente
+     * desde la ficha web pública de Deltron (producto_v2.php) cuando el snapshot/API no las incluye.
+     *
+     * @return array{listado: ?string, carrusel: array<int, string>}
+     */
+    public static function extraerImagenesDesdeWebDeltron(string $sku): array
+    {
+        $skuUpper = strtoupper(trim($sku));
+        $skuLower = strtolower($skuUpper);
+        if (strlen($skuLower) < 4) {
+            return ['listado' => null, 'carrusel' => []];
+        }
+
+        $urlsEncontradas = [];
+        $endpoints = [
+            "https://www.deltron.com.pe/modulos/productos/items/producto_v2.php?item_number=" . urlencode($skuUpper),
+            "https://www.deltron.com.pe/modulos/productos/items/post/mostrar_imagenes_item.php?item_number=" . urlencode($skuUpper),
+        ];
+
+        $headers = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer' => 'https://www.deltron.com.pe/',
+        ];
+
+        $cookieFile = storage_path('app/deltron_cookie.txt');
+        if (is_file($cookieFile)) {
+            $cookieStr = trim((string) @file_get_contents($cookieFile));
+            if ($cookieStr !== '') {
+                $headers['Cookie'] = $cookieStr;
+            }
+        }
+
+        foreach ($endpoints as $endpoint) {
+            try {
+                $resp = \Illuminate\Support\Facades\Http::withoutVerifying()
+                    ->connectTimeout(4)
+                    ->timeout(8)
+                    ->withHeaders($headers)
+                    ->get($endpoint);
+
+                if (!$resp->successful()) {
+                    continue;
+                }
+
+                $html = str_replace('\/', '/', $resp->body());
+
+                // Capturar URLs absolutas o relativas hacia imágenes de productos en Deltron
+                if (preg_match_all('/(?:https?:\/\/(?:imagenes|www)\.deltron\.com\.pe)?\/images\/productos\/[^\s"\'<>()]+?\.(?:jpg|jpeg|png|webp)/i', $html, $matches)) {
+                    foreach ($matches[0] as $rawUrl) {
+                        $u = trim($rawUrl);
+                        if (str_starts_with($u, '/')) {
+                            $u = 'https://imagenes.deltron.com.pe' . $u;
+                        }
+                        $uLower = strtolower($u);
+                        if (
+                            str_contains($uLower, 'blanco.jpg') ||
+                            str_contains($uLower, 'noimagen') ||
+                            str_contains($uLower, 'sin_imagen')
+                        ) {
+                            continue;
+                        }
+
+                        // Asegurar que la imagen corresponda al SKU o esté en la carpeta de items
+                        if (!str_contains($uLower, $skuLower) && !str_contains($uLower, '/items/')) {
+                            continue;
+                        }
+
+                        // Normalizar miniaturas (small/medium/thumbs) a resolución large
+                        $uLarge = preg_replace('/\/items\/(?:small|medium|thumbs|thumb|mini)\//i', '/items/large/', $u);
+                        if (!in_array($uLarge, $urlsEncontradas, true)) {
+                            $urlsEncontradas[] = $uLarge;
+                        }
+                    }
+                }
+
+                if (!empty($urlsEncontradas)) {
+                    break;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return [
+            'listado' => $urlsEncontradas[0] ?? null,
+            'carrusel' => $urlsEncontradas,
+        ];
+    }
+
+    /**
      * Obtiene la ruta física destino para guardar las imágenes de productos,
      * adaptándose automáticamente a entorno local (storage/productos) o producción (public_html/images/productos).
      */

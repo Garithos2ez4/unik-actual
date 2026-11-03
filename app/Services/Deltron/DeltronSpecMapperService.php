@@ -622,10 +622,12 @@ class DeltronSpecMapperService
             if (str_contains($k, 'DIMENSI')) {
                 if (preg_match('/([\d\.]+)\s*x\s*([\d\.]+)\s*x\s*([\d\.]+)\s*(CM|MM|M)?/i', $v, $dm)) {
                     $u = strtolower($dm[4] ?? 'cm');
-                    // Alto (11), Ancho (12), Largo (13)
-                    $resultado[11] = $dm[1] . ' ' . $u;
-                    $resultado[12] = $dm[2] . ' ' . $u;
-                    $resultado[13] = $dm[3] . ' ' . $u;
+                    $nums = [(float)$dm[1], (float)$dm[2], (float)$dm[3]];
+                    sort($nums);
+                    // Menor: Alto (11), Medio: Ancho (12), Mayor: Largo (13)
+                    $resultado[11] = $nums[0] . ' ' . $u;
+                    $resultado[12] = $nums[1] . ' ' . $u;
+                    $resultado[13] = $nums[2] . ' ' . $u;
                 }
             }
         }
@@ -699,7 +701,12 @@ class DeltronSpecMapperService
     /**
      * Llena o actualiza las especificaciones de un producto Unike consultando la ficha oficial de Deltron.
      */
-    public function llenarEspecificacionesProducto(Producto $producto, ?string $deltronSku = null, bool $soloCache = false): array
+    public function llenarEspecificacionesProducto(
+        Producto $producto,
+        ?string $deltronSku = null,
+        bool $soloCache = false,
+        bool $forceOverwrite = false
+    ): array
     {
         // 1. Obtener el SKU de Deltron
         $sku = $deltronSku;
@@ -849,8 +856,11 @@ class DeltronSpecMapperService
 
             if ($existente) {
                 $actual = trim((string) $existente->caracteristicaProducto);
-                // Solo se completan valores vacíos o en "0"; los valores ingresados manualmente se respetan
-                if ($actual === '' || $actual === '0') {
+                // Si se fuerza sobrescritura, o si estaba vacío / en "0", o si tenía un fallback genérico y Deltron provee el valor real
+                $esFallbackGenerico = in_array($actual, ['Negro', '4 cm', '26 cm', '36 cm', '0.4', '1.75', '2 cm', '24 cm', '35.9 cm'], true)
+                    && $valor !== $actual;
+
+                if ($forceOverwrite || $actual === '' || $actual === '0' || $esFallbackGenerico) {
                     Caracteristicas_Producto::where('idProducto', $producto->idProducto)
                         ->where('idCaracteristica', $idCar)
                         ->update(['caracteristicaProducto' => $valor]);

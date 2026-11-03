@@ -64,27 +64,31 @@ if (searchInput) {
 function hideSuggestions(event) {
     let suggestions = document.getElementById('suggestions');
     let hiddenBody = document.getElementById('hidden-body');
-    if (!suggestions.contains(event.target) && event.target.id !== 'search') {
-        suggestions.innerHTML = ''; // Oculta las sugerencias
-        hiddenBody.style.display = 'none';
+    if (suggestions && hiddenBody) {
+        if (!suggestions.contains(event.target) && (!event.target || event.target.id !== 'search')) {
+            suggestions.innerHTML = ''; // Oculta las sugerencias
+            hiddenBody.style.display = 'none';
+        }
     }
 }
 
 document.addEventListener('click', hideSuggestions);
 
 function dataModalDetalle(publicacion, sku, estado, usuario, fecha) {
-    let myModal = new bootstrap.Modal(document.getElementById('detalleModal'));
+    let modalEl = document.getElementById('detalleModal');
+    if (!modalEl) return;
+    let myModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
     let title = document.getElementById('titlepublicacion-modal-detail');
     let skuModal = document.getElementById('sku-modal-detail');
     let state = document.getElementById('state-modal-detail');
     let user = document.getElementById('user-modal-detail');
     let date = document.getElementById('date-modal-detail');
 
-    title.textContent = publicacion;
-    skuModal.textContent = sku;
-    state.textContent = estado == 1 ? 'Activo' : (estado == 0 ? 'Inactivo' : 'Borrado');
-    user.textContent = usuario;
-    date.textContent = fecha;
+    if (title) title.textContent = publicacion ?? '';
+    if (skuModal) skuModal.textContent = sku ?? '';
+    if (state) state.textContent = estado == 1 ? 'Activo' : (estado == 0 ? 'Inactivo' : 'Borrado');
+    if (user) user.textContent = usuario ?? '';
+    if (date) date.textContent = fecha ?? '';
 
     myModal.show();
 }
@@ -94,33 +98,47 @@ function ShareId(id, title, price, estado) {
     let inputTextTitle = document.getElementById('title-text');
     let inputNumberPrice = document.getElementById('price-number');
     let selectEstado = document.getElementById('estado-select');
+    let modalEl = document.getElementById('estadoModal');
+    if (!modalEl) return;
 
-    let modalEstado = new bootstrap.Modal(document.getElementById('estadoModal'), {
+    let modalEstado = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl, {
         keyboard: false
     });
 
-    inputId.value = id;
-    inputTextTitle.value = title;
-    inputNumberPrice.value = price;
-    selectEstado.value = estado;
+    if (inputId) inputId.value = id ?? '';
+    if (inputTextTitle) inputTextTitle.value = title ?? '';
+    if (inputNumberPrice) inputNumberPrice.value = price ?? '';
+    if (selectEstado) selectEstado.value = estado ?? '1';
+
     modalEstado.show();
 }
 
-document.getElementById('month').addEventListener('change', function() {
-    let selectedMonth = this.value;
-    let url = "/registro-publicaciones/" + selectedMonth;
-    
-    if(selectedMonth == ""){
-        alert('Fecha no valida.');
-    }else{
-        window.location.href = url;
-    }
-    
-});
+function editarPublicacionDesdeElem(elem) {
+    if (!elem) return;
+    let id = elem.getAttribute('data-id');
+    let title = elem.getAttribute('data-title');
+    let price = elem.getAttribute('data-price');
+    let estado = elem.getAttribute('data-estado');
+    ShareId(id, title, price, estado);
+}
 
-document.getElementById('month').addEventListener('keydown', function(event) {
-    // Evita que la acci贸n de borrado ocurra si se presiona Backspace o Delete
-    if (event.key === 'Backspace' || event.key === 'Delete') {
-        event.preventDefault();
-    }
-});
+let monthInput = document.getElementById('month');
+if (monthInput) {
+    monthInput.addEventListener('change', function() {
+        let selectedMonth = this.value;
+        let url = "/registro-publicaciones/" + selectedMonth;
+        
+        if (selectedMonth == "") {
+            alert('Fecha no valida.');
+        } else {
+            window.location.href = url;
+        }
+    });
+
+    monthInput.addEventListener('keydown', function(event) {
+        // Evita que la acción de borrado ocurra si se presiona Backspace o Delete
+        if (event.key === 'Backspace' || event.key === 'Delete') {
+            event.preventDefault();
+        }
+    });
+}

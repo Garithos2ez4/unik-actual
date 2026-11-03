@@ -284,6 +284,31 @@ class ProductoController extends Controller
             if ($acceso->idVista == 2) {
                 $producto = $this->productoService->getOneProductByColumn('idProducto', $idProducto);
                 $grupo = $this->productoService->getOneLabelGrupo($producto->idGrupo);
+
+                // Autocorrección de color si tenía el fallback genérico 'Negro' pero el título especifica otro color
+                $carColor = \App\Models\Catalogo\Caracteristicas_Producto::where('idProducto', $producto->idProducto)
+                    ->where('idCaracteristica', 14)
+                    ->first();
+                if ($carColor && $carColor->caracteristicaProducto === 'Negro') {
+                    $nombreLower = mb_strtolower($producto->nombreProducto ?? '');
+                    if (str_contains($nombreLower, 'platead') || str_contains($nombreLower, 'silver') || str_contains($nombreLower, 'plata')) {
+                        $carColor->update(['caracteristicaProducto' => 'Plateado']);
+                        $producto->load('Caracteristicas_Producto');
+                    } elseif (str_contains($nombreLower, 'blanco') || str_contains($nombreLower, 'white')) {
+                        $carColor->update(['caracteristicaProducto' => 'Blanco']);
+                        $producto->load('Caracteristicas_Producto');
+                    } elseif (str_contains($nombreLower, 'azul') || str_contains($nombreLower, 'blue')) {
+                        $carColor->update(['caracteristicaProducto' => 'Azul']);
+                        $producto->load('Caracteristicas_Producto');
+                    } elseif (str_contains($nombreLower, 'rojo') || str_contains($nombreLower, 'red')) {
+                        $carColor->update(['caracteristicaProducto' => 'Rojo']);
+                        $producto->load('Caracteristicas_Producto');
+                    } elseif (str_contains($nombreLower, 'rosad') || str_contains($nombreLower, 'pink')) {
+                        $carColor->update(['caracteristicaProducto' => 'Rosado']);
+                        $producto->load('Caracteristicas_Producto');
+                    }
+                }
+
                 $carGrupos = collect($producto->GrupoProducto->Caracteristicas_Grupo);
                 $carProductos = collect($producto->Caracteristicas_Producto);
                 $options = $carGrupos->filter(function ($carGrupo) use ($carProductos) {

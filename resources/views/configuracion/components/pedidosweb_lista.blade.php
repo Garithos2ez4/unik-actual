@@ -89,9 +89,10 @@
                         <p class="mb-1 text-muted">Cliente:</p>
                         <p class="fw-bold mb-0">
                             @if($pedido->cliente)
-                                {{ $pedido->cliente->nombre }} {{ $pedido->cliente->apellidos }}<br>
-                                DNI/RUC: {{ $pedido->cliente->documento }}<br>
-                                Teléfono: {{ $pedido->cliente->telefono }}
+                                {{ $pedido->cliente->nombre }} {{ $pedido->cliente->apellidoPaterno ?? $pedido->cliente->apellidos ?? '' }}<br>
+                                DNI/RUC: {{ $pedido->cliente->numeroDocumento ?? $pedido->cliente->documento ?? 'No registrado' }}<br>
+                                Teléfono: {{ $pedido->cliente->telefono ?? 'No registrado' }}<br>
+                                Correo: {{ $pedido->cliente->correo ?? $pedido->cliente->email ?? 'No registrado' }}
                             @else
                                 Sin datos
                             @endif
@@ -109,9 +110,14 @@
                 <div class="row mb-3 bg-light p-2 rounded">
                     <div class="col-12">
                         <p class="mb-1 text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> Dirección de Entrega:</p>
-                        <p class="fw-bold mb-0">{{ $pedido->direccion->direccion }}</p>
+                        <p class="fw-bold mb-1">{{ $pedido->direccion->direccion }}</p>
+                        @if($pedido->direccion->latitud && $pedido->direccion->longitud)
+                        <a href="https://www.google.com/maps?q={{ $pedido->direccion->latitud }},{{ $pedido->direccion->longitud }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.8rem;">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Ver ubicación en Google Maps
+                        </a>
+                        @endif
                         @if($pedido->tipo_entrega)
-                        <small class="text-primary fw-bold">Tipo: {{ $pedido->tipo_entrega }}</small>
+                        <div class="mt-1"><small class="text-primary fw-bold">Modalidad: {{ strtoupper($pedido->tipo_entrega) }}</small></div>
                         @endif
                     </div>
                 </div>

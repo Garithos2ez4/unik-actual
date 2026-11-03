@@ -73,9 +73,15 @@
                                 <small>{{$public->CuentasPlataforma->nombreCuenta}}</small>
                             </div>
                             <div class="col-5 col-md-2">
-                                <a href="javascript:void(0)" class="decoration-link" onclick="ShareId({{$public->idPublicacion}},'{{$public->titulo}}',{{$public->precioPublicacion}},{{$public->estado}})">
-                                    <small data-bs-toggle="tooltip" data-bs-placement="top" title="{{$public->titulo}}">
-                                        <strong class="text-primary">{{$public->sku}}</strong>
+                                <a href="javascript:void(0)" class="decoration-link btn-editar-publi" 
+                                   data-id="{{ $public->idPublicacion }}"
+                                   data-title="{{ $public->titulo }}"
+                                   data-price="{{ $public->precioPublicacion }}"
+                                   data-estado="{{ $public->estado }}"
+                                   onclick="editarPublicacionDesdeElem(this)"
+                                   title="Editar publicación">
+                                    <small data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $public->titulo }}">
+                                        <strong class="text-primary">{{ $public->sku }}</strong> <i class="bi bi-pencil-square text-secondary ms-1" style="font-size: 0.75rem;"></i>
                                     </small>
                                 </a>
                             </div>
@@ -185,5 +191,5 @@
         </div>
     </div>
 </div>
-<script src="{{asset('js/publish.js')}}"></script>
+<script src="{{asset('js/publish.js')}}?v=1.2"></script>
 @endsection

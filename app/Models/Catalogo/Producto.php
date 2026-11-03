@@ -347,6 +347,18 @@ class Producto extends Model
     }
 
     /**
+     * Scope de consulta para filtrar únicamente productos reemplazables (sin ventas ni ingresos con garantía vigente).
+     */
+    public function scopeReemplazables($query, int $mesesGarantiaLaptop = 12)
+    {
+        $ids = app(\App\Repositories\ProductoRepositoryInterface::class)
+            ->queryReemplazables($mesesGarantiaLaptop)
+            ->select('Producto.idProducto');
+
+        return $query->whereIn('Producto.idProducto', $ids);
+    }
+
+    /**
      * Componentes hijos de este producto (si es un pack)
      */
     public function packHijos()

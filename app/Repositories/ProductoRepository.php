@@ -393,6 +393,40 @@ class ProductoRepository implements ProductoRepositoryInterface
         return $ultimoIngreso ? \Carbon\Carbon::parse($ultimoIngreso) : null;
     }
 
+    public function getFechaUltimaVenta(int $idProducto): ?\Carbon\Carbon
+    {
+        $ultimoEgreso = DB::table('DetalleComprobante as dc')
+            ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+            ->join('EgresoProducto as ep', 'ep.idRegistro', '=', 'rp.idRegistro')
+            ->where('dc.idProducto', $idProducto)
+            ->whereNotExists(function ($qDev) {
+                $qDev->select(DB::raw(1))
+                    ->from('devoluciones as dev')
+                    ->whereColumn('dev.idEgreso', 'ep.idEgreso');
+            })
+            ->selectRaw('MAX(COALESCE(ep.fechaCompra, ep.fechaDespacho, ep.created_at)) as max_fecha')
+            ->value('max_fecha');
+
+        $ultimaVentaDirecta = DB::table('DetalleVenta as dv')
+            ->leftJoin('Venta as v', 'v.idVenta', '=', 'dv.idVenta')
+            ->where('dv.idProducto', $idProducto)
+            ->where('dv.estado', 'COMPLETADO')
+            ->selectRaw('MAX(COALESCE(v.fechaVenta, dv.created_at)) as max_fecha')
+            ->value('max_fecha');
+
+        $fechas = array_filter([
+            $ultimoEgreso ? \Carbon\Carbon::parse($ultimoEgreso) : null,
+            $ultimaVentaDirecta ? \Carbon\Carbon::parse($ultimaVentaDirecta) : null,
+        ]);
+
+        if (empty($fechas)) {
+            return null;
+        }
+
+        usort($fechas, fn($a, $b) => $b->timestamp <=> $a->timestamp);
+        return $fechas[0];
+    }
+
     public function tieneIngresos(int $idProducto): bool
     {
         return DB::table('DetalleComprobante as dc')
@@ -402,10 +436,44 @@ class ProductoRepository implements ProductoRepositoryInterface
             ->exists();
     }
 
+    public function tieneVentaConGarantiaVigente(int $idProducto, int $mesesGarantia = 12): bool
+    {
+        $ultimaVenta = $this->getFechaUltimaVenta($idProducto);
+        if (!$ultimaVenta) {
+            return false;
+        }
+
+        return $ultimaVenta->copy()->addMonths(max(1, $mesesGarantia))->isFuture();
+    }
+
     public function queryReemplazables(int $mesesGarantiaLaptop = 12)
     {
+        $fechaLimite = now()->subMonths($mesesGarantiaLaptop)->format('Y-m-d');
+
         return Producto::where('Producto.es_padre', 0)
-            ->where(function ($sub) use ($mesesGarantiaLaptop) {
+            // Candado global: ningún producto con una venta cuya garantía siga vigente puede ser reemplazado
+            ->whereNotExists(function ($qVentaEgreso) use ($fechaLimite) {
+                $qVentaEgreso->select(DB::raw(1))
+                    ->from('DetalleComprobante as dc')
+                    ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                    ->join('EgresoProducto as ep', 'ep.idRegistro', '=', 'rp.idRegistro')
+                    ->whereColumn('dc.idProducto', 'Producto.idProducto')
+                    ->whereNotExists(function ($qDev) {
+                        $qDev->select(DB::raw(1))
+                            ->from('devoluciones as dev')
+                            ->whereColumn('dev.idEgreso', 'ep.idEgreso');
+                    })
+                    ->whereRaw('COALESCE(ep.fechaCompra, ep.fechaDespacho, ep.created_at) >= ?', [$fechaLimite]);
+            })
+            ->whereNotExists(function ($qVentaDirecta) use ($fechaLimite) {
+                $qVentaDirecta->select(DB::raw(1))
+                    ->from('DetalleVenta as dv')
+                    ->leftJoin('Venta as v', 'v.idVenta', '=', 'dv.idVenta')
+                    ->whereColumn('dv.idProducto', 'Producto.idProducto')
+                    ->where('dv.estado', 'COMPLETADO')
+                    ->whereRaw('COALESCE(v.fechaVenta, dv.created_at) >= ?', [$fechaLimite]);
+            })
+            ->where(function ($sub) use ($fechaLimite) {
                 // Caso 1: Nunca tuvo ningún ingreso en IngresoProducto
                 $sub->whereNotExists(function ($q) {
                     $q->select(DB::raw(1))
@@ -414,9 +482,8 @@ class ProductoRepository implements ProductoRepositoryInterface
                         ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
                         ->whereColumn('dc.idProducto', 'Producto.idProducto');
                 })
-                // Caso 2: Laptops con garantía comercial vencida (> 12 meses del último ingreso) y sin stock físico
-                ->orWhere(function ($qLaptop) use ($mesesGarantiaLaptop) {
-                    $fechaLimite = now()->subMonths($mesesGarantiaLaptop)->format('Y-m-d');
+                // Caso 2: Laptops con garantía comercial vencida (> 12 meses de último ingreso y de última venta) y sin stock físico
+                ->orWhere(function ($qLaptop) use ($fechaLimite) {
                     $qLaptop->whereIn('Producto.idGrupo', [1, 2, 3])
                         ->whereNotExists(function ($qStock) {
                             $qStock->select(DB::raw(1))
@@ -462,6 +529,27 @@ class ProductoRepository implements ProductoRepositoryInterface
                     ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
                     ->whereColumn('dc.idProducto', 'Producto.idProducto')
                     ->where('ip.fechaIngreso', '>=', $fechaLimite);
+            })
+            ->whereNotExists(function ($qVentaEgreso) use ($fechaLimite) {
+                $qVentaEgreso->select(DB::raw(1))
+                    ->from('DetalleComprobante as dc')
+                    ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                    ->join('EgresoProducto as ep', 'ep.idRegistro', '=', 'rp.idRegistro')
+                    ->whereColumn('dc.idProducto', 'Producto.idProducto')
+                    ->whereNotExists(function ($qDev) {
+                        $qDev->select(DB::raw(1))
+                            ->from('devoluciones as dev')
+                            ->whereColumn('dev.idEgreso', 'ep.idEgreso');
+                    })
+                    ->whereRaw('COALESCE(ep.fechaCompra, ep.fechaDespacho, ep.created_at) >= ?', [$fechaLimite]);
+            })
+            ->whereNotExists(function ($qVentaDirecta) use ($fechaLimite) {
+                $qVentaDirecta->select(DB::raw(1))
+                    ->from('DetalleVenta as dv')
+                    ->leftJoin('Venta as v', 'v.idVenta', '=', 'dv.idVenta')
+                    ->whereColumn('dv.idProducto', 'Producto.idProducto')
+                    ->where('dv.estado', 'COMPLETADO')
+                    ->whereRaw('COALESCE(v.fechaVenta, dv.created_at) >= ?', [$fechaLimite]);
             });
     }
 

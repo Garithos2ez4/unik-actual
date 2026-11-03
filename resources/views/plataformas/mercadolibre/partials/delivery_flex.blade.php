@@ -276,9 +276,9 @@
 
                         <!-- Producto (Buscador) -->
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Productos</label>
+                            <label class="form-label fw-semibold">Productos <span class="text-danger">*</span></label>
                             <div class="position-relative">
-                                <input type="text" class="form-control" id="manualProductoSearch" placeholder="Buscar producto por nombre..." autocomplete="off">
+                                <input type="text" class="form-control" id="manualProductoSearch" placeholder="Buscar producto por nombre, código o modelo..." autocomplete="off">
                                 <div id="productoSearchResults" class="producto-search-results d-none">
                                     <div class="list-group list-group-flush" id="productoSearchList"></div>
                                 </div>
@@ -286,15 +286,39 @@
                             <div id="productosSeleccionados" class="mt-2"></div>
                         </div>
 
-                        <!-- Monto -->
+                        <!-- Resumen de Montos -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Total Productos (S/)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">S/</span>
+                                <input type="number" class="form-control bg-light fw-semibold" id="manualTotalProductos" step="0.01" value="0.00" readonly>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Costo de Envío (S/)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">S/</span>
+                                <input type="number" class="form-control" id="manualCostoEnvio" step="0.01" min="0" value="0.00" oninput="recalcularTotalesManual()">
+                            </div>
+                        </div>
+
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Monto Total (S/) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="manualMontoTotal" step="0.01" min="0" placeholder="0.00" required>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light fw-bold text-success">S/</span>
+                                <input type="number" class="form-control bg-light fw-bold text-success" id="manualMontoTotal" step="0.01" min="0" value="0.00" readonly required>
+                            </div>
                         </div>
 
                         <!-- Dirección -->
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold">Dirección de Entrega <span class="text-danger">*</span></label>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-semibold mb-0">Dirección de Entrega <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" onclick="obtenerDireccionDesdeMapa()">
+                                    <i class="bi bi-geo-alt-fill text-danger"></i> Detectar dirección del pin
+                                </button>
+                            </div>
                             <input type="text" class="form-control" id="manualDireccion" placeholder="Ej. Av. Los Pinos 123, Miraflores" autocomplete="off" required>
                         </div>
 

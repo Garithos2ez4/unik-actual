@@ -212,7 +212,7 @@ class DeltronController extends Controller
             @set_time_limit(60);
             $specMapper = app(\App\Services\Deltron\DeltronSpecMapperService::class);
             $sku = $request->input('sku');
-            $resultado = $specMapper->llenarEspecificacionesProducto($producto, $sku);
+            $resultado = $specMapper->llenarEspecificacionesProducto($producto, $sku, false, true);
 
             return response()->json($resultado, $resultado['success'] ? 200 : 422);
         } catch (\Exception $e) {
@@ -297,8 +297,9 @@ class DeltronController extends Controller
                 if ($stock && isset($stock['stock_total'])) {
                     $invProveedor = Inventario_Proveedor::where('idProducto', $productoDb->idProducto)->first();
                     if (!$invProveedor) {
+                        $lastInvProv = (int) (Inventario_Proveedor::max('idInventarioProveedor') ?? 0);
                         $invProveedor = new Inventario_Proveedor();
-                        $invProveedor->idInventarioProveedor = $productoDb->idProducto;
+                        $invProveedor->idInventarioProveedor = $lastInvProv + 1;
                         $invProveedor->idProducto = $productoDb->idProducto;
                     }
                     $invProveedor->idProveedor = 1;

@@ -244,7 +244,13 @@ class ProductoService implements ProductoServiceInterface
         }
 
         if (!$productoExistente->esReemplazable()) {
-            throw new \InvalidArgumentException("El producto {$productoExistente->codigoProducto} (ID #{$idProducto}) ya registra ingresos en almacén y no puede ser reemplazado.");
+            $ultimaVenta = $this->getFechaUltimaVenta($idProducto);
+            $mesesGarantia = $this->obtenerMesesGarantiaProducto($productoExistente, 12);
+            if ($ultimaVenta && $ultimaVenta->copy()->addMonths($mesesGarantia)->isFuture()) {
+                $expira = $ultimaVenta->copy()->addMonths($mesesGarantia)->format('d/m/Y');
+                throw new \InvalidArgumentException("El producto {$productoExistente->codigoProducto} (ID #{$idProducto}) registra una venta del {$ultimaVenta->format('d/m/Y')} con garantía vigente hasta el {$expira} y no puede ser reemplazado.");
+            }
+            throw new \InvalidArgumentException("El producto {$productoExistente->codigoProducto} (ID #{$idProducto}) ya registra ingresos o garantía vigente en almacén y no puede ser reemplazado.");
         }
 
         if (!empty($array['modelo']) && $this->productoRepository->existsByModelo($array['modelo'], $idProducto)) {
@@ -672,6 +678,43 @@ class ProductoService implements ProductoServiceInterface
         return $this->productoRepository->getFechaUltimoIngreso($idProducto);
     }
 
+    public function getFechaUltimaVenta(int $idProducto): ?\Carbon\Carbon
+    {
+        return $this->productoRepository->getFechaUltimaVenta($idProducto);
+    }
+
+    public function obtenerMesesGarantiaProducto($producto, int $defaultMeses = 12): int
+    {
+        $prodModel = is_numeric($producto) ? $this->productoRepository->getOne('idProducto', $producto) : $producto;
+        if (!$prodModel || empty($prodModel->garantia)) {
+            return $defaultMeses;
+        }
+
+        $gUpper = strtoupper(trim((string) $prodModel->garantia));
+        if (str_contains($gUpper, '36') || str_contains($gUpper, '3 AÑO') || str_contains($gUpper, '3 ANO')) {
+            return max($defaultMeses, 36);
+        }
+        if (str_contains($gUpper, '24') || str_contains($gUpper, '2 AÑO') || str_contains($gUpper, '2 ANO')) {
+            return max($defaultMeses, 24);
+        }
+        if (preg_match('/(\d+)\s*MES/i', $gUpper, $m)) {
+            return max($defaultMeses, (int) $m[1]);
+        }
+
+        return $defaultMeses;
+    }
+
+    public function tieneVentaConGarantiaVigente($producto, int $mesesGarantia = 12): bool
+    {
+        $prodModel = is_numeric($producto) ? $this->productoRepository->getOne('idProducto', $producto) : $producto;
+        if (!$prodModel) {
+            return false;
+        }
+
+        $meses = $this->obtenerMesesGarantiaProducto($prodModel, $mesesGarantia);
+        return $this->productoRepository->tieneVentaConGarantiaVigente((int) $prodModel->idProducto, $meses);
+    }
+
     public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int
     {
         return $this->productoRepository->countFantasmasAutoReciclables($mesesGarantiaLaptop);
@@ -699,14 +742,20 @@ class ProductoService implements ProductoServiceInterface
             return false;
         }
 
-        // 3. Obtener fecha de último ingreso
-        $ultimoIngreso = $this->productoRepository->getFechaUltimoIngreso($prodModel->idProducto);
-        if (!$ultimoIngreso) {
-            return true; // Sin ingresos previos
+        // 3. Candado de venta: Si tiene alguna venta cuya garantía sigue vigente, NO tiene garantía vencida
+        $mesesGarantia = $this->obtenerMesesGarantiaProducto($prodModel, $meses);
+        if ($this->productoRepository->tieneVentaConGarantiaVigente($prodModel->idProducto, $mesesGarantia)) {
+            return false;
         }
 
-        // 4. Último ingreso debe tener más de $meses de antigüedad (ej. 12 meses)
-        return $ultimoIngreso->lt(now()->subMonths($meses));
+        // 4. Obtener fecha de último ingreso
+        $ultimoIngreso = $this->productoRepository->getFechaUltimoIngreso($prodModel->idProducto);
+        if (!$ultimoIngreso) {
+            return true; // Sin ingresos previos ni ventas vigentes
+        }
+
+        // 5. Último ingreso debe tener más de $mesesGarantia de antigüedad (ej. 12 meses)
+        return $ultimoIngreso->lt(now()->subMonths($mesesGarantia));
     }
 
     public function esReemplazable($producto, int $mesesGarantiaLaptop = 12): bool
@@ -716,13 +765,19 @@ class ProductoService implements ProductoServiceInterface
             return false;
         }
 
-        // Caso 1: Nunca tuvo ingresos
+        // Candado global: Si el producto registra una venta con garantía vigente, NO puede ser reemplazado
+        $mesesGarantia = $this->obtenerMesesGarantiaProducto($prodModel, $mesesGarantiaLaptop);
+        if ($this->productoRepository->tieneVentaConGarantiaVigente($prodModel->idProducto, $mesesGarantia)) {
+            return false;
+        }
+
+        // Caso 1: Nunca tuvo ingresos (ni ventas con garantía vigente)
         if (!$this->productoRepository->tieneIngresos($prodModel->idProducto)) {
             return true;
         }
 
-        // Caso 2: Laptop con garantía de 12 meses vencida y sin stock
-        return $this->esLaptopConGarantiaVencida($prodModel, $mesesGarantiaLaptop);
+        // Caso 2: Laptop con garantía vencida (tanto de ingreso como de venta) y sin stock
+        return $this->esLaptopConGarantiaVencida($prodModel, $mesesGarantia);
     }
 
     public function getMotivoReemplazo($producto, int $mesesGarantiaLaptop = 12): ?array
@@ -732,23 +787,33 @@ class ProductoService implements ProductoServiceInterface
             return null;
         }
 
+        if (!$this->esReemplazable($prodModel, $mesesGarantiaLaptop)) {
+            return null;
+        }
+
         $ultimoIngreso = $this->productoRepository->getFechaUltimoIngreso($prodModel->idProducto);
-        if (!$ultimoIngreso) {
+        $ultimaVenta = $this->productoRepository->getFechaUltimaVenta($prodModel->idProducto);
+
+        if (!$ultimoIngreso && !$ultimaVenta) {
             return [
                 'tipo' => 'sin_ingresos',
                 'titulo' => 'Sin Ingresos en Almacén',
-                'descripcion' => 'Este producto nunca tuvo ingresos en almacén.',
+                'descripcion' => 'Este producto nunca tuvo ingresos ni ventas registradas en almacén.',
                 'badge' => 'Sin ingresos (Reemplazable)',
                 'color' => 'warning'
             ];
         }
 
-        if ($this->esLaptopConGarantiaVencida($prodModel, $mesesGarantiaLaptop)) {
-            $mesesTranscurridos = (int) $ultimoIngreso->diffInMonths(now());
+        if ($this->esLaptopConGarantiaVencida($prodModel, $mesesGarantiaLaptop) || !$ultimoIngreso) {
+            $fechaRef = $ultimaVenta ?: $ultimoIngreso;
+            $mesesTranscurridos = $fechaRef ? (int) $fechaRef->diffInMonths(now()) : $mesesGarantiaLaptop;
+            $detalleVenta = $ultimaVenta ? " · Última venta: {$ultimaVenta->format('d/m/Y')}" : '';
+            $detalleIngreso = $ultimoIngreso ? "Último ingreso: {$ultimoIngreso->format('d/m/Y')}" : 'Sin ingresos registrados';
+
             return [
                 'tipo' => 'laptop_garantia_vencida',
                 'titulo' => 'Garantía Vencida (+12 meses)',
-                'descripcion' => "Último ingreso registrado el {$ultimoIngreso->format('d/m/Y')} (hace {$mesesTranscurridos} meses) y stock actual en 0.",
+                'descripcion' => "{$detalleIngreso}{$detalleVenta} (hace {$mesesTranscurridos} meses) y stock actual en 0.",
                 'badge' => "Garantía vencida (+{$mesesTranscurridos}m)",
                 'color' => 'danger'
             ];
