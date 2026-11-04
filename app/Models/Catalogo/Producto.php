@@ -9,7 +9,6 @@ use App\Models\Precios\HistorialPrecioTienda;
 use App\Models\Inventario\Inventario_Proveedor;
 use App\Models\Inventario\RegistroProducto;
 use App\Models\Inventario\Liquidacion;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
@@ -339,23 +338,64 @@ class Producto extends Model
     }
 
     /**
-     * Candado de seguridad: Delega la validación de reemplazo a la capa de servicio (ProductoService).
+     * Scope para filtrar productos fantasma (reemplazables):
+     * Aquellos que nunca tuvieron ningún ingreso en IngresoProducto (y no son contenedores padre).
      */
-    public function esReemplazable(int $mesesGarantiaLaptop = 12): bool
+    public function scopeReemplazables($query)
     {
-        return app(\App\Services\ProductoServiceInterface::class)->esReemplazable($this, $mesesGarantiaLaptop);
+        return $query->where('Producto.es_padre', 0)
+            ->whereNotExists(function ($q) {
+                $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('DetalleComprobante as dc')
+                    ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+                    ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+                    ->whereColumn('dc.idProducto', 'Producto.idProducto');
+            });
     }
 
     /**
-     * Scope de consulta para filtrar únicamente productos reemplazables (sin ventas ni ingresos con garantía vigente).
+     * Scope para reciclaje automático por lotes desde Deltron:
+     * Toma productos sin ingresos (reemplazables) que además estén AGOTADOS/DESCONTINUADOS,
+     * tengan stock proveedor en 0, o sean productos antiguos sin SKU Deltron vinculado.
+     * Nunca pisa productos activos recién importados de Deltron con stock.
      */
-    public function scopeReemplazables($query, int $mesesGarantiaLaptop = 12)
+    public function scopeFantasmasAutoReciclables($query)
     {
-        $ids = app(\App\Repositories\ProductoRepositoryInterface::class)
-            ->queryReemplazables($mesesGarantiaLaptop)
-            ->select('Producto.idProducto');
+        return $query->reemplazables()
+            ->whereNull('Producto.idProductoPadre')
+            ->where(function ($q) {
+                $q->whereIn('Producto.estadoProductoWeb', ['AGOTADO', 'DESCONTINUADO'])
+                    ->orWhereNotExists(function ($sub) {
+                        $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                            ->from('Inventario_Proveedor as ip')
+                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                            ->where('ip.stock', '>', 0);
+                    })
+                    ->orWhereNotExists(function ($sub) {
+                        $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                            ->from('Inventario_Proveedor as ip')
+                            ->join('inventario_proveedor_skus as ips', 'ips.idInventarioProveedor', '=', 'ip.idInventarioProveedor')
+                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                            ->whereNotNull('ips.sku_proveedor')
+                            ->where('ips.sku_proveedor', '!=', '');
+                    });
+            });
+    }
 
-        return $query->whereIn('Producto.idProducto', $ids);
+    /**
+     * Candado de seguridad: Verifica si este producto nunca tuvo ningún ingreso en IngresoProducto.
+     */
+    public function esReemplazable(): bool
+    {
+        if ($this->es_padre) {
+            return false;
+        }
+
+        return !\Illuminate\Support\Facades\DB::table('DetalleComprobante as dc')
+            ->join('RegistroProducto as rp', 'rp.idDetalleComprobante', '=', 'dc.idDetalleComprobante')
+            ->join('IngresoProducto as ip', 'ip.idRegistro', '=', 'rp.idRegistro')
+            ->where('dc.idProducto', $this->idProducto)
+            ->exists();
     }
 
     /**
@@ -468,11 +508,49 @@ class Producto extends Model
 
     public function displayImg($img)
     {
-        if ($img == "asset('storage/images/noimagen.webp')") {
+        if (empty($img) || str_contains($img, 'noimagen.webp')) {
             return "d-none";
-        } else {
-            return "";
         }
+        return "";
+    }
+
+    public function publicVideos()
+    {
+        return array_filter([
+            $this->videoUrl1 ?? null,
+            $this->videoUrl2 ?? null
+        ]);
+    }
+
+    public function getYoutubeThumbnail($videoId)
+    {
+        if (empty($videoId)) return null;
+
+        // Si viene una URL completa de YouTube, extraer el ID de 11 caracteres
+        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $videoId, $m)) {
+            $videoId = $m[1];
+        }
+
+        // Validar que sea un ID de 11 caracteres
+        if (!preg_match('/^[\w-]{11}$/', $videoId)) return null;
+
+        return "https://img.youtube.com/vi/{$videoId}/hqdefault.jpg";
+    }
+
+    public function getYoutubeEmbed($videoId)
+    {
+        if (empty($videoId)) return null;
+
+        // Si viene una URL completa de YouTube, extraer el ID de 11 caracteres
+        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $videoId, $m)) {
+            $videoId = $m[1];
+        }
+
+        // Validar que sea un ID válido (11 caracteres alfanum + guiones)
+        if (!preg_match('/^[\w-]{11}$/', $videoId)) return null;
+
+        // URL para iframe embed de YouTube con autoplay desactivado por defecto
+        return "https://www.youtube.com/embed/{$videoId}";
     }
 
     public function liquidacion()

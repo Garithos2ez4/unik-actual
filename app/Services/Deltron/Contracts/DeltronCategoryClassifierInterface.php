@@ -10,6 +10,11 @@ interface DeltronCategoryClassifierInterface
     public function getCategoriaId(): int;
 
     /**
+     * Nombre legible de la categoría en Unike Store.
+     */
+    public function getCategoriaNombre(): string;
+
+    /**
      * Lista de IDs de GrupoProducto que pertenecen a esta categoría.
      *
      * @return int[]
@@ -20,6 +25,18 @@ interface DeltronCategoryClassifierInterface
      * Indica si este clasificador maneja un idGrupo específico.
      */
     public function supportsGrupo(int $idGrupo): bool;
+
+    /**
+     * Diccionario de sinónimos y claves de Deltron específico para los grupos de esta categoría.
+     * Retorna [CLAVE_DELTRON => idCaracteristica].
+     */
+    public function getMapaClavesCategoria(?int $idGrupo = null): array;
+
+    /**
+     * Normalización de valores específicos por ID de característica dentro de esta categoría.
+     * Retorna null si no tiene regla especializada para delegar al fallback universal.
+     */
+    public function normalizarValorCategoria(int $idCaracteristica, string $valorDeltron, ?string $claveDeltron = null, array $sugerencias = []): ?string;
 
     /**
      * Reglas de clasificación de alta prioridad que deben evaluarse ANTES

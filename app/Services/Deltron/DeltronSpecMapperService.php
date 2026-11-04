@@ -9,6 +9,16 @@ use App\Models\Catalogo\Producto;
 use App\Models\Inventario\InventarioProveedorSku;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Servicio Padre / Orquestador de Mapeo de Especificaciones Técnicas de Deltron.
+ *
+ * Responsabilidades:
+ * 1. Obtención de Fichas de Deltron (Caché local o API).
+ * 2. Parseo de HTML (tablas complejas de 1 a 4+ columnas) y texto plano.
+ * 3. Mapeo universal base (Dimensiones, Peso, Puertos, Color).
+ * 4. Delegación del mapeo y normalización específica al módulo de la categoría correspondiente (Cat01 a Cat17).
+ * 5. Persistencia y sincronización segura en Caracteristicas_Producto.
+ */
 class DeltronSpecMapperService
 {
     protected DeltronApiService $apiService;
@@ -22,6 +32,7 @@ class DeltronSpecMapperService
 
     /**
      * Parsea la tabla HTML de especificaciones de Deltron a un array asociativo [CLAVE => VALOR].
+     * Maneja tablas de 1 celda (rowspan), 2 celdas estándar, 3 celdas (sección) y 4+ celdas (multinivel).
      */
     public function parseSpecsHtml(?string $html): array
     {
@@ -57,10 +68,6 @@ class DeltronSpecMapperService
 
                 if (empty($cellTexts)) continue;
 
-                // Formatos Deltron comunes:
-                // 1 celda con dos puntos (ocurre en filas con rowspan previo): [Clave: Valor]
-                // 2 celdas: [Clave, Valor]
-                // 3 celdas: [Sección, Clave, Valor]
                 if (count($cellTexts) === 1 && str_contains($cellTexts[0], ':')) {
                     $parts = explode(':', $cellTexts[0], 2);
                     $k = strtoupper(trim(rtrim($parts[0], ':')));
@@ -74,11 +81,31 @@ class DeltronSpecMapperService
                     if ($k !== '' && $v !== '') {
                         $specs[$k] = $v;
                     }
-                } elseif (count($cellTexts) >= 3) {
+                } elseif (count($cellTexts) === 3) {
+                    $sec = strtoupper(trim(rtrim($cellTexts[0], ':')));
                     $k = strtoupper(trim(rtrim($cellTexts[1], ':')));
                     $v = trim($cellTexts[2]);
                     if ($k !== '' && $v !== '') {
                         $specs[$k] = $v;
+                        if (str_contains($sec, 'ALMACEN') && !isset($specs['ALMACENAMIENTO'])) {
+                            $specs['ALMACENAMIENTO'] = $v;
+                            $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                        }
+                    }
+                } elseif (count($cellTexts) >= 4) {
+                    $v = trim(end($cellTexts));
+                    $sec = strtoupper(trim(rtrim($cellTexts[0], ':')));
+                    $sub = strtoupper(trim(rtrim($cellTexts[1], ':')));
+                    $k = strtoupper(trim(rtrim($cellTexts[count($cellTexts) - 2], ':')));
+
+                    if ($k !== '' && $v !== '') {
+                        $specs[$k] = $v;
+                        $specs[$sec . ' ' . $k] = $v;
+                        $specs[$sub . ' ' . $k] = $v;
+                        if (str_contains($sec, 'ALMACEN') || str_contains($sub, 'ALMACEN')) {
+                            $specs['ALMACENAMIENTO'] = $v;
+                            $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                        }
                     }
                 }
             }
@@ -89,7 +116,7 @@ class DeltronSpecMapperService
 
     /**
      * Parsea bloques de texto de Deltron (specs_texto, descripcion_completa)
-     * buscando patrones "[CLAVE: VALOR]" o "- CLAVE: VALOR".
+     * buscando patrones "[CLAVE: VALOR]", "- CLAVE: VALOR" o líneas compuestas con guiones.
      */
     public function parseSpecsText(?string $text): array
     {
@@ -121,60 +148,68 @@ class DeltronSpecMapperService
             }
         }
 
+        // 3. Patrón compuesto con guiones (Almacenamiento)
+        if (preg_match_all('/^[ \t]*-[ \t]*ALMACENAMIENTO.*?-[ \t]*CAPACIDAD[ \t]*-[ \t]*([0-9]+\s*(?:TB|GB))/mi', $text, $m3)) {
+            foreach ($m3[1] as $valAlm) {
+                $specs['ALMACENAMIENTO'] = trim($valAlm);
+                $specs['CAPACIDAD DE ALMACENAMIENTO'] = trim($valAlm);
+            }
+        }
+
         return $specs;
     }
 
     /**
-     * Diccionario de sinónimos y equivalencias entre claves de Deltron y el ID de Característica de Unike Store.
+     * Diccionario universal base de sinónimos y equivalencias de claves de Deltron hacia idCaracteristica.
      */
     public function getMapaClavesACaracteristica(): array
     {
         return [
-            // ID 1: Hz
+            // Frecuencia / Hz
             'TASA DE REFRESCO' => 1,
             'FRECUENCIA DE ACTUALIZACION' => 1,
             'FRECUENCIA' => 1,
             'TASA DE REFRESCO / FRECUENCIA' => 1,
 
-            // ID 2: Pulgadas
+            // Pulgadas
             'TAMAÑO DE PANTALLA' => 2,
             'PULGADAS' => 2,
             'TAMAÑO' => 2,
 
-            // ID 3: Resolucion
+            // Resolución
             'RESOLUCIÓN' => 3,
             'RESOLUCION' => 3,
             'RESOLUCIÓN MÁXIMA' => 3,
             'RESOLUCION MAXIMA' => 3,
             'RESOLUCIÓN NATIVA' => 3,
 
-            // ID 4: Procesador
+            // Procesador
             'PROCESADOR' => 4,
             'CPU' => 4,
             'CHIPSET' => 4,
 
-            // ID 5: Memoria RAM
+            // Memoria RAM
             'MEMORIA RAM' => 5,
             'CAPACIDAD DE MEMORIA' => 5,
             'RAM' => 5,
 
-            // ID 6: Almacenamiento
+            // Almacenamiento
             'ALMACENAMIENTO' => 6,
             'CAPACIDAD DE ALMACENAMIENTO' => 6,
             'DISCO DURO' => 6,
             'UNIDAD DE ESTADO SOLIDO' => 6,
 
-            // ID 7: Graficos
+            // Gráficos
             'GRAFICOS' => 7,
             'GRÁFICOS' => 7,
             'TARJETA DE VIDEO' => 7,
             'CHIPSET DE VIDEO' => 7,
             'GPU' => 7,
 
-            // ID 8: Teclado
+            // Teclado
             'TECLADO' => 8,
 
-            // ID 9: Conectividad
+            // Conectividad
             'CONECTIVIDAD' => 9,
             'CONEXIÓN INALÁMBRICA' => 9,
             'CONEXION INALAMBRICA' => 9,
@@ -183,257 +218,117 @@ class DeltronSpecMapperService
             'BLUETOOTH' => 9,
             'VERSIÓN DE BLUETOOTH' => 9,
             'VERSION DE BLUETOOTH' => 9,
-            'ALCANCE BLUETOOTH' => 9,
 
-            // ID 10: Peso
+            // Peso
             'PESO NETO' => 10,
             'PESO' => 10,
 
-            // ID 14: Color
+            // Color
             'COLOR' => 14,
             'COLORES' => 14,
 
-            // ID 15: Sistema Operativo
+            // Sistema Operativo
             'SISTEMA OPERATIVO' => 15,
             'SISTEMAS OPERATIVOS' => 15,
 
-            // ID 16: Bateria
+            // Batería
             'BATERÍA RECARGABLE' => 16,
             'BATERIA' => 16,
             'BATERÍA' => 16,
             'BATERÍA (CAPACIDAD)' => 16,
-            'BATERIA (CAPACIDAD)' => 16,
             'CAPACIDAD DE BATERÍA' => 16,
-            'CAPACIDAD DE BATERIA' => 16,
 
-            // ID 17: Puertos
+            // Puertos
             'PUERTOS' => 17,
             'PUERTO DE CARGA' => 17,
             'ENTRADAS' => 17,
 
-            // ID 18: Tiempo de respuesta
+            // Monitor
             'TIEMPO DE RESPUESTA' => 18,
-
-            // ID 19: Brillo
             'BRILLO' => 19,
-
-            // ID 20: Contraste
             'CONTRASTE' => 20,
             'RELACIÓN DE CONTRASTE' => 20,
-
-            // ID 21: Panel
             'TIPO DE PANEL' => 21,
             'PANEL' => 21,
-            'TIPO' => 21, // En monitores suele ser IPS, VA, etc.
-
-            // ID 22: Curvo
             'CURVATURA' => 22,
             'PANTALLA CURVA' => 22,
-            'FORMATO DE PANTALLA' => 22,
-
-            // ID 23: Angulo de vision
             'ÁNGULO DE VISIÓN' => 23,
-            'ANGULO DE VISION' => 23,
-
-            // ID 24: Montaje de pared
             'MONTAJE VESA' => 24,
             'MONTAJE DE PARED' => 24,
 
-            // ID 25: Idioma
+            // Periféricos / Cables
             'DISTRIBUCIÓN (LAYOUT)' => 25,
             'DISTRIBUCION' => 25,
             'IDIOMA' => 25,
-            'LAYOUT' => 25,
-
-            // ID 26: Cableado
             'CABLE' => 26,
             'TIPO DE CABLE' => 26,
-
-            // ID 27: Longitud de cable
             'LONGITUD DE CABLE' => 27,
             'LONGITUD DEL CABLE' => 27,
-            'LONGITUD' => 27,
-            'LARGO DE CABLE' => 27,
-            'LARGO DEL CABLE' => 27,
-
-            // ID 28: Número de teclas
             'CANTIDAD DE TECLAS' => 28,
             'NÚMERO DE TECLAS' => 28,
-
-            // ID 29: Diseño
             'FORMATO' => 29,
             'DISEÑO' => 29,
-
-            // ID 30: Tipo de teclado
             'TIPO DE TECLADO' => 30,
-            'TECNOLOGÍA' => 30, // en teclados suele ser MEMBRANA / MECANICO
-
-            // ID 31: Tecnología de imp.
-            'TECNOLOGÍA DE IMPRESIÓN' => 31,
-            'TECNOLOGIA DE IMPRESION' => 31,
-
-            // ID 32: Velocidad de imp.
-            'VELOCIDAD DE IMPRESIÓN' => 32,
-            'VELOCIDAD DE IMPRESION' => 32,
-
-            // ID 33: Funciones
-            'FUNCIONES' => 33,
-
-            // ID 34: Resolución de imp.
-            'RESOLUCIÓN DE IMPRESIÓN' => 34,
-
-            // ID 35: Tipo de escáner
-            'TIPO DE ESCÁNER' => 35,
-            'TIPO DE ESCANER' => 35,
-
-            // ID 36: Resolución escáner
-            'RESOLUCIÓN DE ESCÁNER' => 36,
-
-            // ID 37: SO compatibles
-            'COMPATIBILIDAD SO' => 37,
-
-            // ID 40: Tipo de tinta
-            'TIPO DE TINTA' => 40,
-
-            // ID 41: Certificado
-            'CERTIFICADO' => 41,
-            'CERTIFICACIÓN' => 41,
-            'CERTIFICACION' => 41,
-
-            // ID 42: Potencia
-            'POTENCIA' => 42,
-            'CONSUMO' => 42,
-
-            // ID 45: Capacidad
-            'CAPACIDAD' => 45,
-
-            // ID 46: Interfaz
-            'INTERFAZ' => 46,
-
-            // ID 47: Ve. de rotación
-            'VELOCIDAD DE ROTACIÓN' => 47,
-            'VELOCIDAD DE ROTACION' => 47,
-
-            // ID 48: Ve. transferencia
-            'VELOCIDAD DE TRANSFERENCIA' => 48,
-
-            // ID 50: Aplicaciones
-            'USO RECOMENDADO' => 50,
-            'USO' => 50,
-            'APLICACIONES' => 50,
-
-            // ID 53: Material
-            'MATERIAL' => 53,
-
-            // ID 54: Rel. de Aspecto
-            'PROPORCIÓN' => 54,
-            'RELACIÓN DE ASPECTO' => 54,
-
-            // ID 55: Consumo
-            'CONSUMO TÍPICO' => 55,
-
-            // ID 56: Rotacion
-            'PIVOTE' => 56,
-            'GIRO' => 56,
-
-            // ID 57: Inclinacion
-            'INCLINACIÓN' => 57,
-
-            // ID 58: DPI
             'DPI' => 58,
             'RESOLUCIÓN DPI' => 58,
-
-            // ID 59: Sensor
             'SENSOR' => 59,
-            'TIPO DE SENSOR' => 59,
-
-            // ID 60: Botones
-            'CANTIDAD DE BOTONES' => 60,
             'BOTONES' => 60,
-
-            // ID 63: Compatibilidad
-            'COMPATIBILIDAD' => 63,
-            'PARA' => 63,
-            'DISPOSITIVOS COMPATIBLES' => 63,
-
-            // ID 64: IMPEDANCIA
-            'IMPEDANCIA' => 64,
-
-            // ID 67: Microfono
+            'CANTIDAD DE BOTONES' => 60,
             'MICRÓFONO' => 67,
             'MICROFONO' => 67,
-
-            // ID 69: Led
             'RETROILUMINACIÓN' => 69,
-            'RETROILUMINACION' => 69,
             'ILUMINACIÓN' => 69,
             'RGB' => 69,
-
-            // ID 70: Fuente de poder
-            'FUENTE DE PODER' => 70,
-
-            // ID 72: Conexión
             'TIPO DE CONEXIÓN' => 72,
-            'TIPO DE CONEXION' => 72,
             'CONEXIÓN' => 72,
-            'CONEXION' => 72,
 
-            // ID 80: Tipo Memoria
-            'TIPO DE MEMORIA' => 80,
-            'TIPO MEMORIA' => 80,
+            // Empaque y Dimensiones
+            'MATERIAL' => 53,
+            'POTENCIA' => 42,
+            'CONSUMO' => 42,
+            'CAPACIDAD' => 45,
+            'INTERFAZ' => 46,
+            'COMPATIBILIDAD' => 63,
+            'EMPAQUE (ALTO X ANCHO X LARGO)' => 51,
+            'EMPAQUE (ALTO x ANCHO x LARGO)' => 51,
+            'DIMENSIONES DE EMPAQUE' => 51,
+            'DIMENSIONES(PAQUETE)' => 51,
+            'PESO BRUTO' => 52,
+            'PESO(PAQUETE)' => 52,
+            'PESO DEL PAQUETE' => 52,
 
-            // ID 81: Mhz
-            'VELOCIDAD DE MEMORIA' => 81,
-            'MHZ' => 81,
+            // Componentes PC / Case
+            'FUENTE DE PODER' => 70,
+            'INCLUYE FUENTE DE PODER' => 70,
+            'VIDRIO LATERAL' => 71,
+            'TEMPERED GLASS' => 71,
+            'FORMATO DE PLACA' => 76,
+            'MOTHERBOARDS SOPORTADAS (FF)' => 76,
+            'MOTHERBOARDS SOPORTADAS' => 76,
+            'FACTOR DE FORMA' => 77,
+            'FACTOR DE FORMA DE CASE' => 77,
+            'COOLER' => 78,
+            'COOLERS' => 78,
+            'VENTILADORES ARGB INCLUIDOS' => 78,
 
-            // ID 83: VRAM
-            'VRAM' => 83,
-            'MEMORIA DE VIDEO' => 83,
-
-            // ID 85: Potencia de Carga
-            'POTENCIA DE CARGA' => 85,
-            'CORRIENTE' => 85,
-
-            // ID 86: Velocidad de Lectura
-            'VELOCIDAD DE LECTURA' => 86,
-            'TRANSFERENCIA DE DATOS' => 86,
-
-            // ID 87: Tipo De Conexion
-            'TIPO DE CONECTOR' => 87,
-            'CONECTOR' => 87,
-            'CONECTORES' => 87,
-
-            // ID 88: Presentacion
-            'PRESENTACION' => 88,
-            'PRESENTACIÓN' => 88,
-            'EMPAQUE' => 88,
-
-            // ID 90: NUCLEOS
+            // Procesador & Segmento
             'CANTIDAD DE NÚCLEOS' => 90,
             'NÚCLEOS' => 90,
             'NUCLEOS' => 90,
-
-            // ID 91: Segmento
-            'GAMA' => 91,
             'SEGMENTO' => 91,
-
-            // ID 92: Tipo de accesorio
-            'DISPOSITIVO' => 92,
-            'TIPO DE PRODUCTO' => 92,
-            'TIPO DE ACCESORIO' => 92,
+            'GAMA' => 91,
         ];
     }
 
     /**
-     * Normaliza un valor de Deltron adaptándolo a las sugerencias registradas en Unike Store.
+     * Normaliza un valor de Deltron adaptándolo a las sugerencias de la BD o reglas universales.
      */
     public function normalizarValor(int $idCaracteristica, string $valorDeltron, ?string $claveDeltron = null, array $sugerencias = []): string
     {
         $v = trim($valorDeltron);
 
-        // Si hay sugerencias en base de datos para esta característica, buscar coincidencia
+        // 1. Coincidencia directa con sugerencias de la BD
         if (!empty($sugerencias)) {
-            // Coincidencia exacta o insensible a mayúsculas
             foreach ($sugerencias as $sug) {
                 if (strcasecmp($sug, $v) === 0) {
                     return $sug;
@@ -441,52 +336,36 @@ class DeltronSpecMapperService
             }
         }
 
-        // Reglas de normalización específicas por ID de Característica:
+        // 2. Normalización universal para características comunes
         switch ($idCaracteristica) {
             case 1: // Hz
-                // Extraer el número más alto seguido de HZ o número solo (ej: "200 (QHD) ... / 144 ... HZ" -> 200 Hz o 144 Hz)
                 if (preg_match_all('/(\d{2,3})\s*(?:HZ)?/i', $v, $matches)) {
                     $nums = array_map('intval', $matches[1]);
                     rsort($nums);
-                    $maxHz = $nums[0] . ' Hz';
-                    foreach ($sugerencias as $sug) {
-                        if (str_contains($sug, (string)$nums[0])) return $sug;
-                    }
-                    return $maxHz;
+                    return $nums[0] . ' Hz';
                 }
                 break;
 
             case 2: // Pulgadas
-                // Ej: "27 PULG" -> "27'" o "27\""
                 if (preg_match('/(\d+(?:\.\d+)?)\s*(?:PULG|"|\')?/i', $v, $m)) {
-                    $num = $m[1];
-                    foreach ($sugerencias as $sug) {
-                        if (str_starts_with($sug, $num)) return $sug;
-                    }
-                    return $num . '"';
+                    return $m[1] . '"';
                 }
                 break;
 
             case 3: // Resolucion
-                // Ej: "2560 x 1440"
                 if (preg_match('/(\d{3,4}\s*x\s*\d{3,4})/i', $v, $m)) {
-                    $cleanRes = preg_replace('/\s+/', ' ', $m[1]);
-                    foreach ($sugerencias as $sug) {
-                        if (stripos($sug, $cleanRes) !== false) return $sug;
-                    }
-                    return $cleanRes;
+                    return preg_replace('/\s+/', ' ', $m[1]);
                 }
                 break;
 
             case 10: // Peso
-                // Ej: "6.59 KG" -> "6.59" o "41 GR" -> "41g"
                 if (preg_match('/([\d\.]+)\s*(KG|G|GR|GRAMOS)?/i', $v, $m)) {
-                    $cant = $m[1];
+                    $cant = (float) $m[1];
                     $unidad = strtoupper($m[2] ?? 'KG');
-                    if ($unidad === 'G' || $unidad === 'GR' || $unidad === 'GRAMOS') {
-                        return round(floatval($cant) / 1000, 3) . '';
+                    if ($unidad === 'G' || $unidad === 'GR' || $unidad === 'GRAMOS' || $cant > 100) {
+                        return (string) round($cant / 1000, 3);
                     }
-                    return $cant;
+                    return (string) $cant;
                 }
                 break;
 
@@ -496,99 +375,29 @@ class DeltronSpecMapperService
                 }
                 break;
 
-            case 18: // Tiempo de respuesta
-                if (preg_match('/([\d\.]+)\s*MS/i', $v, $m)) {
-                    $valMs = $m[1] . ' MS';
-                    foreach ($sugerencias as $sug) {
-                        if (strcasecmp($sug, $valMs) === 0) return $sug;
-                    }
-                    return $valMs;
+            case 51: // Dimensiones(paquete)
+                if (preg_match('/([\d\.]+)\s*x\s*([\d\.]+)\s*x\s*([\d\.]+)\s*(CM|MM|M)?/i', $v, $dm)) {
+                    $u = strtolower($dm[4] ?? 'cm');
+                    return "{$dm[1]} x {$dm[2]} x {$dm[3]} {$u}";
                 }
                 break;
 
-            case 21: // Panel
-                if (stripos($v, 'IPS') !== false) return 'IPS';
-                if (stripos($v, 'VA') !== false) return 'VA';
-                if (stripos($v, 'OLED') !== false) return 'OLED';
-                if (stripos($v, 'TN') !== false) return 'TN';
-                break;
-
-            case 22: // Curvo
-                if (stripos($v, 'PLANO') !== false || strtoupper($v) === 'NO') return 'No';
-                if (stripos($v, 'CURVO') !== false || stripos($v, 'CURV') !== false || strtoupper($v) === 'SI') return 'Si';
-                break;
-
-            case 30: // Tipo de teclado
-                if (stripos($v, 'MEMBRANA') !== false) return 'Membrana';
-                if (stripos($v, 'MECANIC') !== false || stripos($v, 'MECÁNIC') !== false) return 'Mecánico';
-                break;
-
-            case 53: // Material
-                if (stripos($v, 'ABS') !== false) return 'ABS';
-                if (stripos($v, 'ACERO') !== false) return 'Acero';
-                if (stripos($v, 'ALUMIN') !== false) return 'Aluminio';
-                foreach ($sugerencias as $sug) {
-                    if (strcasecmp($sug, $v) === 0 || stripos($v, $sug) !== false) return $sug;
+            case 52: // Peso(paquete)
+                if (preg_match('/([\d\.]+)/', $v, $m)) {
+                    return $m[1];
                 }
-                return mb_convert_case(mb_strtolower($v), MB_CASE_TITLE, 'UTF-8');
-
-            case 63: // Compatibilidad
-                return mb_convert_case(mb_strtolower($v), MB_CASE_TITLE, 'UTF-8');
+                break;
 
             case 69: // Led
                 if (stripos($v, 'SIN RETRO') !== false || stripos($v, 'NO') !== false) return 'Sin RGB';
-                if (stripos($v, 'RGB') !== false || stripos($v, 'SI') !== false) return 'RGB';
+                if (stripos($v, 'RGB') !== false || stripos($v, 'SI') !== false || stripos($v, 'ARGB') !== false) return 'RGB';
                 break;
 
-            case 72: // Conexión (alineado con Falabella: 'Bluetooth', 'Inalámbrico', 'USB')
-                if (stripos($v, 'BLUETOOTH') !== false || preg_match('/\bBT\b/i', $v)) {
-                    return 'Bluetooth';
-                }
-                if (stripos($v, 'INALAMBRIC') !== false || stripos($v, 'INALÁMBRIC') !== false || stripos($v, 'WIRELESS') !== false || stripos($v, '2.4') !== false) {
-                    return 'Inalámbrico';
-                }
-                if (stripos($v, 'CABLE') !== false || stripos($v, 'USB') !== false) {
-                    return 'USB';
-                }
+            case 72: // Conexión
+                if (stripos($v, 'BLUETOOTH') !== false || preg_match('/\bBT\b/i', $v)) return 'Bluetooth';
+                if (stripos($v, 'INALAMBRIC') !== false || stripos($v, 'WIRELESS') !== false || stripos($v, '2.4') !== false) return 'Inalámbrico';
+                if (stripos($v, 'CABLE') !== false || stripos($v, 'USB') !== false) return 'USB';
                 break;
-
-            case 85: // Potencia de Carga
-                if (preg_match('/\b(\d{1,3})\s*W\b/i', $v, $m)) {
-                    $valW = $m[1] . ' W';
-                    foreach ($sugerencias as $sug) {
-                        if (stripos($sug, $m[1]) !== false) return $sug;
-                    }
-                    return $valW;
-                }
-                break;
-
-            case 86: // Velocidad de Lectura
-                if (stripos($v, '480') !== false) {
-                    return '480 Mbps';
-                }
-                foreach ($sugerencias as $sug) {
-                    if (stripos($v, $sug) !== false) return $sug;
-                }
-                break;
-
-            case 87: // Tipo De Conexion
-                if (stripos($v, 'LIGHTNING') !== false && (stripos($v, 'TIPO C') !== false || stripos($v, 'TYPE C') !== false || stripos($v, 'USB-C') !== false || preg_match('/\bC\b/i', $v))) {
-                    return 'C a Lightning';
-                }
-                if ((stripos($v, 'TIPO C') !== false || stripos($v, 'TYPE C') !== false) && (stripos($v, 'TIPO C') !== false || stripos($v, 'TYPE C') !== false)) {
-                    return 'C a C';
-                }
-                foreach ($sugerencias as $sug) {
-                    if (strcasecmp($sug, $v) === 0 || stripos($v, $sug) !== false) return $sug;
-                }
-                break;
-
-            case 88: // Presentación
-                $vUpper = strtoupper($v);
-                foreach ($sugerencias as $sug) {
-                    if (strcasecmp($sug, $v) === 0) return $sug;
-                }
-                return $vUpper;
 
             case 91: // Segmento
                 if (stripos($v, 'GAM') !== false) return 'Gamer';
@@ -597,34 +406,39 @@ class DeltronSpecMapperService
                 break;
         }
 
-        // Si no aplica regla específica, recortar a máximo 100 caracteres para la base de datos
         return mb_substr($v, 0, 100);
     }
 
     /**
-     * Mapea el conjunto de especificaciones extraídas de Deltron hacia las IDs de características de Unike.
-     * Si se proporciona $idGrupo o $textoCompleto, se priorizan e infieren características complementarias.
+     * Mapea especificaciones técnicas de Deltron hacia las IDs de características de Unike Store,
+     * coordinando con el módulo hijo de la categoría del producto.
      */
     public function mapearEspecificaciones(array $rawSpecs, ?int $idGrupo = null, ?string $textoCompleto = null): array
     {
         $mapaClaves = $this->getMapaClavesACaracteristica();
+        $categoryClassifier = $idGrupo ? $this->classifierService->resolveClassifierForGrupo($idGrupo) : null;
+
+        // Incorporar claves especializadas del módulo hijo si existen
+        if ($categoryClassifier) {
+            $mapaClaves = array_merge($mapaClaves, $categoryClassifier->getMapaClavesCategoria($idGrupo));
+        }
+
         $resultado = [];
 
-        // Obtener sugerencias agrupadas por idCaracteristica para normalizar valores de tipo FILTRO
+        // Obtener sugerencias de características para normalización
         $sugerenciasPorChar = [];
         $suggs = Caracteristicas_Sugerencias::all();
         foreach ($suggs as $sug) {
             $sugerenciasPorChar[$sug->idCaracteristica][] = $sug->sugerencia;
         }
 
-        // 1. Procesar dimensiones compuestas si existen (ej: "ALTURA x ANCHO x LARGO: 2.80 x 15.00 x 32.80 CM")
+        // 1. Dimensiones físicas compuestas universales (Alto 11, Ancho 12, Largo 13)
         foreach ($rawSpecs as $k => $v) {
             if (str_contains($k, 'DIMENSI')) {
                 if (preg_match('/([\d\.]+)\s*x\s*([\d\.]+)\s*x\s*([\d\.]+)\s*(CM|MM|M)?/i', $v, $dm)) {
                     $u = strtolower($dm[4] ?? 'cm');
                     $nums = [(float)$dm[1], (float)$dm[2], (float)$dm[3]];
                     sort($nums);
-                    // Menor: Alto (11), Medio: Ancho (12), Mayor: Largo (13)
                     $resultado[11] = $nums[0] . ' ' . $u;
                     $resultado[12] = $nums[1] . ' ' . $u;
                     $resultado[13] = $nums[2] . ' ' . $u;
@@ -632,15 +446,23 @@ class DeltronSpecMapperService
             }
         }
 
-        // 2. Mapear claves directas
+        // 2. Mapeo de claves directas
         foreach ($rawSpecs as $claveDeltron => $valorDeltron) {
             $claveUpper = strtoupper(trim($claveDeltron));
             if (isset($mapaClaves[$claveUpper])) {
                 $idCar = $mapaClaves[$claveUpper];
-                // Solo si no fue asignado previamente
                 if (!isset($resultado[$idCar])) {
                     $suggsChar = $sugerenciasPorChar[$idCar] ?? [];
-                    $valNorm = $this->normalizarValor($idCar, $valorDeltron, $claveUpper, $suggsChar);
+
+                    // Permitir que el hijo normalice primero según sus reglas de negocio
+                    $valNorm = $categoryClassifier
+                        ? $categoryClassifier->normalizarValorCategoria($idCar, $valorDeltron, $claveUpper, $suggsChar)
+                        : null;
+
+                    if ($valNorm === null) {
+                        $valNorm = $this->normalizarValor($idCar, $valorDeltron, $claveUpper, $suggsChar);
+                    }
+
                     if ($valNorm !== '') {
                         $resultado[$idCar] = $valNorm;
                     }
@@ -648,51 +470,41 @@ class DeltronSpecMapperService
             }
         }
 
-        // 3. Inferencias para cables o conectores si no se mapearon directamente
-        $textoAnalisis = ($textoCompleto ?? '') . "\n" . ($rawSpecs['CARACTERISTICAS'] ?? '');
+        // 3. Consolidación de puertos (ID 17) si vino en bloque [PUERTOS] o desglose
+        if (empty($resultado[17])) {
+            $portsFound = [];
+            if ($textoCompleto && preg_match('/\[PUERTOS\](.*?)(?:\[|\Z)/si', $textoCompleto, $mPortsBlock)) {
+                if (preg_match_all('/^[ \t]*-[ \t]*([^:\n]+):[ \t]*([^\n]+)$/m', $mPortsBlock[1], $mpLines)) {
+                    foreach ($mpLines[1] as $idxP => $kp) {
+                        $portsFound[] = trim($kp) . ': ' . trim($mpLines[2][$idxP]);
+                    }
+                }
+            }
 
-        // Tipo De Conexión (ID 87): ej "Tipo C a Lightning", "Tipo C a Tipo C"
-        if (empty($resultado[87]) && $textoAnalisis !== '') {
-            if (preg_match('/(?:tipo\s*c|type-?c|c)\s*(?:a|to|-)\s*lightning/i', $textoAnalisis)) {
-                $resultado[87] = 'C a Lightning';
-            } elseif (preg_match('/(?:tipo\s*c|type-?c|c)\s*(?:a|to|-)\s*(?:tipo\s*c|type-?c|c)/i', $textoAnalisis)) {
-                $resultado[87] = 'C a C';
+            if (empty($portsFound)) {
+                foreach ($rawSpecs as $rk => $rv) {
+                    $rkUpper = strtoupper(trim($rk));
+                    if (preg_match('/^(AUDIO|USB\s*\d|TYPE-C|TIPO-C|JACK\s*AUDIO|HDMI|DISPLAYPORT)\b/i', $rkUpper)) {
+                        $portsFound[] = trim($rk) . ': ' . trim($rv);
+                    }
+                }
+            }
+
+            if (!empty($portsFound)) {
+                $resultado[17] = implode(', ', $portsFound);
             }
         }
 
-        // Potencia de Carga (ID 85): ej "20W Máx", "60W"
-        if (empty($resultado[85]) && $textoAnalisis !== '') {
-            if (preg_match('/\b(\d{1,3})\s*W\s*(?:máx|max|máximo)?\b/i', $textoAnalisis, $wm)) {
-                $resultado[85] = $wm[1] . ' W';
-            }
-        }
-
-        // Velocidad de Lectura / transferencia (ID 86): ej "480MB/s", "480 Mbps"
-        if (empty($resultado[86]) && $textoAnalisis !== '') {
-            if (preg_match('/\b(480\s*mb(?:\/s|ps)?)\b/i', $textoAnalisis)) {
-                $resultado[86] = '480 Mbps';
-            }
-        }
-
-        // Longitud de cable (ID 27): ej "2 MTS", "2 metros"
-        if (empty($resultado[27]) && $textoAnalisis !== '') {
-            if (preg_match('/\b(\d+(?:\.\d+)?)\s*(?:mts?|metros?)\b/i', $textoAnalisis, $lm)) {
-                $resultado[27] = $lm[1] . ' MTS';
-            }
-        }
-
-        // 4. Delegar enriquecimiento y normalización modular por categoría (ej. Periféricos -> Falabella-ready)
-        if ($idGrupo) {
-            $categoryClassifier = $this->classifierService->resolveClassifierForGrupo($idGrupo);
-            if ($categoryClassifier) {
-                $resultado = $categoryClassifier->enrichAndNormalizeSpecs(
-                    $idGrupo,
-                    $resultado,
-                    $rawSpecs,
-                    $textoAnalisis,
-                    $sugerenciasPorChar
-                );
-            }
+        // 4. Delegar enriquecimiento, inferencia y validaciones al módulo hijo de la categoría
+        if ($categoryClassifier && $idGrupo) {
+            $textoAnalisis = ($textoCompleto ?? '') . "\n" . ($rawSpecs['CARACTERISTICAS'] ?? '');
+            $resultado = $categoryClassifier->enrichAndNormalizeSpecs(
+                $idGrupo,
+                $resultado,
+                $rawSpecs,
+                $textoAnalisis,
+                $sugerenciasPorChar
+            );
         }
 
         return $resultado;
@@ -706,9 +518,8 @@ class DeltronSpecMapperService
         ?string $deltronSku = null,
         bool $soloCache = false,
         bool $forceOverwrite = false
-    ): array
-    {
-        // 1. Obtener el SKU de Deltron
+    ): array {
+        // 1. Obtener SKU de Deltron
         $sku = $deltronSku;
         if (empty($sku)) {
             $invProvSku = InventarioProveedorSku::whereHas('inventarioProveedor', function ($q) use ($producto) {
@@ -721,7 +532,6 @@ class DeltronSpecMapperService
         }
 
         if (empty($sku)) {
-            // Intentar buscar por Part Number o Modelo en fichas locales
             $cleanPn = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($producto->partNumber ?? '')));
             $cleanMod = preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($producto->modelo ?? '')));
             $fichasFiles = glob(storage_path('app/deltron_fichas/*.json'));
@@ -750,8 +560,6 @@ class DeltronSpecMapperService
         }
 
         // 2. Obtener ficha oficial de Deltron
-        // En modo soloCache (importación masiva) solo se usa el snapshot local para no agotar
-        // el límite de la API de Deltron (60 llamadas/hora).
         $ficha = null;
         if (!empty($sku)) {
             if ($soloCache) {
@@ -775,7 +583,7 @@ class DeltronSpecMapperService
         // 3. Extraer y mapear especificaciones
         $rawSpecsHtml = $ficha ? $this->parseSpecsHtml($ficha['specs_html'] ?? '') : [];
         $rawSpecsText = $ficha ? $this->parseSpecsText(($ficha['descripcion_completa'] ?? '') . "\n" . ($ficha['specs_texto'] ?? '')) : [];
-        $rawSpecs = array_merge($rawSpecsText, $rawSpecsHtml); // HTML sobrescribe/prioriza
+        $rawSpecs = array_merge($rawSpecsText, $rawSpecsHtml);
 
         $textoCompleto = ($producto->nombreProducto ?? '') . "\n" .
                          ($producto->descripcionProducto ?? '') . "\n" .
@@ -803,11 +611,7 @@ class DeltronSpecMapperService
             ];
         }
 
-        // 4. Filtrar por características permitidas:
-        //    - Las configuradas en el grupo del producto
-        //    - Las definidas en el clasificador modular de su categoría (alineadas con los Mappers de Falabella)
-        //    - Las que el producto ya tenga asignadas actualmente en Caracteristicas_Producto
-        //    - Las universales aplicables a cualquier producto informático/electrónico
+        // 4. Filtrar por características permitidas (Grupo, Módulo Hijo, Existentes, Universales)
         $idsGrupo = \App\Models\Catalogo\Caracteristicas_Grupo::where('idGrupoProducto', $producto->idGrupo)
             ->pluck('idCaracteristica')
             ->map(fn ($id) => (int) $id)
@@ -837,7 +641,7 @@ class DeltronSpecMapperService
             ];
         }
 
-        // 5. Guardar en Caracteristicas_Producto
+        // 5. Persistir en Caracteristicas_Producto
         $insertadas = 0;
         $actualizadas = 0;
         $conservadas = 0;
@@ -856,7 +660,6 @@ class DeltronSpecMapperService
 
             if ($existente) {
                 $actual = trim((string) $existente->caracteristicaProducto);
-                // Si se fuerza sobrescritura, o si estaba vacío / en "0", o si tenía un fallback genérico y Deltron provee el valor real
                 $esFallbackGenerico = in_array($actual, ['Negro', '4 cm', '26 cm', '36 cm', '0.4', '1.75', '2 cm', '24 cm', '35.9 cm'], true)
                     && $valor !== $actual;
 
@@ -887,7 +690,7 @@ class DeltronSpecMapperService
 
         return [
             'success' => true,
-            'message' => "Especificaciones desde Deltron ({$sku}): {$insertadas} nuevas, {$actualizadas} completadas, {$conservadas} conservadas (ya tenían valor).",
+            'message' => "Especificaciones desde Deltron ({$sku}): {$insertadas} nuevas, {$actualizadas} completadas, {$conservadas} conservadas.",
             'sku' => $sku,
             'insertadas' => $insertadas,
             'actualizadas' => $actualizadas,
@@ -897,4 +700,3 @@ class DeltronSpecMapperService
         ];
     }
 }
-

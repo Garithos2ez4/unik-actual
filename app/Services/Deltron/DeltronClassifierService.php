@@ -3,9 +3,23 @@
 namespace App\Services\Deltron;
 
 use App\Models\Catalogo\Producto;
-use App\Services\Deltron\Classifiers\ComputadorasClassifier;
-use App\Services\Deltron\Classifiers\LaptopsClassifier;
-use App\Services\Deltron\Classifiers\PerifericosClassifier;
+use App\Services\Deltron\Categories\Cat01_Laptops\LaptopsCategoryMapper;
+use App\Services\Deltron\Categories\Cat02_Computadoras\ComputadorasCategoryMapper;
+use App\Services\Deltron\Categories\Cat03_Monitores\MonitoresCategoryMapper;
+use App\Services\Deltron\Categories\Cat04_Perifericos\PerifericosCategoryMapper;
+use App\Services\Deltron\Categories\Cat05_Belleza\BellezaCategoryMapper;
+use App\Services\Deltron\Categories\Cat06_Impresoras\ImpresorasCategoryMapper;
+use App\Services\Deltron\Categories\Cat07_Redes\RedesCategoryMapper;
+use App\Services\Deltron\Categories\Cat08_ComponentesPc\ComponentesPcCategoryMapper;
+use App\Services\Deltron\Categories\Cat09_Smartphones\SmartphonesCategoryMapper;
+use App\Services\Deltron\Categories\Cat10_Cables\CablesCategoryMapper;
+use App\Services\Deltron\Categories\Cat11_RepuestosLaptop\RepuestosLaptopCategoryMapper;
+use App\Services\Deltron\Categories\Cat12_RepuestosImpresoraTinta\RepuestosImpresoraTintaCategoryMapper;
+use App\Services\Deltron\Categories\Cat13_RepuestosImpresoraDeLaser\RepuestosImpresoraDeLaserCategoryMapper;
+use App\Services\Deltron\Categories\Cat14_SuministrosConsumibles\SuministrosConsumiblesCategoryMapper;
+use App\Services\Deltron\Categories\Cat15_RepuestosScanner\RepuestosScannerCategoryMapper;
+use App\Services\Deltron\Categories\Cat16_InsumosHerramientasImpresoras\InsumosHerramientasImpresorasCategoryMapper;
+use App\Services\Deltron\Categories\Cat17_RepuestosImpresoraLaser\RepuestosImpresoraLaserCategoryMapper;
 use App\Services\Deltron\Contracts\DeltronCategoryClassifierInterface;
 
 class DeltronClassifierService
@@ -13,23 +27,39 @@ class DeltronClassifierService
     /** @var DeltronCategoryClassifierInterface[] */
     protected array $classifiers = [];
 
-    protected ComputadorasClassifier $computadorasClassifier;
-    protected LaptopsClassifier $laptopsClassifier;
-    protected PerifericosClassifier $perifericosClassifier;
-
     public function __construct()
     {
-        $this->computadorasClassifier = new ComputadorasClassifier();
-        $this->laptopsClassifier     = new LaptopsClassifier();
-        $this->perifericosClassifier = new PerifericosClassifier();
-
-        // Registro modular de clasificadores por categoría (estilo Falabella Mappers)
-        // Computadoras y Laptops se ejecutan antes que Periféricos para evitar colisiones
+        // Registro de los 17 clasificadores/mappers modulares por categoría
+        // Ordenados estratégicamente para evitar colisiones entre categorías específicas y generales
         $this->classifiers = [
-            $this->computadorasClassifier,
-            $this->laptopsClassifier,
-            $this->perifericosClassifier,
+            new LaptopsCategoryMapper(),                       // Cat 1
+            new ComputadorasCategoryMapper(),                  // Cat 2
+            new ComponentesPcCategoryMapper(),                 // Cat 8
+            new MonitoresCategoryMapper(),                     // Cat 3
+            new ImpresorasCategoryMapper(),                    // Cat 6
+            new RedesCategoryMapper(),                         // Cat 7
+            new SmartphonesCategoryMapper(),                   // Cat 9
+            new CablesCategoryMapper(),                        // Cat 10
+            new PerifericosCategoryMapper(),                   // Cat 4
+            new BellezaCategoryMapper(),                       // Cat 5
+            new RepuestosLaptopCategoryMapper(),               // Cat 11
+            new RepuestosImpresoraTintaCategoryMapper(),       // Cat 12
+            new RepuestosImpresoraDeLaserCategoryMapper(),     // Cat 13
+            new SuministrosConsumiblesCategoryMapper(),        // Cat 14
+            new RepuestosScannerCategoryMapper(),              // Cat 15
+            new InsumosHerramientasImpresorasCategoryMapper(), // Cat 16
+            new RepuestosImpresoraLaserCategoryMapper(),       // Cat 17
         ];
+    }
+
+    /**
+     * Retorna todos los clasificadores registrados.
+     *
+     * @return DeltronCategoryClassifierInterface[]
+     */
+    public function getClassifiers(): array
+    {
+        return $this->classifiers;
     }
 
     /**
@@ -51,8 +81,26 @@ class DeltronClassifierService
     }
 
     /**
+     * Resuelve el clasificador para un idCategoria dado.
+     */
+    public function resolveClassifierForCategoria(?int $idCategoria): ?DeltronCategoryClassifierInterface
+    {
+        if (!$idCategoria) {
+            return null;
+        }
+
+        foreach ($this->classifiers as $classifier) {
+            if ($classifier->getCategoriaId() === $idCategoria) {
+                return $classifier;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Clasifica un item de Deltron en el grupo/categoria correspondiente de Unike Store
-     * cruzando category_name, subcategory_name y titulo comercial.
+     * cruzando category_name, subcategory_name y titulo comercial a través de los 17 módulos hijos.
      */
     public function clasificarGrupoSugerido(array $item, $grupos): array
     {
@@ -71,7 +119,7 @@ class DeltronClassifierService
 
         $idGrupoSugerido = null;
 
-        // 1. Reglas de prioridad temprana de los clasificadores modulares (Mochilas/Maletas, Combos, Accesorios de Laptops)
+        // 1. Reglas de prioridad temprana de los 17 módulos hijos
         foreach ($this->classifiers as $classifier) {
             $earlyMatch = $classifier->classifyEarly($context);
             if ($earlyMatch !== null) {
@@ -80,7 +128,7 @@ class DeltronClassifierService
             }
         }
 
-        // 2. Clasificación principal de categorías modulares (Laptops, Periféricos, etc.)
+        // 2. Clasificación principal de las 17 categorías
         if ($idGrupoSugerido === null) {
             foreach ($this->classifiers as $classifier) {
                 $matchedGrupo = $classifier->classify($context);
@@ -91,142 +139,9 @@ class DeltronClassifierService
             }
         }
 
-        // 3. Reglas de compatibilidad para categorías pendientes de modularizar
-        if ($idGrupoSugerido === null && (str_contains($catDeltron, 'FAN COOLER') || str_contains($titulo, 'COOLER PARA CPU') || str_contains($titulo, 'COOLER PARA PROCESADOR') || str_contains($subDeltron, 'COOLER LIQUIDO') || str_contains($subDeltron, 'FAN COOLER'))) {
-            $idGrupoSugerido = 56; // Coolers (Componentes PC)
-        }
-        // 8. Deltron Category: CPUS (MICROPROCESADORES)
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'CPU') || str_contains($catDeltron, 'MICROPROCESADOR') || str_contains($subDeltron, 'CPU AMD') || str_contains($subDeltron, 'CPU INTEL') || str_starts_with($name, 'CPAM') || str_starts_with($name, 'CPIN') || str_contains($titulo, 'PROCESADOR AMD') || str_contains($titulo, 'PROCESADOR INTEL'))) {
-            $idGrupoSugerido = 49; // Procesadores (Cat Componentes PC)
-        }
-        // 9. Deltron Category: TELEFONOS CELULARES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'TELEFONOS CELULARES') || str_contains($catDeltron, 'SMARTPHONE') || str_contains($subDeltron, 'CELULAR') || str_contains($subDeltron, 'SMARTPHONE'))) {
-            if (str_contains($catDeltron, 'ACCESORIO') || str_contains($subDeltron, 'ACCESORIO')) {
-                if (str_contains($titulo, 'CARGADOR') || str_contains($name, 'ADAP')) $idGrupoSugerido = 67; // Cargadores
-                elseif (str_contains($titulo, 'CASE') || str_contains($titulo, 'FUNDA') || str_contains($titulo, 'CARCASA')) $idGrupoSugerido = 66; // Carcasas
-                elseif (str_contains($titulo, 'CABLE')) $idGrupoSugerido = 68; // Cables de datos
-                else $idGrupoSugerido = 67; // Cargadores
-            } else {
-                $idGrupoSugerido = 64; // Celulares (Cat Smartphones)
-            }
-        }
-        // 10. Deltron Category: TELEVISORES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'TELEVISOR') || str_contains($subDeltron, 'TELEVISOR') || str_starts_with($name, 'TV '))) {
-            $idGrupoSugerido = 16; // Televisores (Cat Monitores)
-        }
-        // 13. Deltron Category: TABLETS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'TABLET') || str_contains($subDeltron, 'TABLET') || 
-            str_contains($titulo, 'TABLET') || str_starts_with($name, 'TB ') || str_starts_with($name, 'TAB '))) {
-            $idGrupoSugerido = 65; // Tablet (Cat 9 Smartphones)
-        }
-        // 14. Deltron Category: ESCANERES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'ESCANER') || str_contains($subDeltron, 'ESCANER') || str_contains($titulo, 'ESCANER') || str_contains($titulo, 'ESCÁNER') || str_contains($titulo, 'SCANNER') || str_contains($subDeltron, 'SCAN/COD/BARRAS'))) {
-            $idGrupoSugerido = 97; // ESCANER (Cat Impresoras)
-        }
-        // 15. Deltron Category: PROYECTORES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'PROYECTOR') || str_contains($subDeltron, 'PROYECTOR') || str_contains($titulo, 'PROYECTOR') || str_starts_with($name, 'MMVDEP') || str_starts_with($name, 'PREP'))) {
-            $idGrupoSugerido = 17; // Proyectores (Cat Monitores)
-        }
-        // 16. Deltron Category: IMPRESORAS Y SUMINISTROS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'IMPRESORA') || str_contains($subDeltron, 'IMPRESORA') || str_contains($titulo, 'PRINTER'))) {
-            if (str_contains($titulo, 'LASER') || str_contains($subDeltron, 'LASER')) $idGrupoSugerido = 41; // Impresora Laser
-            elseif (str_contains($titulo, 'TERMICA') || str_contains($titulo, 'TERM') || str_contains($subDeltron, 'TERMICA')) $idGrupoSugerido = 40; // Impresora Termica
-            elseif (str_contains($titulo, 'MATRICIAL')) $idGrupoSugerido = 43; // Impresora Matricial
-            else $idGrupoSugerido = 42; // Impresora Tinta
-        }
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'SUMINISTROS') || str_contains($subDeltron, 'SUMINIST') || str_contains($catDeltron, 'IMPRESION DE MANUALIDADES'))) {
-            if (str_contains($subDeltron, 'TONER') || str_contains($titulo, 'TONER')) $idGrupoSugerido = 173; // Toner Original
-            elseif (str_contains($subDeltron, 'TINTAS') || str_contains($subDeltron, 'BOTELLAS') || str_contains($titulo, 'TINTA') || str_contains($titulo, 'BOTELLA')) $idGrupoSugerido = 44; // Tintas
-            elseif (str_contains($titulo, 'CINTA')) $idGrupoSugerido = 83; // Cinta para impresora matricial
-            else $idGrupoSugerido = 44;
-        }
-        // 17. Deltron Category: MONITORES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'MONITOR') || str_contains($subDeltron, 'MONITOR') || str_contains($titulo, 'MONITOR') || str_contains($catDeltron, 'DIGITAL SIGNAGE'))) {
-            if (str_contains($catDeltron, 'RACK') || str_contains($subDeltron, 'RACK') || str_contains($titulo, 'RACK') || str_contains($titulo, 'SOPORTE')) $idGrupoSugerido = 19; // Soporte Rack
-            elseif (str_contains($titulo, 'PORTATIL') || str_contains($titulo, 'PORTÁTIL')) $idGrupoSugerido = 82; // Monitor portátil
-            elseif (str_contains($titulo, '4K') || str_contains($titulo, 'UHD')) $idGrupoSugerido = 13; // Monitor UHD 4K
-            elseif (str_contains($titulo, 'QHD') || str_contains($titulo, '2K')) $idGrupoSugerido = 12; // Monitor QHD
-            elseif (str_contains($titulo, 'CURVO')) $idGrupoSugerido = 14; // Monitor Curvo
-            elseif (str_contains($titulo, 'ULTRAWIDE')) $idGrupoSugerido = 15; // Monitor UltraWide
-            else $idGrupoSugerido = 11; // Monitor FHD
-        }
-        // 18. Deltron Category: TARJETAS DE VIDEO
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'TARJETAS DE VIDEO') || str_contains($catDeltron, 'DISPOSITIVOS DE VIDEO') ||
-            str_contains($subDeltron, 'VIDEO') || str_contains($titulo, 'TARJETA DE VIDEO') || 
-            str_starts_with($name, 'VGA ') || str_starts_with($name, 'VD'))) {
-            $idGrupoSugerido = 55; // Tarjetas Graficas (Cat Componentes PC)
-        }
-        // 19. Deltron Category: MOTHERBOARDS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'MOTHERBOARD') || str_contains($subDeltron, 'MB SOCKET') || str_contains($catDeltron, 'PLACA'))) {
-            $idGrupoSugerido = 50; // Placas Madre
-        }
-        // 20. Deltron Category: MEMORIAS RAM
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'MEMORIAS RAM') || str_contains($subDeltron, 'MEM DDR'))) {
-            $idGrupoSugerido = 51; // Memorias RAM
-        }
-        // 21. Deltron Category: DISCOS SOLIDOS (SSD)
-        elseif ($idGrupoSugerido === null && !str_contains($catDeltron, 'NOTEBOOK') && !str_contains($catDeltron, 'PORTATIL') && !str_contains($catDeltron, 'COMPUTADORA') && !str_starts_with($name, 'NB ') && !str_starts_with($titulo, 'NB ') && (str_contains($catDeltron, 'DISCO SOLIDO') || str_contains($catDeltron, 'UNIDADES DE DISCO SOLIDO') || (str_contains($subDeltron, 'SSD') && !str_contains($subDeltron, 'NOTEBOOK')) || str_contains($catDeltron, 'STORAGE') || str_starts_with($titulo, 'SSD ') || str_starts_with($name, 'SSD '))) {
-            $idGrupoSugerido = 94; // Disco Solido
-        }
-        // 22. Deltron Category: DISCOS DUROS INTERNOS / EXTERNOS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'DISCOS DUROS') || str_contains($subDeltron, 'DISCO DURO'))) {
-            $idGrupoSugerido = 52; // Discos Duro
-        }
-        // 23. Deltron Category: CASES & FUENTES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'CASES (CAJAS)') || str_contains($catDeltron, 'CASES, FUENTE') || str_contains($catDeltron, 'CASES'))) {
-            if (str_contains($catDeltron, 'CASES, FUENTE') || (str_contains($subDeltron, 'FUENTE') && !str_contains($subDeltron, 'SIN FUENTE'))) {
-                $idGrupoSugerido = 53; // Fuente de poder
-            } else {
-                $idGrupoSugerido = 54; // Case
-            }
-        }
-        // 26. Deltron Category: SOFTWARE / LICENCIAS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'SOFTWARE') || str_contains($catDeltron, 'LICENCIA') || 
-            str_contains($subDeltron, 'SOFTWARE') || str_contains($subDeltron, 'LICENCIA') || str_contains($subDeltron, 'ESD') || str_contains($subDeltron, 'OFFICE') ||
-            str_contains($catDeltron, 'MICROSOFT') ||
-            str_contains($titulo, 'WINDOWS') || str_contains($titulo, 'OFFICE') || str_contains($titulo, 'ANTIVIRUS') ||
-            str_contains($titulo, 'LICENCIA') || str_contains($titulo, 'MICROSOFT 365') || str_contains($titulo, 'M365') ||
-            str_contains($name, 'OFFICE') || str_contains($name, 'MICROSOFT 365') || str_contains($name, 'LIC') ||
-            str_starts_with($name, 'WIN ') || str_starts_with($name, 'WIN11') || str_starts_with($name, 'MS'))) {
-            $idGrupoSugerido = 62; // Software
-        }
-        // 27. Deltron Category: SERVIDORES
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'SERVIDORES') || str_contains($subDeltron, 'SERVIDORES'))) {
-            $idGrupoSugerido = 61; // Servidores
-        }
-        // 28. Deltron Category: REDES LAN/WAN & INALAMBRICAS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'REDES LAN/WAN') || str_contains($catDeltron, 'REDES INALAMBRICAS') || str_contains($subDeltron, 'RED'))) {
-            if (str_contains($titulo, 'SWITCH')) $idGrupoSugerido = 63; // Switch
-            elseif (str_contains($titulo, 'CAMARA') || str_contains($subDeltron, 'CAMARA')) $idGrupoSugerido = 58; // Camaras de seguridad
-            else $idGrupoSugerido = 59; // Router WIFI
-        }
-        // 29. Deltron Category: CABLES / ADAPTADORES / MISCELANEOS
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'CABLEADO') || str_contains($titulo, 'CABLE') || str_contains($titulo, 'PATCH CORD'))) {
-            $idGrupoSugerido = 68; // Cables de datos
-        }
-        elseif ($idGrupoSugerido === null && (str_contains($titulo, 'ADAPTADOR') || str_contains($titulo, 'HUB') || str_contains($titulo, 'MULTIPUERTO'))) {
-            if (str_contains($titulo, 'RED') || str_contains($titulo, 'ETHERNET') || str_contains($titulo, 'RJ45')) $idGrupoSugerido = 72; // Adaptador de red
-            elseif (str_contains($titulo, 'HDMI') || str_contains($titulo, 'VGA') || str_contains($titulo, 'DISPLAYPORT')) $idGrupoSugerido = 74; // Adaptador de video
-            elseif (str_contains($titulo, 'HUB') || str_contains($titulo, 'MULTIPUERTO')) $idGrupoSugerido = 87; // Multipuertos
-            else $idGrupoSugerido = 68; // Cables de datos
-        }
-        // 30. Deltron Category: MEMORIAS FLASH
-        elseif ($idGrupoSugerido === null && (str_contains($catDeltron, 'MEMORIAS FLASH') || str_contains($subDeltron, 'MEM FLASH') || str_contains($name, 'USB DRIVE'))) {
-            if (str_contains($subDeltron, 'SECURE DIGITAL') || str_contains($titulo, 'MICROSD') || str_contains($titulo, 'MEMORIA SD')) {
-                $idGrupoSugerido = 39; // Memorias SD
-            } else {
-                $idGrupoSugerido = 38; // Memorias USB
-            }
-        }
-        // 34. SMART HOME / IOT
-        elseif ($idGrupoSugerido === null && str_contains($catDeltron, 'SMART HOME')) {
-            if (str_contains($titulo, 'CAMARA')) $idGrupoSugerido = 58; // Camaras de seguridad
-            elseif (str_contains($titulo, 'FOCO') || str_contains($titulo, 'BOMBILLA')) $idGrupoSugerido = 91; // Foco Smart
-            else $idGrupoSugerido = 59; // Router WIFI
-        }
-
+        // Fallback por defecto si no coincidió con ninguna categoría
         if ($idGrupoSugerido === null) {
-            $idGrupoSugerido = PerifericosClassifier::GRUPO_MOUSES; // Default: Perifericos / Mouses (25)
+            $idGrupoSugerido = PerifericosCategoryMapper::GRUPO_MOUSES; // 25
         }
 
         $grupoObj = $grupos->get($idGrupoSugerido);
@@ -273,7 +188,7 @@ class DeltronClassifierService
             }
         }
 
-        return 1; // Fallback generico
+        return 1;
     }
 
     /**
@@ -294,8 +209,7 @@ class DeltronClassifierService
     }
 
     /**
-     * Detecta si un producto de Deltron corresponde a una variante (principalmente color)
-     * basandose en sufijos de SKU, tokens de Deltron y nombre/descripcion.
+     * Detecta si un producto de Deltron corresponde a una variante.
      */
     public static function detectarVarianteDeltron(array $item): ?array
     {
@@ -370,7 +284,6 @@ class DeltronClassifierService
             'N'   => ['#212529', 'Negro'],
         ];
 
-        // 1. Buscar token al final del nombre oficial de Deltron
         $words = preg_split('/[\s,\-\/]+/', $name);
         $lastWord = end($words);
         foreach ($colorMap as [$token, $hex, $label]) {
@@ -379,7 +292,6 @@ class DeltronClassifierService
             }
         }
 
-        // 2. Comparar SKU con part_number para aislar el sufijo
         if (!empty($pn)) {
             $cleanPn = preg_replace('/[^A-Z0-9]/', '', $pn);
             $pos = strpos($sku, $cleanPn);
@@ -392,7 +304,6 @@ class DeltronClassifierService
             }
         }
 
-        // 3. Sufijo directo al final del SKU
         foreach ($shortSkuSuffixes as $suf => [$hex, $label]) {
             if (str_ends_with($sku, $suf)) {
                 return ['tipo' => 'COLOR', 'valor' => $label, 'hex' => $hex, 'token' => $suf];
