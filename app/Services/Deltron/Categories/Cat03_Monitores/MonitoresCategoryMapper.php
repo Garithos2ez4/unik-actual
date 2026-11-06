@@ -57,22 +57,42 @@ class MonitoresCategoryMapper extends AbstractCategorySpecMapper
         $titulo     = $context['titulo'] ?? '';
 
         // Soportes / Racks
+        // Candado estricto: NUNCA confundir con "MOUSE, TRACKBALL, PUNTEROS" que contiene la subcadena "RACK" dentro de "TRACKBALL"
         if (
-            str_contains($catDeltron, 'RACK') ||
-            str_contains($subDeltron, 'RACK') ||
-            str_contains($titulo, 'RACK') ||
-            str_contains($titulo, 'SOPORTE PARA MONITOR') ||
-            str_contains($titulo, 'SOPORTE DE TV') ||
-            str_contains($titulo, 'BRAZO PARA MONITOR')
+            !str_contains($catDeltron, 'MOUSE') &&
+            !str_contains($catDeltron, 'TRACKBALL') &&
+            !str_contains($catDeltron, 'PUNTERO') &&
+            !str_contains($subDeltron, 'MOUSE') &&
+            !str_contains($titulo, 'MOUSE') &&
+            !str_contains($titulo, 'MOUSEPAD') &&
+            !str_contains($titulo, 'PAD') &&
+            !str_contains($titulo, 'BACKPACK') &&
+            !str_contains($titulo, 'MOCHILA') &&
+            !str_contains($titulo, 'MALET')
         ) {
-            return self::GRUPO_SOPORTE_RACK;
+            if (
+                preg_match('/\b(RACK|RACKS)\b/', $catDeltron) ||
+                preg_match('/\b(RACK|RACKS)\b/', $subDeltron) ||
+                preg_match('/\b(RACK|RACKS)\b/', $titulo) ||
+                str_contains($titulo, 'SOPORTE PARA MONITOR') ||
+                str_contains($titulo, 'SOPORTE DE TV') ||
+                str_contains($titulo, 'BRAZO PARA MONITOR') ||
+                str_contains($subDeltron, 'RACKS PARA')
+            ) {
+                return self::GRUPO_SOPORTE_RACK;
+            }
         }
 
-        // Proyectores
+        // Proyectores y Ecrans (Pantallas de Proyección)
         if (
             str_contains($catDeltron, 'PROYECTOR') ||
+            str_contains($catDeltron, 'PROYECCION') ||
             str_contains($subDeltron, 'PROYECTOR') ||
-            str_contains($titulo, 'PROYECTOR')
+            str_contains($subDeltron, 'ECRAN') ||
+            str_contains($titulo, 'PROYECTOR') ||
+            str_contains($titulo, 'ECRAN') ||
+            str_contains($titulo, 'PANTALLA DE PROYECCION') ||
+            str_contains($titulo, 'TELON')
         ) {
             return self::GRUPO_PROYECTORES;
         }

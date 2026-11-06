@@ -534,19 +534,26 @@ class IngresoController extends Controller
     }
 
     /**
-     * AJAX: Buscar productos que pueden ser padres (packs) filtrados por grupos específicos.
+     * AJAX: Buscar productos que pueden ser padres (packs) configurados en la base de datos.
      */
     public function buscarPadresPackAjax(Request $request)
     {
         $query = $request->input('query');
         if (empty($query)) return response()->json([]);
 
-        // IDs de grupos permitidos: Cabezales, Tintas, Cartuchos...
-        $gruposPermitidos = [124, 155, 156, 157, 158, 159, 44, 78, 79];
+        // Grupos configurados como pack en ProductoPackDetalle
+        $gruposConfigurados = \App\Models\Catalogo\ProductoPackDetalle::pluck('idGrupoProducto')->toArray();
 
-        $productos = \App\Models\Catalogo\Producto::whereIn('idGrupo', $gruposPermitidos)
-            ->whereIn('idProducto', function ($q) {
+        $productos = \App\Models\Catalogo\Producto::whereIn('idProducto', function ($q) {
                 $q->select('idProductoPack')->from('ProductoPack');
+            })
+            ->when(!empty($gruposConfigurados), function ($q) use ($gruposConfigurados) {
+                $q->where(function ($sub) use ($gruposConfigurados) {
+                    $sub->whereIn('idGrupo', $gruposConfigurados)
+                        ->orWhereIn('idProducto', function ($sq) {
+                            $sq->select('idProductoPack')->from('ProductoPack');
+                        });
+                });
             })
             ->where(function ($q) use ($query) {
                 $q->where('modelo', 'like', "%$query%")

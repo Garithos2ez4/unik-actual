@@ -454,10 +454,10 @@ class DeltronImportService
                 ->when($replaceTargetId, fn($q) => $q->where('idProducto', '!=', $replaceTargetId))
                 ->exists() ||
                 InventarioProveedorSku::where('sku_proveedor', $sku)
-                    ->when($replaceTargetId, function ($q) use ($replaceTargetId) {
-                        $q->whereHas('inventarioProveedor', fn($sq) => $sq->where('idProducto', '!=', $replaceTargetId));
-                    })
-                    ->exists();
+                ->when($replaceTargetId, function ($q) use ($replaceTargetId) {
+                    $q->whereHas('inventarioProveedor', fn($sq) => $sq->where('idProducto', '!=', $replaceTargetId));
+                })
+                ->exists();
 
             if ($duplicado) {
                 continue;
@@ -502,7 +502,7 @@ class DeltronImportService
 
                         if (!$padre) {
                             $familiaKey = $itemData['familia_key'] ?? ($idMarca . '|' . $basePn);
-                            $coincidentesEnLote = array_filter($itemsAImportar, function($it) use ($familiaKey, $idMarca, $basePn) {
+                            $coincidentesEnLote = array_filter($itemsAImportar, function ($it) use ($familiaKey, $idMarca, $basePn) {
                                 $fk = $it['familia_key'] ?? ($idMarca . '|' . ($it['part_number_base'] ?? ($it['part_number'] ?? '')));
                                 return $fk === $familiaKey;
                             });
@@ -671,7 +671,23 @@ class DeltronImportService
                         \App\Models\Inventario\Liquidacion::where('idProducto', $idProducto)->delete();
                         \App\Models\Precios\PrecioTienda::where('idProducto', $idProducto)->delete();
                         \App\Models\Precios\HistorialPrecioTienda::where('idProducto', $idProducto)->delete();
-                        \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)->delete();
+                        // Eliminar publicaciones que no tengan ventas asociadas para evitar violar la Foreign Key de egresoproducto/detalleventa
+                        \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)
+                            ->whereNotExists(function ($q) {
+                                $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                                    ->from('EgresoProducto as ep')
+                                    ->whereColumn('ep.idPublicacion', 'Publicacion.idPublicacion');
+                            })
+                            ->whereNotExists(function ($q) {
+                                $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                                    ->from('DetalleVenta as dv')
+                                    ->whereColumn('dv.idPublicacion', 'Publicacion.idPublicacion');
+                            })
+                            ->delete();
+
+                        // Desactivar cualquier publicación residual con ventas históricas
+                        \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)
+                            ->update(['estado' => 0]);
                     }
 
                     // Titulo y relaciones segun si es variante de un padre o producto simple
@@ -803,13 +819,16 @@ class DeltronImportService
                     );
 
                     // 6. Autollenar especificaciones técnicas desde la ficha de Deltron
-                    //    (solo snapshot local: no consume el límite horario de la API en lotes masivos)
+                    // [DESACTIVADO]: Se comenta para optimizar consumo de memoria RAM y velocidad de creación masiva.
+                    // Las especificaciones técnicas se pueden autollenar individualmente con el botón existente en createdetails.
+                    /*
                     try {
                         $specMapper = new DeltronSpecMapperService($this->getApiService());
                         $specMapper->llenarEspecificacionesProducto($prod, $sku, true);
                     } catch (\Throwable $e) {
                         Log::warning("No se pudieron autollenar specs para {$sku}: " . $e->getMessage());
                     }
+                    */
 
                     $importados[] = [
                         'idProducto' => $idProducto,
@@ -1019,7 +1038,13 @@ class DeltronImportService
         $hashesVistos = [];
 
         $procesarSlot = function (int $slot, array &$poolUrls) use (
-            $producto, $manager, $destinationPath, $timestamp, &$updates, &$slotsLlenados, &$hashesVistos
+            $producto,
+            $manager,
+            $destinationPath,
+            $timestamp,
+            &$updates,
+            &$slotsLlenados,
+            &$hashesVistos
         ): bool {
             while (!empty($poolUrls)) {
                 $url = array_shift($poolUrls);
@@ -1169,10 +1194,10 @@ class DeltronImportService
 
         // Verificar que el SKU no esté ya vinculado a OTRO producto distinto
         $skuEnUso = InventarioProveedorSku::where(function ($q) use ($skuReal, $skuClean) {
-                $q->where('sku_proveedor', $skuReal)
-                  ->orWhere('sku_proveedor', $skuClean)
-                  ->orWhere('part_number', $skuClean);
-            })
+            $q->where('sku_proveedor', $skuReal)
+                ->orWhere('sku_proveedor', $skuClean)
+                ->orWhere('part_number', $skuClean);
+        })
             ->whereHas('inventarioProveedor', function ($q) use ($producto) {
                 $q->where('idProducto', '!=', $producto->idProducto);
             })

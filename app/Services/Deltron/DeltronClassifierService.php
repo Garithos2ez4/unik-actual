@@ -104,10 +104,10 @@ class DeltronClassifierService
      */
     public function clasificarGrupoSugerido(array $item, $grupos): array
     {
-        $catDeltron = strtoupper($item['category_name'] ?? '');
-        $subDeltron = strtoupper($item['subcategory_name'] ?? '');
-        $titulo = strtoupper(DeltronTextHelper::obtenerTituloComercialDeltron($item));
-        $name = strtoupper($item['name'] ?? '');
+        $catDeltron = DeltronTextHelper::normalizarParaBusqueda($item['category_name'] ?? '');
+        $subDeltron = DeltronTextHelper::normalizarParaBusqueda($item['subcategory_name'] ?? '');
+        $titulo = DeltronTextHelper::normalizarParaBusqueda(DeltronTextHelper::obtenerTituloComercialDeltron($item));
+        $name = DeltronTextHelper::normalizarParaBusqueda($item['name'] ?? '');
 
         $context = [
             'catDeltron' => $catDeltron,

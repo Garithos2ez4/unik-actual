@@ -58,6 +58,9 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
             str_contains($subDeltron, 'NOTEBOOK, ACCESORIOS') ||
             str_contains($subDeltron, 'ACCESORIOS NOTEBOOK')
         ) {
+            if (str_contains($titulo, 'HUB') || str_contains($name, 'HUB') || str_contains($titulo, 'MULTIPUERTO') || str_contains($titulo, 'DOCKING')) {
+                return 87; // Multipuertos (Cables)
+            }
             if (str_contains($titulo, 'CARGADOR') || str_contains($titulo, 'ADAPTADOR') || str_contains($subDeltron, 'CARGADOR') || str_contains($name, 'ADAP')) {
                 return self::GRUPO_CARGADORES_LAPTOP;
             }

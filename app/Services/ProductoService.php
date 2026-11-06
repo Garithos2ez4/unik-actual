@@ -771,6 +771,20 @@ class ProductoService implements ProductoServiceInterface
             return false;
         }
 
+        // Candado estructural: Si tiene publicaciones con ventas históricas, no puede ser reemplazado para no violar FK
+        if (\Illuminate\Support\Facades\DB::table('Publicacion as pub')
+            ->join('EgresoProducto as ep', 'ep.idPublicacion', '=', 'pub.idPublicacion')
+            ->where('pub.idProducto', $prodModel->idProducto)
+            ->exists()) {
+            return false;
+        }
+        if (\Illuminate\Support\Facades\DB::table('Publicacion as pub')
+            ->join('DetalleVenta as dv', 'dv.idPublicacion', '=', 'pub.idPublicacion')
+            ->where('pub.idProducto', $prodModel->idProducto)
+            ->exists()) {
+            return false;
+        }
+
         // Caso 1: Nunca tuvo ingresos (ni ventas con garantía vigente)
         if (!$this->productoRepository->tieneIngresos($prodModel->idProducto)) {
             return true;

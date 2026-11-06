@@ -65,10 +65,21 @@ class Inventario_Proveedor extends Model
         return $this->hasOne(InventarioProveedorSku::class, 'idInventarioProveedor', 'idInventarioProveedor')
             ->where('idProveedor', 1);
     }
-    
 
-    /**
-     * Obtener las relaciones del modelo.
-     */
-    
+    public function skus()
+    {
+        return $this->hasMany(InventarioProveedorSku::class, 'idInventarioProveedor', 'idInventarioProveedor');
+    }
+
+    public function scopeConStock($query)
+    {
+        return $query->where('stock', '>', 0);
+    }
+
+    public function scopeConSkuVinculado($query)
+    {
+        return $query->whereHas('skus', function ($q) {
+            $q->whereNotNull('sku_proveedor')->where('sku_proveedor', '!=', '');
+        });
+    }
 }

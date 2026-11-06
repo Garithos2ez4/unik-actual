@@ -188,6 +188,9 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
             str_contains($titulo, 'MICROFONO') ||
             str_contains($titulo, 'MICRÓFONO') ||
             str_contains($titulo, 'TWS') ||
+            str_contains($name, 'AUDIFONO') ||
+            str_contains($name, 'HEADSET') ||
+            str_contains($name, 'AURICULAR') ||
             str_contains($name, 'EARB')
         ) {
             if (
@@ -200,12 +203,22 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
                 return self::GRUPO_PARLANTES;
             }
 
+            // Si el título o name menciona audífono/auricular/headset, SIEMPRE es Auriculares
+            // (evita que audífonos con micrófono categorizados en Deltron como "AUDIO, MICROFONO USB" vayan a micrófonos)
             if (
-                (str_contains($titulo, 'MICROFONO') || str_contains($titulo, 'MICRÓFONO') || str_contains($subDeltron, 'MICROFONO')) &&
-                !str_contains($titulo, 'AUDIFONO') &&
-                !str_contains($titulo, 'AUDÍFONO') &&
-                !str_contains($titulo, 'HEADSET') &&
-                !str_contains($titulo, 'AURICULAR')
+                str_contains($titulo, 'AUDIFONO') ||
+                str_contains($titulo, 'AUDÍFONO') ||
+                str_contains($titulo, 'HEADSET') ||
+                str_contains($titulo, 'AURICULAR') ||
+                str_contains($name, 'AUDIFONO') ||
+                str_contains($name, 'HEADSET') ||
+                str_contains($name, 'AURICULAR')
+            ) {
+                return self::GRUPO_AURICULARES;
+            }
+
+            if (
+                (str_contains($titulo, 'MICROFONO') || str_contains($titulo, 'MICRÓFONO') || str_contains($subDeltron, 'MICROFONO') || str_contains($name, 'MICROFONO'))
             ) {
                 return self::GRUPO_MICROFONO;
             }

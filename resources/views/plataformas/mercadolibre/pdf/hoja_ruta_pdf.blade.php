@@ -153,7 +153,12 @@
                 @endif
                 <br>
                 <strong>{{ $entrega['buyer_name'] }}</strong><br>
-                <small style="color: #666;">Ord: {{ $entrega['order_id'] }}</small>
+                @if(!empty($entrega['is_pack']) && $entrega['pack_id'] !== $entrega['order_id'])
+                    <small style="color: #666;">Pack: <strong>{{ $entrega['pack_id'] }}</strong></small><br>
+                    <small style="color: #999; font-size: 9px;">Ord: {{ $entrega['order_id'] }}</small>
+                @else
+                    <small style="color: #666;">Ord: {{ $entrega['pack_id'] ?? $entrega['order_id'] }}</small>
+                @endif
             </td>
             <td>
                 {{ $entrega['destino'] }}

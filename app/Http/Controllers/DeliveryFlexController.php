@@ -99,8 +99,12 @@ class DeliveryFlexController extends Controller
                 }
             }
 
+            $packId = $payload['pack_id'] ?? null;
+
             $entregas[] = [
                 'order_id' => $order->ml_order_id,
+                'pack_id' => $packId ?: $order->ml_order_id,
+                'is_pack' => !empty($packId),
                 'buyer_name' => $order->buyer_name ?? ($order->payload['shipment']['receiver_address']['receiver_name'] ?? $order->buyer_nickname),
                 'status' => $order->status,
                 'items' => $order->items,
@@ -176,8 +180,12 @@ class DeliveryFlexController extends Controller
                 $itemsWsp[] = (object)['title' => 'Pedido WSP #' . $pedido->idPedidoWeb, 'quantity' => 1];
             }
 
+            $orderIdWsp = 'WSP-' . $pedido->idPedidoWeb;
+
             $entregas[] = [
-                'order_id' => 'WSP-' . $pedido->idPedidoWeb,
+                'order_id' => $orderIdWsp,
+                'pack_id' => $orderIdWsp,
+                'is_pack' => false,
                 'buyer_name' => $clienteNombre,
                 'status' => $pedido->estado,
                 'items' => $itemsWsp,
@@ -699,8 +707,12 @@ class DeliveryFlexController extends Controller
                 $zona = $this->determinarZona($lat, $lon);
             }
 
+            $packId = $payload['pack_id'] ?? null;
+
             $entregas[] = [
                 'order_id' => $order->ml_order_id,
+                'pack_id' => $packId ?: $order->ml_order_id,
+                'is_pack' => !empty($packId),
                 'buyer_name' => $order->buyer_name ?? ($order->payload['shipment']['receiver_address']['receiver_name'] ?? $order->buyer_nickname),
                 'status' => $order->status,
                 'items' => $order->items,
@@ -760,8 +772,12 @@ class DeliveryFlexController extends Controller
                 $itemsWsp[] = (object)['title' => 'Pedido WSP #' . $pedido->idPedidoWeb, 'quantity' => 1];
             }
 
+            $orderIdWsp = 'WSP-' . $pedido->idPedidoWeb;
+
             $entregas[] = [
-                'order_id' => 'WSP-' . $pedido->idPedidoWeb,
+                'order_id' => $orderIdWsp,
+                'pack_id' => $orderIdWsp,
+                'is_pack' => false,
                 'buyer_name' => $clienteNombre,
                 'status' => $pedido->estado,
                 'items' => $itemsWsp,

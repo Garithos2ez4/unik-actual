@@ -5,6 +5,23 @@ namespace App\Services\Deltron;
 class DeltronTextHelper
 {
     /**
+     * Normaliza un texto para comparaciones y búsquedas de clasificación:
+     * mayúsculas limpias, sin acentos (Á->A, etc.) y sin espacios repetidos.
+     */
+    public static function normalizarParaBusqueda(?string $texto): string
+    {
+        if (empty($texto)) {
+            return '';
+        }
+        $texto = mb_strtoupper(trim(self::stripEmojis($texto)), 'UTF-8');
+        return str_replace(
+            ['Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ', 'á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['A', 'E', 'I', 'O', 'U', 'U', 'N', 'A', 'E', 'I', 'O', 'U', 'U', 'N'],
+            $texto
+        );
+    }
+
+    /**
      * Limpia emojis y caracteres UTF-8 de 4 bytes para total compatibilidad con bases de datos en HostGator (utf8_general_ci / utf8mb3).
      */
     public static function stripEmojis(?string $string): ?string
