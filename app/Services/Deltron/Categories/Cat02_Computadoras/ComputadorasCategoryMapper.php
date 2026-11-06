@@ -90,18 +90,33 @@ class ComputadorasCategoryMapper extends AbstractCategorySpecMapper
         $sku        = strtoupper($context['item']['sku'] ?? '');
 
         // 1. ALL IN ONE (AIO) -> Grupo 10
-        if (
-            str_contains($catDeltron, 'ALL IN ONE') ||
-            str_contains($catDeltron, 'ALL-IN-ONE') ||
-            str_contains($subDeltron, 'ALL IN ONE') ||
-            str_contains($subDeltron, 'ALL-IN-ONE') ||
-            str_contains($subDeltron, 'AIO') ||
-            str_contains($titulo, 'ALL IN ONE') ||
-            str_contains($titulo, 'ALL-IN-ONE') ||
-            str_contains($titulo, 'AIO ') ||
-            str_starts_with($name, 'AIO ')
-        ) {
-            return self::GRUPO_PC_ALL_IN_ONE;
+        // Candado estricto: Las impresoras multifuncionales de tinta/láser ("Impresora All-in-one", "Multifuncional") NO son computadoras
+        $esImpresora = (
+            str_contains($catDeltron, 'IMPRESORA') ||
+            str_contains($subDeltron, 'IMPRESORA') ||
+            str_contains($subDeltron, 'TINTA') ||
+            str_contains($subDeltron, 'MULTIFUNCIONAL') ||
+            str_contains($titulo, 'IMPRESORA') ||
+            str_contains($titulo, 'MULTIFUNCIONAL') ||
+            str_contains($titulo, 'SMART TANK') ||
+            str_contains($titulo, 'INK TANK') ||
+            str_contains($titulo, 'ECOTANK')
+        );
+
+        if (!$esImpresora) {
+            if (
+                str_contains($catDeltron, 'ALL IN ONE') ||
+                str_contains($catDeltron, 'ALL-IN-ONE') ||
+                str_contains($subDeltron, 'ALL IN ONE') ||
+                str_contains($subDeltron, 'ALL-IN-ONE') ||
+                str_contains($subDeltron, 'AIO') ||
+                str_contains($titulo, 'ALL IN ONE') ||
+                str_contains($titulo, 'ALL-IN-ONE') ||
+                str_contains($titulo, 'AIO ') ||
+                str_starts_with($name, 'AIO ')
+            ) {
+                return self::GRUPO_PC_ALL_IN_ONE;
+            }
         }
 
         // 2. BAREBONES / MINI PC / NUC

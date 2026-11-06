@@ -112,9 +112,12 @@
                                 <td class="fw-bold text-dark align-middle">
                                     @if(($entrega['tipo'] ?? 'ml') === 'wsp')
                                     <span class="badge-wsp"><i class="bi bi-whatsapp me-1"></i>WSP</span>
-                                    <br><small class="text-muted">{{ $entrega['order_id'] }}</small>
+                                    <br><small class="text-muted">{{ $entrega['pack_id'] }}</small>
                                     @else
-                                    {{ $entrega['order_id'] }}
+                                    {{ $entrega['pack_id'] }}
+                                    @if(!empty($entrega['is_pack']) && $entrega['pack_id'] !== $entrega['order_id'])
+                                    <br><small class="text-muted fw-normal" style="font-size: 11px;">Ord: {{ $entrega['order_id'] }}</small>
+                                    @endif
                                     @endif
                                 </td>
                                 <td>

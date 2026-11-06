@@ -12,10 +12,13 @@ use App\Models\Inventario\Liquidacion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Producto extends Model
 {
+    use HasSlug;
+
     public $timestamps = false;
 
     protected $table = 'Producto';
@@ -77,6 +80,13 @@ class Producto extends Model
         'usar_tc_fijo' => true, // Por defecto usa el TC de la API de SUNAT
     ];
 
+    public function getSlugOptions(): SlugOptions
+    {
+        return SlugOptions::create()
+            ->generateSlugsFrom(fn ($model) => $model->nombreProducto ?: 'producto')
+            ->saveSlugsTo('slugProducto');
+    }
+
     public static function boot()
     {
         parent::boot();
@@ -87,38 +97,6 @@ class Producto extends Model
             }
             if (!isset($producto->UPC) || $producto->UPC === null || $producto->UPC === '') {
                 $producto->UPC = '0';
-            }
-
-            $baseSlug = Str::slug($producto->nombreProducto ?: 'producto');
-            $slug = $baseSlug;
-            $counter = 1;
-            while (static::where('slugProducto', $slug)->exists()) {
-                if (!empty($producto->modelo)) {
-                    $slug = $baseSlug . '-' . Str::slug($producto->modelo);
-                    if (!static::where('slugProducto', $slug)->exists()) {
-                        break;
-                    }
-                }
-                $slug = $baseSlug . '-' . (++$counter);
-            }
-            $producto->slugProducto = $slug;
-        });
-
-        static::updating(function ($producto) {
-            if ($producto->isDirty('nombreProducto')) {
-                $baseSlug = Str::slug($producto->nombreProducto ?: 'producto');
-                $slug = $baseSlug;
-                $counter = 1;
-                while (static::where('slugProducto', $slug)->where('idProducto', '!=', $producto->idProducto)->exists()) {
-                    if (!empty($producto->modelo)) {
-                        $slug = $baseSlug . '-' . Str::slug($producto->modelo);
-                        if (!static::where('slugProducto', $slug)->where('idProducto', '!=', $producto->idProducto)->exists()) {
-                            break;
-                        }
-                    }
-                    $slug = $baseSlug . '-' . (++$counter);
-                }
-                $producto->slugProducto = $slug;
             }
         });
 
@@ -365,20 +343,8 @@ class Producto extends Model
             ->whereNull('Producto.idProductoPadre')
             ->where(function ($q) {
                 $q->whereIn('Producto.estadoProductoWeb', ['AGOTADO', 'DESCONTINUADO'])
-                    ->orWhereNotExists(function ($sub) {
-                        $sub->select(\Illuminate\Support\Facades\DB::raw(1))
-                            ->from('Inventario_Proveedor as ip')
-                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
-                            ->where('ip.stock', '>', 0);
-                    })
-                    ->orWhereNotExists(function ($sub) {
-                        $sub->select(\Illuminate\Support\Facades\DB::raw(1))
-                            ->from('Inventario_Proveedor as ip')
-                            ->join('inventario_proveedor_skus as ips', 'ips.idInventarioProveedor', '=', 'ip.idInventarioProveedor')
-                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
-                            ->whereNotNull('ips.sku_proveedor')
-                            ->where('ips.sku_proveedor', '!=', '');
-                    });
+                    ->orWhereDoesntHave('Inventario_Proveedor', fn ($ip) => $ip->conStock())
+                    ->orWhereDoesntHave('Inventario_Proveedor', fn ($ip) => $ip->conSkuVinculado());
             });
     }
 

@@ -28,11 +28,12 @@ class FalabellaApiService
     }
 
     /**
-     * Obtiene el PDF de etiqueta de envío de Falabella para un OrderItemId.
+     * Obtiene el PDF de etiqueta de envío de Falabella para uno o varios OrderItemIds.
      * Retorna el contenido binario del PDF.
      */
-    public function getDocumentRaw(string|int $orderItemId): string
+    public function getDocumentRaw(string|int|array $orderItemId): string
     {
+        $itemIds = is_array($orderItemId) ? array_values(array_map('intval', $orderItemId)) : [(int) $orderItemId];
         $params = [
             'Action'       => 'GetDocument',
             'Format'       => config('services.falabella.format', 'JSON'),
@@ -40,7 +41,7 @@ class FalabellaApiService
             'UserID'       => trim((string) config('services.falabella.user_id')),
             'Version'      => config('services.falabella.version', '1.0'),
             'DocumentType' => 'shippingParcel',
-            'OrderItemIds' => json_encode([(int) $orderItemId]),
+            'OrderItemIds' => json_encode($itemIds),
         ];
 
         $this->validateCredentials($params);

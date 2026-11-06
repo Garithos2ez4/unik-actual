@@ -643,39 +643,34 @@ class FalabellaController extends Controller
                     $selectedStatus !== '' ? $selectedStatus : null
                 );
 
-                // Filtrar solo las órdenes seleccionadas por checkbox (si se enviaron)
-                $orderIdsParam = $request->query('order_ids');
+                // Filtrar solo las órdenes seleccionadas por checkbox o individualmente (si se enviaron)
+                $orderIdsParam = $request->query('order_ids', $request->query('order_id'));
                 if (!empty($orderIdsParam)) {
-                    $selectedIds = is_array($orderIdsParam) ? $orderIdsParam : explode(',', $orderIdsParam);
+                    $selectedIds = is_array($orderIdsParam) ? $orderIdsParam : explode(',', (string) $orderIdsParam);
                     $orders = $orders->filter(function ($order) use ($selectedIds) {
-                        return in_array($order->order_id, $selectedIds);
+                        return in_array($order->order_id, $selectedIds) || in_array($order->order_number, $selectedIds);
                     });
                 }
 
                 $labels = [];
                 $errors = [];
-                $processedPackages = [];
 
                 // Liberar la conexión a base de datos de inmediato antes del bucle de peticiones HTTP
                 \Illuminate\Support\Facades\DB::disconnect();
 
                 foreach ($orders as $order) {
-                    foreach ($order->items as $item) {
-                        // Evitar duplicados por PackageId
-                        $packageId = $item->package_id;
-                        if ($packageId && in_array($packageId, $processedPackages)) {
-                            continue;
-                        }
+                    $itemIds = $order->items->pluck('order_item_id')->filter()->all();
+                    if (empty($itemIds)) {
+                        continue;
+                    }
 
-                        try {
-                            $pdfBinary = $this->falabellaApiService->getDocumentRaw($item->order_item_id);
-                            $labels[] = base64_encode($pdfBinary);
-                            if ($packageId) {
-                                $processedPackages[] = $packageId;
-                            }
-                        } catch (Throwable $e) {
-                            $errors[] = "Item {$item->order_item_id}: " . $e->getMessage();
-                        }
+                    try {
+                        // Pasar todos los OrderItemIds de la orden juntos: Falabella devuelve
+                        // un único documento PDF con los bultos/etiquetas correspondientes sin duplicados.
+                        $pdfBinary = $this->falabellaApiService->getDocumentRaw($itemIds);
+                        $labels[] = base64_encode($pdfBinary);
+                    } catch (Throwable $e) {
+                        $errors[] = "Orden #{$order->order_number}: " . $e->getMessage();
                     }
                 }
 

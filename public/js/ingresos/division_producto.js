@@ -524,12 +524,15 @@ document.addEventListener('click', function (e) {
 
     // Reset completo al cerrar el modal
     modalEl.addEventListener('hidden.bs.modal', function () {
-        wizardData              = resetWizard();
-        listaPacks.innerHTML    = '';
-        compContainer.innerHTML = '';
-        resumen.innerHTML       = '';
-        noPacks.classList.add('d-none');
-        loadingPacks.classList.remove('d-none');
+        wizardData = resetWizard();
+        if (listaPacks)    listaPacks.innerHTML    = '';
+        if (compContainer) compContainer.innerHTML = '';
+        if (resumen)       resumen.innerHTML       = '';
+        if (noPacks)       noPacks.classList.add('d-none');
+        if (loadingPacks)  loadingPacks.classList.remove('d-none');
+        if (inputBuscarPadre) inputBuscarPadre.value = '';
+        if (suggestionsPadre) suggestionsPadre.style.display = 'none';
+        if (errorPadre)       errorPadre.classList.add('d-none');
         irAPaso(1);
     });
 
