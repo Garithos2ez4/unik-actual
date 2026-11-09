@@ -40,8 +40,11 @@
 
 <div class="container-fluid mt-4 px-4">
     <div class="row mb-3 align-items-center">
-        <div class="col-md-5">
-            <h2><i class="bi bi-calculator"></i> Cotizador de Publicaciones</h2>
+        <div class="col-md-5 d-flex align-items-center flex-wrap gap-2">
+            <h2 class="mb-0"><i class="bi bi-calculator"></i> Cotizador de Publicaciones</h2>
+            <a href="{{ route('laptops.seguimiento.index') }}" class="btn btn-sm btn-outline-dark shadow-sm" style="border-radius: 20px;" title="Ver Tablero de Seguimiento de Laptops (Libro 11)">
+                <i class="bi bi-laptop"></i> Seguimiento Laptops
+            </a>
         </div>
         <div class="col-md-2 text-center">
             <div class="form-check form-switch d-inline-block">

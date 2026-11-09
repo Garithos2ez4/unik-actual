@@ -5,11 +5,14 @@
 @section('content')
     <div class="container">
         <br>
-        <div class="row">
-            <div class="col-8 d-flex align-items-center">
-                 <h2 class="mb-0"><i class="bi bi-calculator"></i> Calculadora</h2>
-                 <a href="{{ route('calculadora.cotizador') }}" class="btn btn-outline-primary ms-4 shadow-sm" style="border-radius: 20px;">
+        <div class="row align-items-center">
+            <div class="col-8 d-flex align-items-center flex-wrap gap-2">
+                 <h2 class="mb-0 me-3"><i class="bi bi-calculator"></i> Calculadora</h2>
+                 <a href="{{ route('calculadora.cotizador') }}" class="btn btn-outline-primary shadow-sm" style="border-radius: 20px;">
                      <i class="bi bi-magic"></i> Ir al Nuevo Cotizador Avanzado
+                 </a>
+                 <a href="{{ route('laptops.seguimiento.index') }}" class="btn btn-outline-dark shadow-sm" style="border-radius: 20px;" title="Ver Tablero de Seguimiento de Laptops (Libro 11)">
+                     <i class="bi bi-laptop"></i> Seguimiento Laptops
                  </a>
             </div>
             <div class="col-4 text-end text-secondary">

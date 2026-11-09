@@ -320,6 +320,37 @@ class MercadoLibreApiService
     }
 
     /**
+     * Pausa o reactiva una publicación en Mercado Libre mediante la API oficial.
+     * Requiere permisos de escritura (write) en la aplicación de ML.
+     *
+     * @param string $sellerId
+     * @param string $itemId (Ej: 'MPE123456789' o '123456789')
+     * @param string $status ('paused' o 'active')
+     * @return array
+     */
+    public function updateItemStatus(string $sellerId, string $itemId, string $status): array
+    {
+        $cleanId = strtoupper(trim($itemId));
+        if (!str_starts_with($cleanId, 'MPE')) {
+            $cleanId = 'MPE' . preg_replace('/[^0-9]/', '', $cleanId);
+        }
+
+        $token = $this->getToken($sellerId);
+        $response = Http::withToken($token)
+            ->timeout(15)
+            ->put($this->baseUrl . "/items/{$cleanId}", [
+                'status' => strtolower($status),
+            ]);
+
+        if ($response->failed()) {
+            Log::warning("ML API updateItemStatus error [{$cleanId} -> {$status}]: " . $response->status() . ' - ' . $response->body());
+            throw new \RuntimeException("ML API Error {$response->status()}: " . $response->body());
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
      * Busca reclamos/mediaciones abiertas del seller.
      */
     public function getOpenClaims(string $sellerId): array

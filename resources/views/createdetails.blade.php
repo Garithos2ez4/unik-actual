@@ -26,7 +26,7 @@
             <img src="{{ asset('storage/'.$producto->MarcaProducto->imagenMarca) }}" alt="imagen marca" style="width:100%" class="rounded-3">
         </div>
         <div class="col-9 text-md-start text-end col-md-8">
-            <h5>{{$producto->estadoProductoWeb}}</h5>
+            <h5><x-producto-estado :producto="$producto" /></h5>
         </div>
         <div class="col-12 col-md-4 text-md-end">
             <h5 data-bs-toggle="tooltip" data-bs-placement="bottom" title="Modelo">{{$grupo['nombreGrupo']}}: {{$producto->modelo}}</h4>

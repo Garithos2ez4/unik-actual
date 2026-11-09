@@ -285,6 +285,17 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/compras/deltron/catalogo-candidatos', [DeltronController::class, 'getCatalogoCandidatos'])->name('compras.deltron.catalogo.candidatos');
     Route::post('/compras/deltron/importar-lote-ofertas', [DeltronController::class, 'importarLoteOfertas'])->name('compras.deltron.importar.lote');
 
+    // Seguimiento de Laptops ML US (Reemplazo de Libro11.xlsx)
+    Route::prefix('dashboard/laptops/seguimiento')->name('laptops.seguimiento.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'index'])->name('index');
+        Route::post('/', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'store'])->name('store');
+        Route::post('/{id}/inline', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'updateInline'])->name('inline');
+        Route::delete('/{id}', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'destroy'])->name('destroy');
+        Route::post('/importar-excel', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'importarExcel'])->name('importar');
+        Route::post('/vincular-automatico', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'vincularAutomatico'])->name('vincular');
+        Route::get('/exportar-excel', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'exportarExcel'])->name('exportar');
+    });
+
     // Rutas para Ventas
     Route::prefix('ventas')->name('ventas.')->group(function () {
         Route::get('/', [VentaController::class, 'index'])->name('index');

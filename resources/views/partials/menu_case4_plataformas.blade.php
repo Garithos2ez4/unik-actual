@@ -116,6 +116,11 @@
                         <i class="bi bi-chevron-right"></i> Envíos Flex
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('laptops.seguimiento.index') }}" class="btn btn-sm text-warning fw-semibold py-0">
+                        <i class="bi bi-laptop me-1"></i> Laptops ML US
+                    </a>
+                </li>
             </ul>
         </li>
     </ul>

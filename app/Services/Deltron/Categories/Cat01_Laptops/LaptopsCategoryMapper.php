@@ -51,6 +51,16 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
         $titulo     = $context['titulo'] ?? '';
         $name       = $context['name'] ?? '';
 
+        // Soportes, bases y stands para laptops (incluso si Deltron los lista en "Accesorios Misceláneos")
+        if (
+            !str_contains($catDeltron, 'MONITOR') &&
+            !str_contains($titulo, 'MONITOR') &&
+            (str_contains($titulo, 'SOPORTE') || str_contains($titulo, 'STAND') || str_contains($titulo, 'BASE PARA')) &&
+            (str_contains($titulo, 'LAPTOP') || str_contains($titulo, 'NOTEBOOK'))
+        ) {
+            return self::GRUPO_COOLER_LAPTOP;
+        }
+
         if (
             str_contains($catDeltron, 'NOTEBOOK , ACCESORIOS') ||
             str_contains($catDeltron, 'ACCESORIOS DE NOTEBOOK') ||
@@ -90,6 +100,71 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
         $name       = $context['name'] ?? '';
         $sku        = strtoupper($context['item']['sku'] ?? '');
 
+        // 1. Candado estricto: NUNCA clasificar componentes de PC (Cases, Placas, GPUs), monitores,
+        // periféricos, audio, consolas o redes como Laptops, aunque contengan palabras como Gaming, TUF, ROG o Legion.
+        $esOtraCategoria = (
+            str_contains($catDeltron, 'CASES') ||
+            str_contains($subDeltron, 'CASES') ||
+            str_contains($catDeltron, 'MOTHERBOARD') ||
+            str_contains($catDeltron, 'PLACAS BASE') ||
+            str_contains($subDeltron, 'MB SOCKET') ||
+            str_contains($catDeltron, 'TARJETAS DE VIDEO') ||
+            str_contains($catDeltron, 'DISPOSITIVOS DE VIDEO') ||
+            str_contains($catDeltron, 'MONITOR') ||
+            str_contains($subDeltron, 'MONITOR') ||
+            str_contains($catDeltron, 'COMPUTADORAS DESKTOP') ||
+            str_contains($catDeltron, 'AUDIO') ||
+            str_contains($catDeltron, 'TECLADO') ||
+            str_contains($catDeltron, 'MOUSE') ||
+            str_contains($catDeltron, 'ROUTER') ||
+            str_contains($catDeltron, 'SWITCH') ||
+            str_contains($catDeltron, 'IMPRESORA') ||
+            str_contains($catDeltron, 'CONSOLAS') ||
+            str_contains($catDeltron, 'ENERGIA RENOVABLE') ||
+            str_contains($catDeltron, 'MEMORIAS RAM') ||
+            str_contains($catDeltron, 'DISCOS DUROS') ||
+            str_contains($catDeltron, 'DISCO SOLIDO') ||
+            str_contains($catDeltron, 'CPU') ||
+            str_contains($catDeltron, 'MICROPROCESADOR') ||
+            str_contains($catDeltron, 'FAN COOLER') ||
+            str_starts_with($sku, 'CS') || // Cases
+            str_starts_with($sku, 'MB') || // Motherboards
+            str_starts_with($sku, 'VD') || // Video
+            str_starts_with($sku, 'MO') || // Monitores
+            str_starts_with($sku, 'PC') || // Desktop PC
+            str_starts_with($sku, 'MM') || // Multimedia / Audio
+            str_starts_with($sku, 'KB') || // Teclados
+            str_starts_with($sku, 'MS') || // Mouse
+            str_starts_with($sku, 'RT') || // Routers
+            str_starts_with($sku, 'SW') || // Switches
+            str_starts_with($sku, 'PR') || // Impresoras
+            str_starts_with($sku, 'CP') || // CPUs
+            str_starts_with($titulo, 'CASE ') ||
+            str_starts_with($titulo, 'CASE DEL TIPO') ||
+            str_starts_with($titulo, 'COMPUTADORA ') ||
+            str_starts_with($titulo, 'MONITOR ') ||
+            str_starts_with($titulo, 'MOTHERBOARD ') ||
+            str_starts_with($titulo, 'MAINBOARD ') ||
+            str_starts_with($titulo, 'PLACA ') ||
+            str_starts_with($titulo, 'TARJETA DE VIDEO ') ||
+            str_starts_with($titulo, 'TECLADO ') ||
+            str_starts_with($titulo, 'MOUSE ') ||
+            str_starts_with($titulo, 'AURICULAR') ||
+            str_starts_with($titulo, 'AUDIFONO') ||
+            str_starts_with($titulo, 'CONSOLA ') ||
+            str_starts_with($titulo, 'ESTACION DE ENERGIA') ||
+            str_contains($titulo, 'OPEN-FRAME') ||
+            str_contains($titulo, 'MID-TOWER') ||
+            str_contains($titulo, 'MINI-TOWER') ||
+            str_contains($titulo, 'FULL-TOWER') ||
+            str_contains($titulo, 'GABINETE') ||
+            str_contains($titulo, 'CHASSIS')
+        );
+
+        if ($esOtraCategoria) {
+            return null;
+        }
+
         $esLaptop = (
             str_contains($catDeltron, 'NOTEBOOK') ||
             str_contains($catDeltron, 'PORTATIL') ||
@@ -104,7 +179,7 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
             str_starts_with($titulo, 'NB ') ||
             str_starts_with($name, 'NB ') ||
             str_starts_with($sku, 'NB') ||
-            preg_match('/\b(ELITEBOOK|THINKPAD|PROBOOK|LATITUDE|EXPERTBOOK|IDEAPAD|VIVOBOOK|ZENBOOK|YOGA|ASPIRE|SWIFT|PAVILION|ENVY|SPECTRE|OMEN|VICTUS|LOQ|LEGION|TUF|ROG|PREDATOR|NITRO|VOSTRO|MACBOOK)\b/i', $titulo . ' ' . $name)
+            preg_match('/\b(ELITEBOOK|THINKPAD|PROBOOK|LATITUDE|EXPERTBOOK|IDEAPAD|VIVOBOOK|ZENBOOK|YOGA|ASPIRE|SWIFT|PAVILION|ENVY|SPECTRE|OMEN|VICTUS|LOQ|LEGION|PREDATOR|NITRO|VOSTRO|MACBOOK|ZEPHYRUS|STRIX|FLOW)\b/i', $titulo . ' ' . $name)
         );
 
         if (!$esLaptop) {

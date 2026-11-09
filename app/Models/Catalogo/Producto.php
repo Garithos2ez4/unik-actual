@@ -242,6 +242,11 @@ class Producto extends Model
         return $this->belongsTo(Inventario_Proveedor::class, 'idProducto', 'idProducto');
     }
 
+    public function laptopSeguimiento()
+    {
+        return $this->hasOne(\App\Models\Inventario\LaptopSeguimiento::class, 'idProducto', 'idProducto');
+    }
+
     public function publicImages()
     {
         $default = asset('storage/noimagen.webp');
@@ -458,18 +463,6 @@ class Producto extends Model
         }
 
         return (int) Inventario::where('idProducto', $this->idProducto)->sum('stock');
-    }
-
-
-    public function estadoColor()
-    {
-        if ($this->estadoProductoWeb == 'DISPONIBLE') {
-            return 'text-success';
-        } elseif ($this->estadoProductoWeb == 'OFERTA') {
-            return 'text-danger';
-        } else {
-            return 'text-danger text-decoration-line-through';
-        }
     }
 
     public function displayImg($img)

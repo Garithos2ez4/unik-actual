@@ -179,6 +179,9 @@
                             href="{{ route('productos', [encrypt(1), encrypt(1)]) }}" class="btn text-light" id="tour-productos">Productos
                             <i class="bi bi-box-fill"></i></a></li>
                     <li class="list-group-item bg-sistema-uno menu-border"><a
+                            href="{{ route('laptops.seguimiento.index') }}" class="btn text-light">Seguimiento Laptops US
+                            <i class="bi bi-laptop text-info"></i></a></li>
+                    <li class="list-group-item bg-sistema-uno menu-border"><a
                             href="{{ route('productos.liquidacion') }}" class="btn text-light">Liquidación
                             <i class="bi bi-tags-fill"></i></a></li>
                     <li class="list-group-item bg-sistema-uno menu-border"><a

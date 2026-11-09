@@ -53,6 +53,38 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
         $catDeltron = $context['catDeltron'] ?? '';
         $subDeltron = $context['subDeltron'] ?? '';
         $titulo     = $context['titulo'] ?? '';
+        $sku        = strtoupper($context['item']['sku'] ?? '');
+
+        // Cases & Gabinetes PC (Prioridad temprana sobre categorías generales)
+        if (
+            !str_contains($catDeltron, 'NOTEBOOK') &&
+            !str_contains($subDeltron, 'NOTEBOOK') &&
+            !str_starts_with($titulo, 'NB ') &&
+            (
+                str_contains($catDeltron, 'CASES (CAJAS)') ||
+                str_contains($catDeltron, 'CASES, FUENTE') ||
+                str_contains($catDeltron, 'CASES') ||
+                str_contains($subDeltron, 'CASES') ||
+                str_starts_with($titulo, 'CASE ') ||
+                str_starts_with($titulo, 'CASE DEL TIPO') ||
+                str_contains($titulo, 'OPEN-FRAME') ||
+                str_contains($titulo, 'GABINETE') ||
+                str_contains($titulo, 'MID-TOWER') ||
+                str_contains($titulo, 'MINI-TOWER') ||
+                str_contains($titulo, 'FULL-TOWER') ||
+                str_starts_with($sku, 'CS')
+            )
+        ) {
+            if (
+                str_contains($catDeltron, 'CASES, FUENTE') ||
+                (str_contains($subDeltron, 'FUENTE') && !str_contains($subDeltron, 'SIN FUENTE') && !str_contains($subDeltron, 'S/FUENTE')) ||
+                str_contains($titulo, 'FUENTE DE PODER') ||
+                str_contains($titulo, 'POWER SUPPLY')
+            ) {
+                return self::GRUPO_FUENTE_PODER;
+            }
+            return self::GRUPO_CASE;
+        }
 
         // Coolers
         if (
@@ -121,8 +153,27 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
         }
 
         // 7. Cases & Fuentes
-        if (str_contains($catDeltron, 'CASES (CAJAS)') || str_contains($catDeltron, 'CASES, FUENTE') || str_contains($catDeltron, 'CASES') || str_contains($titulo, 'CASE ')) {
-            if (str_contains($catDeltron, 'CASES, FUENTE') || (str_contains($subDeltron, 'FUENTE') && !str_contains($subDeltron, 'SIN FUENTE')) || str_contains($titulo, 'FUENTE DE PODER')) {
+        $sku = strtoupper($context['item']['sku'] ?? '');
+        if (
+            str_contains($catDeltron, 'CASES (CAJAS)') ||
+            str_contains($catDeltron, 'CASES, FUENTE') ||
+            str_contains($catDeltron, 'CASES') ||
+            str_contains($subDeltron, 'CASES') ||
+            str_starts_with($titulo, 'CASE ') ||
+            str_starts_with($titulo, 'CASE DEL TIPO') ||
+            str_contains($titulo, 'OPEN-FRAME') ||
+            str_contains($titulo, 'GABINETE') ||
+            str_contains($titulo, 'MID-TOWER') ||
+            str_contains($titulo, 'MINI-TOWER') ||
+            str_contains($titulo, 'FULL-TOWER') ||
+            str_starts_with($sku, 'CS')
+        ) {
+            if (
+                str_contains($catDeltron, 'CASES, FUENTE') ||
+                (str_contains($subDeltron, 'FUENTE') && !str_contains($subDeltron, 'SIN FUENTE') && !str_contains($subDeltron, 'S/FUENTE')) ||
+                str_contains($titulo, 'FUENTE DE PODER') ||
+                str_contains($titulo, 'POWER SUPPLY')
+            ) {
                 return self::GRUPO_FUENTE_PODER;
             }
             return self::GRUPO_CASE;
