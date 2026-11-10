@@ -173,7 +173,7 @@ class ProductoController extends Controller
                                 }
 
                                 if (empty($deltronData['modelo_real'])) {
-                                    $deltronData['modelo_real'] = \App\Services\Deltron\DeltronApiService::extraerModeloRealDesdeSpecs($deltronData['specs_html'] ?? '');
+                                    $deltronData['modelo_real'] = \App\Services\Deltron\DeltronTextHelper::extraerModeloDesdeItem($deltronData);
                                 }
 
                                 if (!empty($deltronData['brand_name'])) {

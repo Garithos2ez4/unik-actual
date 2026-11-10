@@ -293,6 +293,7 @@ Route::middleware(['validate.session'])->group(function () {
         Route::delete('/{id}', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'destroy'])->name('destroy');
         Route::post('/importar-excel', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'importarExcel'])->name('importar');
         Route::post('/vincular-automatico', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'vincularAutomatico'])->name('vincular');
+        Route::post('/sync-frecuencias', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'syncFrecuencias'])->name('sync-frecuencias');
         Route::get('/exportar-excel', [\App\Http\Controllers\Productos\LaptopSeguimientoController::class, 'exportarExcel'])->name('exportar');
     });
 

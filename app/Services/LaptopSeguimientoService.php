@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Catalogo\Caracteristicas;
+use App\Models\Catalogo\Caracteristicas_Producto;
+use App\Models\Catalogo\Caracteristicas_Sugerencias;
 use App\Models\Catalogo\MarcaProducto;
 use App\Models\Catalogo\Producto;
 use App\Models\Catalogo\Publicacion;
@@ -187,6 +190,87 @@ class LaptopSeguimientoService
         }
 
         return null;
+    }
+
+    /**
+     * Obtiene las sugerencias de frecuencia/Hz configuradas en Caracteristicas_Sugerencias.
+     */
+    public function obtenerSugerenciasFrecuencia(): array
+    {
+        try {
+            $sugerencias = Caracteristicas_Sugerencias::where(function ($q) {
+                    $q->where('idCaracteristica', 1)
+                      ->orWhereHas('Caracteristicas', function ($qc) {
+                          $qc->whereIn('especificacion', ['Hz', 'Frecuencia']);
+                      });
+                })
+                ->pluck('sugerencia')
+                ->map(fn($s) => trim((string)$s))
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            if (!empty($sugerencias)) {
+                return $sugerencias;
+            }
+        } catch (\Throwable $e) {
+            // Fallback en caso de error
+        }
+
+        return ['60 Hz', '75 Hz', '100 Hz', '120 Hz', '144 Hz', '160 Hz', '165 Hz', '180 Hz', '240 Hz', '280 Hz', '300 Hz', '360 Hz'];
+    }
+
+    /**
+     * Obtiene el valor de la frecuencia configurada para un producto desde Caracteristicas_Producto.
+     */
+    public function obtenerFrecuenciaProducto(int $idProducto): ?string
+    {
+        try {
+            $caract = Caracteristicas_Producto::where('idProducto', $idProducto)
+                ->where(function ($q) {
+                    $q->where('idCaracteristica', 1)
+                      ->orWhereHas('Caracteristicas', function ($qc) {
+                          $qc->whereIn('especificacion', ['Hz', 'Frecuencia']);
+                      });
+                })
+                ->value('caracteristicaProducto');
+
+            if ($caract && trim($caract) !== '') {
+                return trim($caract);
+            }
+        } catch (\Throwable $e) {
+            // Ignorar
+        }
+
+        return null;
+    }
+
+    /**
+     * Completa automáticamente las frecuencias faltantes en laptop_seguimientos
+     * a partir de los productos vinculados que tengan especificación en Caracteristicas_Producto.
+     */
+    public function sincronizarFrecuenciasDesdeProductos(): int
+    {
+        $actualizados = 0;
+        $items = LaptopSeguimiento::whereNotNull('idProducto')
+            ->where(function ($q) {
+                $q->whereNull('frecuencia')
+                  ->orWhere('frecuencia', '')
+                  ->orWhere('frecuencia', '-');
+            })
+            ->get();
+
+        foreach ($items as $item) {
+            $freq = $this->obtenerFrecuenciaProducto((int) $item->idProducto);
+            if ($freq) {
+                $item->frecuencia = $freq;
+                $item->save();
+                $actualizados++;
+            }
+        }
+
+        return $actualizados;
     }
 
     /**

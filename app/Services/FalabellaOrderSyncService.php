@@ -73,6 +73,13 @@ class FalabellaOrderSyncService
 
         // Sincronizar items de esta orden
         try {
+            // Si la orden ya tiene items registrados y su estado es final (delivered, canceled, etc.),
+            // omitimos volver a llamar a GetOrderItems (evita llamadas innecesarias y el error HTTP 400 de Falabella para órdenes cerradas)
+            $isFinalStatus = in_array(strtolower((string) $order->status), ['delivered', 'canceled', 'cancelled', 'failed', 'returned'], true);
+            if ($isFinalStatus && $order->items()->exists()) {
+                return $order;
+            }
+
             $itemsResponse = $this->falabellaApiService->getOrderItems((string) $order->order_id);
             $items = $this->falabellaApiService->extractOrderItems($itemsResponse);
 
@@ -288,6 +295,7 @@ class FalabellaOrderSyncService
         // Verificar TODAS las ordenes locales que siguen como pending/ready_to_ship para evitar que se queden atascadas
         $staleOrders = FalabellaOrder::whereIn('status', ['pending', 'ready_to_ship'])
             ->whereNotNull('created_at_falabella')
+            ->where('created_at_falabella', '>=', $lookbackCutoff)
             ->get();
 
         if ($staleOrders->isEmpty()) {

@@ -15,7 +15,7 @@ class SyncFalabellaOrdersJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 300; // 5 minutes
+    public $timeout = 600; // 10 minutes
 
     protected $date;
     protected $status;

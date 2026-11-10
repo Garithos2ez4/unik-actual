@@ -4,129 +4,8 @@
 
 @section('content')
 <style>
-    .tabla-libro11 {
-        font-size: 0.78rem;
-        border-collapse: collapse;
-    }
-    .tabla-libro11 th, .tabla-libro11 td {
-        padding: 4px 6px !important;
-        vertical-align: middle;
-        border: 1px solid #bfbfbf !important;
-    }
-    .hdr-marca {
-        background-color: #0070C0 !important;
-        color: #FFFFFF !important;
-        font-weight: 700;
-        font-size: 0.88rem;
-        cursor: pointer;
-    }
-    .hdr-cpu {
-        background-color: #00B0F0 !important;
-        color: #000000 !important;
-        font-weight: 700;
-        font-size: 0.82rem;
-    }
-    .hdr-gama {
-        background-color: #F705E3 !important;
-        color: #000000 !important;
-        font-weight: 700;
-        font-size: 0.80rem;
-    }
-    /* Colores de estado de fila (idénticos a Libro11.xlsx) */
-    .fila-estado-CON_STOCK td.celda-estado {
-        background-color: #66FF33 !important;
-        color: #000000 !important;
-    }
-    .fila-estado-AGOTADO td.celda-estado {
-        background-color: #FF0000 !important;
-        color: #FFFFFF !important;
-    }
-    .fila-estado-AGOTADO td.celda-estado input,
-    .fila-estado-AGOTADO td.celda-estado select,
-    .fila-estado-AGOTADO td.celda-estado a {
-        color: #FFFFFF !important;
-    }
-    .fila-estado-EN_TRANSITO td.celda-estado {
-        background-color: #FFC000 !important;
-        color: #000000 !important;
-    }
-    .fila-estado-DESHABILITADA td.celda-estado {
-        background-color: #7030A0 !important;
-        color: #FFFFFF !important;
-    }
-    .fila-estado-DESHABILITADA td.celda-estado input,
-    .fila-estado-DESHABILITADA td.celda-estado select {
-        color: #FFFFFF !important;
-    }
-    .fila-estado-PAUSADA td.celda-estado {
-        background-color: #6C757D !important;
-        color: #FFFFFF !important;
-    }
-    /* Colores por marca cuando el estado es NORMAL (Gris = Acer, Salmón = Asus) */
-    .fila-marca-ACER.fila-estado-NORMAL td.celda-estado {
-        background-color: #D9D9D9 !important;
-        color: #000000 !important;
-    }
-    .fila-marca-ASUS.fila-estado-NORMAL td.celda-estado {
-        background-color: #F6C6AD !important;
-        color: #000000 !important;
-    }
-    /* Fecha vencida (< hoy) en rosa como el formato condicional de Libro11.xlsx */
-    .celda-fecha-vencida {
-        background-color: #FFC7CE !important;
-        color: #9C0006 !important;
-        font-weight: 700;
-    }
-    /* Celdas de proveedor: PROV en negro, x en verde suave, código W en azul suave */
-    .celda-prov-PROV {
-        background-color: #000000 !important;
-        color: #FFFFFF !important;
-        font-weight: 700;
-    }
-    .celda-prov-PROV input {
-        color: #FFFFFF !important;
-        font-weight: 700;
-    }
-    .celda-prov-STOCK {
-        background-color: #C6EFCE !important;
-        color: #006100 !important;
-        font-weight: 700;
-    }
-    .celda-prov-CODIGO {
-        background-color: #DDEBF7 !important;
-        color: #1F4E78 !important;
-        font-weight: 700;
-    }
-    .input-inline {
-        border: 1px solid transparent;
-        background: transparent;
-        width: 100%;
-        font-size: 0.76rem;
-        padding: 1px 3px;
-        border-radius: 3px;
-    }
-    .input-inline:focus {
-        border-color: #0d6efd;
-        background: #ffffff !important;
-        color: #000000 !important;
-        outline: none;
-    }
-    .cuenta-pill {
-        cursor: pointer;
-        font-size: 0.65rem;
-        padding: 2px 5px;
-        border-radius: 4px;
-        user-select: none;
-        transition: all 0.15s;
-    }
-    .cuenta-pill.inactiva {
-        opacity: 0.28;
-        border: 1px dashed #6c757d;
-        background: transparent !important;
-        color: #6c757d !important;
-    }
+    @include('laptops.styles.seguimientostyle');
 </style>
-
 <div class="container-fluid py-3 px-3">
     <!-- Cabecera Principal -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -231,7 +110,7 @@
                     <select name="marca" class="form-select form-select-sm">
                         <option value="">Todas</option>
                         @foreach(array_keys($marcasCfg) as $mName)
-                            <option value="{{ $mName }}" @selected($filtros['marca'] === $mName)>{{ $mName }}</option>
+                        <option value="{{ $mName }}" @selected($filtros['marca']===$mName)>{{ $mName }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -241,7 +120,7 @@
                     <select name="gama" class="form-select form-select-sm">
                         <option value="">Todas las gamas</option>
                         @foreach($gamasCfg as $gKey => $gLabel)
-                            <option value="{{ $gKey }}" @selected($filtros['gama'] === $gKey)>{{ $gLabel }}</option>
+                        <option value="{{ $gKey }}" @selected($filtros['gama']===$gKey)>{{ $gLabel }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -251,7 +130,7 @@
                     <select name="estado" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         @foreach($estadosCfg as $eKey => $eData)
-                            <option value="{{ $eKey }}" @selected($filtros['estado'] === $eKey)>{{ $eData['short'] }}</option>
+                        <option value="{{ $eKey }}" @selected($filtros['estado']===$eKey)>{{ $eData['short'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -261,7 +140,7 @@
                     <select name="idProveedor" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         @foreach($proveedoresCfg as $idP => $pData)
-                            <option value="{{ $idP }}" @selected((string)$filtros['idProveedor'] === (string)$idP)>{{ $pData['codigo'] }}</option>
+                        <option value="{{ $idP }}" @selected((string)$filtros['idProveedor']===(string)$idP)>{{ $pData['codigo'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -271,7 +150,7 @@
                     <select name="idCuentaPlataforma" class="form-select form-select-sm">
                         <option value="">Todas</option>
                         @foreach($cuentasMlCfg as $idC => $cData)
-                            <option value="{{ $idC }}" @selected((string)$filtros['idCuentaPlataforma'] === (string)$idC)>{{ $cData['sigla'] }}</option>
+                        <option value="{{ $idC }}" @selected((string)$filtros['idCuentaPlataforma']===(string)$idC)>{{ $cData['sigla'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -281,7 +160,7 @@
                     <select name="responsable" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         @foreach($responsables as $resp)
-                            <option value="{{ $resp }}" @selected($filtros['responsable'] === $resp)>{{ $resp }}</option>
+                        <option value="{{ $resp }}" @selected($filtros['responsable']===$resp)>{{ $resp }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -311,7 +190,7 @@
                     <th style="min-width: 195px;">MODELO</th>
                     <th style="width: 105px;">SERIE</th>
                     <th style="width: 55px;">TAM.</th>
-                    <th style="width: 60px;">FREQ.</th>
+                    <th style="width: 72px;">FREQ.</th>
                     <th style="min-width: 120px;">PROCESADOR</th>
                     <th style="width: 55px;">RAM</th>
                     <th style="width: 60px;">DISCO</th>
@@ -320,7 +199,7 @@
                     <th style="width: 60px;">STOCK</th>
                     <th style="width: 115px;">FECHA REV.</th>
                     @foreach($proveedoresCfg as $idProv => $pCfg)
-                        <th style="width: 72px;" title="{{ $pCfg['nombre'] }} (idProveedor={{ $idProv }})">{{ $pCfg['codigo'] }}</th>
+                    <th style="width: 72px;" title="{{ $pCfg['nombre'] }} (idProveedor={{ $idProv }})">{{ $pCfg['codigo'] }}</th>
                     @endforeach
                     <th style="width: 50px;">unik</th>
                     <th style="min-width: 155px;">CUENTA ML</th>
@@ -329,214 +208,232 @@
             </thead>
             <tbody>
                 @forelse($agrupado as $marca => $plataformas)
-                    @php
-                        $collapseId = 'marca_' . preg_replace('/[^A-Z0-9]/', '', $marca);
-                    @endphp
-                    <!-- Cabecera de Marca (Azul #0070C0) -->
-                    <tr class="hdr-marca" data-bs-toggle="collapse" data-bs-target=".{{ $collapseId }}">
-                        <td><i class="bi bi-chevron-down"></i></td>
-                        <td colspan="11">{{ $marca }}</td>
-                        @foreach($proveedoresCfg as $pCfg)
-                            <td class="text-center">{{ $pCfg['codigo'] }}</td>
-                        @endforeach
-                        <td class="text-center">unik</td>
-                        <td class="text-center">CUENTA ML</td>
-                        <td class="text-center">ESTADO</td>
-                    </tr>
-
-                    @foreach($plataformas as $cpu => $gamas)
-                        <!-- Cabecera Plataforma CPU (Celeste #00B0F0) -->
-                        <tr class="hdr-cpu collapse show {{ $collapseId }}">
-                            <td></td>
-                            <td colspan="18">{{ $cpu }}</td>
-                        </tr>
-
-                        @foreach($gamas as $gama => $modelos)
-                            <!-- Cabecera Gama (Magenta #F705E3) -->
-                            <tr class="hdr-gama collapse show {{ $collapseId }}">
-                                <td></td>
-                                <td colspan="18">
-                                    {{ $gama }}
-                                    <span class="badge bg-dark text-white ms-2">{{ count($modelos) }}</span>
-                                </td>
-                            </tr>
-
-                            @foreach($modelos as $item)
-                                @php
-                                    $provs = $item->proveedores_data ?? [];
-                                    $ctasIds = $item->cuentas_ml_data['ids'] ?? [];
-                                    $vencido = $item->estaVencido();
-                                @endphp
-                                <tr id="fila-seg-{{ $item->idLaptopSeguimiento }}"
-                                    class="collapse show {{ $collapseId }} fila-marca-{{ $marca }} fila-estado-{{ $item->estado_fila }}">
-                                    <!-- A: Responsable -->
-                                    <td>
-                                        <input type="text" class="input-inline text-center fw-bold"
-                                               value="{{ $item->nombre_responsable }}"
-                                               placeholder="-"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'responsable_texto', this.value, this)">
-                                    </td>
-
-                                    <!-- B: Modelo + vínculo con Producto -->
-                                    <td class="celda-estado">
-                                        <div class="d-flex align-items-center gap-1">
-                                            <input type="text" class="input-inline fw-bold"
-                                                   value="{{ $item->modelo }}"
-                                                   onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'modelo', this.value, this)">
-                                            @if($item->idProducto)
-                                                <span class="badge bg-primary" title="Vinculado a Producto #{{ $item->idProducto }} ({{ $item->producto->codigoProducto ?? '' }})">
-                                                    <i class="bi bi-link-45deg"></i>
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </td>
-
-                                    <!-- C: Serie -->
-                                    <td class="celda-estado">
-                                        <input type="text" class="input-inline"
-                                               value="{{ $item->serie }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'serie', this.value, this)">
-                                    </td>
-
-                                    <!-- D: Tamaño -->
-                                    <td class="celda-estado text-center">
-                                        <input type="text" class="input-inline text-center"
-                                               value="{{ $item->tamano }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'tamano', this.value, this)">
-                                    </td>
-
-                                    <!-- E: Frecuencia -->
-                                    <td class="celda-estado text-center">
-                                        <input type="text" class="input-inline text-center"
-                                               value="{{ $item->frecuencia }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'frecuencia', this.value, this)">
-                                    </td>
-
-                                    <!-- F: Procesador -->
-                                    <td class="celda-estado">
-                                        <input type="text" class="input-inline"
-                                               value="{{ $item->procesador }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'procesador', this.value, this)">
-                                    </td>
-
-                                    <!-- G: RAM -->
-                                    <td class="celda-estado text-center">
-                                        <input type="text" class="input-inline text-center"
-                                               value="{{ $item->ram }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'ram', this.value, this)">
-                                    </td>
-
-                                    <!-- H: Disco -->
-                                    <td class="celda-estado text-center">
-                                        <input type="text" class="input-inline text-center"
-                                               value="{{ $item->disco }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'disco', this.value, this)">
-                                    </td>
-
-                                    <!-- I: Video -->
-                                    <td class="celda-estado">
-                                        <input type="text" class="input-inline"
-                                               value="{{ $item->video }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'video', this.value, this)">
-                                    </td>
-
-                                    <!-- J: Part Number -->
-                                    <td class="celda-estado font-monospace">
-                                        <input type="text" class="input-inline font-monospace"
-                                               value="{{ $item->part_number }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'part_number', this.value, this)">
-                                    </td>
-
-                                    <!-- K: Stock -->
-                                    <td class="celda-estado text-center">
-                                        <input type="text" class="input-inline text-center fw-bold"
-                                               value="{{ $item->stock_texto }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'stock_texto', this.value, this)">
-                                    </td>
-
-                                    <!-- L: Fecha de Revisión (Rosa si < hoy) -->
-                                    <td id="celda-fecha-{{ $item->idLaptopSeguimiento }}"
-                                        class="text-center {{ $vencido ? 'celda-fecha-vencida' : '' }}">
-                                        <div class="d-flex align-items-center gap-1">
-                                            <input type="date" class="input-inline text-center p-0"
-                                                   value="{{ $item->fecha_revision ? $item->fecha_revision->format('Y-m-d') : '' }}"
-                                                   onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'fecha_revision', this.value, this)">
-                                            <button type="button" class="btn btn-xs btn-outline-success py-0 px-1"
-                                                    style="font-size: 0.65rem;"
-                                                    title="Marcar revisado HOY"
-                                                    onclick="marcarRevisadoHoy({{ $item->idLaptopSeguimiento }})">
-                                                <i class="bi bi-check2"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-
-                                    <!-- M, N, O, P: Proveedores CUAD (40), DM (59), ALC (48), ASIA (22) -->
-                                    @foreach($proveedoresCfg as $idProv => $pCfg)
-                                        @php
-                                            $celdaP = $provs[$idProv] ?? $provs[(string)$idProv] ?? ['valor' => '', 'tipo' => 'VACIO'];
-                                            $tipoP = $celdaP['tipo'] ?? 'VACIO';
-                                            $valP = $celdaP['valor'] ?? '';
-                                        @endphp
-                                        <td id="celda-prov-{{ $item->idLaptopSeguimiento }}-{{ $idProv }}"
-                                            class="text-center celda-prov-{{ $tipoP }}">
-                                            <input type="text" class="input-inline text-center"
-                                                   value="{{ $valP }}"
-                                                   placeholder="-"
-                                                   title="{{ $pCfg['nombre'] }}: 'x' = Con stock, 'PROV' = En lista sin stock, 'W0...' = Código"
-                                                   onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'prov_{{ $idProv }}', this.value, this)">
-                                        </td>
-                                    @endforeach
-
-                                    <!-- Q: unik (stock propio) -->
-                                    <td class="text-center">
-                                        <input type="text" class="input-inline text-center fw-bold"
-                                               value="{{ $item->stock_unik }}"
-                                               onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'stock_unik', this.value, this)">
-                                    </td>
-
-                                    <!-- R: Cuentas ML (UNIK=3, GAMING=4, UP=5, LIZ=6) -->
-                                    <td class="text-center">
-                                        <div class="d-flex flex-wrap justify-content-center gap-1">
-                                            @foreach($cuentasMlCfg as $idCta => $cCfg)
-                                                @php
-                                                    $activa = in_array((int)$idCta, $ctasIds, true);
-                                                @endphp
-                                                <span id="pill-cta-{{ $item->idLaptopSeguimiento }}-{{ $idCta }}"
-                                                      class="badge bg-{{ $cCfg['color'] }} cuenta-pill {{ $activa ? '' : 'inactiva' }}"
-                                                      title="{{ $cCfg['nombre'] }} (Clic para activar/desactivar)"
-                                                      onclick="toggleCuentaMl({{ $item->idLaptopSeguimiento }}, {{ $idCta }}, this)">
-                                                    {{ $cCfg['sigla'] }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    </td>
-
-                                    <!-- Selector de Estado de Fila + Eliminar -->
-                                    <td class="text-center">
-                                        <div class="d-flex align-items-center gap-1">
-                                            <select class="form-select form-select-sm py-0 px-1" style="font-size: 0.70rem;"
-                                                    onchange="cambiarEstadoFila({{ $item->idLaptopSeguimiento }}, this.value)">
-                                                @foreach($estadosCfg as $eKey => $eData)
-                                                    <option value="{{ $eKey }}" @selected($item->estado_fila === $eKey)>{{ $eData['short'] }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button type="button" class="btn btn-xs text-danger p-0" title="Eliminar fila"
-                                                    onclick="eliminarFilaSeguimiento({{ $item->idLaptopSeguimiento }})">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @endforeach
+                @php
+                $collapseId = 'marca_' . preg_replace('/[^A-Z0-9]/', '', $marca);
+                @endphp
+                <!-- Cabecera de Marca (Azul #0070C0) -->
+                <tr class="hdr-marca" data-bs-toggle="collapse" data-bs-target=".{{ $collapseId }}">
+                    <td><i class="bi bi-chevron-down"></i></td>
+                    <td colspan="11">{{ $marca }}</td>
+                    @foreach($proveedoresCfg as $pCfg)
+                    <td class="text-center">{{ $pCfg['codigo'] }}</td>
                     @endforeach
+                    <td class="text-center">unik</td>
+                    <td class="text-center">CUENTA ML</td>
+                    <td class="text-center">ESTADO</td>
+                </tr>
+
+                @foreach($plataformas as $cpu => $gamas)
+                <!-- Cabecera Plataforma CPU (Celeste #00B0F0) -->
+                <tr class="hdr-cpu collapse show {{ $collapseId }}">
+                    <td></td>
+                    <td colspan="18">{{ $cpu }}</td>
+                </tr>
+
+                @foreach($gamas as $gama => $modelos)
+                <!-- Cabecera Gama (Magenta #F705E3) -->
+                <tr class="hdr-gama collapse show {{ $collapseId }}">
+                    <td></td>
+                    <td colspan="18">
+                        {{ $gama }}
+                        <span class="badge bg-dark text-white ms-2">{{ count($modelos) }}</span>
+                    </td>
+                </tr>
+
+                @foreach($modelos as $item)
+                @php
+                $provs = $item->proveedores_data ?? [];
+                $ctasIds = $item->cuentas_ml_data['ids'] ?? [];
+                $vencido = $item->estaVencido();
+                @endphp
+                <tr id="fila-seg-{{ $item->idLaptopSeguimiento }}"
+                    class="collapse show {{ $collapseId }} fila-marca-{{ $marca }} fila-estado-{{ $item->estado_fila }}">
+                    <!-- A: Responsable -->
+                    <td>
+                        <input type="text" class="input-inline text-center fw-bold"
+                            value="{{ $item->nombre_responsable }}"
+                            placeholder="-"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'responsable_texto', this.value, this)">
+                    </td>
+
+                    <!-- B: Modelo + vínculo con Producto -->
+                    <td class="celda-estado">
+                        <div class="d-flex align-items-center gap-1">
+                            <input type="text" class="input-inline fw-bold"
+                                value="{{ $item->modelo }}"
+                                onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'modelo', this.value, this)">
+                            @if($item->idProducto)
+                            <span class="badge bg-primary" title="Vinculado a Producto #{{ $item->idProducto }} ({{ $item->producto->codigoProducto ?? '' }})">
+                                <i class="bi bi-link-45deg"></i>
+                            </span>
+                            @endif
+                        </div>
+                    </td>
+
+                    <!-- C: Serie -->
+                    <td class="celda-estado">
+                        <input type="text" class="input-inline"
+                            value="{{ $item->serie }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'serie', this.value, this)">
+                    </td>
+
+                    <!-- D: Tamaño -->
+                    <td class="celda-estado text-center">
+                        <input type="text" class="input-inline text-center"
+                            value="{{ $item->tamano }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'tamano', this.value, this)">
+                    </td>
+
+                    <!-- E: Frecuencia (Hz) -->
+                    <td class="celda-estado text-center" style="min-width: 70px;">
+                        @php
+                            $valNorm = strtoupper(str_replace(' ', '', (string)$item->frecuencia));
+                            $encontrado = false;
+                        @endphp
+                        <select class="input-inline text-center sel-frecuencia"
+                                style="cursor: pointer;"
+                                title="Frecuencia (clic para ver todas las opciones de Hz)"
+                                onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'frecuencia', this.value, this)">
+                            <option value="">-</option>
+                            @foreach($frecuenciasSugeridas as $sug)
+                                @php
+                                    $sugNorm = strtoupper(str_replace(' ', '', (string)$sug));
+                                    $esSel = ($valNorm === $sugNorm);
+                                    if ($esSel) $encontrado = true;
+                                @endphp
+                                <option value="{{ $sug }}" @selected($esSel)>{{ $sug }}</option>
+                            @endforeach
+                            @if(!empty($item->frecuencia) && !$encontrado)
+                                <option value="{{ $item->frecuencia }}" selected>{{ $item->frecuencia }}</option>
+                            @endif
+                        </select>
+                    </td>
+
+                    <!-- F: Procesador -->
+                    <td class="celda-estado">
+                        <input type="text" class="input-inline"
+                            value="{{ $item->procesador }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'procesador', this.value, this)">
+                    </td>
+
+                    <!-- G: RAM -->
+                    <td class="celda-estado text-center">
+                        <input type="text" class="input-inline text-center"
+                            value="{{ $item->ram }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'ram', this.value, this)">
+                    </td>
+
+                    <!-- H: Disco -->
+                    <td class="celda-estado text-center">
+                        <input type="text" class="input-inline text-center"
+                            value="{{ $item->disco }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'disco', this.value, this)">
+                    </td>
+
+                    <!-- I: Video -->
+                    <td class="celda-estado">
+                        <input type="text" class="input-inline"
+                            value="{{ $item->video }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'video', this.value, this)">
+                    </td>
+
+                    <!-- J: Part Number -->
+                    <td class="celda-estado font-monospace">
+                        <input type="text" class="input-inline font-monospace"
+                            value="{{ $item->part_number }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'part_number', this.value, this)">
+                    </td>
+
+                    <!-- K: Stock -->
+                    <td class="celda-estado text-center">
+                        <input type="text" class="input-inline text-center fw-bold"
+                            value="{{ $item->stock_texto }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'stock_texto', this.value, this)">
+                    </td>
+
+                    <!-- L: Fecha de Revisión (Rosa si < hoy) -->
+                    <td id="celda-fecha-{{ $item->idLaptopSeguimiento }}"
+                        class="text-center {{ $vencido ? 'celda-fecha-vencida' : '' }}">
+                        <div class="d-flex align-items-center gap-1">
+                            <input type="date" class="input-inline text-center p-0"
+                                value="{{ $item->fecha_revision ? $item->fecha_revision->format('Y-m-d') : '' }}"
+                                onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'fecha_revision', this.value, this)">
+                            <button type="button" class="btn btn-xs btn-outline-success py-0 px-1"
+                                style="font-size: 0.65rem;"
+                                title="Marcar revisado HOY"
+                                onclick="marcarRevisadoHoy({{ $item->idLaptopSeguimiento }})">
+                                <i class="bi bi-check2"></i>
+                            </button>
+                        </div>
+                    </td>
+
+                    <!-- M, N, O, P: Proveedores CUAD (40), DM (59), ALC (48), ASIA (22) -->
+                    @foreach($proveedoresCfg as $idProv => $pCfg)
+                    @php
+                    $celdaP = $provs[$idProv] ?? $provs[(string)$idProv] ?? ['valor' => '', 'tipo' => 'VACIO'];
+                    $tipoP = $celdaP['tipo'] ?? 'VACIO';
+                    $valP = $celdaP['valor'] ?? '';
+                    @endphp
+                    <td id="celda-prov-{{ $item->idLaptopSeguimiento }}-{{ $idProv }}"
+                        class="text-center celda-prov-{{ $tipoP }}">
+                        <input type="text" class="input-inline text-center"
+                            value="{{ $valP }}"
+                            placeholder="-"
+                            title="{{ $pCfg['nombre'] }}: 'x' = Con stock, 'PROV' = En lista sin stock, 'W0...' = Código"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'prov_{{ $idProv }}', this.value, this)">
+                    </td>
+                    @endforeach
+
+                    <!-- Q: unik (stock propio) -->
+                    <td class="text-center">
+                        <input type="text" class="input-inline text-center fw-bold"
+                            value="{{ $item->stock_unik }}"
+                            onchange="guardarCeldaInline({{ $item->idLaptopSeguimiento }}, 'stock_unik', this.value, this)">
+                    </td>
+
+                    <!-- R: Cuentas ML (UNIK=3, GAMING=4, UP=5, LIZ=6) -->
+                    <td class="text-center">
+                        <div class="d-flex flex-wrap justify-content-center gap-1">
+                            @foreach($cuentasMlCfg as $idCta => $cCfg)
+                            @php
+                            $activa = in_array((int)$idCta, $ctasIds, true);
+                            @endphp
+                            <span id="pill-cta-{{ $item->idLaptopSeguimiento }}-{{ $idCta }}"
+                                class="badge bg-{{ $cCfg['color'] }} cuenta-pill {{ $activa ? '' : 'inactiva' }}"
+                                title="{{ $cCfg['nombre'] }} (Clic para activar/desactivar)"
+                                onclick="toggleCuentaMl({{ $item->idLaptopSeguimiento }}, {{ $idCta }}, this)">
+                                {{ $cCfg['sigla'] }}
+                            </span>
+                            @endforeach
+                        </div>
+                    </td>
+
+                    <!-- Selector de Estado de Fila + Eliminar -->
+                    <td class="text-center">
+                        <div class="d-flex align-items-center gap-1">
+                            <select class="form-select form-select-sm py-0 px-1" style="font-size: 0.70rem;"
+                                onchange="cambiarEstadoFila({{ $item->idLaptopSeguimiento }}, this.value)">
+                                @foreach($estadosCfg as $eKey => $eData)
+                                <option value="{{ $eKey }}" @selected($item->estado_fila === $eKey)>{{ $eData['short'] }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="btn btn-xs text-danger p-0" title="Eliminar fila"
+                                onclick="eliminarFilaSeguimiento({{ $item->idLaptopSeguimiento }})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                @endforeach
+                @endforeach
+                @endforeach
                 @empty
-                    <tr>
-                        <td colspan="19" class="text-center py-5 text-muted">
-                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                            No se encontraron modelos con los filtros seleccionados.
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="19" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        No se encontraron modelos con los filtros seleccionados.
+                    </td>
+                </tr>
                 @endforelse
             </tbody>
         </table>
@@ -558,7 +455,7 @@
                         <label class="form-label small fw-bold">Marca *</label>
                         <select name="marca_nombre" class="form-select form-select-sm" required>
                             @foreach(array_keys($marcasCfg) as $mName)
-                                <option value="{{ $mName }}">{{ $mName }}</option>
+                            <option value="{{ $mName }}">{{ $mName }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -580,8 +477,13 @@
                         <input type="text" name="tamano" class="form-control form-control-sm" placeholder='15.6"'>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-bold">Frecuencia</label>
-                        <input type="text" name="frecuencia" class="form-control form-control-sm" placeholder="165HZ">
+                        <label class="form-label small fw-bold">Frecuencia (Hz)</label>
+                        <select name="frecuencia" class="form-select form-select-sm">
+                            <option value="">-- Hz --</option>
+                            @foreach($frecuenciasSugeridas as $sug)
+                                <option value="{{ $sug }}">{{ $sug }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-5">
                         <label class="form-label small fw-bold">Procesador</label>
@@ -608,7 +510,7 @@
                         <label class="form-label small fw-bold">Estado Inicial</label>
                         <select name="estado_fila" class="form-select form-select-sm">
                             @foreach($estadosCfg as $eKey => $eData)
-                                <option value="{{ $eKey }}">{{ $eData['label'] }}</option>
+                            <option value="{{ $eKey }}">{{ $eData['label'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -618,12 +520,12 @@
                         <label class="form-label small fw-bold text-primary mb-1">Proveedores (`x` = stock, `PROV` = sin stock confirmado, `W06335` = código)</label>
                         <div class="row g-2">
                             @foreach($proveedoresCfg as $idProv => $pCfg)
-                                <div class="col-3">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text fw-bold">{{ $pCfg['codigo'] }}</span>
-                                        <input type="text" name="prov_{{ $idProv }}" class="form-control" placeholder="x / PROV / W...">
-                                    </div>
+                            <div class="col-3">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text fw-bold">{{ $pCfg['codigo'] }}</span>
+                                    <input type="text" name="prov_{{ $idProv }}" class="form-control" placeholder="x / PROV / W...">
                                 </div>
+                            </div>
                             @endforeach
                         </div>
                     </div>
@@ -632,12 +534,12 @@
                         <label class="form-label small fw-bold text-primary mb-1">Cuentas Mercado Libre Publicadas</label>
                         <div class="d-flex gap-3">
                             @foreach($cuentasMlCfg as $idCta => $cCfg)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="cuentas_ml[]" value="{{ $idCta }}" id="chkCtaNew{{ $idCta }}">
-                                    <label class="form-check-label small fw-bold" for="chkCtaNew{{ $idCta }}">
-                                        {{ $cCfg['sigla'] }} ({{ $cCfg['nombre'] }})
-                                    </label>
-                                </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="cuentas_ml[]" value="{{ $idCta }}" id="chkCtaNew{{ $idCta }}">
+                                <label class="form-check-label small fw-bold" for="chkCtaNew{{ $idCta }}">
+                                    {{ $cCfg['sigla'] }} ({{ $cCfg['nombre'] }})
+                                </label>
+                            </div>
                             @endforeach
                         </div>
                     </div>
@@ -677,114 +579,12 @@
     </div>
 </div>
 
-<script>
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+<!-- Datalist de Sugerencias de Frecuencia (Hz) desde Caracteristicas_Sugerencias -->
+<datalist id="lista-frecuencias">
+    @foreach($frecuenciasSugeridas ?? [] as $sug)
+        <option value="{{ $sug }}"></option>
+    @endforeach
+</datalist>
 
-async function guardarCeldaInline(id, campo, valor, inputEl = null) {
-    try {
-        const res = await fetch(`{{ url('dashboard/laptops/seguimiento') }}/${id}/inline`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ campo, valor })
-        });
-        const data = await res.json();
-        if (data.ok) {
-            if (campo.startsWith('prov_')) {
-                const idProv = campo.replace('prov_', '');
-                const td = document.getElementById(`celda-prov-${id}-${idProv}`);
-                const tipo = data.proveedores_data?.[idProv]?.tipo || 'VACIO';
-                if (td) {
-                    td.className = `text-center celda-prov-${tipo}`;
-                }
-            }
-            const tdFecha = document.getElementById(`celda-fecha-${id}`);
-            if (tdFecha) {
-                tdFecha.classList.toggle('celda-fecha-vencida', !!data.vencido);
-                const dateInput = tdFecha.querySelector('input[type="date"]');
-                if (dateInput && data.fecha_revision) {
-                    dateInput.value = data.fecha_revision;
-                }
-            }
-        }
-    } catch (e) {
-        console.error('Error guardando celda:', e);
-    }
-}
-
-async function marcarRevisadoHoy(id) {
-    await guardarCeldaInline(id, 'fecha_hoy', 1);
-}
-
-async function toggleCuentaMl(id, idCuenta, pillEl) {
-    try {
-        const res = await fetch(`{{ url('dashboard/laptops/seguimiento') }}/${id}/inline`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ campo: 'toggle_cuenta_ml', valor: idCuenta })
-        });
-        const data = await res.json();
-        if (data.ok && pillEl) {
-            const ids = data.cuentas_ml_data?.ids || [];
-            pillEl.classList.toggle('inactiva', !ids.includes(Number(idCuenta)));
-
-            // Feedback de sincronización con la API de Mercado Libre
-            if (data.ml && data.ml.message) {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: data.ml.synced ? 3000 : 4500,
-                    timerProgressBar: true
-                });
-                Toast.fire({
-                    icon: data.ml.synced ? 'success' : (data.ml.error ? 'warning' : 'info'),
-                    title: data.ml.message
-                });
-            }
-        }
-    } catch (e) {
-        console.error('Error actualizando cuenta ML:', e);
-    }
-}
-
-async function cambiarEstadoFila(id, nuevoEstado) {
-    await guardarCeldaInline(id, 'estado_fila', nuevoEstado);
-    const tr = document.getElementById(`fila-seg-${id}`);
-    if (tr) {
-        tr.className = tr.className.replace(/\bfila-estado-\S+/g, '').trim() + ` fila-estado-${nuevoEstado}`;
-    }
-}
-
-async function eliminarFilaSeguimiento(id) {
-    const confirm = await Swal.fire({
-        title: '¿Eliminar modelo del seguimiento?',
-        text: 'El producto del catálogo general no será afectado.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    });
-    if (!confirm.isConfirmed) return;
-
-    const res = await fetch(`{{ url('dashboard/laptops/seguimiento') }}/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': csrfToken,
-            'Accept': 'application/json'
-        }
-    });
-    if (res.ok) {
-        document.getElementById(`fila-seg-${id}`)?.remove();
-    }
-}
-</script>
+@include('laptops.logic.seguimientologic')
 @endsection
-

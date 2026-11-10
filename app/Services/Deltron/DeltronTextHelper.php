@@ -165,27 +165,41 @@ class DeltronTextHelper
         if (!empty($item['modelo_real']) && $item['modelo_real'] !== '-') {
             return trim($item['modelo_real']);
         }
-        if (!empty($item['modelo']) && $item['modelo'] !== '-') {
-            return trim($item['modelo']);
-        }
-        if (!empty($item['model']) && $item['model'] !== '-') {
-            return trim($item['model']);
+
+        // 1. Prioridad: Buscar en tablas HTML de especificaciones o en la descripción técnica (donde Deltron escribe "- MODELO: XXX")
+        $fuentes = [
+            $item['specs']['specs_all_html'] ?? null,
+            $item['specs']['specs_html'] ?? null,
+            $item['specs_all_html'] ?? null,
+            $item['specs_html'] ?? null,
+            $item['description_large'] ?? null,
+            $item['descripcion_completa'] ?? null,
+            $item['description'] ?? null,
+            $item['description_small'] ?? null,
+        ];
+
+        foreach ($fuentes as $src) {
+            if (is_string($src) && trim($src) !== '') {
+                $modeloReal = self::extraerModeloRealDesdeSpecs($src);
+                if ($modeloReal) {
+                    return $modeloReal;
+                }
+            }
         }
 
-        $specsHtml = $item['specs']['specs_all_html'] 
-            ?? ($item['specs']['specs_html'] 
-            ?? ($item['specs_all_html'] 
-            ?? ($item['specs_html'] ?? '')));
-
-        if (is_string($specsHtml) && trim($specsHtml) !== '') {
-            return self::extraerModeloRealDesdeSpecs($specsHtml);
+        // 2. Si no se encontró en las especificaciones ni en la descripción, revisar campos modelo/model
+        foreach (['modelo', 'model'] as $k) {
+            if (!empty($item[$k]) && $item[$k] !== '-') {
+                return trim((string) $item[$k]);
+            }
         }
 
         return null;
     }
 
     /**
-     * Extrae el modelo verdadero del fabricante desde la tabla de especificaciones tecnicas (specs_html) de Deltron.
+     * Extrae el modelo verdadero del fabricante desde la tabla de especificaciones tecnicas (specs_html)
+     * o desde el texto de la descripción de Deltron (ej: "- MODELO: ASTRO A10 Gen 2").
      */
     public static function extraerModeloRealDesdeSpecs(?string $html): ?string
     {
@@ -214,8 +228,8 @@ class DeltronTextHelper
             }
         }
 
-        // 2. Fallback de texto plano
-        if (preg_match('/(?:^|\n|\r)\s*MODELO\s*:\s*([^\r\n<]+)/i', strip_tags($html), $m)) {
+        // 2. Fallback de texto plano (admite viñetas como "- MODELO: XXX", "• MODELO: XXX", etc.)
+        if (preg_match('/(?:^|[\r\n\-\*•\t])\s*MODELO\s*:\s*([^\r\n<\[]+)/i', strip_tags($html), $m)) {
             $val = trim($m[1]);
             $vUpper = strtoupper($val);
             if (!empty($val) && $vUpper !== 'MODELO' && $vUpper !== '-' && $vUpper !== 'N/A' && strlen($val) <= 100) {

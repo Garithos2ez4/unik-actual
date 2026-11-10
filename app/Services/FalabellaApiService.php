@@ -289,6 +289,8 @@ class FalabellaApiService
 
             if (is_array($statuses)) {
                 $statusList = $this->isAssoc($statuses) ? array_values($statuses) : $statuses;
+            } elseif ($statuses !== null && $statuses !== '') {
+                $statusList = [$statuses];
             }
         } elseif ($statuses !== null && $statuses !== '') {
             $statusList = [$statuses];
@@ -424,8 +426,8 @@ class FalabellaApiService
 
         $response = Http::baseUrl(rtrim(config('services.falabella.base_url'), '/'))
             ->acceptJson()
-            ->timeout((int) config('services.falabella.timeout', 120))
-            ->connectTimeout((int) config('services.falabella.connect_timeout', 30))
+            ->timeout((int) config('services.falabella.timeout', 30))
+            ->connectTimeout((int) config('services.falabella.connect_timeout', 10))
             ->retry(
                 times: 3,
                 sleepMilliseconds: 1000,

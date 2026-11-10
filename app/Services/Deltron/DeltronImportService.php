@@ -350,7 +350,7 @@ class DeltronImportService
             $limaStock = $c['limaStock'];
             $limaHayMas = $c['limaHayMas'];
 
-            $modeloReal = DeltronTextHelper::extraerModeloRealDesdeSpecs($item['specs_all_html'] ?? ($item['specs_html'] ?? ''));
+            $modeloReal = DeltronTextHelper::extraerModeloDesdeItem($item);
 
             $clasif = $this->classifierService->clasificarGrupoSugerido($item, $grupos);
             $idMarca = $this->classifierService->emparejarMarca($item['brand_name'] ?? '', $marcas);
@@ -1259,7 +1259,7 @@ class DeltronImportService
             'replace_id' => $producto->idProducto,
             'sku' => $skuReal,
             'part_number' => $pn,
-            'modelo_real' => $ficha['modelo_real'] ?? DeltronTextHelper::extraerModeloRealDesdeSpecs($ficha['specs_html'] ?? ''),
+            'modelo_real' => $ficha['modelo_real'] ?? DeltronTextHelper::extraerModeloDesdeItem($ficha),
             'name' => $ficha['name'] ?? DeltronTextHelper::obtenerTituloComercialDeltron($ficha),
             'brand_name' => $ficha['brand_name'] ?? '',
             'idMarca' => $idMarca,

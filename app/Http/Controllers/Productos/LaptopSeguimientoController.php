@@ -57,20 +57,22 @@ class LaptopSeguimientoController extends Controller
         $productosLaptop = Producto::whereIn('idGrupo', [1, 2, 3])
             ->orderBy('nombreProducto')
             ->get(['idProducto', 'codigoProducto', 'modelo', 'partNumber', 'nombreProducto']);
+        $frecuenciasSugeridas = $this->service->obtenerSugerenciasFrecuencia();
 
         return view('laptops.seguimiento', [
-            'user'            => $user,
-            'agrupado'        => $tablero['agrupado'],
-            'stats'           => $tablero['stats'],
-            'responsables'    => $tablero['responsables'],
-            'filtros'         => $filtros,
-            'proveedoresCfg'  => $proveedoresCfg,
-            'cuentasMlCfg'    => $cuentasMlCfg,
-            'marcasCfg'       => $marcasCfg,
-            'estadosCfg'      => $estadosCfg,
-            'gamasCfg'        => $gamasCfg,
-            'usuarios'        => $usuarios,
-            'productosLaptop' => $productosLaptop,
+            'user'                 => $user,
+            'agrupado'             => $tablero['agrupado'],
+            'stats'                => $tablero['stats'],
+            'responsables'         => $tablero['responsables'],
+            'filtros'              => $filtros,
+            'proveedoresCfg'       => $proveedoresCfg,
+            'cuentasMlCfg'         => $cuentasMlCfg,
+            'marcasCfg'            => $marcasCfg,
+            'estadosCfg'           => $estadosCfg,
+            'gamasCfg'             => $gamasCfg,
+            'usuarios'             => $usuarios,
+            'productosLaptop'      => $productosLaptop,
+            'frecuenciasSugeridas' => $frecuenciasSugeridas,
         ]);
     }
 
@@ -128,6 +130,11 @@ class LaptopSeguimientoController extends Controller
             $idProducto = $this->service->buscarProductoVinculado($data['part_number'] ?? null, $data['modelo'], $indice);
         }
 
+        $frecuencia = !empty($data['frecuencia']) ? trim($data['frecuencia']) : null;
+        if (empty($frecuencia) && $idProducto) {
+            $frecuencia = $this->service->obtenerFrecuenciaProducto($idProducto);
+        }
+
         $idUser = null;
         if (!empty($data['responsable_texto'])) {
             $u = Usuario::whereRaw('UPPER(user) = ?', [strtoupper(trim($data['responsable_texto']))])->first();
@@ -147,7 +154,7 @@ class LaptopSeguimientoController extends Controller
             'modelo'            => $data['modelo'],
             'serie'             => $data['serie'] ?? null,
             'tamano'            => $data['tamano'] ?? null,
-            'frecuencia'        => $data['frecuencia'] ?? null,
+            'frecuencia'        => $frecuencia,
             'procesador'        => $data['procesador'] ?? null,
             'ram'               => $data['ram'] ?? null,
             'disco'             => $data['disco'] ?? null,
@@ -249,6 +256,12 @@ class LaptopSeguimientoController extends Controller
             $seg->save();
         } elseif ($campo === 'idProducto') {
             $seg->idProducto = !empty($valor) ? (int) $valor : null;
+            if ($seg->idProducto && (empty($seg->frecuencia) || $seg->frecuencia === '-')) {
+                $freqProd = $this->service->obtenerFrecuenciaProducto($seg->idProducto);
+                if ($freqProd) {
+                    $seg->frecuencia = $freqProd;
+                }
+            }
             $seg->save();
             if ($seg->idProducto) {
                 $this->service->sincronizarConInventarioProveedor($seg);
@@ -265,6 +278,7 @@ class LaptopSeguimientoController extends Controller
         return response()->json([
             'ok'               => true,
             'id'               => $seg->idLaptopSeguimiento,
+            'frecuencia'       => $seg->frecuencia,
             'estado_fila'      => $seg->estado_fila,
             'fecha_revision'   => $seg->fecha_revision ? $seg->fecha_revision->format('Y-m-d') : '',
             'fecha_formateada' => $seg->fecha_revision ? $seg->fecha_revision->format('d/m/Y') : '-',
@@ -273,6 +287,17 @@ class LaptopSeguimientoController extends Controller
             'cuentas_ml_data'  => $seg->cuentas_ml_data,
             'idProducto'       => $seg->idProducto,
             'ml'               => $mlResult ?? null,
+        ]);
+    }
+
+    public function syncFrecuencias()
+    {
+        $actualizados = $this->service->sincronizarFrecuenciasDesdeProductos();
+
+        return response()->json([
+            'ok'           => true,
+            'actualizados' => $actualizados,
+            'mensaje'      => "Se completaron las frecuencias de {$actualizados} laptops desde las especificaciones de catálogo.",
         ]);
     }
 
@@ -315,15 +340,28 @@ class LaptopSeguimientoController extends Controller
             $idProd = $this->service->buscarProductoVinculado($seg->part_number, $seg->modelo, $indice);
             if ($idProd) {
                 $seg->idProducto = $idProd;
+                if (empty($seg->frecuencia) || $seg->frecuencia === '-') {
+                    $freqProd = $this->service->obtenerFrecuenciaProducto($idProd);
+                    if ($freqProd) {
+                        $seg->frecuencia = $freqProd;
+                    }
+                }
                 $seg->save();
                 $this->service->sincronizarConInventarioProveedor($seg);
                 $nuevosVinculados++;
             }
         }
 
+        $frecuenciasActualizadas = $this->service->sincronizarFrecuenciasDesdeProductos();
+
+        $detalles = [];
+        if ($nuevosVinculados > 0) $detalles[] = "{$nuevosVinculados} modelos vinculados al catálogo";
+        if ($frecuenciasActualizadas > 0) $detalles[] = "{$frecuenciasActualizadas} frecuencias (Hz) autocompletadas desde especificaciones";
+        $msg = !empty($detalles) ? implode(' y ', $detalles) . '.' : 'Todos los modelos ya se encuentran al día con el catálogo.';
+
         return redirect()->route('laptops.seguimiento.index')->with([
             'title'   => 'Sincronización con Catálogo',
-            'message' => "Se vincularon y sincronizaron {$nuevosVinculados} modelos adicionales con la tabla Producto e Inventario_Proveedor.",
+            'message' => $msg,
             'icon'    => 'info',
             'button'  => 'btn btn-primary',
         ]);
