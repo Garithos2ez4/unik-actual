@@ -56,28 +56,32 @@ class MonitoresCategoryMapper extends AbstractCategorySpecMapper
         $subDeltron = $context['subDeltron'] ?? '';
         $titulo     = $context['titulo'] ?? '';
 
-        // Soportes / Racks
-        // Candado estricto: NUNCA confundir con "MOUSE, TRACKBALL, PUNTEROS" que contiene la subcadena "RACK" dentro de "TRACKBALL"
-        if (
-            !str_contains($catDeltron, 'MOUSE') &&
-            !str_contains($catDeltron, 'TRACKBALL') &&
-            !str_contains($catDeltron, 'PUNTERO') &&
-            !str_contains($subDeltron, 'MOUSE') &&
-            !str_contains($titulo, 'MOUSE') &&
-            !str_contains($titulo, 'MOUSEPAD') &&
-            !str_contains($titulo, 'PAD') &&
-            !str_contains($titulo, 'BACKPACK') &&
-            !str_contains($titulo, 'MOCHILA') &&
-            !str_contains($titulo, 'MALET')
-        ) {
+        // Soportes / Racks (Monitores y Televisores)
+        $sku = strtoupper($context['item']['sku'] ?? '');
+        $name = strtoupper($context['name'] ?? '');
+
+        $esMochilaOMaleta = str_contains($catDeltron, 'MOCHILA') || str_contains($catDeltron, 'ACCESORIOS DE VIAJE') ||
+            str_contains($subDeltron, 'MOCHILA') || str_contains($subDeltron, 'BACKPACK') || str_contains($subDeltron, 'MALETA') ||
+            str_contains($titulo, 'BACKPACK') || str_contains($titulo, 'MOCHILA') || str_contains($titulo, 'MALETA') ||
+            str_contains($titulo, 'MALETIN') || str_contains($titulo, 'MALETÍN') || str_contains($name, 'BACKPACK') ||
+            str_starts_with($sku, 'NBACK') || str_starts_with($name, 'BP ');
+
+        $esPeriferico = str_contains($catDeltron, 'MOUSE') || str_contains($catDeltron, 'TRACKBALL') ||
+            str_contains($catDeltron, 'PUNTERO') || str_contains($subDeltron, 'MOUSE') ||
+            str_contains($titulo, 'MOUSE') || str_contains($titulo, 'MOUSEPAD') || str_contains($titulo, 'PAD') ||
+            str_contains($titulo, 'TECLADO') || str_contains($titulo, 'AURICULAR') || str_contains($titulo, 'AUDIFONO');
+
+        if (!$esMochilaOMaleta && !$esPeriferico) {
             if (
-                preg_match('/\b(RACK|RACKS)\b/', $catDeltron) ||
-                preg_match('/\b(RACK|RACKS)\b/', $subDeltron) ||
-                preg_match('/\b(RACK|RACKS)\b/', $titulo) ||
                 str_contains($titulo, 'SOPORTE PARA MONITOR') ||
+                str_contains($titulo, 'SOPORTE DE MONITOR') ||
+                str_contains($titulo, 'SOPORTE PARA TV') ||
                 str_contains($titulo, 'SOPORTE DE TV') ||
                 str_contains($titulo, 'BRAZO PARA MONITOR') ||
-                str_contains($subDeltron, 'RACKS PARA')
+                str_contains($titulo, 'RACK PARA') ||
+                str_contains($subDeltron, 'RACKS PARA') ||
+                ((str_contains($catDeltron, 'MONITOR') || str_contains($subDeltron, 'MONITOR') || str_contains($catDeltron, 'TELEVISOR') || str_contains($subDeltron, 'TELEVISOR') || str_contains($catDeltron, 'RACK')) &&
+                 preg_match('/\b(RACK|RACKS|SOPORTE)\b/i', $titulo))
             ) {
                 return self::GRUPO_SOPORTE_RACK;
             }

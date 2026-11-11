@@ -137,12 +137,21 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
         }
 
         // 5. SSD / Disco Sólido
+        $sku = strtoupper($context['item']['sku'] ?? '');
+        $esNasOServidor = str_starts_with($sku, 'NAS') || str_starts_with($sku, 'SRV') ||
+            str_contains($titulo, 'SERVIDOR') || str_contains($titulo, 'SERVER') ||
+            (str_contains($titulo, 'NAS') && !str_contains($titulo, 'DISCO') && !str_contains($titulo, 'HDD') && !str_contains($titulo, 'SSD')) ||
+            str_contains($subDeltron, 'NAS') || str_contains($subDeltron, 'SERVIDORES') ||
+            str_contains($titulo, 'ASUSTOR') || str_contains($titulo, 'SYNOLOGY') || str_contains($titulo, 'QNAP');
+
         if (
+            !$esNasOServidor &&
             !str_contains($catDeltron, 'NOTEBOOK') && !str_contains($catDeltron, 'PORTATIL') && !str_contains($catDeltron, 'COMPUTADORA') &&
             !str_starts_with($name, 'NB ') && !str_starts_with($titulo, 'NB ') &&
             (str_contains($catDeltron, 'DISCO SOLIDO') || str_contains($catDeltron, 'UNIDADES DE DISCO SOLIDO') ||
              (str_contains($subDeltron, 'SSD') && !str_contains($subDeltron, 'NOTEBOOK')) ||
-             str_contains($catDeltron, 'STORAGE') || str_starts_with($titulo, 'SSD ') || str_starts_with($name, 'SSD '))
+             (str_contains($catDeltron, 'STORAGE') && !str_contains($subDeltron, 'NAS')) ||
+             str_starts_with($titulo, 'SSD ') || str_starts_with($name, 'SSD '))
         ) {
             return self::GRUPO_DISCO_SOLIDO;
         }

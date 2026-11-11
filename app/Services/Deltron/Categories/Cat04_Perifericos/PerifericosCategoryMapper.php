@@ -73,12 +73,27 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
         $titulo     = $context['titulo'] ?? '';
         $name       = $context['name'] ?? '';
 
-        // 1. Mochilas / Maletas
+        // 1. Auriculares / Audífonos / Headsets
+        if (
+            str_contains($catDeltron, 'AURICULAR') || str_contains($catDeltron, 'AUDIFONO') ||
+            str_contains($subDeltron, 'AURICULAR') || str_contains($subDeltron, 'AUDIFONO') ||
+            str_contains($titulo, 'AURICULAR') || str_contains($titulo, 'AUDIFONO') || str_contains($titulo, 'AUDÍFONO') ||
+            str_contains($titulo, 'HEADSET') || str_starts_with($name, 'HS ') || str_starts_with($name, 'HEADSET')
+        ) {
+            return self::GRUPO_AURICULARES;
+        }
+
+        // 2. Mochilas / Maletas
+        $sku = strtoupper($context['item']['sku'] ?? '');
         if (
             str_contains($catDeltron, 'MOCHILA') ||
             str_contains($subDeltron, 'MOCHILA') ||
+            str_contains($subDeltron, 'BACKPACK') ||
             str_contains($titulo, 'BACKPACK') ||
             str_contains($titulo, 'MOCHILA') ||
+            str_contains($name, 'BACKPACK') ||
+            str_starts_with($name, 'BP ') ||
+            str_starts_with($sku, 'NBACK') ||
             str_contains($catDeltron, 'ACCESORIOS DE VIAJE') ||
             str_contains($titulo, 'MALETA') ||
             str_contains($titulo, 'MALETIN') ||

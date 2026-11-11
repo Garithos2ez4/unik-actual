@@ -437,4 +437,43 @@ class DeltronTextHelper
         }
         return $fallback;
     }
+
+    /**
+     * Limpia sufijos regionales o de empaque frecuentes en Part Numbers tecnológicos:
+     * -AL (América Latina, común en tintas y consumibles Epson: T555320-AL -> T555320)
+     * -LA, -PE, -US, -ES, -BR
+     * #ABM, #AC8, #AK8 (sufijos regionales de HP: DM8V2LA#ABM -> DM8V2LA)
+     * /A, /B, /LL (Apple: MYD82LL/A -> MYD82LL)
+     */
+    public static function limpiarSufijoPartNumber(?string $pn): string
+    {
+        if (empty($pn)) {
+            return '';
+        }
+        $pn = trim($pn);
+        return preg_replace('/(-AL|-LA|-PE|-US|-ES|-BR|#ABM|#AC8|#AK8|\/[A-Z0-9]+)$/i', '', $pn);
+    }
+
+    /**
+     * Extrae códigos Part Number referenciados en bloques de texto o especificaciones
+     * (por ejemplo: "*P/N: T555320-AL", "Part Number: FQC-10553", etc.)
+     */
+    public static function extraerPartNumbersDesdeTexto(?string $texto): array
+    {
+        if (empty($texto)) {
+            return [];
+        }
+        preg_match_all('/(?:P\/N|PART\s*NUMBER)\s*[:=]\s*([A-Za-z0-9\-#\/]+)/i', $texto, $matches);
+        if (empty($matches[1])) {
+            return [];
+        }
+        $pns = [];
+        foreach ($matches[1] as $m) {
+            $mTrim = trim($m);
+            if (!empty($mTrim) && strlen($mTrim) >= 3 && strtoupper($mTrim) !== 'NO' && strtoupper($mTrim) !== 'NA') {
+                $pns[] = $mTrim;
+            }
+        }
+        return array_unique($pns);
+    }
 }

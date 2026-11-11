@@ -79,6 +79,11 @@ class DeltronImportService
             if (!empty($pnClean)) {
                 $existingPartNumbers[$pnClean] = true;
             }
+            $pnBase = strtoupper(trim(DeltronTextHelper::limpiarSufijoPartNumber($pnUpper)));
+            $pnBaseClean = preg_replace('/[^A-Z0-9]/', '', $pnBase);
+            if (!empty($pnBaseClean)) {
+                $existingPartNumbers[$pnBaseClean] = true;
+            }
         }
 
         $grupos = GrupoProducto::with('CategoriaProducto')->get()->keyBy('idGrupoProducto');
@@ -92,6 +97,8 @@ class DeltronImportService
 
             $pn = strtoupper(trim($item['part_number'] ?? ''));
             $pnClean = preg_replace('/[^A-Z0-9]/', '', $pn);
+            $pnBase = strtoupper(trim(DeltronTextHelper::limpiarSufijoPartNumber($pn)));
+            $pnBaseClean = preg_replace('/[^A-Z0-9]/', '', $pnBase);
 
             // Obtener el atributo modelo oficial de Deltron
             $modeloReal = DeltronTextHelper::extraerModeloDesdeItem($item);
@@ -102,6 +109,9 @@ class DeltronImportService
                 continue;
             }
             if (!empty($pnClean) && (isset($existingPartNumbers[$pnClean]) || isset($existingModelosLimpios[$pnClean]) || isset($existingModelos[$pn]))) {
+                continue;
+            }
+            if (!empty($pnBaseClean) && (isset($existingPartNumbers[$pnBaseClean]) || isset($existingModelosLimpios[$pnBaseClean]) || isset($existingModelos[$pnBase]))) {
                 continue;
             }
             if (!empty($modClean) && (isset($existingModelosLimpios[$modClean]) || isset($existingPartNumbers[$modClean]) || isset($existingModelos[$modeloReal]))) {
@@ -248,6 +258,11 @@ class DeltronImportService
             if (!empty($pnClean)) {
                 $existingPartNumbers[$pnClean] = true;
             }
+            $pnBase = strtoupper(trim(DeltronTextHelper::limpiarSufijoPartNumber($pnUpper)));
+            $pnBaseClean = preg_replace('/[^A-Z0-9]/', '', $pnBase);
+            if (!empty($pnBaseClean)) {
+                $existingPartNumbers[$pnBaseClean] = true;
+            }
         }
 
         $query = strtoupper(trim($filtros['query'] ?? ''));
@@ -263,6 +278,8 @@ class DeltronImportService
 
             $pn = strtoupper(trim($item['part_number'] ?? ''));
             $pnClean = preg_replace('/[^A-Z0-9]/', '', $pn);
+            $pnBase = strtoupper(trim(DeltronTextHelper::limpiarSufijoPartNumber($pn)));
+            $pnBaseClean = preg_replace('/[^A-Z0-9]/', '', $pnBase);
 
             // Obtener el atributo modelo oficial de Deltron
             $modeloReal = DeltronTextHelper::extraerModeloDesdeItem($item);
@@ -273,6 +290,9 @@ class DeltronImportService
                 continue;
             }
             if (!empty($pnClean) && (isset($existingPartNumbers[$pnClean]) || isset($existingModelosLimpios[$pnClean]) || isset($existingModelos[$pn]))) {
+                continue;
+            }
+            if (!empty($pnBaseClean) && (isset($existingPartNumbers[$pnBaseClean]) || isset($existingModelosLimpios[$pnBaseClean]) || isset($existingModelos[$pnBase]))) {
                 continue;
             }
             if (!empty($modClean) && (isset($existingModelosLimpios[$modClean]) || isset($existingPartNumbers[$modClean]) || isset($existingModelos[$modeloReal]))) {
@@ -450,6 +470,11 @@ class DeltronImportService
 
             // Verificar duplicados en caliente (excluyendo el propio producto si es un reemplazo directo)
             $replaceTargetId = !empty($itemData['replace_id']) ? (int) $itemData['replace_id'] : null;
+            $pnItem = trim($itemData['part_number'] ?? '');
+            $cleanPnItem = preg_replace('/[^A-Z0-9]/', '', strtoupper($pnItem));
+            $basePnItem = DeltronTextHelper::limpiarSufijoPartNumber($pnItem);
+            $cleanBasePnItem = preg_replace('/[^A-Z0-9]/', '', strtoupper($basePnItem));
+
             $duplicado = Producto::where('modelo', $sku)
                 ->when($replaceTargetId, fn($q) => $q->where('idProducto', '!=', $replaceTargetId))
                 ->exists() ||
@@ -458,6 +483,20 @@ class DeltronImportService
                     $q->whereHas('inventarioProveedor', fn($sq) => $sq->where('idProducto', '!=', $replaceTargetId));
                 })
                 ->exists();
+
+            if (!$duplicado && !empty($cleanPnItem)) {
+                $duplicado = Producto::where(function ($q) use ($pnItem, $cleanPnItem, $cleanBasePnItem) {
+                    $q->where('partNumber', $pnItem);
+                    if (!empty($cleanPnItem)) {
+                        $q->orWhereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanPnItem]);
+                    }
+                    if (!empty($cleanBasePnItem)) {
+                        $q->orWhereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanBasePnItem]);
+                    }
+                })
+                ->when($replaceTargetId, fn($q) => $q->where('idProducto', '!=', $replaceTargetId))
+                ->exists();
+            }
 
             if ($duplicado) {
                 continue;

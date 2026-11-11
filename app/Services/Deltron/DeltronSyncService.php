@@ -93,6 +93,26 @@ class DeltronSyncService
                 $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanPn])->first();
                 if ($p) return $p;
             }
+
+            // 3b. Part Number sin sufijo regional (ej. T555320-AL -> T555320, DM8V2LA#ABM -> DM8V2LA)
+            $basePn = DeltronTextHelper::limpiarSufijoPartNumber($exactPn);
+            $cleanBasePn = preg_replace('/[^A-Z0-9]/', '', strtoupper($basePn));
+            if (!empty($cleanBasePn) && $cleanBasePn !== $cleanPn) {
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(partNumber, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanBasePn])->first();
+                if ($p) return $p;
+
+                $p = Producto::whereRaw("UPPER(REPLACE(REPLACE(REPLACE(REPLACE(modelo, '-', ''), '_', ''), ' ', ''), '/', '')) = ?", [$cleanBasePn])->first();
+                if ($p) return $p;
+            }
+
+            // 3c. Part Number base contra Unike con sufijo regional (ej. Deltron busca T555320 y Unike tiene T555320-AL)
+            if (!empty($cleanPn) && strlen($cleanPn) >= 5) {
+                $p = Producto::where('partNumber', 'like', $exactPn . '-%')
+                    ->orWhere('partNumber', 'like', $exactPn . '#%')
+                    ->orWhere('partNumber', 'like', $exactPn . '/%')
+                    ->first();
+                if ($p) return $p;
+            }
         }
 
         // 4. SKU Deltron contra campos principales

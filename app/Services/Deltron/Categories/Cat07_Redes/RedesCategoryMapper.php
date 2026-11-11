@@ -50,18 +50,44 @@ class RedesCategoryMapper extends AbstractCategorySpecMapper
         $name       = $context['name'] ?? '';
 
         // Software y Licencias
-        if (
+        $esHardwareOPeriferico = str_contains($titulo, 'AURICULAR') || str_contains($titulo, 'AUDIFONO') ||
+            str_contains($titulo, 'AUDÍFONO') || str_contains($titulo, 'HEADSET') ||
+            str_contains($titulo, 'TECLADO') || str_contains($titulo, 'MOUSE') ||
+            str_contains($titulo, 'PARLANTE') || str_contains($titulo, 'MICROFONO') || str_contains($titulo, 'MICRÓFONO') ||
+            str_contains($titulo, 'CONTROL') || str_contains($titulo, 'CABLE') ||
+            str_contains($titulo, 'MONITOR') || str_contains($titulo, 'LAPTOP');
+
+        if (!$esHardwareOPeriferico && (
             str_contains($catDeltron, 'SOFTWARE') || str_contains($catDeltron, 'LICENCIA') ||
             str_contains($subDeltron, 'SOFTWARE') || str_contains($subDeltron, 'LICENCIA') || str_contains($subDeltron, 'ESD') ||
-            str_contains($titulo, 'WINDOWS') || str_contains($titulo, 'OFFICE') || str_contains($titulo, 'ANTIVIRUS') ||
-            str_contains($titulo, 'MICROSOFT 365') || str_starts_with($name, 'WIN ') || str_starts_with($name, 'WIN11')
-        ) {
+            str_contains($titulo, 'LICENCIA') || str_contains($titulo, 'OFFICE') || str_contains($titulo, 'ANTIVIRUS') ||
+            str_contains($titulo, 'MICROSOFT 365') || str_starts_with($name, 'WIN ') || str_starts_with($name, 'WIN11') ||
+            preg_match('/\b(WINDOWS\s*(10|11|SERVER)|WIN\s*(10|11))\b/i', $titulo)
+        )) {
             return self::GRUPO_SOFTWARE;
         }
 
-        // Servidores
-        if (str_contains($catDeltron, 'SERVIDORES') || str_contains($subDeltron, 'SERVIDORES')) {
-            return self::GRUPO_SERVIDORES;
+        // Servidores y Almacenamiento en Red (NAS)
+        $sku = strtoupper($context['item']['sku'] ?? '');
+        $esServidorONas = (
+            str_contains($catDeltron, 'SERVIDORES') || str_contains($subDeltron, 'SERVIDORES') ||
+            str_contains($subDeltron, 'NAS') ||
+            str_contains($titulo, 'SERVIDOR') || str_contains($titulo, 'SERVER') ||
+            str_contains($titulo, 'NAS') ||
+            str_starts_with($name, 'NAS ') || str_starts_with($name, 'SRV ') ||
+            str_starts_with($sku, 'NAS') || str_starts_with($sku, 'SRV') ||
+            str_contains($titulo, 'ASUSTOR') || str_contains($titulo, 'SYNOLOGY') || str_contains($titulo, 'QNAP')
+        );
+
+        if ($esServidorONas) {
+            $esDiscoFisico = str_contains($catDeltron, 'DISCOS DUROS') || str_contains($catDeltron, 'DISCO SOLIDO') ||
+                str_contains($subDeltron, 'DISCO DURO') || str_contains($subDeltron, 'SSD') ||
+                str_starts_with($titulo, 'DISCO DURO') || str_starts_with($titulo, 'DISCO SOLIDO') ||
+                str_starts_with($name, 'HD ') || str_starts_with($name, 'SSD ');
+
+            if (!$esDiscoFisico) {
+                return self::GRUPO_SERVIDORES;
+            }
         }
 
         return null;
