@@ -306,11 +306,14 @@ class DeliveryFlexController extends Controller
      */
     public function storeManual(Request $request)
     {
+        $esTienda = $request->input('tipo_entrega') === 'tienda';
+
         $request->validate([
             'idCliente' => 'required|integer',
-            'direccion' => 'required|string|max:255',
-            'latitud' => 'required|numeric',
-            'longitud' => 'required|numeric',
+            'tipo_entrega' => 'nullable|in:tienda,domicilio',
+            'direccion' => $esTienda ? 'nullable|string|max:255' : 'required|string|max:255',
+            'latitud' => $esTienda ? 'nullable|numeric' : 'required|numeric',
+            'longitud' => $esTienda ? 'nullable|numeric' : 'required|numeric',
             'costo_envio' => 'nullable|numeric|min:0',
             'monto_total' => 'required|numeric|min:0',
             'productos' => 'required|array|min:1',
@@ -319,38 +322,42 @@ class DeliveryFlexController extends Controller
             'productos.*.precio' => 'required|numeric|min:0',
         ]);
 
-        // 1. Calcular costo de envío
-        $distanciaKm = $this->openRouteService->calcularDistancia(
-            (float)$request->latitud,
-            (float)$request->longitud
-        );
-        $costoEnvio = $request->filled('costo_envio')
-            ? (float)$request->costo_envio
-            : $this->openRouteService->calcularCosto($distanciaKm);
+        // 1. Calcular costo de envío (recojo en tienda = SIEMPRE 0)
+        if ($esTienda) {
+            $costoEnvio = 0;
+        } else {
+            $costoEnvio = $request->filled('costo_envio')
+                ? (float)$request->costo_envio
+                : $this->openRouteService->calcularCosto(
+                    $this->openRouteService->calcularDistancia((float)$request->latitud, (float)$request->longitud)
+                );
+        }
 
         $subtotalProductos = collect($request->productos)->sum(function ($prod) {
             return ((int)$prod['cantidad']) * ((float)($prod['precio'] ?? 0));
         });
         $montoTotal = round($subtotalProductos + $costoEnvio, 2);
 
-        // 2. Crear PedidoWeb
-        $pedido = PedidoWeb::create([
-            'idCliente' => $request->idCliente,
-            'codigoTransaccion' => 'WSP-' . time(),
-            'pasarela' => 'whatsapp',
-            'total' => $montoTotal,
-            'estado' => 'pendiente',
-            'tipo_entrega' => 'domicilio',
-            'costo_envio' => $costoEnvio
-        ]);
+        // 2. Crear PedidoWeb (tipo_entrega y costo_envio asignados explícitamente)
+        $pedido = new PedidoWeb();
+        $pedido->idCliente = $request->idCliente;
+        $pedido->codigoTransaccion = 'WSP-' . time();
+        $pedido->pasarela = 'whatsapp';
+        $pedido->total = $montoTotal;
+        $pedido->estado = 'pendiente';
+        $pedido->tipo_entrega = $esTienda ? 'tienda' : 'domicilio';
+        $pedido->costo_envio = $costoEnvio;
+        $pedido->save();
 
-        // 4. Crear DireccionPedidoWeb
-        DireccionPedidoWeb::create([
-            'pedido_web_id' => $pedido->idPedidoWeb,
-            'direccion' => $request->direccion,
-            'latitud' => $request->latitud,
-            'longitud' => $request->longitud
-        ]);
+        // 4. Crear DireccionPedidoWeb (solo si es envío a domicilio)
+        if (!$esTienda) {
+            DireccionPedidoWeb::create([
+                'pedido_web_id' => $pedido->idPedidoWeb,
+                'direccion' => $request->direccion,
+                'latitud' => $request->latitud,
+                'longitud' => $request->longitud
+            ]);
+        }
 
         // 5. Crear detalles del pedido (productos)
         foreach ($request->productos as $prod) {
@@ -389,6 +396,7 @@ class DeliveryFlexController extends Controller
                     'idCliente' => $pedido->idCliente,
                     'nombre' => trim(optional($pedido->cliente)->nombre . ' ' . optional($pedido->cliente)->apellidoPaterno),
                     'costo_envio' => (float) ($pedido->costo_envio ?? 0),
+                    'tipo_entrega' => $pedido->tipo_entrega ?: ($pedido->direccion ? 'domicilio' : 'tienda'),
                     'monto_total' => (float) ($pedido->total ?? 0),
                     'direccion' => optional($pedido->direccion)->direccion,
                     'latitud' => optional($pedido->direccion)->latitud,
@@ -404,12 +412,14 @@ class DeliveryFlexController extends Controller
     public function updateManual(Request $request, $id)
     {
         $pedido = PedidoWeb::where('idPedidoWeb', $id)->firstOrFail();
+        $esTienda = $request->input('tipo_entrega') === 'tienda';
 
         $request->validate([
             'idCliente' => 'required|integer',
-            'direccion' => 'required|string|max:255',
-            'latitud' => 'required|numeric',
-            'longitud' => 'required|numeric',
+            'tipo_entrega' => 'nullable|in:tienda,domicilio',
+            'direccion' => $esTienda ? 'nullable|string|max:255' : 'required|string|max:255',
+            'latitud' => $esTienda ? 'nullable|numeric' : 'required|numeric',
+            'longitud' => $esTienda ? 'nullable|numeric' : 'required|numeric',
             'costo_envio' => 'nullable|numeric|min:0',
             'monto_total' => 'required|numeric|min:0',
             'productos' => 'required|array|min:1',
@@ -418,29 +428,41 @@ class DeliveryFlexController extends Controller
             'productos.*.precio' => 'required|numeric|min:0',
         ]);
 
-        // Recalcular envío si no se envió explícitamente
-        $distanciaKm = $this->openRouteService->calcularDistancia(
-            (float)$request->latitud,
-            (float)$request->longitud
-        );
-        $costoEnvio = $request->filled('costo_envio')
-            ? (float)$request->costo_envio
-            : $this->openRouteService->calcularCosto($distanciaKm);
+        // Recojo en tienda = envío SIEMPRE 0
+        if ($esTienda) {
+            $costoEnvio = 0;
+        } else {
+            $costoEnvio = $request->filled('costo_envio')
+                ? (float)$request->costo_envio
+                : $this->openRouteService->calcularCosto(
+                    $this->openRouteService->calcularDistancia((float)$request->latitud, (float)$request->longitud)
+                );
+        }
 
         $subtotalProductos = collect($request->productos)->sum(function ($prod) {
             return ((int)$prod['cantidad']) * ((float)($prod['precio'] ?? 0));
         });
         $montoTotal = round($subtotalProductos + $costoEnvio, 2);
 
-        $pedido->update([
-            'idCliente' => $request->idCliente,
-            'total' => $montoTotal,
-            'costo_envio' => $costoEnvio
-        ]);
+        $pedido->idCliente = $request->idCliente;
+        $pedido->total = $montoTotal;
+        $pedido->tipo_entrega = $esTienda ? 'tienda' : 'domicilio';
+        $pedido->costo_envio = $costoEnvio;
+        $pedido->save();
 
         // Actualizar dirección
-        if ($pedido->direccion) {
+        if ($esTienda) {
+            DireccionPedidoWeb::where('pedido_web_id', $pedido->idPedidoWeb)->delete();
+            \App\Models\Ecommerce\MercadoLibreFlexRoute::where('ml_order_id', 'WSP-' . $pedido->idPedidoWeb)->delete();
+        } elseif ($pedido->direccion) {
             $pedido->direccion->update([
+                'direccion' => $request->direccion,
+                'latitud' => $request->latitud,
+                'longitud' => $request->longitud
+            ]);
+        } else {
+            DireccionPedidoWeb::create([
+                'pedido_web_id' => $pedido->idPedidoWeb,
                 'direccion' => $request->direccion,
                 'latitud' => $request->latitud,
                 'longitud' => $request->longitud

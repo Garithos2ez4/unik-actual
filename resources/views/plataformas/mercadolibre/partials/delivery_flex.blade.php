@@ -289,6 +289,17 @@
                             <div id="productosSeleccionados" class="mt-2"></div>
                         </div>
 
+                        <!-- Modalidad de entrega -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold d-block">Modalidad de Entrega <span class="text-danger">*</span></label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="manualTipoEntrega" id="manualTipoDomicilio" value="domicilio" checked onchange="cambiarModalidadManual()">
+                                <label class="btn btn-outline-primary" for="manualTipoDomicilio"><i class="bi bi-truck me-1"></i> Envío a Domicilio</label>
+                                <input type="radio" class="btn-check" name="manualTipoEntrega" id="manualTipoTienda" value="tienda" onchange="cambiarModalidadManual()">
+                                <label class="btn btn-outline-success" for="manualTipoTienda"><i class="bi bi-shop me-1"></i> Recojo en Tienda (sin envío)</label>
+                            </div>
+                        </div>
+
                         <!-- Resumen de Montos -->
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Total Productos (S/)</label>
@@ -315,7 +326,7 @@
                         </div>
 
                         <!-- Dirección -->
-                        <div class="col-12">
+                        <div class="col-12 manual-solo-domicilio">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label class="form-label fw-semibold mb-0">Dirección de Entrega <span class="text-danger">*</span></label>
                                 <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" onclick="obtenerDireccionDesdeMapa()">
@@ -326,7 +337,7 @@
                         </div>
 
                         <!-- Mapa -->
-                        <div class="col-12">
+                        <div class="col-12 manual-solo-domicilio">
                             <div id="manualModalMap" class="border"></div>
                             <input type="hidden" id="manualLat">
                             <input type="hidden" id="manualLng">

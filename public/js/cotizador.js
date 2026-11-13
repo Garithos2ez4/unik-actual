@@ -37,7 +37,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const indivCosto = document.getElementById('indiv-costo');
     const indivFlete = document.getElementById('indiv-flete');
     const indivGanancia = document.getElementById('indiv-ganancia');
+    const indivMargenPct = document.getElementById('indiv-margen-pct');
+    const indivMargenSolesPreview = document.getElementById('indiv-margen-soles-preview');
     const indivTotalSoles = document.getElementById('indiv-total-soles');
+    const indivTotalGanancia = document.getElementById('indiv-total-ganancia');
+    const indivTotalGananciaPct = document.getElementById('indiv-total-ganancia-pct');
     const indivTotalBase = document.getElementById('indiv-total-base');
     const inputsIndiv = document.querySelectorAll('.input-indiv');
     const inputTasaCambio = document.getElementById('input-tasa-cambio');
@@ -65,6 +69,17 @@ document.addEventListener('DOMContentLoaded', function() {
     inputsIndiv.forEach(input => {
         input.addEventListener('input', () => window.recalcularCotizacion());
         input.addEventListener('focus', function() { this.select(); });
+    });
+
+    // Botones rápidos de porcentaje
+    document.querySelectorAll('.btn-quick-pct').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const pct = parseFloat(this.dataset.pct) || 0;
+            if (indivMargenPct) {
+                indivMargenPct.value = pct;
+                window.recalcularCotizacion();
+            }
+        });
     });
     
     let prevMonedaIndiv = indivMoneda ? indivMoneda.value : 'USD';
@@ -429,6 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const costo = parseFloat(indivCosto.value) || 0;
             const flete = parseFloat(indivFlete.value) || 0;
             const ganancia = parseFloat(indivGanancia.value) || 0;
+            const margenPct = parseFloat(indivMargenPct ? indivMargenPct.value : 0) || 0;
             const esUsd = indivMoneda.value === 'USD';
             
             // Costo ya incluye IGV, solo convertimos a soles si es USD
@@ -439,8 +455,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 costoSolesConIgv = costo;
             }
             
+            // Monto de aumento por porcentaje sobre el costo
+            const montoMargen = costoSolesConIgv * (margenPct / 100);
+            const totalGanancia = ganancia + montoMargen;
+            
             indivTotalSoles.textContent = costoSolesConIgv.toFixed(2);
-            totalBaseSinComision = costoSolesConIgv + flete + ganancia;
+            
+            // Actualizar preview y totales
+            if (indivMargenSolesPreview) {
+                indivMargenSolesPreview.textContent = `+S/ ${montoMargen.toFixed(2)}`;
+            }
+            if (indivTotalGanancia) {
+                indivTotalGanancia.textContent = totalGanancia.toFixed(2);
+            }
+            if (indivTotalGananciaPct) {
+                const pctEfectivo = costoSolesConIgv > 0 ? (totalGanancia / costoSolesConIgv) * 100 : 0;
+                indivTotalGananciaPct.textContent = `(${pctEfectivo.toFixed(1)}%)`;
+            }
+
+            totalBaseSinComision = costoSolesConIgv + flete + totalGanancia;
             indivTotalBase.textContent = `S/ ${totalBaseSinComision.toFixed(2)}`;
         }
 
@@ -507,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="col-4">
                                 <div class="d-flex align-items-center flex-wrap">
                                     <span class="fw-bold me-1">${pct}%</span>
-                                    ${flete > 0 ? `<span class="badge bg-light text-secondary border small fw-normal">+S/ ${flete.toFixed(2)}</span>` : ''}
+                                    ${flete > 0 ? `<span class="badge bg-light text-secondary border small fw-normal">+S/ ${flete.toFixed(2)} flete</span>` : ''}
                                 </div>
                                 ${nombre ? `<div class="text-muted text-truncate" style="font-size: 0.73rem; max-width: 140px;" title="${nombre}">${nombre}</div>` : ''}
                                 <span class="badge bg-success d-none badge-aplicable mt-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i> Sugerido</span>
@@ -662,14 +695,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // ---------------------------------------------------------
     window.verificarPrecioDeltronCotizador = function() {
         let query = '';
-        if (currentIndividualProduct && currentIndividualProduct.modelo) {
-            query = currentIndividualProduct.modelo;
+        let idProducto = '';
+        if (currentIndividualProduct) {
+            query = currentIndividualProduct.modelo || '';
+            idProducto = currentIndividualProduct.id || '';
         } else if (searchInput && searchInput.value.trim()) {
             query = searchInput.value.trim();
         }
 
         const feedback = document.getElementById('deltron-verify-feedback');
-        if (!query) {
+        if (!query && !idProducto) {
             if (feedback) {
                 feedback.style.display = 'block';
                 feedback.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Ingresa un SKU o selecciona un producto para consultar a Deltron.</span>';
@@ -682,7 +717,14 @@ document.addEventListener('DOMContentLoaded', function() {
             feedback.innerHTML = '<span class="text-primary"><div class="spinner-border spinner-border-sm me-1"></div>Consultando precio en Deltron API (API-0000030)...</span>';
         }
 
-        fetch(`/compras/deltron/precio-tiempo-real?sku=${encodeURIComponent(query)}`)
+        const params = new URLSearchParams();
+        if (query) params.append('sku', query);
+        if (idProducto) params.append('id_producto', idProducto);
+        if (currentIndividualProduct && currentIndividualProduct.modelo) {
+            params.append('part_number', currentIndividualProduct.modelo);
+        }
+
+        fetch(`/compras/deltron/precio-tiempo-real?${params.toString()}`)
             .then(res => res.json())
             .then(res => {
                 if (res.status === 'ok' && res.data) {
@@ -695,30 +737,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     const precioElegidoSinIgv = tienePromo ? precioPromo : precioLista;
                     const precioElegidoConIgv = (precioElegidoSinIgv * 1.18).toFixed(2);
 
+                    const igvLista = (precioLista * 0.18).toFixed(2);
+                    const totalListaConIgv = (precioLista * 1.18).toFixed(2);
+                    const totalPromoConIgv = precioPromo ? (precioPromo * 1.18).toFixed(2) : null;
+
                     let html = `
                         <div class="alert ${tienePromo ? 'alert-success' : 'alert-info'} border-0 shadow-xs py-2 px-3 text-start mt-2">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold">${data.name || data.sku}</span>
                                 <span class="badge ${tienePromo ? 'bg-danger' : 'bg-primary'} font-monospace">API-0000030</span>
                             </div>
-                            <div class="d-flex align-items-center gap-3 flex-wrap">
-                                <div>
-                                    <small class="text-muted d-block">Precio Regular Deltron:</small>
-                                    <span class="${tienePromo ? 'text-decoration-line-through text-muted' : 'fw-bold text-dark'}">$${precioLista.toFixed(2)} USD</span>
-                                    <small class="text-muted">(+IGV: $${(precioLista * 1.18).toFixed(2)})</small>
+                            <div class="d-flex align-items-center gap-3 flex-wrap my-2">
+                                <div class="p-2 rounded bg-white bg-opacity-75 border">
+                                    <small class="text-muted d-block fw-semibold">Valor Deltron (Sin IGV):</small>
+                                    <span class="${tienePromo ? 'text-decoration-line-through text-muted' : 'fw-bold text-dark fs-6'}">$${precioLista.toFixed(2)} USD</span>
+                                    <small class="text-secondary d-block">+18% IGV: $${igvLista}</small>
+                                    <div class="fw-bold text-primary mt-1 border-top pt-1">Total: $${totalListaConIgv} USD (Con IGV)</div>
                                 </div>
                                 ${tienePromo ? `
-                                <div>
-                                    <small class="text-danger fw-bold d-block"><i class="bi bi-fire"></i> ¡Precio Promo Vigente!</small>
+                                <div class="p-2 rounded bg-white bg-opacity-75 border border-success">
+                                    <small class="text-danger fw-bold d-block"><i class="bi bi-fire"></i> Promo Deltron (Sin IGV):</small>
                                     <span class="fw-bold text-success fs-6">$${precioPromo.toFixed(2)} USD</span>
-                                    <small class="text-success fw-semibold">(+IGV: $${(precioPromo * 1.18).toFixed(2)})</small>
+                                    <small class="text-secondary d-block">+18% IGV: $${(precioPromo * 0.18).toFixed(2)}</small>
+                                    <div class="fw-bold text-success mt-1 border-top pt-1">Total Promo: $${totalPromoConIgv} USD (Con IGV)</div>
                                 </div>
                                 ` : ''}
                             </div>
-                            ${tienePromo ? `<div class="badge bg-warning text-dark mt-1">Ahorro de $${ahorro.toFixed(2)} USD por unidad</div>` : ''}
+                            ${tienePromo ? `<div class="badge bg-warning text-dark mb-2">Ahorro de $${ahorro.toFixed(2)} USD por unidad antes de impuestos</div>` : ''}
                             <div class="mt-2 text-end">
-                                <button type="button" class="btn btn-sm ${tienePromo ? 'btn-success' : 'btn-primary'} rounded-pill px-3 py-1" onclick="aplicarPrecioDeltronCotizador(${precioElegidoConIgv})">
-                                    <i class="bi bi-check2-circle me-1"></i> Aplicar $${precioElegidoConIgv} USD (Con IGV) a Cotización
+                                <button type="button" class="btn btn-sm ${tienePromo ? 'btn-success' : 'btn-primary'} rounded-pill px-3 py-1 shadow-xs" onclick="aplicarPrecioDeltronCotizador(${precioElegidoConIgv})">
+                                    <i class="bi bi-check2-circle me-1"></i> Aplicar Costo Real: $${precioElegidoConIgv} USD (Con IGV)
                                 </button>
                             </div>
                         </div>

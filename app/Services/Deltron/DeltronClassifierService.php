@@ -139,9 +139,14 @@ class DeltronClassifierService
             }
         }
 
-        // Fallback por defecto si no coincidió con ninguna categoría
+        // Si no coincidió con ninguna categoría, no asignar categoría por defecto (dejar en blanco para asignación manual)
         if ($idGrupoSugerido === null) {
-            $idGrupoSugerido = PerifericosCategoryMapper::GRUPO_MOUSES; // 25
+            return [
+                'idGrupo' => null,
+                'nombreGrupo' => null,
+                'idCategoria' => null,
+                'nombreCategoria' => null
+            ];
         }
 
         $grupoObj = $grupos->get($idGrupoSugerido);

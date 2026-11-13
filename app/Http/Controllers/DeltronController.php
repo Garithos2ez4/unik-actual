@@ -260,9 +260,10 @@ class DeltronController extends Controller
     {
         $sku = trim($request->input('sku', ''));
         $partNumber = trim($request->input('part_number', ''));
+        $idProducto = $request->input('id_producto') ? (int) $request->input('id_producto') : null;
 
         $query = $sku ?: $partNumber;
-        if (empty($query)) {
+        if (empty($query) && empty($idProducto)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Parámetro sku o part_number requerido.'
@@ -270,21 +271,30 @@ class DeltronController extends Controller
         }
 
         try {
-            $stock = $this->deltronService->getStock($query);
-            if ((!$stock || ($stock['stock_total'] ?? 0) === 0) && !empty($partNumber) && $partNumber !== $query) {
+            $deltronSku = $this->deltronService->resolverDeltronSku($query, $idProducto);
+            $targetSku = $deltronSku ?: $query;
+
+            $stock = $this->deltronService->getStock($targetSku);
+            if ((!$stock || ($stock['stock_total'] ?? 0) === 0) && !empty($partNumber) && $partNumber !== $targetSku) {
                 $stockAlt = $this->deltronService->getStock($partNumber);
                 if ($stockAlt) {
                     $stock = $stockAlt;
                 }
             }
 
-            $precio = $this->deltronService->getPrecio($query);
-            if (!$precio && !empty($partNumber) && $partNumber !== $query) {
-                $precio = $this->deltronService->getPrecio($partNumber);
+            $precio = null;
+            try {
+                $precio = $this->deltronService->getPrecio($targetSku);
+                if (!$precio && !empty($partNumber) && $partNumber !== $targetSku) {
+                    $precio = $this->deltronService->getPrecio($partNumber);
+                }
+            } catch (\Throwable $e) {}
+            if (!$precio && $targetSku) {
+                $precio = $this->deltronService->getPrecioFallback($targetSku);
             }
 
-            $detalle = $this->deltronService->getProductoPorSku($query);
-            if (!$detalle && !empty($partNumber) && $partNumber !== $query) {
+            $detalle = $this->deltronService->getProductoPorSku($targetSku);
+            if (!$detalle && !empty($partNumber) && $partNumber !== $targetSku) {
                 $detalle = $this->deltronService->getProductoPorSku($partNumber);
             }
 
@@ -408,9 +418,10 @@ class DeltronController extends Controller
     {
         $sku = trim($request->input('sku', ''));
         $partNumber = trim($request->input('part_number', ''));
+        $idProducto = $request->input('id_producto') ? (int) $request->input('id_producto') : null;
         $query = $sku ?: $partNumber;
 
-        if (empty($query)) {
+        if (empty($query) && empty($idProducto)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Parámetro sku o part_number requerido.'
@@ -418,9 +429,23 @@ class DeltronController extends Controller
         }
 
         try {
-            $precio = $this->deltronService->getPrecio($query);
-            if (!$precio && !empty($partNumber) && $partNumber !== $query) {
-                $precio = $this->deltronService->getPrecio($partNumber);
+            // Resolver SKU oficial de Deltron si se envió un Part Number comercial, Modelo o idProducto
+            $deltronSku = $this->deltronService->resolverDeltronSku($query, $idProducto);
+            $targetSku = $deltronSku ?: $query;
+
+            $precio = null;
+            try {
+                $precio = $this->deltronService->getPrecio($targetSku);
+                if (!$precio && !empty($partNumber) && $partNumber !== $targetSku) {
+                    $precio = $this->deltronService->getPrecio($partNumber);
+                }
+            } catch (\Throwable $apiEx) {
+                \Illuminate\Support\Facades\Log::warning("Deltron live price API error for {$targetSku}: " . $apiEx->getMessage());
+            }
+
+            // Fallback a catálogo snapshot o inventario proveedor si la API en vivo responde 404 o timeout
+            if (!$precio && $targetSku) {
+                $precio = $this->deltronService->getPrecioFallback($targetSku);
             }
 
             if (!$precio) {

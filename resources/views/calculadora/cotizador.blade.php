@@ -8,33 +8,46 @@
     .table-cotizador input {
         text-align: right;
     }
+
     .table-cotizador .remove-row {
         cursor: pointer;
         color: #dc3545;
     }
+
     .table-cotizador .remove-row:hover {
         color: #a71d2a;
     }
+
     .product-result-item {
         cursor: pointer;
         transition: background-color 0.2s;
     }
+
     .product-result-item:hover {
         background-color: #f8f9fa;
     }
+
     .totales-box {
         background-color: #f8f9fa;
         border-radius: 8px;
         padding: 15px;
         border: 1px solid #dee2e6;
     }
+
     .platform-card {
         transition: transform 0.2s, box-shadow 0.2s;
         height: 100%;
     }
+
     .platform-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-xs {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.72rem;
+        line-height: 1.2;
     }
 </style>
 
@@ -57,7 +70,7 @@
                 <h5 class="text-secondary mb-0 me-2">T.C:</h5>
                 <input type="number" id="input-tasa-cambio" class="form-control form-control-sm text-center fw-bold text-primary border-primary" style="width: 70px;" step="0.01" min="1" value="{{$valores->tasaCambio}}">
                 <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-consultar-tc" onclick="consultarTipoCambio()" title="Consultar SUNAT en tiempo real"><i class="bi bi-arrow-clockwise"></i></button>
-                
+
                 <h5 class="text-secondary mb-0 ms-4">IGV: <span class="fw-bold text-dark">{{$valores->igv}}</span>%</h5>
                 <h5 class="text-secondary mb-0 ms-3">Facturación: <span class="fw-bold text-dark">{{$valores->facturacion}}</span>%</h5>
             </div>
@@ -89,12 +102,12 @@
     <div class="row">
         <!-- COLUMNA IZQUIERDA: MODO INDIVIDUAL O MODO COMBO -->
         <div class="col-xl-8 mb-4">
-            
+
             <!-- MODO INDIVIDUAL -->
             <div id="modo-individual" class="card shadow-sm h-100">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title mb-4"><i class="bi bi-laptop"></i> Producto Individual</h5>
-                    
+
                     <div class="mb-4 text-center">
                         <div class="d-flex justify-content-center align-items-center">
                             <h4 id="indiv-nombre-producto" class="text-primary mb-1">Cotización Manual</h4>
@@ -110,10 +123,10 @@
                     </div>
 
                     <div class="row g-3 justify-content-center">
-                        <div class="col-md-4">
+                        <div class="col-6 col-md-3">
                             <label class="form-label fw-bold">Costo del Producto</label>
                             <div class="input-group">
-                                <select class="form-select" id="indiv-moneda" style="max-width: 80px;">
+                                <select class="form-select" id="indiv-moneda" style="max-width: 75px;">
                                     <option value="USD">$</option>
                                     <option value="PEN">S/</option>
                                 </select>
@@ -121,31 +134,55 @@
                             </div>
                             <small class="text-muted">Con IGV</small>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Flete S/</label>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-bold">
+                                Flete Local S/
+                                <i class="bi bi-info-circle text-primary" data-bs-toggle="tooltip" title="Costo propio de recojo/traslado Deltron a tienda (opcional). El flete de plataformas (ej: Falabella S/ 3.90 ó 10.90) ya se aplica automáticamente a la derecha."></i>
+                            </label>
                             <div class="input-group">
                                 <span class="input-group-text">S/</span>
                                 <input type="number" class="form-control form-control-lg input-indiv text-secondary" id="indiv-flete" value="0.00" step="1" min="0">
                             </div>
+                            <small class="text-muted">Traslado a tienda (Opcional)</small>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Ganancia S/</label>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-bold">% Aumento / Margen</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control form-control-lg input-indiv text-primary fw-bold" id="indiv-margen-pct" value="0" step="1" min="0" placeholder="0">
+                                <span class="input-group-text fw-bold bg-light">%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-primary fw-bold" id="indiv-margen-soles-preview">+S/ 0.00</small>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-pct" data-pct="10" title="Aumento 10%">10%</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-pct" data-pct="20" title="Aumento 20%">20%</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary btn-quick-pct" data-pct="30" title="Aumento 30%">30%</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-bold">Ganancia Fija S/</label>
                             <div class="input-group">
                                 <span class="input-group-text">S/</span>
                                 <input type="number" class="form-control form-control-lg input-indiv text-success" id="indiv-ganancia" value="0.00" step="1" min="0">
                             </div>
+                            <small class="text-muted">Monto adicional fijo</small>
                         </div>
                     </div>
-                    
+
                     <!-- Resumen Individual -->
                     <div class="totales-box mt-auto mt-4">
-                        <div class="row align-items-center text-center">
-                            <div class="col-md-4 border-end">
+                        <div class="row align-items-center text-center g-2">
+                            <div class="col-4 border-end">
                                 <div class="text-secondary small fw-bold text-uppercase mb-1">Costo (Con IGV)</div>
                                 <h4 class="mb-0 text-dark">S/ <span id="indiv-total-soles">0.00</span></h4>
                             </div>
-                            <div class="col-md-8">
-                                <div class="text-secondary small fw-bold text-uppercase mb-1">Costo Base Total (S/ + Flete + Ganancia)</div>
+                            <div class="col-4 border-end">
+                                <div class="text-secondary small fw-bold text-uppercase mb-1">Ganancia / Margen</div>
+                                <h4 class="mb-0 text-success">S/ <span id="indiv-total-ganancia">0.00</span> <small class="fs-6 fw-normal text-muted" id="indiv-total-ganancia-pct">(0%)</small></h4>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-secondary small fw-bold text-uppercase mb-1">Costo Base Total</div>
                                 <h3 class="mb-0 fw-bold text-primary" id="indiv-total-base">0.00</h3>
                             </div>
                         </div>
@@ -160,7 +197,7 @@
                         <h5 class="card-title mb-0"><i class="bi bi-box-seam"></i> Componentes del Combo</h5>
                         <button class="btn btn-sm btn-danger d-none" id="btn-clear-combo"><i class="bi bi-trash"></i> Limpiar Todo</button>
                     </div>
-                    
+
                     <div class="table-responsive flex-grow-1">
                         <table class="table table-hover table-bordered table-cotizador align-middle mb-0" id="table-combo">
                             <thead class="table-light">
@@ -185,7 +222,7 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- Resumen Totales (Base) -->
                     <div class="totales-box mt-3 d-none" id="totales-box">
                         <div class="row align-items-center">
@@ -220,7 +257,7 @@
             <div class="card shadow-sm h-100 bg-light border-0">
                 <div class="card-body">
                     <h5 class="card-title mb-4"><i class="bi bi-graph-up"></i> Precio Venta Sugerido</h5>
-                    
+
                     <div id="simulador-empty" class="text-center text-muted py-5">
                         <i class="bi bi-calculator fs-1 d-block mb-2 text-secondary opacity-25"></i>
                         Agrega productos para ver la simulación de precios por plataforma.
@@ -231,19 +268,19 @@
                         <div class="accordion" id="accordionPlataformas">
                             @foreach($plataformas as $index => $plata)
                             @php
-                                $plataformaKey = strtoupper(trim($plata->nombrePlataforma));
-                                $reglasPlata = isset($reglasComisiones) ? $reglasComisiones->where('plataforma', $plataformaKey) : collect();
+                            $plataformaKey = strtoupper(trim($plata->nombrePlataforma));
+                            $reglasPlata = isset($reglasComisiones) ? $reglasComisiones->where('plataforma', $plataformaKey) : collect();
                             @endphp
                             <div class="accordion-item mb-2 border rounded shadow-sm">
                                 <h2 class="accordion-header" id="heading-{{$plata->idPlataforma}}">
                                     <button class="accordion-button {{$index !== 0 ? 'collapsed' : ''}} py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{$plata->idPlataforma}}" aria-expanded="{{$index === 0 ? 'true' : 'false'}}" aria-controls="collapse-{{$plata->idPlataforma}}">
                                         <div class="d-flex align-items-center w-100 pe-3">
                                             @if($plata->imagenPlataforma)
-                                                <img src="{{asset('storage/'.$plata->imagenPlataforma)}}" alt="{{$plata->nombrePlataforma}}" style="height: 24px; max-width: 80px; object-fit: contain;" class="me-2">
+                                            <img src="{{asset('storage/'.$plata->imagenPlataforma)}}" alt="{{$plata->nombrePlataforma}}" style="height: 24px; max-width: 80px; object-fit: contain;" class="me-2">
                                             @else
-                                                <span class="fw-bold me-2">{{$plata->nombrePlataforma}}</span>
+                                            <span class="fw-bold me-2">{{$plata->nombrePlataforma}}</span>
                                             @endif
-                                            
+
                                             <div class="ms-auto text-end">
                                                 <span class="badge bg-primary rounded-pill js-rango-recomendado" data-pid="{{$plata->idPlataforma}}">S/ 0.00</span>
                                             </div>
@@ -256,32 +293,32 @@
                                             <!-- Guardamos la info de comisiones en data attributes para leerlas desde JS -->
                                             <div class="d-none plataforma-data" data-pid="{{$plata->idPlataforma}}" data-name="{{$plata->nombrePlataforma}}" data-has-rules="{{$reglasPlata->isNotEmpty() ? '1' : '0'}}">
                                                 @if($reglasPlata->isNotEmpty())
-                                                    @foreach($reglasPlata as $regla)
-                                                        <span class="comision-data" 
-                                                              data-id="{{$regla->id}}"
-                                                              data-nombre="{{$regla->nombre_regla}}"
-                                                              data-comision="{{$regla->porcentaje_comision !== null ? ($regla->porcentaje_comision * 100) : 0}}" 
-                                                              data-flete="{{$regla->monto_fijo ?? 0}}"
-                                                              data-tipo="{{$regla->tipo_condicion}}"
-                                                              data-valor="{{$regla->valor_condicion ?? ''}}"
-                                                              data-prioridad="{{$regla->prioridad}}">
-                                                        </span>
-                                                    @endforeach
+                                                @foreach($reglasPlata as $regla)
+                                                <span class="comision-data"
+                                                    data-id="{{$regla->id}}"
+                                                    data-nombre="{{$regla->nombre_regla}}"
+                                                    data-comision="{{$regla->porcentaje_comision !== null ? ($regla->porcentaje_comision * 100) : 0}}"
+                                                    data-flete="{{$regla->monto_fijo ?? 0}}"
+                                                    data-tipo="{{$regla->tipo_condicion}}"
+                                                    data-valor="{{$regla->valor_condicion ?? ''}}"
+                                                    data-prioridad="{{$regla->prioridad}}">
+                                                </span>
+                                                @endforeach
                                                 @else
-                                                    @foreach($plata->ComisionPlataforma as $comi)
-                                                        <span class="comision-data" 
-                                                              data-id="{{$comi->idComisionPlataforma}}"
-                                                              data-nombre=""
-                                                              data-comision="{{$comi->comision}}" 
-                                                              data-flete="{{$comi->flete}}"
-                                                              data-tipo="DEFAULT"
-                                                              data-valor=""
-                                                              data-prioridad="0">
-                                                        </span>
-                                                    @endforeach
+                                                @foreach($plata->ComisionPlataforma as $comi)
+                                                <span class="comision-data"
+                                                    data-id="{{$comi->idComisionPlataforma}}"
+                                                    data-nombre=""
+                                                    data-comision="{{$comi->comision}}"
+                                                    data-flete="{{$comi->flete}}"
+                                                    data-tipo="DEFAULT"
+                                                    data-valor=""
+                                                    data-prioridad="0">
+                                                </span>
+                                                @endforeach
                                                 @endif
                                             </div>
-                                            
+
                                             <!-- Aquí se inyectan las opciones de comisiones con JS -->
                                             <div class="plataforma-comisiones-container" id="container-plataforma-{{$plata->idPlataforma}}">
                                                 <!-- Plantilla JS -->
@@ -300,14 +337,23 @@
 </div>
 
 <!-- Configuración Global -->
+<div id="cotizador-app-data" class="d-none"
+     data-facturacion-factor="{{ ($valores->facturacion / 100) + 1 }}"
+     data-igv-factor="{{ ($valores->igv / 100) + 1 }}"
+     data-tasa-cambio="{{ $valores->tasaCambio }}"
+     data-igv-porcentaje="{{ $valores->igv }}"
+     data-facturacion-porcentaje="{{ $valores->facturacion }}"
+     data-csrf="{{ csrf_token() }}"></div>
+
 <script>
+    const _cfg = document.getElementById('cotizador-app-data');
     window.APP_DATA = {
-        facturacionFactor: {{ ($valores->facturacion / 100) + 1 }},
-        igvFactor: {{ ($valores->igv / 100) + 1 }},
-        tasaCambio: {{ $valores->tasaCambio }},
-        igvPorcentaje: {{ $valores->igv }},
-        facturacionPorcentaje: {{ $valores->facturacion }},
-        csrf: '{{ csrf_token() }}'
+        facturacionFactor: parseFloat(_cfg.dataset.facturacionFactor),
+        igvFactor: parseFloat(_cfg.dataset.igvFactor),
+        tasaCambio: parseFloat(_cfg.dataset.tasaCambio),
+        igvPorcentaje: parseFloat(_cfg.dataset.igvPorcentaje),
+        facturacionPorcentaje: parseFloat(_cfg.dataset.facturacionPorcentaje),
+        csrf: _cfg.dataset.csrf
     };
 
     function consultarTipoCambio() {
@@ -326,14 +372,18 @@
                     let inputTc = document.getElementById('input-tasa-cambio');
                     if (inputTc) inputTc.value = tc;
                     window.APP_DATA.tasaCambio = parseFloat(tc);
-                    
+
                     Swal.fire({
-                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
-                        icon: 'success', title: 'TC SUNAT obtenido: ' + tc
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        icon: 'success',
+                        title: 'TC SUNAT obtenido: ' + tc
                     });
-                    
+
                     // Recalcular todo
-                    if(typeof window.recalcularCotizacion === 'function') {
+                    if (typeof window.recalcularCotizacion === 'function') {
                         window.recalcularCotizacion();
                     }
                 } else {
@@ -347,5 +397,5 @@
             });
     }
 </script>
-<script src="{{ asset('js/cotizador.js') }}?v=1.02"></script>
+<script src="{{ asset('js/cotizador.js') }}?v=1.04"></script>
 @endsection

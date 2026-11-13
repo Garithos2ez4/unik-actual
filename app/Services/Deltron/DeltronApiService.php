@@ -879,6 +879,119 @@ class DeltronApiService
     }
 
     /**
+     * Resuelve el SKU oficial de Deltron a partir de cualquier criterio de búsqueda:
+     * - SKU oficial (ej. KBTE4064N)
+     * - Modelo o Part Number (ej. TE-4064N -> KBTE4064N)
+     * - ID de Producto de Unike Store
+     */
+    public function resolverDeltronSku(string $query, ?int $idProducto = null): ?string
+    {
+        $qClean = strtoupper(trim($query));
+        if (empty($qClean) && empty($idProducto)) {
+            return null;
+        }
+
+        // 1. Coincidencia directa en InventarioProveedorSku por SKU o Part Number
+        if (!empty($qClean)) {
+            $skuLink = InventarioProveedorSku::where('sku_proveedor', $qClean)->first();
+            if ($skuLink) {
+                return $skuLink->sku_proveedor;
+            }
+
+            $skuLink = InventarioProveedorSku::where('part_number', $qClean)->first();
+            if ($skuLink) {
+                return $skuLink->sku_proveedor;
+            }
+        }
+
+        // 2. Coincidencia a través del Producto local
+        $prod = null;
+        if ($idProducto) {
+            $prod = Producto::find($idProducto);
+        }
+        if (!$prod && !empty($qClean)) {
+            $prod = Producto::where('modelo', $qClean)->orWhere('partNumber', $qClean)->first();
+        }
+        if ($prod) {
+            $inv = \App\Models\Inventario\Inventario_Proveedor::where('idProducto', $prod->idProducto)
+                ->where('idProveedor', 1)
+                ->first();
+            if ($inv) {
+                $link = InventarioProveedorSku::where('idInventarioProveedor', $inv->idInventarioProveedor)->first();
+                if ($link && !empty($link->sku_proveedor)) {
+                    return $link->sku_proveedor;
+                }
+            }
+        }
+
+        // 3. Deltron Catalog Snapshot
+        if (!empty($qClean)) {
+            $itemSnap = $this->buscarItemEnCatalogoSnapshot($qClean);
+            if ($itemSnap && !empty($itemSnap['sku'])) {
+                return $itemSnap['sku'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Devuelve el último precio conocido de catálogo snapshot o sincronizado
+     * como contingencia si la API en vivo de Deltron responde 404 o timeout.
+     */
+    public function getPrecioFallback(string $sku): ?array
+    {
+        $cleanSku = strtoupper(trim($sku));
+        if (empty($cleanSku)) return null;
+
+        // 1. Buscar en snapshot local
+        $snap = $this->buscarItemEnCatalogoSnapshot($cleanSku);
+        if ($snap && isset($snap['price']) && $snap['price'] > 0) {
+            $price = (float) $snap['price'];
+            $pricePromo = isset($snap['price_promo']) && $snap['price_promo'] !== null ? (float) $snap['price_promo'] : null;
+            $tienePromo = ($pricePromo !== null && $pricePromo < $price && $pricePromo > 0);
+            $ahorro = $tienePromo ? round($price - $pricePromo, 2) : 0;
+
+            return [
+                'sku' => $snap['sku'] ?? $cleanSku,
+                'name' => $snap['name'] ?? '',
+                'price' => $price,
+                'price_promo' => $pricePromo,
+                'price_con_igv' => round($price * 1.18, 2),
+                'price_promo_con_igv' => $pricePromo ? round($pricePromo * 1.18, 2) : null,
+                'tiene_promo' => $tienePromo,
+                'ahorro' => $ahorro,
+                'es_snapshot' => true,
+                'consultado_at' => now()->format('d/m/Y h:i A') . ' (Catálogo)'
+            ];
+        }
+
+        // 2. Buscar en InventarioProveedorSku
+        $link = InventarioProveedorSku::where('sku_proveedor', $cleanSku)->first();
+        if ($link && $link->precio_b2b > 0) {
+            $price = (float) $link->precio_b2b;
+            $pricePromo = $link->precio_promo ? (float) $link->precio_promo : null;
+            $tienePromo = ($pricePromo !== null && $pricePromo < $price && $pricePromo > 0);
+            $ahorro = $tienePromo ? round($price - $pricePromo, 2) : 0;
+
+            return [
+                'sku' => $link->sku_proveedor,
+                'name' => $link->part_number ?? '',
+                'price' => $price,
+                'price_promo' => $pricePromo,
+                'price_con_igv' => round($price * 1.18, 2),
+                'price_promo_con_igv' => $pricePromo ? round($pricePromo * 1.18, 2) : null,
+                'tiene_promo' => $tienePromo,
+                'ahorro' => $ahorro,
+                'es_snapshot' => true,
+                'consultado_at' => ($link->updated_at ? $link->updated_at->format('d/m/Y h:i A') : now()->format('d/m/Y h:i A')) . ' (Sincronizado)'
+            ];
+        }
+
+        return null;
+    }
+
+    /**
      * Consulta las promociones activas disponibles para el partner.
      * Permite filtrar opcionalmente por SKU.
      */

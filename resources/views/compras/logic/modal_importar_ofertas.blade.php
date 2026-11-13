@@ -88,7 +88,7 @@
         document.getElementById('btnEjecutarImportacion').disabled = false;
 
         // Opciones para el select de grupos
-        let opcionesGruposHtml = '';
+        let opcionesGruposHtml = `<option value="">-- Sin categoría (Asignar manualmente) --</option>`;
         gruposGlobales.forEach(g => {
             opcionesGruposHtml += `<option value="${g.idGrupo}" data-cat="${g.nombreCategoria}">${g.nombreGrupo} (${g.nombreCategoria})</option>`;
         });
@@ -100,6 +100,12 @@
 
             const precioBase = parseFloat(item.price || 0).toFixed(2);
             const precioPromo = item.price_promo ? parseFloat(item.price_promo).toFixed(2) : null;
+
+            const tieneGrupo = item.idGrupo !== null && item.idGrupo !== undefined && item.idGrupo !== '';
+            const selectClase = tieneGrupo ? '' : 'border-warning bg-warning-subtle text-dark fw-semibold';
+            const catBadgeHtml = tieneGrupo 
+                ? `<span class="badge bg-light text-secondary border me-1" id="cat-label-${idx}">${item.nombreCategoria}</span><span class="text-success" style="font-size: 0.72rem;"><i class="bi bi-magic"></i> Sugerido: ${item.nombreGrupo}</span>`
+                : `<span class="badge bg-warning text-dark me-1" id="cat-label-${idx}"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin categoría asignada</span>`;
 
             const tr = document.createElement('tr');
             tr.className = 'candidato-row';
@@ -131,14 +137,11 @@
                     </div>
                 </td>
                 <td>
-                    <select class="form-select form-select-sm select-grupo-candidato py-1" data-idx="${idx}" onchange="cambiarGrupoFila(${idx}, this)">
+                    <select class="form-select form-select-sm select-grupo-candidato py-1 ${selectClase}" data-idx="${idx}" onchange="cambiarGrupoFila(${idx}, this)">
                         ${opcionesGruposHtml}
                     </select>
-                    <div class="mt-1 small text-muted d-flex align-items-center">
-                        <span class="badge bg-light text-secondary border me-1" id="cat-label-${idx}">
-                            ${item.nombreCategoria || 'Perifericos'}
-                        </span>
-                        <span class="text-success" style="font-size: 0.72rem;"><i class="bi bi-magic"></i> Sugerido por título</span>
+                    <div class="mt-1 small text-muted d-flex align-items-center" id="cat-info-${idx}">
+                        ${catBadgeHtml}
                     </div>
                 </td>
                 <td class="text-center">
@@ -158,24 +161,38 @@
 
             // Pre-seleccionar el grupo sugerido en el select
             const selectEl = tr.querySelector('.select-grupo-candidato');
-            if (selectEl && item.idGrupo) {
-                selectEl.value = item.idGrupo;
+            if (selectEl) {
+                selectEl.value = (item.idGrupo !== null && item.idGrupo !== undefined) ? item.idGrupo : '';
             }
         });
     }
 
     function cambiarGrupoFila(idx, selectEl) {
-        const idGrupo = parseInt(selectEl.value);
-        const grupoObj = gruposGlobales.find(g => g.idGrupo === idGrupo);
-        if (grupoObj) {
-            candidatosGlobales[idx].idGrupo = idGrupo;
-            candidatosGlobales[idx].nombreGrupo = grupoObj.nombreGrupo;
-            candidatosGlobales[idx].idCategoria = grupoObj.idCategoria;
-            candidatosGlobales[idx].nombreCategoria = grupoObj.nombreCategoria;
+        const val = selectEl.value;
+        const idGrupo = val ? parseInt(val) : null;
+        const infoEl = document.getElementById(`cat-info-${idx}`);
+        if (idGrupo) {
+            const grupoObj = gruposGlobales.find(g => g.idGrupo === idGrupo);
+            if (grupoObj) {
+                candidatosGlobales[idx].idGrupo = idGrupo;
+                candidatosGlobales[idx].nombreGrupo = grupoObj.nombreGrupo;
+                candidatosGlobales[idx].idCategoria = grupoObj.idCategoria;
+                candidatosGlobales[idx].nombreCategoria = grupoObj.nombreCategoria;
 
-            const labelEl = document.getElementById(`cat-label-${idx}`);
-            if (labelEl) {
-                labelEl.innerText = grupoObj.nombreCategoria;
+                selectEl.classList.remove('border-warning', 'bg-warning-subtle', 'text-dark', 'fw-semibold');
+                if (infoEl) {
+                    infoEl.innerHTML = `<span class="badge bg-light text-secondary border me-1" id="cat-label-${idx}">${grupoObj.nombreCategoria}</span><span class="text-success" style="font-size: 0.72rem;"><i class="bi bi-check-circle me-1"></i> Asignado: ${grupoObj.nombreGrupo}</span>`;
+                }
+            }
+        } else {
+            candidatosGlobales[idx].idGrupo = null;
+            candidatosGlobales[idx].nombreGrupo = null;
+            candidatosGlobales[idx].idCategoria = null;
+            candidatosGlobales[idx].nombreCategoria = null;
+
+            selectEl.classList.add('border-warning', 'bg-warning-subtle', 'text-dark', 'fw-semibold');
+            if (infoEl) {
+                infoEl.innerHTML = `<span class="badge bg-warning text-dark me-1" id="cat-label-${idx}"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin categoría asignada</span>`;
             }
         }
     }
@@ -225,6 +242,21 @@
             const idx = parseInt(c.getAttribute('data-idx'));
             return candidatosGlobales[idx];
         });
+
+        const sinGrupo = itemsSeleccionados.filter(it => !it.idGrupo);
+        if (sinGrupo.length > 0) {
+            Swal.fire({
+                title: 'Categoría requerida',
+                html: `Hay <b>${sinGrupo.length} producto(s)</b> seleccionado(s) que <b>no tienen categoría asignada</b>.<br><br>` +
+                      `Por favor selecciónales una categoría en el desplegable o desmarca sus casillas antes de importar.`,
+                icon: 'warning',
+                confirmButtonText: 'Entendido',
+                customClass: {
+                    confirmButton: 'btn btn-danger rounded-pill px-4'
+                }
+            });
+            return;
+        }
 
         const totalItems = itemsSeleccionados.length;
         const totalLotes = Math.ceil(totalItems / CHUNK_SIZE);

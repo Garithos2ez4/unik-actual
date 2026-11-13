@@ -504,9 +504,12 @@ class DeltronImportService
 
             try {
                 DB::transaction(function () use ($itemData, $sku, $imgService, $destinationPath, $grupos, $almacenes, $itemsAImportar, $reciclarFantasmas, &$importados) {
-                    $idGrupo = (int)($itemData['idGrupo'] ?? 25);
+                    $idGrupo = !empty($itemData['idGrupo']) ? (int)$itemData['idGrupo'] : null;
+                    if (!$idGrupo) {
+                        throw new \Exception("El producto SKU {$sku} no tiene categoría/grupo asignado. Debe asignarle una categoría antes de importar.");
+                    }
                     $grupoObj = $grupos->get($idGrupo);
-                    $nombreGrupo = $grupoObj ? $grupoObj->nombreGrupo : 'Perifericos';
+                    $nombreGrupo = $grupoObj ? $grupoObj->nombreGrupo : 'General';
 
                     $idMarca = (int)($itemData['idMarca'] ?? 1);
                     $pn = substr(DeltronTextHelper::cleanDeltronText($itemData['part_number'] ?? $sku), 0, 50);

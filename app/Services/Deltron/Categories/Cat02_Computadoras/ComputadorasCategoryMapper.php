@@ -90,7 +90,7 @@ class ComputadorasCategoryMapper extends AbstractCategorySpecMapper
         $sku        = strtoupper($context['item']['sku'] ?? '');
 
         // 1. ALL IN ONE (AIO) -> Grupo 10
-        // Candado estricto: Las impresoras multifuncionales de tinta/láser ("Impresora All-in-one", "Multifuncional") NO son computadoras
+        // Candado estricto: Las impresoras multifuncionales y los Coolers / Refrigeración Líquida (AIO) NO son computadoras
         $esImpresora = (
             str_contains($catDeltron, 'IMPRESORA') ||
             str_contains($subDeltron, 'IMPRESORA') ||
@@ -103,7 +103,24 @@ class ComputadorasCategoryMapper extends AbstractCategorySpecMapper
             str_contains($titulo, 'ECOTANK')
         );
 
-        if (!$esImpresora) {
+        $esCoolerRefrigeracion = (
+            str_contains($catDeltron, 'COOLER') ||
+            str_contains($catDeltron, 'VENTILADOR') ||
+            str_contains($subDeltron, 'COOLER') ||
+            str_contains($subDeltron, 'VENTILADOR') ||
+            str_contains($titulo, 'COOLER') ||
+            str_contains($titulo, 'REFRIGERACION') ||
+            str_contains($titulo, 'REFRIGERACIÓN') ||
+            str_contains($titulo, 'DISIPADOR') ||
+            str_contains($titulo, 'VENTILADOR') ||
+            str_contains($titulo, 'WATER COOLING') ||
+            str_contains($titulo, 'LIQUID COOL') ||
+            str_contains($titulo, 'LIQUID') ||
+            str_starts_with($sku, 'ACAR') ||
+            str_starts_with($sku, 'CL')
+        );
+
+        if (!$esImpresora && !$esCoolerRefrigeracion) {
             if (
                 str_contains($catDeltron, 'ALL IN ONE') ||
                 str_contains($catDeltron, 'ALL-IN-ONE') ||

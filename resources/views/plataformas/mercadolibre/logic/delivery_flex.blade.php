@@ -168,6 +168,41 @@
         });
     }
 
+    function getModalidadManual() {
+        const tienda = document.getElementById('manualTipoTienda');
+        return (tienda && tienda.checked) ? 'tienda' : 'domicilio';
+    }
+
+    let costoEnvioDomicilioPrevio = '10.00';
+
+    function cambiarModalidadManual() {
+        const esTienda = getModalidadManual() === 'tienda';
+        const costoInput = document.getElementById('manualCostoEnvio');
+
+        document.querySelectorAll('.manual-solo-domicilio').forEach(el => {
+            el.style.display = esTienda ? 'none' : '';
+        });
+        const dirInput = document.getElementById('manualDireccion');
+        if (dirInput) dirInput.required = !esTienda;
+
+        if (costoInput) {
+            if (esTienda) {
+                if (parseFloat(costoInput.value) > 0) costoEnvioDomicilioPrevio = costoInput.value;
+                costoInput.value = '0.00';
+                costoInput.readOnly = true;
+                costoInput.classList.add('bg-light');
+            } else {
+                costoInput.readOnly = false;
+                costoInput.classList.remove('bg-light');
+                if (!(parseFloat(costoInput.value) > 0)) costoInput.value = costoEnvioDomicilioPrevio;
+                if (typeof google !== 'undefined' && manualMap) {
+                    setTimeout(() => google.maps.event.trigger(manualMap, 'resize'), 100);
+                }
+            }
+        }
+        recalcularTotalesManual();
+    }
+
     function openManualModal(editData = null) {
         document.getElementById('manualEditId').value = '';
         document.getElementById('manualIdCliente').value = '';
@@ -178,6 +213,8 @@
         document.getElementById('manualMontoTotal').value = '10.00';
         document.getElementById('manualLat').value = '-12.055775';
         document.getElementById('manualLng').value = '-77.037733';
+        document.getElementById('manualTipoDomicilio').checked = true;
+        costoEnvioDomicilioPrevio = '10.00';
         productosAgregados = [];
 
         if (editData) {
@@ -189,6 +226,9 @@
             document.getElementById('manualCostoEnvio').value = parseFloat(editData.costo_envio || 0).toFixed(2);
             document.getElementById('manualLat').value = editData.latitud || editData.lat || '-12.055775';
             document.getElementById('manualLng').value = editData.longitud || editData.lng || '-77.037733';
+            if (editData.tipo_entrega === 'tienda') {
+                document.getElementById('manualTipoTienda').checked = true;
+            }
 
             if (editData.productos && Array.isArray(editData.productos)) {
                 productosAgregados = editData.productos.map(p => ({
@@ -212,6 +252,7 @@
         }
 
         renderProductos();
+        cambiarModalidadManual();
 
         const modalEl = document.getElementById('manualModal');
         if (!manualModalInstance) {
@@ -474,7 +515,9 @@
         }, 0);
 
         const costoEnvioInput = document.getElementById('manualCostoEnvio');
-        const costoEnvio = Math.max(0, parseFloat(costoEnvioInput ? costoEnvioInput.value : 0) || 0);
+        const costoEnvio = getModalidadManual() === 'tienda'
+            ? 0
+            : Math.max(0, parseFloat(costoEnvioInput ? costoEnvioInput.value : 0) || 0);
         const montoTotal = subtotalProductos + costoEnvio;
 
         const totalProdEl = document.getElementById('manualTotalProductos');
@@ -529,12 +572,14 @@
     function saveManual() {
         recalcularTotalesManual();
         const editId = document.getElementById('manualEditId').value;
+        const tipoEntrega = getModalidadManual();
         const payload = {
             idCliente: document.getElementById('manualIdCliente').value,
+            tipo_entrega: tipoEntrega,
             direccion: document.getElementById('manualDireccion').value.trim(),
             latitud: document.getElementById('manualLat').value,
             longitud: document.getElementById('manualLng').value,
-            costo_envio: document.getElementById('manualCostoEnvio').value,
+            costo_envio: tipoEntrega === 'tienda' ? 0 : document.getElementById('manualCostoEnvio').value,
             monto_total: document.getElementById('manualMontoTotal').value,
             productos: productosAgregados.map(p => ({
                 idProducto: p.idProducto,
@@ -543,8 +588,13 @@
             }))
         };
 
-        if (!payload.idCliente || !payload.direccion || payload.direccion === 'No especificada') {
-            alert('Por favor completa el Cliente y una Dirección de Entrega válida.');
+        if (!payload.idCliente) {
+            alert('Por favor selecciona el Cliente.');
+            return;
+        }
+
+        if (tipoEntrega === 'domicilio' && (!payload.direccion || payload.direccion === 'No especificada')) {
+            alert('Por favor completa una Dirección de Entrega válida (o elige "Recojo en Tienda").');
             return;
         }
 

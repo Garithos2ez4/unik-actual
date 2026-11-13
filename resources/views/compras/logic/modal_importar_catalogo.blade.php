@@ -128,7 +128,7 @@
 
         document.getElementById('btnEjecutarImportacionCatalogo').disabled = false;
 
-        const gruposOptionsHtml = gruposCatalogoGlobales.map(g => 
+        const gruposOptionsHtml = `<option value="">-- Sin categoría (Asignar manualmente) --</option>` + gruposCatalogoGlobales.map(g => 
             `<option value="${g.idGrupo}">${g.nombreGrupo} (${g.nombreCategoria})</option>`
         ).join('');
 
@@ -153,6 +153,12 @@
                 ? `<img src="${it.foto1_url}" alt="Foto" class="rounded border shadow-xs" style="width: 46px; height: 46px; object-fit: contain; background: #fff;" onerror="this.onerror=null; this.src='{{ asset('storage/noimagen.webp') }}';">`
                 : `<img src="{{ asset('storage/noimagen.webp') }}" alt="Foto" class="rounded border shadow-xs" style="width: 46px; height: 46px; object-fit: contain; opacity: 0.6;">`;
 
+            const tieneGrupo = it.idGrupo !== null && it.idGrupo !== undefined && it.idGrupo !== '';
+            const selectClaseExtra = tieneGrupo ? '' : 'border-warning bg-warning-subtle text-dark fw-semibold';
+            const sugeridoTexto = tieneGrupo 
+                ? `Sugerido: <span class="text-primary fw-semibold">${it.nombreGrupo}</span>`
+                : `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin categoría asignada</span>`;
+
             tr.innerHTML = `
                 <td class="text-center">
                     <input class="form-check-input check-candidato-catalogo" type="checkbox" data-idx="${idx}" checked onchange="actualizarConteoCatalogo()">
@@ -172,11 +178,11 @@
                     </div>
                 </td>
                 <td>
-                    <select class="form-select form-select-sm select-grupo-catalogo shadow-xs" data-idx="${idx}" onchange="cambiarGrupoItemCatalogo(${idx}, this.value)">
+                    <select class="form-select form-select-sm select-grupo-catalogo shadow-xs ${selectClaseExtra}" data-idx="${idx}" onchange="cambiarGrupoItemCatalogo(${idx}, this.value, this)">
                         ${gruposOptionsHtml}
                     </select>
-                    <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
-                        Sugerido: <span class="text-primary fw-semibold">${it.nombreGrupo}</span>
+                    <small class="text-muted d-block mt-1 info-sugerido-catalogo-${idx}" style="font-size: 0.72rem;">
+                        ${sugeridoTexto}
                     </small>
                 </td>
                 <td class="text-center">
@@ -193,21 +199,41 @@
 
             const select = tr.querySelector('.select-grupo-catalogo');
             if (select) {
-                select.value = it.idGrupo;
+                select.value = (it.idGrupo !== null && it.idGrupo !== undefined) ? it.idGrupo : '';
             }
         });
 
         actualizarConteoCatalogo();
     }
 
-    function cambiarGrupoItemCatalogo(idx, nuevoIdGrupo) {
+    function cambiarGrupoItemCatalogo(idx, nuevoIdGrupo, selectEl) {
         if (catalogoCandidatos[idx]) {
-            catalogoCandidatos[idx].idGrupo = parseInt(nuevoIdGrupo);
-            const g = gruposCatalogoGlobales.find(gr => gr.idGrupo === parseInt(nuevoIdGrupo));
-            if (g) {
-                catalogoCandidatos[idx].nombreGrupo = g.nombreGrupo;
-                catalogoCandidatos[idx].idCategoria = g.idCategoria;
-                catalogoCandidatos[idx].nombreCategoria = g.nombreCategoria;
+            const parsed = nuevoIdGrupo ? parseInt(nuevoIdGrupo) : null;
+            catalogoCandidatos[idx].idGrupo = parsed;
+            const infoSugerido = document.querySelector(`.info-sugerido-catalogo-${idx}`);
+            if (parsed) {
+                const g = gruposCatalogoGlobales.find(gr => gr.idGrupo === parsed);
+                if (g) {
+                    catalogoCandidatos[idx].nombreGrupo = g.nombreGrupo;
+                    catalogoCandidatos[idx].idCategoria = g.idCategoria;
+                    catalogoCandidatos[idx].nombreCategoria = g.nombreCategoria;
+                }
+                if (selectEl) {
+                    selectEl.classList.remove('border-warning', 'bg-warning-subtle', 'text-dark', 'fw-semibold');
+                }
+                if (infoSugerido) {
+                    infoSugerido.innerHTML = `Asignado: <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>${catalogoCandidatos[idx].nombreGrupo}</span>`;
+                }
+            } else {
+                catalogoCandidatos[idx].nombreGrupo = null;
+                catalogoCandidatos[idx].idCategoria = null;
+                catalogoCandidatos[idx].nombreCategoria = null;
+                if (selectEl) {
+                    selectEl.classList.add('border-warning', 'bg-warning-subtle', 'text-dark', 'fw-semibold');
+                }
+                if (infoSugerido) {
+                    infoSugerido.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sin categoría asignada</span>`;
+                }
             }
         }
     }
@@ -252,6 +278,21 @@
             const idx = parseInt(c.getAttribute('data-idx'));
             return catalogoCandidatos[idx];
         });
+
+        const sinGrupo = itemsSeleccionados.filter(it => !it.idGrupo);
+        if (sinGrupo.length > 0) {
+            Swal.fire({
+                title: 'Categoría requerida',
+                html: `Hay <b>${sinGrupo.length} producto(s)</b> seleccionado(s) que <b>no tienen categoría asignada</b>.<br><br>` +
+                      `Por favor selecciónales una categoría en el desplegable o desmarca sus casillas antes de importar.`,
+                icon: 'warning',
+                confirmButtonText: 'Entendido',
+                customClass: {
+                    confirmButton: 'btn btn-primary rounded-pill px-4'
+                }
+            });
+            return;
+        }
 
         const totalItems = itemsSeleccionados.length;
         const totalLotes = Math.ceil(totalItems / CHUNK_SIZE_CATALOGO);

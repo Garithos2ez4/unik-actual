@@ -86,15 +86,27 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
             return self::GRUPO_CASE;
         }
 
-        // Coolers
+        // Coolers & Refrigeración Líquida
+        $sku = strtoupper($context['item']['sku'] ?? '');
         if (
-            str_contains($catDeltron, 'FAN COOLER') ||
+            str_contains($catDeltron, 'COOLER') ||
+            str_contains($catDeltron, 'FAN') ||
+            str_contains($catDeltron, 'VENTILADOR') ||
+            str_contains($titulo, 'COOLER') ||
+            str_contains($titulo, 'REFRIGERACION') ||
+            str_contains($titulo, 'REFRIGERACIÓN') ||
+            str_contains($titulo, 'DISIPADOR') ||
             str_contains($titulo, 'COOLER PARA CPU') ||
             str_contains($titulo, 'COOLER PARA PROCESADOR') ||
             str_contains($subDeltron, 'COOLER LIQUIDO') ||
-            str_contains($subDeltron, 'FAN COOLER')
+            str_contains($subDeltron, 'FAN COOLER') ||
+            str_contains($subDeltron, 'COOLER') ||
+            str_starts_with($sku, 'ACAR') ||
+            str_starts_with($sku, 'CL')
         ) {
-            return self::GRUPO_COOLERS;
+            if (!str_contains($titulo, 'NOTEBOOK') && !str_contains($titulo, 'LAPTOP')) {
+                return self::GRUPO_COOLERS;
+            }
         }
 
         return null;
@@ -186,6 +198,28 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
                 return self::GRUPO_FUENTE_PODER;
             }
             return self::GRUPO_CASE;
+        }
+
+        // 8. Coolers / Refrigeración Líquida (AIO) / Disipadores
+        if (
+            str_contains($catDeltron, 'COOLER') ||
+            str_contains($catDeltron, 'VENTILADOR') ||
+            str_contains($subDeltron, 'COOLER') ||
+            str_contains($subDeltron, 'VENTILADOR') ||
+            str_contains($titulo, 'COOLER') ||
+            str_contains($titulo, 'REFRIGERACION') ||
+            str_contains($titulo, 'REFRIGERACIÓN') ||
+            str_contains($titulo, 'DISIPADOR') ||
+            str_contains($titulo, 'VENTILADOR') ||
+            str_contains($titulo, 'WATER COOLING') ||
+            str_contains($titulo, 'LIQUID COOL') ||
+            (str_contains($titulo, 'AIO') && (str_contains($titulo, 'ARGB') || str_contains($titulo, 'RGB') || str_contains($titulo, '240') || str_contains($titulo, '360') || str_contains($titulo, '120') || str_contains($titulo, '420') || str_contains($titulo, 'LCD') || str_contains($titulo, 'STEEL LEGEND'))) ||
+            str_starts_with($sku, 'ACAR') ||
+            str_starts_with($sku, 'CL')
+        ) {
+            if (!str_contains($titulo, 'NOTEBOOK') && !str_contains($titulo, 'LAPTOP') && !str_contains($catDeltron, 'NOTEBOOK')) {
+                return self::GRUPO_COOLERS;
+            }
         }
 
         return null;
