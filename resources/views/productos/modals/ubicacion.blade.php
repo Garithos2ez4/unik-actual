@@ -40,17 +40,17 @@
                             }
                             }
 
-                            // 2. Traer TODAS las series que están en el almacén
+                            // 2. Traer TODAS las series activas que están en el almacén
                             $seriesAlmacen = \App\Models\Inventario\RegistroProducto::whereHas('DetalleComprobante', function($q) use ($producto) {
                             $q->where('idProducto', $producto->idProducto);
                             })
                             ->where('idAlmacen', $almacen->idAlmacen)
-                            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO'])
+                            ->whereNotIn('estado', ['ENTREGADO', 'INVALIDO', 'ELIMINADO'])
                             ->with('UbicacionExacta')
                             ->get();
 
                             // 3. Filtrar las que queremos contar
-                            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO','REUNIDO']);
+                            $seriesValidas = $seriesAlmacen->whereNotIn('estado', ['GARANTIA', 'DEFECTUOSO', 'ABIERTO', 'DIVIDIDO', 'REUNIDO', 'ELIMINADO']);
 
                             // 4. Agrupar y contar las cantidades por estante
                             $distribucion = [];
@@ -103,6 +103,11 @@
                                 </td>
                                 <td class="align-middle">
                                     <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $stockRealMostrar }}</span>
+                                    @if($inventario->stock != $stockRealMostrar)
+                                    <div class="text-danger mt-1 fw-semibold" style="font-size: 0.72rem;" title="El contador en tabla Inventario ({{ $inventario->stock }}) no coincide con las series activas ({{ $stockRealMostrar }})">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Inventario: {{ $inventario->stock }}
+                                    </div>
+                                    @endif
                                 </td>
                             </tr>
                             @endif

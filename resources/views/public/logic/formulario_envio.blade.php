@@ -224,12 +224,16 @@
         let val = e.target.value.trim();
 
         // Desbloquear campos por defecto mientras escribe
-        const fieldsToLock = ['nombre', 'apellidoPaterno', 'apellidoMaterno'];
+        const fieldsToLock = ['nombre', 'apellidoPaterno', 'apellidoMaterno', 'telefono'];
         fieldsToLock.forEach(id => {
             let el = document.getElementById(id);
             if (el) {
                 el.readOnly = false;
                 el.classList.remove('bg-light');
+                if (id === 'telefono') {
+                    el.setAttribute('pattern', '[0-9]{9}');
+                    el.setAttribute('minlength', '9');
+                }
             }
         });
 
@@ -275,7 +279,14 @@
                             el.classList.add('bg-light');
                         }
 
-                        if (c.telefono) document.getElementById('telefono').value = c.telefono;
+                        if (c.telefono) {
+                            let elTel = document.getElementById('telefono');
+                            elTel.value = c.telefono;
+                            elTel.readOnly = true;
+                            elTel.classList.add('bg-light');
+                            elTel.removeAttribute('pattern');
+                            elTel.removeAttribute('minlength');
+                        }
                         if (c.correo) document.getElementById('correo').value = c.correo;
 
                         let hasEnvio = false;
@@ -499,10 +510,11 @@
         if (document.getElementById('telefono_registrante')) {
             document.getElementById('telefono_registrante').style.borderColor = '';
         }
-        const telefonoVal = document.getElementById('telefono').value.trim();
-        if (telefonoVal.length !== 9) {
+        const elTelefono = document.getElementById('telefono');
+        const telefonoVal = elTelefono.value.trim();
+        if (!elTelefono.readOnly && telefonoVal.length !== 9) {
             e.preventDefault();
-            document.getElementById('telefono').style.borderColor = '#ef4444';
+            elTelefono.style.borderColor = '#ef4444';
             Swal.fire({
                 icon: 'error',
                 title: 'Número inválido',

@@ -60,7 +60,11 @@ class Producto extends Model
     ];
 
 
-    protected $hidden = [];
+    protected $hidden = [
+        'gananciaExtra',
+        'usar_tc_fijo',
+        'tc_fijo',
+    ];
 
 
     protected $casts = [

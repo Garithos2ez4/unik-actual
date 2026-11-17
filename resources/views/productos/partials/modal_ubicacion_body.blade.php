@@ -94,6 +94,11 @@
                 </td>
                 <td class="align-middle">
                     <span class="badge bg-success" style="font-size: 16px;" title="Stock apto para venta">{{ $stockRealMostrar }}</span>
+                    @if($inventario->stock != $stockRealMostrar)
+                    <div class="text-danger mt-1 fw-semibold" style="font-size: 0.72rem;" title="El contador en tabla Inventario ({{ $inventario->stock }}) no coincide con las series activas ({{ $stockRealMostrar }})">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Inventario: {{ $inventario->stock }}
+                    </div>
+                    @endif
                 </td>
             </tr>
             @endif

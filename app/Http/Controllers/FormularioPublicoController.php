@@ -117,7 +117,7 @@ class FormularioPublicoController extends Controller
         $agencyHasBranches = \App\Models\Envios\SubAgencia::where('idAgencia', $request->idAgencia)
             ->where('estado', 1)
             ->exists();
-            
+
         if ($agencyHasBranches && empty($request->idSubAgencia)) {
             return back()->withErrors(['idSubAgencia' => 'Esta agencia requiere seleccionar una oficina/sucursal de destino válida.'])->withInput();
         }
@@ -136,11 +136,12 @@ class FormularioPublicoController extends Controller
         $cliente = Cliente::where('numeroDocumento', $request->numeroDocumento)->first();
 
         if ($cliente) {
+            $telefonoInput = trim((string) $request->telefono);
             $cliente->update([
                 'nombre'          => $request->nombre,
                 'apellidoPaterno' => $request->apellidoPaterno,
                 'apellidoMaterno' => $request->apellidoMaterno ?? '',
-                'telefono'        => $request->telefono,
+                'telefono'        => preg_match('/^[0-9]{9}$/', $telefonoInput) ? $telefonoInput : $cliente->telefono,
                 'correo'          => $request->correo ?? $cliente->correo,
                 'idTipoDocumento' => $request->idTipoDocumento,
             ]);
@@ -228,7 +229,7 @@ class FormularioPublicoController extends Controller
 
         if ($idAgencia == 3) {
             $query->where('nombre_oficina', 'NOT LIKE', '%AGENTE%')
-                  ->where('nombre_oficina', 'NOT LIKE', '%AG.%');
+                ->where('nombre_oficina', 'NOT LIKE', '%AG.%');
         }
 
         $subagencias = $query->orderBy('nombre_oficina', 'asc')
@@ -342,14 +343,7 @@ class FormularioPublicoController extends Controller
 
             return response()->json([
                 'success' => true,
-                'cliente' => [
-                    'nombre'          => $cliente->nombre,
-                    'apellidoPaterno' => $cliente->apellidoPaterno,
-                    'apellidoMaterno' => $cliente->apellidoMaterno,
-                    'telefono'        => $cliente->telefono,
-                    'correo'          => $cliente->correo,
-                    'idTipoDocumento' => $cliente->idTipoDocumento,
-                ],
+                'cliente' => (new \App\Http\Resources\ClienteResource($cliente))->resolve($request),
                 'ultimo_envio' => $envioData
             ]);
         }

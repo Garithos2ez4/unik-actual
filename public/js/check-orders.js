@@ -97,12 +97,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Guardar ML (Persistente)
                 localStorage.setItem('notifiedMlOrders_v2', JSON.stringify(notifiedMlOrders));
+                localStorage.setItem('lastCheckNewOrdersAt', String(Date.now()));
             }
         })
         .catch(error => console.error('Error verificando nuevos pedidos:', error));
     }
 
-    // Check immediately on load, then every hour
-    checkOrders();
+    // Evitar disparar la consulta en cada clic de navegación si ya se consultó hace menos de 5 minutos
+    const COOLDOWN_MS = 5 * 60 * 1000;
+    const lastCheck = parseInt(localStorage.getItem('lastCheckNewOrdersAt') || '0', 10);
+    if (Date.now() - lastCheck >= COOLDOWN_MS) {
+        checkOrders();
+    }
     setInterval(checkOrders, 3600000); 
 });

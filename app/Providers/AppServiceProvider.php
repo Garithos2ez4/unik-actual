@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Models\Inventario\Almacen;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 
 use App\Repositories\AccesosRepository;
 use App\Repositories\AccesosRepositoryInterface;
@@ -221,6 +224,27 @@ class AppServiceProvider extends ServiceProvider
 
         Carbon::setLocale('es');
         Paginator::useBootstrapFive();
+
+        // Rate Limiters para protección de rutas contra fuerza bruta, scraping y saturación
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
+        RateLimiter::for('cotizador', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('busqueda', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('scrapers', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
         
         if (!app()->runningInConsole()) {
             $almacenes = Cache::remember('almacenes_all', 86400, function () {

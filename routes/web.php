@@ -64,15 +64,15 @@ use App\Http\Controllers\CatalogoPreciosPublicoController;
 
 Route::withoutMiddleware(['validate.session'])->group(function () {
     Route::get('/', [LoginController::class, 'index'])->name('login');
-    Route::post('/', [LoginController::class, 'validation'])->name('validation');
+    Route::post('/', [LoginController::class, 'validation'])->middleware('throttle:login')->name('validation');
 
     // Formulario público para clientes (sin sesión)
     Route::prefix('formulario-envio')->group(function () {
         Route::get('/api/provincias/{idDepartamento}', [FormularioPublicoController::class, 'provincias']);
         Route::get('/api/destinos/{idProvincia}', [FormularioPublicoController::class, 'destinos']);
         Route::get('/api/subagencias/{idAgencia}/{idDestino}', [FormularioPublicoController::class, 'subagencias']);
-        Route::post('/api/buscar-cliente', [FormularioPublicoController::class, 'buscarCliente']);
-        Route::get('/api/buscar-cliente/{token}/{documento}', [FormularioPublicoController::class, 'buscarCliente']);
+        Route::post('/api/buscar-cliente', [FormularioPublicoController::class, 'buscarCliente'])->middleware('throttle:busqueda');
+        Route::get('/api/buscar-cliente/{token}/{documento}', [FormularioPublicoController::class, 'buscarCliente'])->middleware('throttle:busqueda');
         Route::get('/{token}', [FormularioPublicoController::class, 'show'])->name('formulario.publico.show');
         Route::post('/{token}', [FormularioPublicoController::class, 'store'])->name('formulario.publico.store');
     });
@@ -111,7 +111,7 @@ Route::middleware(['validate.session'])->group(function () {
     Route::post('/dashboard/logistica/delivery-flex/manual', [DeliveryFlexController::class, 'storeManual'])->name('delivery.flex.store');
     Route::put('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'updateManual'])->name('delivery.flex.update');
     Route::delete('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'destroyManual'])->name('delivery.flex.destroy');
-    Route::get('/dashboard/logistica/delivery-flex/buscar-productos', [DeliveryFlexController::class, 'searchProductos'])->name('delivery.flex.searchProductos');
+    Route::get('/dashboard/logistica/delivery-flex/buscar-productos', [DeliveryFlexController::class, 'searchProductos'])->middleware('throttle:busqueda')->name('delivery.flex.searchProductos');
     Route::get('/dashboard/logistica/delivery-flex/buscar-clientes', [DeliveryFlexController::class, 'searchClientes'])->name('delivery.flex.searchClientes');
     Route::get('/dashboard/logistica/delivery-flex/manual/{id}', [DeliveryFlexController::class, 'getManual'])->name('delivery.flex.getManual');
     Route::post('/dashboard/logistica/delivery-flex/update-delivery-info/{orderId}', [DeliveryFlexController::class, 'updateDeliveryInfo'])->name('delivery.flex.updateDeliveryInfo');
@@ -146,8 +146,8 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/dashboard/inventario/{estado}', [HomeController::class, 'dashboardInventario'])->name('dashboardinventario');
 
     Route::get('/calculadora', [CalculadoraController::class, 'index'])->name('calculadora');
-    Route::get('/calculadora/cotizador', [CalculadoraController::class, 'cotizador'])->name('calculadora.cotizador');
-    Route::get('/calculadora/calculate', [CalculadoraController::class, 'calculate'])->name('calculadora-calculate');
+    Route::get('/calculadora/cotizador', [CalculadoraController::class, 'cotizador'])->middleware('throttle:cotizador')->name('calculadora.cotizador');
+    Route::get('/calculadora/calculate', [CalculadoraController::class, 'calculate'])->middleware('throttle:cotizador')->name('calculadora-calculate');
 
     Route::get('/ingresos/searchingresos', [IngresoController::class, 'searchIngreso'])->name('searchingresos');
     Route::get('/ingresos/getoneingreso', [IngresoController::class, 'getOneIngreso'])->name('getoneingreso');
@@ -183,17 +183,17 @@ Route::middleware(['validate.session'])->group(function () {
     Route::get('/usuario/getbandeja', [UsuarioController::class, 'getBandejaColaborador'])->name('getbandeja');
     Route::post('/usuario/tour-completado', [UsuarioController::class, 'marcarTourCompletado'])->name('tour.completado');
 
-    Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->name('buscarproducto');
+    Route::get('/productos/buscarproducto', [ProductoController::class, 'searchProduct'])->middleware('throttle:busqueda')->name('buscarproducto');
 
     // Liquidación
     Route::get('/productos/liquidacion', [LiquidacionController::class, 'index'])->name('productos.liquidacion');
-    Route::get('/productos/liquidacion/buscar-ajax', [LiquidacionController::class, 'buscarProductoAjax'])->name('productos.liquidacion.buscar-ajax');
+    Route::get('/productos/liquidacion/buscar-ajax', [LiquidacionController::class, 'buscarProductoAjax'])->middleware('throttle:busqueda')->name('productos.liquidacion.buscar-ajax');
     Route::post('/productos/liquidacion/agregar', [LiquidacionController::class, 'agregarLiquidacion'])->name('productos.liquidacion.agregar');
     Route::post('/productos/liquidacion/quitar', [LiquidacionController::class, 'quitarLiquidacion'])->name('productos.liquidacion.quitar');
     Route::post('/productos/toggle-status', [ProductoController::class, 'toggleStatus'])->name('producto.toggleStatus');
     Route::get('/productos/get-utilidad/{id}', [ProductoPrecioController::class, 'getUtilidad'])->name('producto.getUtilidad');
     Route::post('/productos/update-utilidad', [ProductoPrecioController::class, 'updateUtilidad'])->name('producto.updateUtilidad');
-    Route::get('/productos/searchmodelproduct', [ProductoController::class, 'searchModelProduct'])->name('searchmodelproduct');
+    Route::get('/productos/searchmodelproduct', [ProductoController::class, 'searchModelProduct'])->middleware('throttle:busqueda')->name('searchmodelproduct');
     Route::get('/producto/calculate', [ProductoPrecioController::class, 'calculate'])->name('calculateproducto');
     Route::get('/productos/historial-precio-tienda/{id}', [ProductoPrecioController::class, 'obtenerHistorialPrecioTienda']);
     Route::get('/productos/{cat}/{grup}', [ProductoController::class, 'index'])->name('productos');
@@ -277,12 +277,12 @@ Route::middleware(['validate.session'])->group(function () {
     // Deltron Compras
     Route::get('/compras/deltron-ofertas', [DeltronController::class, 'indexStock'])->name('compras.deltron');
     Route::post('/compras/deltron-ofertas/sync', [DeltronController::class, 'syncManual'])->name('compras.deltron.sync');
-    Route::get('/compras/deltron/consultar-tiempo-real', [DeltronController::class, 'consultarTiempoReal'])->name('compras.deltron.consultar');
-    Route::get('/compras/deltron/precio-tiempo-real', [DeltronController::class, 'consultarPrecioTiempoReal'])->name('compras.deltron.precio');
-    Route::get('/compras/deltron/promocion-detalle/{promo_id?}', [DeltronController::class, 'consultarPromocionDetalle'])->where('promo_id', '.*')->name('compras.deltron.promocion.detalle');
-    Route::get('/compras/deltron/ficha-sku/{sku?}', [DeltronController::class, 'consultarFichaSku'])->where('sku', '.*')->name('compras.deltron.ficha.sku');
-    Route::get('/compras/deltron/ofertas-candidatas', [DeltronController::class, 'getOfertasCandidatas'])->name('compras.deltron.ofertas.candidatas');
-    Route::get('/compras/deltron/catalogo-candidatos', [DeltronController::class, 'getCatalogoCandidatos'])->name('compras.deltron.catalogo.candidatos');
+    Route::get('/compras/deltron/consultar-tiempo-real', [DeltronController::class, 'consultarTiempoReal'])->middleware('throttle:busqueda')->name('compras.deltron.consultar');
+    Route::get('/compras/deltron/precio-tiempo-real', [DeltronController::class, 'consultarPrecioTiempoReal'])->middleware('throttle:busqueda')->name('compras.deltron.precio');
+    Route::get('/compras/deltron/promocion-detalle/{promo_id?}', [DeltronController::class, 'consultarPromocionDetalle'])->middleware('throttle:busqueda')->where('promo_id', '.*')->name('compras.deltron.promocion.detalle');
+    Route::get('/compras/deltron/ficha-sku/{sku?}', [DeltronController::class, 'consultarFichaSku'])->middleware('throttle:busqueda')->where('sku', '.*')->name('compras.deltron.ficha.sku');
+    Route::get('/compras/deltron/ofertas-candidatas', [DeltronController::class, 'getOfertasCandidatas'])->middleware('throttle:busqueda')->name('compras.deltron.ofertas.candidatas');
+    Route::get('/compras/deltron/catalogo-candidatos', [DeltronController::class, 'getCatalogoCandidatos'])->middleware('throttle:busqueda')->name('compras.deltron.catalogo.candidatos');
     Route::post('/compras/deltron/importar-lote-ofertas', [DeltronController::class, 'importarLoteOfertas'])->name('compras.deltron.importar.lote');
 
     // Seguimiento de Laptops ML US (Reemplazo de Libro11.xlsx)
@@ -471,7 +471,7 @@ Route::middleware(['validate.session'])->group(function () {
     //Configuracion-PEDIDOS WEB y ALERTAS
     Route::get('/configuracion/pedidos-web', [ConfigAlertasController::class, 'pedidosWeb'])->name('configpedidosweb');
     Route::post('/configuracion/pedidos-web/{id}/estado', [ConfigAlertasController::class, 'updatePedidoWebEstado'])->name('updatepedidowebestado');
-    Route::get('/api/check-new-orders', [HomeController::class, 'checkNewOrders'])->name('checkNewOrders');
+    Route::get('/api/check-new-orders', [HomeController::class, 'checkNewOrders'])->middleware('throttle:api')->name('checkNewOrders');
     Route::post('/configuracion/alerta/{id}/estado', [ConfigAlertasController::class, 'updateAlertaEstado'])->name('updatealertaestado');
     Route::post('/configuracion/alerta/crear', [ConfigAlertasController::class, 'crearAlertaManual'])->name('crearalertamanual');
     Route::post('/configuracion/alerta/ejecutar-bot', [ConfigAlertasController::class, 'ejecutarBotPrecios'])->name('ejecutarbotprecios');

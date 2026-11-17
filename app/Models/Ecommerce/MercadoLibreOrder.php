@@ -41,6 +41,10 @@ class MercadoLibreOrder extends Model
         'sync_date',
     ];
 
+    protected $hidden = [
+        'payload',
+    ];
+
     protected $casts = [
         'payload'        => 'array',
         'created_at_ml'  => 'datetime',

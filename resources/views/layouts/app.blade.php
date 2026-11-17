@@ -297,7 +297,7 @@
     </footer>
     @stack('scripts')
     <script src="{{ asset('js/app.js') }}?v=1.03"></script>
-    <script src="{{ asset('js/check-orders.js') }}?v=1.4"></script>
+    <script src="{{ asset('js/check-orders.js') }}?v=1.5"></script>
 
     {{-- ML Notifications --}}
     @if ($user->Accesos->contains('idVista', 4))

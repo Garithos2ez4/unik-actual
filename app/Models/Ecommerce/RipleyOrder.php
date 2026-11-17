@@ -31,6 +31,10 @@ class RipleyOrder extends Model
         'sync_date',
     ];
 
+    protected $hidden = [
+        'payload',
+    ];
+
     protected $casts = [
         'statuses' => 'array',
         'payload' => 'array',

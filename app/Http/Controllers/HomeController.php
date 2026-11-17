@@ -25,37 +25,59 @@ class HomeController extends Controller
 
     public function checkNewOrders(Request $request)
     {
-        // 1. Web Orders
-        $newOrders = \App\Models\Web\PedidoWeb::with('cliente')
-            ->where('estado', 'PENDIENTE')
-            ->orderBy('idPedidoWeb', 'asc')
-            ->get();
-
-        // 2. Ripley Orders (Trigger sync and fetch)
-        try {
-            \Illuminate\Support\Facades\Artisan::call('ripley:sync-orders');
-        } catch (\Exception $e) {
-            if (strpos($e->getMessage(), 'cURL error 6') === false && strpos($e->getMessage(), 'cURL error 28') === false) {
-                \Illuminate\Support\Facades\Log::error("Error sincronizando Ripley desde API checkNewOrders: " . $e->getMessage());
+        // 1. Sincronizar Ripley como máximo una vez cada 15 minutos (900s), no en cada carga de página
+        if (\Illuminate\Support\Facades\Cache::add('ripley_orders_auto_sync_lock', true, 900)) {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('ripley:sync-orders');
+            } catch (\Exception $e) {
+                if (strpos($e->getMessage(), 'cURL error 6') === false && strpos($e->getMessage(), 'cURL error 28') === false) {
+                    \Illuminate\Support\Facades\Log::error("Error sincronizando Ripley desde API checkNewOrders: " . $e->getMessage());
+                }
             }
         }
 
-        $ripleyOrders = \App\Models\Ecommerce\RipleyOrder::whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING'])
-            ->where('created_at_ripley', '>=', now()->subDays(5))
-            ->orderBy('id', 'asc')
-            ->get();
+        // 2. Cachear las consultas por 60 segundos y seleccionar únicamente las columnas necesarias (sin payload pesado ni datos sensibles)
+        $data = \Illuminate\Support\Facades\Cache::remember('check_new_orders_summary', 60, function () {
+            $newOrders = \App\Models\Web\PedidoWeb::with(['cliente:idCliente,nombre,apellidoPaterno,apellidoMaterno'])
+                ->select(['idPedidoWeb', 'idCliente', 'total'])
+                ->where('estado', 'PENDIENTE')
+                ->orderBy('idPedidoWeb', 'asc')
+                ->get()
+                ->map(function ($order) {
+                    return [
+                        'idPedidoWeb' => $order->idPedidoWeb,
+                        'total' => $order->total,
+                        'cliente' => $order->cliente ? [
+                            'nombre' => $order->cliente->nombre,
+                            'apellidos' => trim(($order->cliente->apellidoPaterno ?? '') . ' ' . ($order->cliente->apellidoMaterno ?? '')),
+                        ] : null,
+                    ];
+                });
 
-        // 3. Mercado Libre Orders
-        $mlOrders = \App\Models\Ecommerce\MercadoLibreOrder::where('status', 'paid')
-            ->where('created_at_ml', '>=', now()->subDays(5))
-            ->orderBy('id', 'asc')
-            ->get();
+            $ripleyOrders = \App\Models\Ecommerce\RipleyOrder::select(['id', 'order_id', 'price', 'customer_name'])
+                ->whereIn('status', ['WAITING_ACCEPTANCE', 'SHIPPING'])
+                ->where('created_at_ripley', '>=', now()->subDays(5))
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $mlOrders = \App\Models\Ecommerce\MercadoLibreOrder::select(['id', 'ml_order_id', 'total_amount', 'buyer_name', 'buyer_nickname'])
+                ->where('status', 'paid')
+                ->where('created_at_ml', '>=', now()->subDays(5))
+                ->orderBy('id', 'asc')
+                ->get();
+
+            return [
+                'new_orders' => $newOrders,
+                'ripley_orders' => $ripleyOrders,
+                'ml_orders' => $mlOrders,
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'new_orders' => $newOrders,
-            'ripley_orders' => $ripleyOrders,
-            'ml_orders' => $mlOrders
+            'new_orders' => $data['new_orders'],
+            'ripley_orders' => $data['ripley_orders'],
+            'ml_orders' => $data['ml_orders'],
         ]);
     }
 
