@@ -50,6 +50,23 @@ class CablesCategoryMapper extends AbstractCategorySpecMapper
         ];
     }
 
+    public function classifyEarly(array $context): ?int
+    {
+        $titulo = $context['titulo'] ?? '';
+        $name   = $context['name'] ?? '';
+        $fuente = $titulo . ' ' . $name;
+
+        if (
+            str_contains($fuente, 'IDEASHARE') ||
+            str_contains($fuente, 'TRANSFERENCIA DE MEDIOS') ||
+            str_contains($fuente, 'CABLE DE DATOS')
+        ) {
+            return self::GRUPO_CABLES_DATOS;
+        }
+
+        return null;
+    }
+
     public function classify(array $context): ?int
     {
         $catDeltron = $context['catDeltron'] ?? '';

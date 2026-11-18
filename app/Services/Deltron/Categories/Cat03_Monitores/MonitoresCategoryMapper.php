@@ -121,6 +121,18 @@ class MonitoresCategoryMapper extends AbstractCategorySpecMapper
         $titulo     = $context['titulo'] ?? '';
         $name       = $context['name'] ?? '';
 
+        $esAccesorioNoMonitor = (
+            str_contains($titulo, 'IDEASHARE') ||
+            str_contains($titulo, 'TRANSFERENCIA DE MEDIOS') ||
+            str_contains($titulo, 'DONGLE') ||
+            str_contains($titulo, 'ADAPTADOR') ||
+            str_contains($titulo, 'CABLE ')
+        ) && !str_contains($titulo, 'MONITOR');
+
+        if ($esAccesorioNoMonitor) {
+            return null;
+        }
+
         $esMonitor = (
             str_contains($catDeltron, 'MONITOR') ||
             str_contains($subDeltron, 'MONITOR') ||

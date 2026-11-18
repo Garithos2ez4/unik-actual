@@ -192,11 +192,12 @@ class ClienteController extends Controller
                 'string',
                 function ($attribute, $value, $fail) use ($request) {
                     $tipoDoc = (int) $request->tipodoc;
+                    $numDoc  = trim((string) $value);
 
-                    if ($tipoDoc === 1 && !preg_match('/^[0-9]{8}$/', $value)) {
+                    if ($tipoDoc === 1 && !preg_match('/^[0-9]{8}$/', $numDoc)) {
                         $fail('El DNI debe tener exactamente 8 dígitos numéricos.');
                     }
-                    if ($tipoDoc === 3 && !preg_match('/^(10|15|17|20)[0-9]{9}$/', $value)) {
+                    if ($tipoDoc === 3 && !preg_match('/^(10|15|17|20)[0-9]{9}$/', $numDoc)) {
                         $fail('El RUC debe tener 11 dígitos numéricos y comenzar con 10, 15, 17 o 20.');
                     }
                 },

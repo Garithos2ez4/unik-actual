@@ -712,10 +712,19 @@
     // Editar Teléfono ML
     // ========================
     function editPhone(orderId, currentPhone, currentNote, currentDeliveryNote) {
+        const esWsp = String(orderId).startsWith('WSP-');
         document.getElementById('editDeliveryOrderId').value = orderId;
         document.getElementById('editDeliveryPhone').value = currentPhone || '';
-        document.getElementById('editDeliveryNote').value = currentNote || '';
-        document.getElementById('editDeliveryDeliveryNote').value = currentDeliveryNote || '';
+        document.getElementById('editDeliveryNote').value = esWsp ? '' : (currentNote || '');
+        document.getElementById('editDeliveryDeliveryNote').value = esWsp ? '' : (currentDeliveryNote || '');
+        const noteGroup = document.getElementById('groupEditDeliveryNote');
+        const deliveryNoteGroup = document.getElementById('groupEditDeliveryDeliveryNote');
+        if (noteGroup) {
+            noteGroup.classList.toggle('d-none', esWsp);
+        }
+        if (deliveryNoteGroup) {
+            deliveryNoteGroup.classList.toggle('d-none', esWsp);
+        }
         const modal = new bootstrap.Modal(document.getElementById('modalEditDeliveryInfo'));
         modal.show();
     }

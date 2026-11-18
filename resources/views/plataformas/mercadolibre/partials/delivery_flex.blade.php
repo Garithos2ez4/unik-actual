@@ -122,10 +122,9 @@
                                 </td>
                                 <td>
                                     <div class="fw-semibold text-dark">{{ $entrega['buyer_name'] }}</div>
-                                    @if(($entrega['tipo'] ?? 'ml') === 'ml')
                                     <div class="mt-1 d-flex align-items-center justify-content-center">
                                         <small class="text-muted" id="phone-text-{{ $entrega['order_id'] }}">
-                                            <i class="bi bi-telephone-fill me-1"></i>{{ $entrega['telefono'] ?? 'Sin teléfono' }}
+                                            <i class="bi bi-telephone-fill me-1"></i>{{ !empty($entrega['telefono']) ? $entrega['telefono'] : 'Sin teléfono' }}
                                         </small>
                                         <button class="btn btn-sm btn-link p-0 ms-2 text-primary" onclick="editPhone('{{ $entrega['order_id'] }}', '{{ $entrega['telefono'] ?? '' }}', '{{ addslashes($entrega['nota'] ?? '') }}', '{{ addslashes($entrega['delivery_note'] ?? '') }}')" title="Editar Información">
                                             <i class="bi bi-pencil-square" style="font-size: 0.9rem;"></i>
@@ -135,7 +134,6 @@
                                     <div class="mt-1 text-danger fw-semibold {{ empty($entrega['delivery_note']) ? 'd-none' : '' }}" id="delivery-note-container-{{ $entrega['order_id'] }}" style="font-size: 11px;">
                                         <i class="bi bi-clock-history me-1"></i><span id="delivery-note-text-{{ $entrega['order_id'] }}">{{ $entrega['delivery_note'] ?? '' }}</span>
                                     </div>
-                                    @endif
                                 </td>
                                 <td class="align-middle text-center">
                                     @if(($entrega['tipo'] ?? 'ml') === 'wsp')
@@ -372,11 +370,11 @@
                     <label class="form-label fw-semibold text-dark">Teléfono del Comprador</label>
                     <input type="text" class="form-control" id="editDeliveryPhone" placeholder="Ej: 999999999" pattern="[0-9]{9}" maxlength="9" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9);">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" id="groupEditDeliveryNote">
                     <label class="form-label fw-semibold text-dark">Palabra Clave </label>
                     <input type="text" class="form-control" id="editDeliveryNote" placeholder="Ej: Manzana, Casa Azul, etc.">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3" id="groupEditDeliveryDeliveryNote">
                     <label class="form-label fw-semibold text-dark">Nota / Horario de Entrega</label>
                     <input type="text" class="form-control" id="editDeliveryDeliveryNote" placeholder="Ej: Solo estará hasta las 2:00 PM, llamar antes de llegar, etc.">
                 </div>

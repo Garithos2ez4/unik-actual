@@ -685,7 +685,6 @@ class DeliveryFlexController extends Controller
     public function downloadPdf($zonaBuscada)
     {
         // 1. Obtener todas las órdenes de la misma manera que en index()
-        $userModel = auth()->user();
 
         $flexOrders = \App\Models\Ecommerce\MercadoLibreOrder::with('items')
             ->where('logistic_type', 'self_service')
@@ -754,7 +753,7 @@ class DeliveryFlexController extends Controller
         }
 
         // 2. Obtener Pedidos Web (WSP)
-        $pedidosWeb = \App\Models\web\PedidoWeb::with(['direccion', 'detalles.producto', 'cliente'])
+        $pedidosWeb = PedidoWeb::with(['direccion', 'detalles.producto', 'cliente'])
             ->where('estado', 'pendiente')
             ->whereHas('direccion')
             ->orderBy('created_at', 'desc')
@@ -814,7 +813,9 @@ class DeliveryFlexController extends Controller
                 'pedido_web_id' => $pedido->idPedidoWeb,
                 'telefono' => $clienteTelefono,
                 'cuenta' => 'WhatsApp',
-                'balance_envio' => 0
+                'balance_envio' => 0,
+                'nota' => isset($savedRoutes[$orderIdWsp]) ? $savedRoutes[$orderIdWsp]->note : null,
+                'delivery_note' => isset($savedRoutes[$orderIdWsp]) ? $savedRoutes[$orderIdWsp]->delivery_note : null
             ];
         }
 
@@ -890,6 +891,25 @@ class DeliveryFlexController extends Controller
             'note' => 'nullable|string|max:255',
             'delivery_note' => 'nullable|string|max:255'
         ]);
+
+        if (str_starts_with((string) $orderId, 'WSP-')) {
+            $idPedidoWeb = (int) substr((string) $orderId, 4);
+            $pedido = PedidoWeb::with('cliente')->find($idPedidoWeb);
+            $telefonoActualizado = null;
+            if ($pedido && $pedido->cliente) {
+                $pedido->cliente->update([
+                    'telefono' => $request->buyer_phone ?? ''
+                ]);
+                $telefonoActualizado = $pedido->cliente->telefono;
+            }
+
+            return response()->json([
+                'success' => true,
+                'buyer_phone' => $telefonoActualizado,
+                'note' => null,
+                'delivery_note' => null
+            ]);
+        }
 
         $flexRoute = \App\Models\Ecommerce\MercadoLibreFlexRoute::firstOrCreate(
             ['ml_order_id' => $orderId],

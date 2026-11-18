@@ -50,7 +50,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" onclick="sendFormNewCliente()"
-                        class="btn btn-primary" id="btn-modal-new-cliente"  data-bs-dismiss="modal">Guardar</button>
+                        class="btn btn-primary" id="btn-modal-new-cliente">Guardar</button>
                 </div>
             </div>
         </div>

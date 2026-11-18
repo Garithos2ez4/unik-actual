@@ -72,6 +72,8 @@ function changeTipeDoc(input) {
 function sendFormNewCliente() {
     const tipodoc = formNewCliente.querySelector('select[name="tipodoc"]').value;
     const numerodoc = formNewCliente.querySelector('input[name="numerodoc"]').value.trim();
+    const nombre = formNewCliente.querySelector('input[name="nombre"]').value.trim();
+    const numerotelf = formNewCliente.querySelector('input[name="numerotelf"]').value.trim();
 
     if (tipodoc === '1' && !/^[0-9]{8}$/.test(numerodoc)) {
         alert('El DNI debe tener exactamente 8 dígitos numéricos.');
@@ -80,6 +82,18 @@ function sendFormNewCliente() {
 
     if (tipodoc === '3' && !/^(10|15|17|20)[0-9]{9}$/.test(numerodoc)) {
         alert('El RUC debe tener 11 dígitos numéricos y comenzar con 10, 15, 17 o 20.');
+        return;
+    }
+
+    if (!nombre) {
+        alert('Por favor ingresa el nombre o razón social del cliente.');
+        formNewCliente.querySelector('input[name="nombre"]').focus();
+        return;
+    }
+
+    if (!numerotelf || numerotelf.length < 7) {
+        alert('El número de teléfono es obligatorio (mínimo 7 dígitos).');
+        formNewCliente.querySelector('input[name="numerotelf"]').focus();
         return;
     }
 
@@ -96,15 +110,25 @@ function sendFormNewCliente() {
         method: 'POST',
         body: formData
     })
-    .then(response => { 
+    .then(async response => { 
+        const payload = await response.json().catch(() => ({}));
         if (response.ok) { 
-            return response.json(); 
+            return payload; 
         } else { 
-            throw new Error('Error al registrar.'); 
+            throw new Error(payload.error || payload.message || 'Error al registrar.'); 
         } 
     })
     .then(data => {
+        if (typeof data === 'string') {
+            alert(data);
+            return;
+        }
         objectCliente = data;
+        const modalEl = document.getElementById('nuevoClienteModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
         alertBootstrap('Cliente '+data.numeroDocumento+' registrado.', 'success');
         if (typeof window.onClienteCreado === "function") {
             window.onClienteCreado(data);
@@ -112,7 +136,8 @@ function sendFormNewCliente() {
     }) 
     .catch(error => {
         console.log('error: ' + error);
-        alertBootstrap('error: ' + error, 'danger');
+        alert(error.message || 'Error al registrar.');
+        alertBootstrap('error: ' + (error.message || error), 'danger');
     });
 }
 
