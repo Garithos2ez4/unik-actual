@@ -289,10 +289,11 @@ class DeltronClassifierService
             'N'   => ['#212529', 'Negro'],
         ];
 
+        $tituloComercial = strtoupper(trim(DeltronTextHelper::obtenerTituloComercialDeltron($item)));
         $words = preg_split('/[\s,\-\/]+/', $name);
         $lastWord = end($words);
         foreach ($colorMap as [$token, $hex, $label]) {
-            if ($lastWord === $token) {
+            if ($lastWord === $token || preg_match('/\bCOLOR\s+' . preg_quote($token, '/') . '\b/i', $tituloComercial)) {
                 return ['tipo' => 'COLOR', 'valor' => $label, 'hex' => $hex, 'token' => $token];
             }
         }
@@ -309,8 +310,10 @@ class DeltronClassifierService
             }
         }
 
+        // En el fallback ciego por sufijo de SKU, no usar sufijos de 1 sola letra (ej. 'W' o 'N')
+        // porque forman parte de códigos de modelo/región (ej. Samsung ...GW / ...WW o TE-4064N)
         foreach ($shortSkuSuffixes as $suf => [$hex, $label]) {
-            if (str_ends_with($sku, $suf)) {
+            if (strlen($suf) >= 2 && str_ends_with($sku, $suf)) {
                 return ['tipo' => 'COLOR', 'valor' => $label, 'hex' => $hex, 'token' => $suf];
             }
         }
@@ -342,9 +345,11 @@ class DeltronClassifierService
 
         $nombrePadre = $titulo;
         if ($token) {
+            $nombrePadre = preg_replace('/\bCOLOR\s+' . preg_quote($token, '/') . '\b/i', '', $nombrePadre);
             $nombrePadre = preg_replace('/\b' . preg_quote($token, '/') . '\b/i', '', $nombrePadre);
             $nombrePadre = preg_replace('/(\d+)' . preg_quote($token, '/') . '(?=[\s,]|$)/i', '$1', $nombrePadre);
             if (!empty($variante['valor'])) {
+                $nombrePadre = preg_replace('/\bCOLOR\s+' . preg_quote($variante['valor'], '/') . '\b/i', '', $nombrePadre);
                 $nombrePadre = preg_replace('/\b' . preg_quote($variante['valor'], '/') . '\b/i', '', $nombrePadre);
             }
         }

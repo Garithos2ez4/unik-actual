@@ -303,6 +303,14 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
                 ? 'Inglés' : 'Español';
         }
 
+        // 12b. Teclado (8) - Solo idioma, iluminado y numérico (ej: ESPAÑOL, ILUMINADO Y NUMERICO / ESPAÑOL E ILUMINADO / ESPAÑOL Y NUMERICO / ESPAÑOL)
+        $specsMapeadas[8] = $this->resolveTeclado(
+            (string) ($specsMapeadas[8] ?? ''),
+            $rawSpecs,
+            (string) ($specsMapeadas[25] ?? ''),
+            $textoAnalisis
+        );
+
         // 13. Panel (21)
         if (empty($specsMapeadas[21])) {
             if (preg_match('/\bOLED\b/i', $textoAnalisis)) {
@@ -400,14 +408,60 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
 
     protected function resolveMemoriaRam(string $ramActual, string $textoAnalisis): string
     {
-        $r = $this->extractMemoriaRam($ramActual . ' ' . $textoAnalisis);
-        return $r ?? '16 GB';
+        if (trim($ramActual) !== '') {
+            $r = $this->extractMemoriaRam($ramActual);
+            if ($r !== null) {
+                return $r;
+            }
+        }
+
+        if (preg_match('/\[MEMORIA[^\]]*\](.*?)(?:\n\s*\[|\z)/si', $textoAnalisis, $mBlk)) {
+            if (preg_match('/^[ \t]*-[ \t]*CAPACIDAD[ \t]*:[ \t]*([^\r\n]+)/mi', $mBlk[1], $mCap)) {
+                $r = $this->extractMemoriaRam($mCap[1]);
+                if ($r !== null) {
+                    return $r;
+                }
+            }
+        }
+
+        $primeraLinea = trim(strtok($textoAnalisis, "\r\n") ?: '');
+        if ($primeraLinea !== '') {
+            $r = $this->extractMemoriaRam($primeraLinea);
+            if ($r !== null) {
+                return $r;
+            }
+        }
+
+        return $this->extractMemoriaRam($textoAnalisis) ?? '16 GB';
     }
 
     protected function resolveAlmacenamiento(string $almActual, string $textoAnalisis): string
     {
-        $a = $this->extractAlmacenamiento($almActual . ' ' . $textoAnalisis);
-        return $a ?? '512 GB';
+        if (trim($almActual) !== '') {
+            $a = $this->extractAlmacenamiento($almActual);
+            if ($a !== null) {
+                return $a;
+            }
+        }
+
+        if (preg_match('/\[ALMACENAMIENTO[^\]]*\](.*?)(?:\n\s*\[|\z)/si', $textoAnalisis, $mBlk)) {
+            if (preg_match('/^[ \t]*-[ \t]*CAPACIDAD[ \t]*:[ \t]*([^\r\n]+)/mi', $mBlk[1], $mCap)) {
+                $a = $this->extractAlmacenamiento($mCap[1]);
+                if ($a !== null) {
+                    return $a;
+                }
+            }
+        }
+
+        $primeraLinea = trim(strtok($textoAnalisis, "\r\n") ?: '');
+        if ($primeraLinea !== '') {
+            $a = $this->extractAlmacenamiento($primeraLinea);
+            if ($a !== null) {
+                return $a;
+            }
+        }
+
+        return $this->extractAlmacenamiento($textoAnalisis) ?? '512 GB';
     }
 
     protected function resolveResolucion(string $resActual, string $textoAnalisis): string
@@ -418,13 +472,54 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
 
     protected function resolveSistemaOperativo(string $soActual, string $textoAnalisis): string
     {
-        $fuente = mb_strtolower($soActual . ' ' . $textoAnalisis);
-        if (str_contains($fuente, 'mac') || str_contains($fuente, 'apple')) return 'Mac OS';
-        if (str_contains($fuente, 'win 11 pro') || str_contains($fuente, 'windows 11 pro')) return 'Windows 11 Pro';
-        if (str_contains($fuente, 'win 11') || str_contains($fuente, 'windows 11')) return 'Windows 11 Home';
-        if (str_contains($fuente, 'win 10') || str_contains($fuente, 'windows 10')) return 'Windows 10';
-        if (str_contains($fuente, 'free') || str_contains($fuente, 'dos') || str_contains($fuente, 'sin so')) return 'Free DOS';
-        if (str_contains($fuente, 'linux') || str_contains($fuente, 'ubuntu')) return 'Linux';
+        $partesPrioritarias = [];
+        if (trim($soActual) !== '') {
+            $partesPrioritarias[] = trim($soActual);
+        }
+        if (preg_match('/\[SISTEMA\s+OPERATIVO\](.*?)(?:\n\s*\[|\z)/si', $textoAnalisis, $mBloqueSo)) {
+            $partesPrioritarias[] = $mBloqueSo[1];
+        }
+        if (preg_match_all('/(?:SISTEMA\s+OPERATIVO|VERSION\s+DE\s+SO)[^\n]{0,140}/iu', $textoAnalisis, $mLinesSo)) {
+            $partesPrioritarias[] = implode("\n", $mLinesSo[0]);
+        }
+
+        $fuentePrioritaria = trim(implode("\n", $partesPrioritarias));
+        $fuentes = array_values(array_filter([$fuentePrioritaria, $textoAnalisis], fn($f) => trim($f) !== ''));
+
+        foreach ($fuentes as $fuente) {
+            // Mac OS: solo equipos Apple/Mac reales (evita falso positivo con "almacenamiento")
+            if (
+                preg_match('/\b(?:mac\s*os(?:\s*x)?|macbook)\b/iu', $fuente)
+                || (
+                    preg_match('/\bapple\b/iu', $fuente)
+                    && !preg_match('/\b(?:windows|win\s*1[01]|lenovo|hp|asus|acer|msi|dell|advance|gigabyte)\b/iu', $textoAnalisis)
+                )
+            ) {
+                return 'Mac OS';
+            }
+
+            // Sin SO / Free DOS (evita falsos positivos con "dos unidades" o "FreeSync")
+            if (preg_match('/\b(?:no\s+incluye\s+sistema\s+operativo|sin\s+sistema\s+operativo|sin\s+so|free\s*dos(?:\s*[\d\.]+)?|ms[\s-]*dos|no\s+os)\b/iu', $fuente)) {
+                return 'Free DOS';
+            }
+
+            if (preg_match('/\b(?:windows|win)\s*11\s*pro\b/iu', $fuente)) {
+                return 'Windows 11 Pro';
+            }
+            if (preg_match('/\b(?:windows|win)\s*11(?:\s*home)?\b/iu', $fuente)) {
+                return 'Windows 11 Home';
+            }
+            if (preg_match('/\b(?:windows|win)\s*10\b/iu', $fuente)) {
+                return 'Windows 10';
+            }
+            if (preg_match('/\b(?:linux|ubuntu|fedora|debian|endless\s*os)\b/iu', $fuente)) {
+                return 'Linux';
+            }
+            if (preg_match('/\bchrome\s*os\b/iu', $fuente)) {
+                return 'Chrome OS';
+            }
+        }
+
         return 'Windows 11 Home';
     }
 
@@ -465,6 +560,122 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
         if (str_contains($fuente, 'blanco') || str_contains($fuente, 'white')) return 'Blanco';
         if (str_contains($fuente, 'dorad') || str_contains($fuente, 'gold')) return 'Dorado';
         return 'Gris';
+    }
+
+    protected function resolveTeclado(string $tecladoActual, array $rawSpecs, string $idiomaResuelto, string $textoAnalisis): string
+    {
+        $detectarIdiomaEnTexto = static function (string $txt): ?string {
+            $txt = trim($txt);
+            if ($txt === '') {
+                return null;
+            }
+            $esIngles = (bool) preg_match('/(?:TECLADO|\b)(?:INGL[EÉ]S|ENGLISH|US\s*LAYOUT|AMERICANO)\b/iu', $txt);
+            $esEspanol = (bool) preg_match('/(?:(?:TECLADO|\b)(?:ESPAÑOL|ESPANOL|SPANISH|LATINO)\b|\(LA\))/iu', $txt);
+
+            if ($esIngles && !$esEspanol) {
+                return 'INGLES';
+            }
+            if ($esEspanol) {
+                return 'ESPAÑOL';
+            }
+            return null;
+        };
+
+        $candidatosIdioma = [
+            (string) ($rawSpecs['IDIOMA DE TECLADO'] ?? ''),
+            (string) ($rawSpecs['IDIOMA DEL TECLADO'] ?? ''),
+            $tecladoActual,
+            (string) ($rawSpecs['TECLADO'] ?? ''),
+            (string) ($rawSpecs['TIPO DE TECLADO'] ?? ''),
+        ];
+
+        if (preg_match('/IDIOMA\s+DE\s+TECLADO[^\n]{0,60}/iu', $textoAnalisis, $mIdiomaTec)) {
+            $candidatosIdioma[] = $mIdiomaTec[0];
+        }
+        if (preg_match_all('/TECLADO[^\n]{0,120}/iu', $textoAnalisis, $mTecLines)) {
+            foreach ($mTecLines[0] as $tecLine) {
+                $candidatosIdioma[] = $tecLine;
+            }
+        }
+
+        $idioma = null;
+        foreach ($candidatosIdioma as $cand) {
+            $idioma = $detectarIdiomaEnTexto($cand);
+            if ($idioma !== null) {
+                break;
+            }
+        }
+
+        if ($idioma === null) {
+            $idioma = (stripos($idiomaResuelto, 'ingl') !== false) ? 'INGLES' : 'ESPAÑOL';
+        }
+
+        $tecladoRaw = trim(implode(' ', array_filter([
+            $tecladoActual,
+            (string) ($rawSpecs['TECLADO'] ?? ''),
+            (string) ($rawSpecs['TIPO DE TECLADO'] ?? ''),
+        ])));
+        $fuenteNumerico = $tecladoRaw . "\n" . $textoAnalisis;
+
+        $esNumerico = false;
+        if (!preg_match('/\b(?:SIN|NO)\s+(?:TECLADO\s+)?(?:NUM[EÉ]RIC[OA]|NUMPAD|NUMBER\s*PAD|NUM[\s-]?KEY|PAD\s+NUM[EÉ]RIC[OA])\b/iu', $fuenteNumerico)) {
+            if (
+                preg_match('/\b(?:TECLADO\s+NUM[EÉ]RIC[OA]|PAD\s+NUM[EÉ]RIC[OA]|NUMPAD|NUMBER\s*PAD|NUM[\s-]?KEY|NUMERIC\s+KEYPAD)\b/iu', $fuenteNumerico)
+                || ($tecladoRaw !== '' && preg_match('/\bNUM[EÉ]RIC[OA]\b/iu', $tecladoRaw))
+            ) {
+                $esNumerico = true;
+            }
+        }
+
+        // Detección de iluminación / retroiluminación exclusivamente en contexto de teclado (evita pantallas LED BACKLIT)
+        $iluminadoParts = [];
+        if ($tecladoRaw !== '') {
+            $iluminadoParts[] = $tecladoRaw;
+        }
+        if (preg_match_all('/(?:(?:(?:NO|SIN|NON)[\s-]*)?(?:BACKLIT|RETROILUMINAD\w*|ILUMINAD\w*|RGB)\s+(?:DE\s+)?(?:TECLADO|KEYBOARD)|(?:TECLADO|KEYBOARD)[^\n]{0,140})/iu', $textoAnalisis, $mIlumLines)) {
+            foreach ($mIlumLines[0] as $ilumLine) {
+                $iluminadoParts[] = $ilumLine;
+            }
+        }
+
+        $retroSiExplicito = false;
+        foreach (['RETROILUMINACIÓN', 'RETROILUMINACION', 'ILUMINACIÓN', 'ILUMINACION'] as $kRetro) {
+            $valRetro = trim((string) ($rawSpecs[$kRetro] ?? ''));
+            if ($valRetro === '') {
+                continue;
+            }
+            if (preg_match('/^(?:SI|S[IÍ]|YES)$/iu', $valRetro)) {
+                $retroSiExplicito = true;
+                $iluminadoParts[] = 'RETROILUMINADO';
+            } elseif (preg_match('/\b(?:NO|SIN|NONE|N\/A)\b/iu', $valRetro)) {
+                $iluminadoParts[] = 'NO RETROILUMINADO';
+            } else {
+                $iluminadoParts[] = 'RETROILUMINADO ' . $valRetro;
+            }
+        }
+
+        $fuenteIluminado = implode("\n", $iluminadoParts);
+        $esIluminado = false;
+        if (!preg_match('/\b(?:NO|SIN|NON)[\s-]*(?:RETRO\s*ILUMINAD[OA]?|RETRO\s*ILUMINACI[OÓ]N|ILUMINAD[OA]?|ILUMINACI[OÓ]N|BACKLIT|RGB)\b/iu', $fuenteIluminado)) {
+            if (
+                $retroSiExplicito
+                || preg_match('/\b(?:RETRO\s*ILUMINAD[OA]?|RETRO\s*ILUMINACI[OÓ]N|ILUMINAD[OA]?|BACKLIT|RGB)\b/iu', $fuenteIluminado)
+            ) {
+                $esIluminado = true;
+            }
+        }
+
+        if ($esIluminado && $esNumerico) {
+            return $idioma . ', ILUMINADO Y NUMERICO';
+        }
+        if ($esIluminado) {
+            return $idioma . ' E ILUMINADO';
+        }
+        if ($esNumerico) {
+            return $idioma . ' Y NUMERICO';
+        }
+
+        return $idioma;
     }
 
     protected function ensureDimensionesYPesoLaptop(int $idGrupo, array $specs, array $rawSpecs, string $textoAnalisis): array

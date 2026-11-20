@@ -146,7 +146,6 @@ class DeltronApiService
             Log::info("Deltron API: Token renovado con exito para la IP cliente {$clientIp}.");
 
             return $token;
-
         } catch (Exception $e) {
             Log::error("Deltron API Auth Exception: " . $e->getMessage());
             throw $e;
@@ -167,15 +166,15 @@ class DeltronApiService
                 'Accept' => 'application/json',
             ]);
 
-        $response = $method === 'GET' 
-            ? $httpRequest->get($url, $queryParams) 
+        $response = $method === 'GET'
+            ? $httpRequest->get($url, $queryParams)
             : $httpRequest->post($url, $body);
 
         // Si expiro el token (401), renovar token y reintentar una vez
         if ($response->status() === 401) {
             Log::warning("Deltron API: Token rechazado (401). Forzando renovacion...");
             $token = $this->getToken(true);
-            $response = $method === 'GET' 
+            $response = $method === 'GET'
                 ? Http::withToken($token)->timeout($timeout)->get($url, $queryParams)
                 : Http::withToken($token)->timeout($timeout)->post($url, $body);
         }
@@ -261,7 +260,7 @@ class DeltronApiService
             }
         } catch (Exception $e) {
             Log::error("Deltron API getInicioDia: Error al consultar corte de inicio de dia: " . $e->getMessage() . ". Se evita reintentos inmediatos.");
-            
+
             if (file_exists($snapshotPath)) {
                 Log::warning("Deltron API getInicioDia: Usando snapshot local guardado en disco para no saturar la API.");
                 $saved = json_decode(file_get_contents($snapshotPath), true);
@@ -353,9 +352,9 @@ class DeltronApiService
             $cached = Cache::get($cacheKey);
             if (is_array($cached) && !empty($cached)) {
                 $cached['origen'] = 'base_de_datos';
-                if (empty($cached['modelo_real'])) {
-                    $cached['modelo_real'] = DeltronTextHelper::extraerModeloDesdeItem($cached);
-                }
+                $cached['modelo_real'] = !empty($cached['modelo_real'])
+                    ? DeltronTextHelper::formatearModeloSiLaptop($cached['modelo_real'], $cached)
+                    : DeltronTextHelper::extraerModeloDesdeItem($cached);
                 if (empty($cached['vinculado_bd']) || empty($cached['idProducto'])) {
                     $prodDb = $this->buscarProductoEnUnike($cleanSku, $cached['part_number'] ?? null, $cached['modelo_real'] ?? null);
                     if ($prodDb) {
@@ -380,9 +379,9 @@ class DeltronApiService
                     $comp = $saved['descripcion_larga'] ?: $saved['descripcion_corta'];
                     $saved['descripcion_completa'] = trim($comp . (!empty($specsTxt) ? "\n\n" . $specsTxt : ''));
                 }
-                if (empty($saved['modelo_real'])) {
-                    $saved['modelo_real'] = DeltronTextHelper::extraerModeloDesdeItem($saved);
-                }
+                $saved['modelo_real'] = !empty($saved['modelo_real'])
+                    ? DeltronTextHelper::formatearModeloSiLaptop($saved['modelo_real'], $saved)
+                    : DeltronTextHelper::extraerModeloDesdeItem($saved);
                 if (empty($saved['vinculado_bd']) || empty($saved['idProducto'])) {
                     $prodDb = $this->buscarProductoEnUnike($cleanSku, $saved['part_number'] ?? null, $saved['modelo_real'] ?? null);
                     if ($prodDb) {
@@ -411,9 +410,9 @@ class DeltronApiService
                         $comp = $saved['descripcion_larga'] ?: $saved['descripcion_corta'];
                         $saved['descripcion_completa'] = trim($comp . (!empty($specsTxt) ? "\n\n" . $specsTxt : ''));
                     }
-                    if (empty($saved['modelo_real'])) {
-                        $saved['modelo_real'] = DeltronTextHelper::extraerModeloDesdeItem($saved);
-                    }
+                    $saved['modelo_real'] = !empty($saved['modelo_real'])
+                        ? DeltronTextHelper::formatearModeloSiLaptop($saved['modelo_real'], $saved)
+                        : DeltronTextHelper::extraerModeloDesdeItem($saved);
                     if (empty($saved['vinculado_bd']) || empty($saved['idProducto'])) {
                         $prodDb = $this->buscarProductoEnUnike($cleanSku, $saved['part_number'] ?? null, $saved['modelo_real'] ?? null);
                         if ($prodDb) {
@@ -763,7 +762,8 @@ class DeltronApiService
             }
         }
 
-        $modeloReal = DeltronTextHelper::extraerModeloRealDesdeSpecs($specsHtml) ?: DeltronTextHelper::extraerModeloDesdeItem($raw);
+        $modeloBase = DeltronTextHelper::extraerModeloRealDesdeSpecs($specsHtml) ?: DeltronTextHelper::extraerModeloDesdeItem($raw);
+        $modeloReal = DeltronTextHelper::formatearModeloSiLaptop($modeloBase, $raw);
 
         $prodDb = $this->buscarProductoEnUnike($cleanSku, $partNumber, $modeloReal);
         $vinculadoBd = ($prodDb !== null);
@@ -1044,9 +1044,7 @@ class DeltronApiService
         return $this->syncService->syncInventario($deltronItems);
     }
 
-    /* =========================================================================
-     * DELEGACION HACIA DeltronClassifierService
-     * ========================================================================= */
+
 
     public function clasificarGrupoSugerido(array $item, $grupos): array
     {

@@ -231,7 +231,7 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
 
         return match ($idGrupo) {
             self::GRUPO_PROCESADORES   => [4, 9, 10, 11, 12, 13, 37, 48, 51, 52, 63, 90, 91],
-            self::GRUPO_PLACAS_MADRE   => [4, 9, 17, 46, 51, 52, 63, 76, 77],
+            self::GRUPO_PLACAS_MADRE   => [4, 5, 9, 17, 37, 46, 51, 52, 63, 76, 77, 80, 88],
             self::GRUPO_MEMORIAS_RAM   => [5, 46, 49, 50, 51, 52, 80, 81],
             self::GRUPO_DISCOS_DURO,
             self::GRUPO_DISCO_SOLIDO   => [6, 45, 46, 47, 48, 49, 50, 51, 52],
@@ -259,6 +259,11 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
         // 1. CASES / GABINETES (ID 54)
         if ($idGrupo === self::GRUPO_CASE) {
             $specsMapeadas = $this->enrichCaseSpecs($specsMapeadas, $rawSpecs, $textoAnalisis);
+        }
+
+        // 1.1 PLACAS MADRE (ID 50)
+        if ($idGrupo === self::GRUPO_PLACAS_MADRE) {
+            $specsMapeadas = $this->enrichPlacaMadreSpecs($specsMapeadas, $rawSpecs, $textoAnalisis);
         }
 
         // 2. FUENTES DE PODER (ID 53)
@@ -344,6 +349,86 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
         }
 
         return $specsMapeadas;
+    }
+
+    protected function enrichPlacaMadreSpecs(array $specs, array $rawSpecs, string $textoAnalisis): array
+    {
+        // Factor de forma (77) y Formato de placa (76)
+        $factorForma = $rawSpecs['FACTOR DE FORMA'] ?? ($specs[77] ?? null);
+        if (!$factorForma && preg_match('/FACTOR\s+DE\s+FORMA\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mff)) {
+            $factorForma = $mff[1];
+        }
+        if (!$factorForma && preg_match('/\b(E-?ATX|MICRO-?ATX|MINI-?ITX|ATX)\b/i', $textoAnalisis, $mff2)) {
+            $factorForma = $mff2[1];
+        }
+        if ($factorForma) {
+            $ffUpper = strtoupper(trim($factorForma));
+            $specs[77] = $ffUpper;
+            $specs[76] = $ffUpper;
+        }
+
+        // Presentación (88)
+        $presentacion = $rawSpecs['PRESENTACION'] ?? ($rawSpecs['PRESENTACIÓN'] ?? ($specs[88] ?? null));
+        if (!$presentacion && preg_match('/PRESENTACI[ÓO]N\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mpres)) {
+            $presentacion = $mpres[1];
+        }
+        if ($presentacion) {
+            $specs[88] = ucfirst(strtolower(trim($presentacion)));
+        }
+
+        // Dimensiones (51)
+        if (empty($specs[51])) {
+            $dim = $rawSpecs['DIMENSIONES'] ?? ($rawSpecs['DIMENSIONES(PAQUETE)'] ?? null);
+            if (!$dim && preg_match('/DIMENSIONES(?:\s*\(PAQUETE\))?\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mdim)) {
+                $dim = $mdim[1];
+            }
+            if ($dim) {
+                $specs[51] = trim($dim);
+            }
+        }
+
+        // Peso(paquete) (52)
+        if (empty($specs[52])) {
+            $peso = $rawSpecs['PESO BRUTO'] ?? ($rawSpecs['PESO(PAQUETE)'] ?? null);
+            if (!$peso && preg_match('/PESO(?:\s*\(PAQUETE\)|\s+BRUTO)?\s*:\s*([\d\.]+[^\r\n]*)/i', $textoAnalisis, $mpeso)) {
+                $peso = $mpeso[1];
+            }
+            if ($peso && preg_match('/([\d\.]+)/', $peso, $mp)) {
+                $specs[52] = $mp[1];
+            }
+        }
+
+        // Conectividad (9): extraer Wi-Fi / Bluetooth / Ethernet si está vacío
+        if (empty($specs[9])) {
+            $conParts = [];
+            if (preg_match('/\b(Wi-?Fi\s*(?:6E|7|6|5)?(?:\s*2x2)?)\b/i', $textoAnalisis, $mw)) {
+                $conParts[] = trim($mw[1]);
+            }
+            if (stripos($textoAnalisis, 'BLUETOOTH') !== false) {
+                $conParts[] = 'Bluetooth';
+            }
+            if (stripos($textoAnalisis, 'RJ-45') !== false || stripos($textoAnalisis, 'ETHERNET') !== false || stripos($textoAnalisis, 'LAN') !== false) {
+                $conParts[] = 'Ethernet RJ-45';
+            }
+            if (!empty($conParts)) {
+                $specs[9] = implode(', ', array_unique($conParts));
+            }
+        }
+
+        // Tipo de RAM / Tipo Memoria (80): DDR5 / DDR4 / DDR3
+        if (empty($specs[80]) && preg_match('/\b(DDR5|DDR4|DDR3)\b/i', $textoAnalisis, $mram)) {
+            $specs[80] = strtoupper($mram[1]);
+        }
+
+        // Evitar que Wi-Fi se meta por error en Procesador (4)
+        if (!empty($specs[4]) && (stripos($specs[4], 'WI-FI') !== false || stripos($specs[4], 'WIFI') !== false || stripos($specs[4], 'BLUETOOTH') !== false)) {
+            unset($specs[4]);
+        }
+        if (empty($specs[4]) && preg_match('/(?:SOCKET|CHIPSET)\s*:\s*([^\r\n]+)/i', $textoAnalisis, $msoc)) {
+            $specs[4] = trim($msoc[1]);
+        }
+
+        return $specs;
     }
 
     protected function enrichCaseSpecs(array $specs, array $rawSpecs, string $textoAnalisis): array

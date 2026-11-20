@@ -131,25 +131,71 @@ abstract class AbstractCategorySpecMapper implements DeltronCategoryClassifierIn
         return null;
     }
 
+    protected function stripExpansionPhrases(string $texto): string
+    {
+        // 1. Líneas estructuradas de expansión máxima o comentarios sobre capacidad máxima soportada
+        $limpio = preg_replace('/^[ \t]*-?[ \t]*EXPANSI[OÓ]N\s+M[AÁ]XIMA\s*:[^\r\n]*/imu', ' ', $texto);
+        $limpio = preg_replace('/^[ \t]*-?[ \t]*COMENTARIOS\s*:[^\r\n]*(?:SOPORTA\s+HASTA|DE\s+HASTA|EXPANSI[OÓ]N|EXPANDIBLE|M[AÁ]XIM[OA]|UP\s+TO)[^\r\n]*/imu', ' ', $limpio ?? $texto);
+
+        // 2. Cláusulas de expansión en prosa/comentarios sin cortar en puntos internos como "M.2" o "4.0"
+        $limpio = preg_replace(
+            '/(?:EXPANSI[OÓ]N\s+M[AÁ]XIMA|MEMORIA\s+M[AÁ]XIMA(?:\s+SOPORTADA)?|ALMACENAMIENTO\s+M[AÁ]XIMO(?:\s+SOPORTADO)?|SOPORTA\s+HASTA|SOPORTAD[AO]\s+HASTA|EXPANDIBLE\s+HASTA|AMPLIABLE\s+HASTA|ACTUALIZABLE\s+HASTA|UP\s+TO\s+\d+\s*(?:GB|TB)|DE\s+HASTA\s+(?:UN[AO]?\s+)?\d+\s*(?:GB|TB)|HASTA\s+(?:UN[AO]?\s+)?\d+\s*(?:GB|TB))(?:[^\r\n;.]|\.(?!\s|$))*/iu',
+            ' ',
+            $limpio ?? $texto
+        );
+
+        return $limpio ?? $texto;
+    }
+
     protected function extractMemoriaRam(string $texto): ?string
     {
-        if (preg_match('/\b(4|8|12|16|24|32|48|64|128)\s*GB\s*(?:DDR[45]|LPDDR[45]X?|SO-?DIMM|SODIMM|RAM)?\b/i', $texto, $m)) {
+        $limpio = $this->stripExpansionPhrases($texto);
+
+        if (preg_match('/\b(2|3|4|8|12|16|24|32|48|64|128)\s*GB?\s*(?:DDR[345]|LPDDR[45]X?|SO-?DIMM|SODIMM|RAM)\b/i', $limpio, $m)) {
             return $m[1] . ' GB';
         }
+
+        $sinVideo = preg_replace('/\[VIDEO[^\]]*\].*?(?=\n\s*\[|\z)/si', ' ', $limpio) ?? $limpio;
+        $sinVideo = preg_replace('/\b(?:RTX|GTX|RX|RADEON|GEFORCE|ARC|VRAM)\s*[A-Z0-9-]{0,12}\s+\d{1,2}\s*GB\b/i', ' ', $sinVideo) ?? $sinVideo;
+        if (preg_match('/\b(2|3|4|8|12|16|24|32|48|64|128)\s*GB\b(?!\s*(?:SSD|NVME|M\.2|HDD|EMMC|UFS|GDDR\d*|VRAM|RTX|GTX|VIDEO))/i', $sinVideo, $m)) {
+            return $m[1] . ' GB';
+        }
+
         return null;
     }
 
     protected function extractAlmacenamiento(string $texto): ?string
     {
-        if (preg_match('/\b(2)\s*TB\b/i', $texto)) {
-            return '2TB';
+        $limpio = $this->stripExpansionPhrases($texto);
+
+        $normalizar = static function (?string $tb, ?string $gb): string {
+            if ($tb !== null && $tb !== '') {
+                return $tb . 'TB';
+            }
+            if ($gb === '1024') {
+                return '1TB';
+            }
+            return $gb . ' GB';
+        };
+
+        // Prioridad 1: capacidad junto a palabra clave de almacenamiento
+        if (preg_match('/\b(?:(4|2|1)\s*TB?|(1024|512|256|128|64|32)\s*GB?)\s*(?:SSD|NVME|M\.2|HDD|EMMC|UFS|PCIE|SOLID)\b/i', $limpio, $m)) {
+            return $normalizar(($m[1] ?? '') ?: null, ($m[2] ?? '') ?: null);
         }
-        if (preg_match('/\b(1)\s*TB\b/i', $texto) || preg_match('/\b1024\s*GB\b/i', $texto)) {
-            return '1TB';
+        if (preg_match('/\b(?:SSD|NVME|M\.2|HDD|EMMC|UFS|DISCO(?:\s+DURO|\s+S[OÓ]LIDO)?)(?:\s+(?:M\.2|NVME|PCIE|SATA|DE)){0,3}\s+(?:(4|2|1)\s*TB?|(1024|512|256|128|64|32)\s*GB?)\b/i', $limpio, $m)) {
+            return $normalizar(($m[1] ?? '') ?: null, ($m[2] ?? '') ?: null);
         }
-        if (preg_match('/\b(512|256|128)\s*GB\b/i', $texto, $m)) {
+
+        // Prioridad 2: capacidad en orden de aparición (excluyendo RAM ej. 128GB DDR5)
+        if (preg_match('/\b(?:(4|2|1)\s*TB|(1024|512|256|128)\s*GB(?!\s*(?:DDR[345]|LPDDR[45]X?|SO-?DIMM|SODIMM|RAM)))\b/i', $limpio, $m)) {
+            return $normalizar(($m[1] ?? '') ?: null, ($m[2] ?? '') ?: null);
+        }
+
+        // Prioridad 3: capacidades pequeñas (64/32 GB, e.g. eMMC) solo si no es RAM ni VRAM
+        if (preg_match('/\b(64|32)\s*GB(?!\s*(?:DDR[345]|LPDDR[45]X?|SO-?DIMM|SODIMM|RAM|GDDR\d*|VRAM))\b/i', $limpio, $m)) {
             return $m[1] . ' GB';
         }
+
         return null;
     }
 

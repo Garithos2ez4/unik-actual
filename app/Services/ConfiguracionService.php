@@ -297,6 +297,9 @@ class ConfiguracionService implements ConfiguracionServiceInterface
         if ($idCaracteristica) {
             $data = ['tipo' => 'INVALIDO'];
             $this->caracteristicasRepository->update($idCaracteristica, $data);
+
+            \App\Models\Catalogo\Caracteristicas_Producto::where('idCaracteristica', $idCaracteristica)->delete();
+            \App\Models\Catalogo\Caracteristicas_Grupo::where('idCaracteristica', $idCaracteristica)->delete();
         }
     }
 

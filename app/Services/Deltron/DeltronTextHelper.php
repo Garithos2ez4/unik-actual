@@ -159,42 +159,292 @@ class DeltronTextHelper
 
     /**
      * Extrae el atributo modelo de Deltron desde el payload/array del producto (top-level o desde tabla de specs).
+     * En laptops añade de forma abreviada e idempotente RAM y Almacenamiento (ej. "V15 G5 IRL - 16GB/512GB").
      */
-    public static function extraerModeloDesdeItem(array $item): ?string
+    public static function extraerModeloDesdeItem(array $item, ?int $idGrupo = null): ?string
     {
+        $modeloBase = null;
+
         if (!empty($item['modelo_real']) && $item['modelo_real'] !== '-') {
-            return trim($item['modelo_real']);
-        }
+            $modeloBase = trim((string) $item['modelo_real']);
+        } else {
+            // 1. Prioridad: Buscar en tablas HTML de especificaciones o en la descripción técnica (donde Deltron escribe "- MODELO: XXX")
+            $fuentes = [
+                $item['specs']['specs_all_html'] ?? null,
+                $item['specs']['specs_html'] ?? null,
+                $item['specs_all_html'] ?? null,
+                $item['specs_html'] ?? null,
+                $item['description_large'] ?? null,
+                $item['descripcion_completa'] ?? null,
+                $item['description'] ?? null,
+                $item['description_small'] ?? null,
+            ];
 
-        // 1. Prioridad: Buscar en tablas HTML de especificaciones o en la descripción técnica (donde Deltron escribe "- MODELO: XXX")
-        $fuentes = [
-            $item['specs']['specs_all_html'] ?? null,
-            $item['specs']['specs_html'] ?? null,
-            $item['specs_all_html'] ?? null,
-            $item['specs_html'] ?? null,
-            $item['description_large'] ?? null,
-            $item['descripcion_completa'] ?? null,
-            $item['description'] ?? null,
-            $item['description_small'] ?? null,
-        ];
+            foreach ($fuentes as $src) {
+                if (is_string($src) && trim($src) !== '') {
+                    $modeloReal = self::extraerModeloRealDesdeSpecs($src);
+                    if ($modeloReal) {
+                        $modeloBase = $modeloReal;
+                        break;
+                    }
+                }
+            }
 
-        foreach ($fuentes as $src) {
-            if (is_string($src) && trim($src) !== '') {
-                $modeloReal = self::extraerModeloRealDesdeSpecs($src);
-                if ($modeloReal) {
-                    return $modeloReal;
+            // 2. Si no se encontró en las especificaciones ni en la descripción, revisar campos modelo/model
+            if ($modeloBase === null) {
+                foreach (['modelo', 'model'] as $k) {
+                    if (!empty($item[$k]) && $item[$k] !== '-') {
+                        $modeloBase = trim((string) $item[$k]);
+                        break;
+                    }
                 }
             }
         }
 
-        // 2. Si no se encontró en las especificaciones ni en la descripción, revisar campos modelo/model
-        foreach (['modelo', 'model'] as $k) {
-            if (!empty($item[$k]) && $item[$k] !== '-') {
-                return trim((string) $item[$k]);
+        return self::formatearModeloSiLaptop($modeloBase, $item, $idGrupo);
+    }
+
+    /**
+     * Determina si un payload/ficha de Deltron corresponde a una Laptop (excluyendo accesorios).
+     */
+    public static function esItemLaptop(array $item, ?int $idGrupo = null): bool
+    {
+        if ($idGrupo !== null) {
+            return in_array($idGrupo, [1, 2, 3], true);
+        }
+
+        $sku = strtoupper(trim((string) ($item['sku'] ?? '')));
+        if (str_starts_with($sku, 'NBAC')) {
+            return false;
+        }
+
+        $cat = self::normalizarParaBusqueda($item['category_name'] ?? '');
+        $sub = self::normalizarParaBusqueda($item['subcategory_name'] ?? '');
+        $name = self::normalizarParaBusqueda($item['name'] ?? '');
+        $titulo = self::normalizarParaBusqueda(self::obtenerTituloComercialDeltron($item));
+        $descCorta = self::normalizarParaBusqueda($item['descripcion_corta'] ?? '');
+        $combo = $cat . ' ' . $sub . ' ' . $titulo . ' ' . $descCorta;
+
+        if (
+            str_contains($cat, 'ACCESORIO')
+            || str_contains($sub, 'ACCESORIO')
+            || preg_match('/\b(?:MOCHILA|FUNDA|MALETIN|CARGADOR|ADAPTADOR|BATERIA|COOLER|SOPORTE|STAND|HUB|DOCKING|MEMORIA RAM|DISCO SOLIDO|MONITOR|TECLADO|MOUSE)\b/', $cat . ' ' . $sub)
+            || preg_match('/^(?:MOCHILA|FUNDA|MALETIN|CARGADOR|ADAPTADOR|BATERIA|COOLER|SOPORTE|STAND|HUB|DOCKING|MEMORIA|DISCO|MONITOR|TECLADO|MOUSE)\b/', $titulo)
+        ) {
+            return false;
+        }
+
+        if (
+            str_starts_with($sku, 'NB')
+            || str_contains($cat, 'NOTEBOOK')
+            || str_contains($cat, 'PORTATIL')
+            || str_contains($cat, 'LAPTOP')
+            || str_contains($sub, 'NOTEBOOK')
+            || str_contains($sub, 'PORTATIL')
+            || str_contains($sub, 'LAPTOP')
+            || preg_match('/^(?:NB|R\s+NB|NOTEBOOK|LAPTOP|MACBOOK)\b/', $titulo)
+            || preg_match('/^(?:NB|R\s+NB)\b/', $name)
+        ) {
+            return true;
+        }
+
+        return str_contains($combo, 'NOTEBOOK ') || str_contains($combo, 'LAPTOP ');
+    }
+
+    /**
+     * Extrae RAM y Almacenamiento de fábrica desde un ítem/ficha de laptop Deltron
+     * priorizando la tabla de especificaciones ([MEMORIA] / [ALMACENAMIENTO]) para no confundir
+     * expansión máxima ("EXPANSION MAXIMA: 32 GB", "HASTA 1TB") con la capacidad real.
+     *
+     * @return array{ram:?string, storage:?string}
+     */
+    public static function extraerRamYAlmacenamientoLaptop(array $item): array
+    {
+        $ram = null;
+        $storage = null;
+
+        $normalizarCap = static function (string $num, string $unit): string {
+            $u = strtoupper(trim($unit));
+            if ($num === '1024' && ($u === 'GB' || $u === 'G' || $u === '')) {
+                return '1TB';
+            }
+            if ($u === 'TB' || $u === 'T') {
+                return $num . 'TB';
+            }
+            return $num . 'GB';
+        };
+
+        // Prioridad 1: Secciones estructuradas [MEMORIA] y [ALMACENAMIENTO] en HTML y texto plano
+        $htmlSources = [
+            $item['specs']['specs_all_html'] ?? null,
+            $item['specs']['specs_html'] ?? null,
+            $item['specs_all_html'] ?? null,
+            $item['specs_html'] ?? null,
+        ];
+        foreach ($htmlSources as $html) {
+            if (!is_string($html) || trim($html) === '') {
+                continue;
+            }
+            if ($ram === null && preg_match('/MEMORIA(?:S?\s*RAM)?\s*<\/(?:td|th)>.{0,350}?CAPACIDAD\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>\s*(4|8|12|16|24|32|48|64|128)\s*GB\b/is', $html, $m)) {
+                $ram = $normalizarCap($m[1], 'GB');
+            }
+            if ($storage === null && preg_match('/ALMACENAMIENTO\s*<\/(?:td|th)>.{0,350}?CAPACIDAD\s*<\/(?:td|th)>\s*<(?:td|th)[^>]*>\s*(?:(1|2|4)\s*TB|(128|256|512|1024)\s*GB)\b/is', $html, $m)) {
+                $storage = !empty($m[1]) ? $normalizarCap($m[1], 'TB') : $normalizarCap($m[2], 'GB');
             }
         }
 
-        return null;
+        $textStructSources = [
+            $item['specs_texto'] ?? null,
+            $item['descripcion_completa'] ?? null,
+            $item['description'] ?? null,
+        ];
+        foreach ($textStructSources as $txt) {
+            if (!is_string($txt) || trim($txt) === '') {
+                continue;
+            }
+            if ($ram === null && preg_match('/\[MEMORIA[^\]]*\](.*?)(?:\n\s*\[|\z)/si', $txt, $mBlk)) {
+                if (preg_match('/-\s*CAPACIDAD\s*:\s*(4|8|12|16|24|32|48|64|128)\s*GB\b/i', $mBlk[1], $m)) {
+                    $ram = $normalizarCap($m[1], 'GB');
+                }
+            }
+            if ($storage === null && preg_match('/\[ALMACENAMIENTO[^\]]*\](.*?)(?:\n\s*\[|\z)/si', $txt, $mBlk)) {
+                if (preg_match('/-\s*CAPACIDAD\s*:\s*(?:(1|2|4)\s*TB|(128|256|512|1024)\s*GB)\b/i', $mBlk[1], $m)) {
+                    $storage = !empty($m[1]) ? $normalizarCap($m[1], 'TB') : $normalizarCap($m[2], 'GB');
+                }
+            }
+        }
+
+        // Prioridad 2: Título comercial (description_small / descripcion_corta / segmento antes de [@@@])
+        $titulares = [
+            self::cleanDeltronText($item['description_small'] ?? ''),
+            self::cleanDeltronText($item['descripcion_corta'] ?? ''),
+        ];
+        $descLargeRaw = (string) ($item['description_large'] ?? ($item['descripcion_larga'] ?? ''));
+        if ($descLargeRaw !== '' && str_contains($descLargeRaw, '[@@@]')) {
+            $titulares[] = self::cleanDeltronText(explode('[@@@]', $descLargeRaw)[0] ?? '');
+        }
+        $tituloNorm = trim(implode(' ', array_filter($titulares)));
+
+        if ($tituloNorm !== '') {
+            if ($ram === null) {
+                if (preg_match('/\b(4|8|12|16|24|32|48|64|128)\s*GB\s*(?:DDR[345]|LPDDR[45]X?|SO-?DIMM|SODIMM|RAM)\b/i', $tituloNorm, $m)) {
+                    $ram = $normalizarCap($m[1], 'GB');
+                } elseif (preg_match('/\b(4|8|12|16|24|32|48|64|128)\s*GB\b(?!\s*(?:SSD|NVME|M\.2|HDD|EMMC|UFS|GDDR|VRAM|RTX|GTX))/i', $tituloNorm, $m)) {
+                    $ram = $normalizarCap($m[1], 'GB');
+                }
+            }
+            if ($storage === null) {
+                if (preg_match('/\b(128|256|512|1024)\s*GB\b(?:\s*(?:SSD|NVME|M\.2|HDD|EMMC|UFS|PCIe))?/i', $tituloNorm, $m)) {
+                    $storage = $normalizarCap($m[1], 'GB');
+                } elseif (preg_match('/(?<!HASTA\s)\b(1|2|4)\s*TB\b(?:\s*(?:SSD|NVME|M\.2|HDD|PCIe))?/i', $tituloNorm, $m)) {
+                    $storage = $normalizarCap($m[1], 'TB');
+                }
+            }
+        }
+
+        // Prioridad 3: Nombre abreviado Deltron (ej. ".../16/512/FR", ".../16G/1T/W11P", "... 8 512 W1H", "... 8GB+256SSD")
+        if ($ram === null || $storage === null) {
+            $nameCandidates = array_filter([
+                (string) ($item['deltron_name'] ?? ''),
+                (string) ($item['name'] ?? ''),
+            ]);
+            foreach ($nameCandidates as $shortName) {
+                $shortUpper = strtoupper($shortName);
+                if (preg_match('/(?:[\/\s+])(4|8|12|16|24|32|48|64|128)(?:GB?)?(?:[\/\s+])(128|256|512)(?:GB?|SSD)?\b/i', $shortUpper, $m)) {
+                    $ram ??= $normalizarCap($m[1], 'GB');
+                    $storage ??= $normalizarCap($m[2], 'GB');
+                    break;
+                }
+                if (preg_match('/(?:[\/\s+])(4|8|12|16|24|32|48|64|128)(?:GB?)?(?:[\/\s+])([124])(?:TB?|(?=(?:[\/\s]|$)(?:W1|FR|V\d|WP|WH|NO|F\b|$)))/i', $shortUpper, $m)) {
+                    $ram ??= $normalizarCap($m[1], 'GB');
+                    $storage ??= $normalizarCap($m[2], 'TB');
+                    break;
+                }
+            }
+        }
+
+        // Prioridad 4: Cuerpo completo de descripción limpiando frases de expansión máxima
+        if ($ram === null || $storage === null) {
+            $cuerpoRaw = trim(implode("\n", array_filter([
+                self::cleanDeltronText($descLargeRaw),
+                self::cleanDeltronText($item['descripcion_completa'] ?? ''),
+                self::cleanDeltronText($item['description'] ?? ''),
+            ])));
+            if ($cuerpoRaw !== '') {
+                $cuerpoLimpio = preg_replace('/(?:EXPANSI[OÓ]N\s+M[AÁ]XIMA|SOPORTA\s+HASTA|HASTA\s+\d+\s*(?:GB|TB))[^\r\n\.]*/iu', ' ', $cuerpoRaw);
+                if ($ram === null) {
+                    if (preg_match('/\b(4|8|12|16|24|32|48|64|128)\s*GB\s*(?:DDR[345]|LPDDR[45]X?|SO-?DIMM|SODIMM|RAM)\b/i', $cuerpoLimpio, $m)) {
+                        $ram = $normalizarCap($m[1], 'GB');
+                    } elseif (preg_match('/\b(4|8|12|16|24|32|48|64|128)\s*GB\b(?!\s*(?:SSD|NVME|M\.2|HDD|EMMC|UFS|GDDR|VRAM|RTX|GTX))/i', $cuerpoLimpio, $m)) {
+                        $ram = $normalizarCap($m[1], 'GB');
+                    }
+                }
+                if ($storage === null) {
+                    if (preg_match('/\b(128|256|512|1024)\s*GB\s*(?:SSD|NVME|M\.2|HDD|EMMC|UFS|PCIe)\b/i', $cuerpoLimpio, $m)) {
+                        $storage = $normalizarCap($m[1], 'GB');
+                    } elseif (preg_match('/\b(1|2|4)\s*TB\s*(?:SSD|NVME|M\.2|HDD|PCIe)\b/i', $cuerpoLimpio, $m)) {
+                        $storage = $normalizarCap($m[1], 'TB');
+                    }
+                }
+            }
+        }
+
+        return [
+            'ram' => $ram,
+            'storage' => $storage,
+        ];
+    }
+
+    /**
+     * Formatea de manera idempotente el campo `modelo` de una laptop añadiendo "- RAM/Almacenamiento"
+     * respetando el límite de 70 caracteres sin truncar el sufijo.
+     */
+    public static function formatearModeloSiLaptop(?string $modelo, array $item, ?int $idGrupo = null): ?string
+    {
+        if ($modelo === null) {
+            return null;
+        }
+        $modelo = trim($modelo);
+        if ($modelo === '' || $modelo === '-') {
+            return $modelo;
+        }
+
+        if (!self::esItemLaptop($item, $idGrupo)) {
+            return $modelo;
+        }
+
+        ['ram' => $ram, 'storage' => $storage] = self::extraerRamYAlmacenamientoLaptop($item);
+
+        $tieneRam = false;
+        if ($ram !== null) {
+            $ramNum = preg_replace('/GB$/i', '', $ram);
+            $tieneRam = (bool) preg_match('/\b' . preg_quote($ramNum, '/') . '\s*GB\b/i', $modelo);
+        }
+
+        $tieneStorage = false;
+        if ($storage !== null) {
+            $stoUnit = str_ends_with(strtoupper($storage), 'TB') ? 'TB' : 'GB';
+            $stoNum = preg_replace('/(?:GB|TB)$/i', '', $storage);
+            $tieneStorage = (bool) preg_match('/\b' . preg_quote($stoNum, '/') . '\s*' . $stoUnit . '\b/i', $modelo);
+        }
+
+        $partes = [];
+        if ($ram !== null && !$tieneRam) {
+            $partes[] = $ram;
+        }
+        if ($storage !== null && !$tieneStorage) {
+            $partes[] = $storage;
+        }
+
+        if (empty($partes)) {
+            return mb_substr($modelo, 0, 70);
+        }
+
+        $sufijo = ' - ' . implode('/', $partes);
+        $maxBase = max(10, 70 - mb_strlen($sufijo));
+        $base = rtrim(mb_substr($modelo, 0, $maxBase), " -/");
+
+        return $base . $sufijo;
     }
 
     /**

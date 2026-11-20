@@ -172,9 +172,12 @@ class ProductoController extends Controller
                                     }
                                 }
 
-                                if (empty($deltronData['modelo_real'])) {
-                                    $deltronData['modelo_real'] = \App\Services\Deltron\DeltronTextHelper::extraerModeloDesdeItem($deltronData);
-                                }
+                                $deltronData['modelo_real'] = \App\Services\Deltron\DeltronTextHelper::formatearModeloSiLaptop(
+                                    !empty($deltronData['modelo_real'])
+                                        ? $deltronData['modelo_real']
+                                        : \App\Services\Deltron\DeltronTextHelper::extraerModeloDesdeItem($deltronData),
+                                    $deltronData
+                                );
 
                                 if (!empty($deltronData['brand_name'])) {
                                     $brandSearch = trim($deltronData['brand_name']);

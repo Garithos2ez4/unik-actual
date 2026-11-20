@@ -26,23 +26,28 @@
                     PRODUCTO: <span class="text-secondary">{{$producto->codigoProducto}}</span>
                 </h3>
                 <span class="text-muted">Mini Código: {{$producto->idProducto}}</span>
-                @if($esProductoReemplazable ?? false)
-                    @if(isset($motivoReemplazo) && $motivoReemplazo['tipo'] === 'laptop_garantia_vencida')
-                        <span class="badge bg-danger-subtle text-danger-emphasis border border-danger ms-2" title="{{ $motivoReemplazo['descripcion'] }}">
-                            <i class="bi bi-shield-x me-1"></i>{{ $motivoReemplazo['badge'] }}
-                        </span>
-                    @else
-                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning ms-2" title="{{ $motivoReemplazo['descripcion'] ?? 'Este producto nunca tuvo ingresos en IngresoProducto y su ID puede ser reemplazado' }}">
-                            <i class="bi bi-recycle me-1"></i>{{ $motivoReemplazo['badge'] ?? 'Sin ingresos (Reemplazable)' }}
-                        </span>
+                @php
+                $deltronSkuInfo = $producto->Inventario_Proveedor
+                ? \App\Models\Inventario\InventarioProveedorSku::where('idInventarioProveedor', $producto->Inventario_Proveedor->idInventarioProveedor)
+                ->whereNotNull('sku_proveedor')
+                ->where('sku_proveedor', '!=', '')
+                ->first()
+                : null;
+                @endphp
+                @if($deltronSkuInfo)
+                    <span class="badge bg-light text-primary border border-primary ms-2 font-monospace">
+                        <i class="bi bi-upc me-1"></i>SKU Deltron: {{ $deltronSkuInfo->sku_proveedor }}
+                        @if(!empty($deltronSkuInfo->mini_codigo))
+                        | Minicódigo: {{ $deltronSkuInfo->mini_codigo }}
+                        @endif
+                    </span>
                     @endif
-                @endif
             </div>
             <div class="col-2 col-lg-6 text-end pt-2">
                 @if($esProductoReemplazable ?? false)
-                    <button type="button" class="btn btn-warning fw-semibold me-1" onclick="abrirModalReemplazarProducto()" title="Reemplazar este producto conservando su ID ({{$producto->idProducto}})">
-                        <i class="bi bi-arrow-repeat"></i> <span class="d-none d-lg-inline">Reemplazar Producto</span>
-                    </button>
+                <button type="button" class="btn btn-warning fw-semibold me-1" onclick="abrirModalReemplazarProducto()" title="Reemplazar este producto conservando su ID ({{$producto->idProducto}})">
+                    <i class="bi bi-arrow-repeat"></i> <span class="d-none d-lg-inline">Reemplazar Producto</span>
+                </button>
                 @endif
                 @include('productos.components.btn_templates')
                 @include('productos.components.btn_crear_padre')

@@ -284,7 +284,7 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
             self::GRUPO_MOUSES          => [58, 59, 60, 69, 16],
             self::GRUPO_TECLADOS        => [25, 28, 29, 30, 69, 16],
             self::GRUPO_COMBOS          => [25, 28, 29, 30, 58, 59, 60, 69],
-            self::GRUPO_AURICULARES     => [1, 16, 42, 64, 65, 66, 67, 68, 69],
+            self::GRUPO_AURICULARES     => [1, 9, 16, 27, 42, 51, 52, 63, 64, 65, 66, 67, 68, 69],
             self::GRUPO_PARLANTES       => [1, 16, 17, 42, 64, 66, 68, 69, 75],
             self::GRUPO_MICROFONO       => [1, 17, 64, 67, 69],
             self::GRUPO_UPS,
@@ -354,7 +354,165 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
             }
         }
 
+        if ($idGrupo === self::GRUPO_AURICULARES) {
+            $specsMapeadas = $this->enrichAuricularesSpecs($specsMapeadas, $rawSpecs, $textoAnalisis);
+        }
+
         return $this->ensureDimensionesYPesoPeriferico($idGrupo, $specsMapeadas);
+    }
+
+    protected function enrichAuricularesSpecs(array $specs, array $rawSpecs, string $textoAnalisis): array
+    {
+        // Conectividad (9)
+        if (empty($specs[9])) {
+            $formaUso = $rawSpecs['FORMA DE USO'] ?? ($rawSpecs['CONECTOR'] ?? null);
+            if (!$formaUso && preg_match('/(?:FORMA\s+DE\s+USO|CONECTOR)\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mfu)) {
+                $formaUso = $mfu[1];
+            }
+            if ($formaUso) {
+                $specs[9] = ucfirst(strtolower(trim($formaUso)));
+            } elseif (!empty($specs[72])) {
+                $specs[9] = $specs[72];
+            }
+        }
+
+        // Longitud de cable (27) - para audífonos alámbricos
+        if (empty($specs[27])) {
+            $long = $rawSpecs['LONGITUD DE CABLE']
+                ?? ($rawSpecs['LONGITUD DEL CABLE']
+                ?? ($rawSpecs['LONGITUD DE CABLE (MT)']
+                ?? ($rawSpecs['LONGITUD DE CABLE (M)'] ?? null)));
+            if (!$long && preg_match('/LONGITUD\s+(?:DE|DEL)\s+CABLE(?:\s*\([^\)]+\))?\s*:\s*([^\r\n]+)/i', $textoAnalisis, $ml)) {
+                $long = $ml[1];
+            }
+            if ($long) {
+                $specs[27] = trim($long);
+            }
+        }
+
+        // Batería (16) - horas de duración si son inalámbricos
+        if (empty($specs[16])) {
+            $duracion = $rawSpecs['DURACIÓN DE BATERÍA']
+                ?? ($rawSpecs['DURACION DE BATERIA']
+                ?? ($rawSpecs['AUTONOMÍA']
+                ?? ($rawSpecs['AUTONOMIA']
+                ?? ($rawSpecs['TIEMPO DE REPRODUCCIÓN']
+                ?? ($rawSpecs['TIEMPO DE REPRODUCCION']
+                ?? ($rawSpecs['BATERÍA'] ?? ($rawSpecs['BATERIA'] ?? null)))))));
+
+            if ($duracion) {
+                if (preg_match('/(\d+(?:\.\d+)?\s*(?:horas|hora|hrs?|h)\b)/i', $duracion, $mh)) {
+                    $specs[16] = trim($mh[1]);
+                } else {
+                    $specs[16] = trim($duracion);
+                }
+            } elseif (
+                stripos($textoAnalisis, 'BLUETOOTH') !== false ||
+                stripos($textoAnalisis, 'INALAMBRIC') !== false ||
+                stripos($textoAnalisis, 'INALÁMBRIC') !== false ||
+                stripos($textoAnalisis, 'WIRELESS') !== false
+            ) {
+                if (preg_match('/(?:bater[ií]a|autonom[ií]a|duraci[oó]n|reproducci[oó]n|uso\s+continuo)[^\r\n]{0,40}?(\d+(?:\.\d+)?\s*(?:horas|hora|hrs?))\b/i', $textoAnalisis, $mbat)) {
+                    $specs[16] = trim($mbat[1]);
+                } elseif (preg_match('/(\d+(?:\.\d+)?\s*(?:horas|hrs))\b/i', $textoAnalisis, $mbat2)) {
+                    $specs[16] = trim($mbat2[1]);
+                } elseif (preg_match('/(\d{2,5}\s*mAh)/i', $textoAnalisis, $mmah)) {
+                    $specs[16] = trim($mmah[1]);
+                }
+            }
+        }
+
+        // Impedancia (64)
+        if (empty($specs[64])) {
+            $imp = $rawSpecs['IMPEDANCIA'] ?? null;
+            if (!$imp && preg_match('/IMPEDANCIA\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mimp)) {
+                $imp = $mimp[1];
+            }
+            if ($imp) {
+                $specs[64] = trim($imp);
+            }
+        }
+
+        // Frecuencia (68)
+        if (empty($specs[68])) {
+            $freq = $rawSpecs['RESPUESTA DE FRECUENCIA'] ?? ($rawSpecs['RANGO DE FRECUENCIA'] ?? null);
+            if (!$freq && preg_match('/RESPUESTA\s+DE\s+FRECUENCIA\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mfreq)) {
+                $freq = $mfreq[1];
+            }
+            if ($freq) {
+                $specs[68] = trim($freq);
+            }
+        }
+
+        // Auricular (66): Driver + Sensibilidad
+        if (empty($specs[66])) {
+            $partesAur = [];
+            $driver = $rawSpecs['DRIVER'] ?? null;
+            if (!$driver && preg_match('/DRIVER\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mdrv)) {
+                $driver = $mdrv[1];
+            }
+            if ($driver) {
+                $partesAur[] = trim($driver);
+            }
+            $sens = $rawSpecs['SENSIBILIDAD'] ?? null;
+            if (!$sens && preg_match('/^[\-\s]*SENSIBILIDAD\s*:\s*([^\r\n]+)/im', $textoAnalisis, $msens)) {
+                $sens = $msens[1];
+            }
+            if ($sens) {
+                $partesAur[] = trim($sens);
+            }
+            if (!empty($partesAur)) {
+                $specs[66] = implode(', ', $partesAur);
+            }
+        }
+
+        // Micrófono (67)
+        if (empty($specs[67])) {
+            if (stripos($textoAnalisis, 'SIN MICRÓFONO') !== false || stripos($textoAnalisis, 'SIN MICROFONO') !== false) {
+                $specs[67] = 'No';
+            } elseif (stripos($textoAnalisis, 'MICRÓFONO') !== false || stripos($textoAnalisis, 'MICROFONO') !== false) {
+                $specs[67] = 'Si';
+            }
+        }
+
+        // Diam-Microfono / Detalle Micrófono (65)
+        if (empty($specs[65])) {
+            $partesMic = [];
+            $tipoMic = $rawSpecs['TIPO DE MICRÓFONO'] ?? ($rawSpecs['TIPO DE MICROFONO'] ?? null);
+            if (!$tipoMic && preg_match('/TIPO\s+DE\s+MICR[ÓO]FONO\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mtm)) {
+                $tipoMic = $mtm[1];
+            }
+            if ($tipoMic) $partesMic[] = trim($tipoMic);
+
+            $sensMic = $rawSpecs['SENSIBILIDAD DE MICRÓFONO'] ?? ($rawSpecs['SENSIBILIDAD DE MICROFONO'] ?? null);
+            if (!$sensMic && preg_match('/SENSIBILIDAD\s+DE\s+MICR[ÓO]FONO\s*:\s*([^\r\n]+)/i', $textoAnalisis, $msm)) {
+                $sensMic = $msm[1];
+            }
+            if ($sensMic) $partesMic[] = trim($sensMic);
+
+            $freqMic = $rawSpecs['RESPUESTA DE FRECUENCIA DE MICRÓFONO'] ?? ($rawSpecs['RESPUESTA DE FRECUENCIA DE MICROFONO'] ?? null);
+            if (!$freqMic && preg_match('/RESPUESTA\s+DE\s+FRECUENCIA\s+DE\s+MICR[ÓO]FONO\s*:\s*([^\r\n]+)/i', $textoAnalisis, $mfm)) {
+                $freqMic = $mfm[1];
+            }
+            if ($freqMic) $partesMic[] = trim($freqMic);
+
+            if (!empty($partesMic)) {
+                $specs[65] = implode(', ', $partesMic);
+            }
+        }
+
+        // Led (69)
+        if (empty($specs[69])) {
+            if (stripos($textoAnalisis, 'ARGB') !== false || stripos($textoAnalisis, 'RGB') !== false) {
+                $specs[69] = 'RGB';
+            } elseif (preg_match('/\bLED\b/i', $textoAnalisis)) {
+                $specs[69] = 'Si';
+            } else {
+                $specs[69] = 'No';
+            }
+        }
+
+        return $specs;
     }
 
     protected function normalizarColorPeriferico(string $rawColor, string $textoAnalisis): string

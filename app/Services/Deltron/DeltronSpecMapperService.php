@@ -54,9 +54,14 @@ class DeltronSpecMapperService
         $specs = [];
         foreach ($tables as $table) {
             $rows = $xpath->query('./tr | ./tbody/tr', $table);
+            $currentSection = '';
             foreach ($rows as $row) {
                 $cols = $xpath->query('./td | ./th', $row);
                 if ($cols->length === 0) continue;
+
+                $firstCell = $cols->item(0);
+                $hasFirCol = $firstCell instanceof \DOMElement
+                    && ($firstCell->hasAttribute('fircol') || $firstCell->hasAttribute('firCol'));
 
                 $cellTexts = [];
                 foreach ($cols as $col) {
@@ -79,17 +84,47 @@ class DeltronSpecMapperService
                     $k = strtoupper(trim(rtrim($cellTexts[0], ':')));
                     $v = trim($cellTexts[1]);
                     if ($k !== '' && $v !== '') {
-                        $specs[$k] = $v;
+                        if ($hasFirCol) {
+                            $currentSection = $k;
+                        }
+                        if (!($k === 'CAPACIDAD' && str_contains($currentSection, 'VIDEO') && isset($specs['CAPACIDAD']))) {
+                            $specs[$k] = $v;
+                        }
+                        if (!$hasFirCol && $currentSection !== '') {
+                            $specs[$currentSection . ' ' . $k] = $v;
+                            if (str_contains($currentSection, 'ALMACEN') && $k === 'CAPACIDAD') {
+                                $specs['ALMACENAMIENTO'] = $v;
+                                $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                            }
+                            if (str_contains($currentSection, 'MEMORIA') && !str_contains($currentSection, 'LECTOR') && $k === 'CAPACIDAD') {
+                                $specs['MEMORIA RAM'] = $v;
+                            }
+                        }
                     }
                 } elseif (count($cellTexts) === 3) {
                     $sec = strtoupper(trim(rtrim($cellTexts[0], ':')));
                     $k = strtoupper(trim(rtrim($cellTexts[1], ':')));
                     $v = trim($cellTexts[2]);
+                    if ($sec !== '') {
+                        $currentSection = $sec;
+                    }
                     if ($k !== '' && $v !== '') {
-                        $specs[$k] = $v;
-                        if (str_contains($sec, 'ALMACEN') && !isset($specs['ALMACENAMIENTO'])) {
-                            $specs['ALMACENAMIENTO'] = $v;
-                            $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                        if (!($k === 'CAPACIDAD' && str_contains($sec, 'VIDEO') && isset($specs['CAPACIDAD']))) {
+                            $specs[$k] = $v;
+                        }
+                        if ($sec !== '') {
+                            $specs[$sec . ' ' . $k] = $v;
+                        }
+                        if (str_contains($sec, 'ALMACEN') && !str_contains($k, 'COMENTARIO') && !str_contains($k, 'EXPANSI')) {
+                            if ($k === 'CAPACIDAD' || !isset($specs['ALMACENAMIENTO'])) {
+                                $specs['ALMACENAMIENTO'] = $v;
+                                $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                            }
+                        }
+                        if (str_contains($sec, 'MEMORIA') && !str_contains($sec, 'LECTOR') && !str_contains($k, 'COMENTARIO') && !str_contains($k, 'EXPANSI')) {
+                            if ($k === 'CAPACIDAD' || !isset($specs['MEMORIA RAM'])) {
+                                $specs['MEMORIA RAM'] = $v;
+                            }
                         }
                     }
                 } elseif (count($cellTexts) >= 4) {
@@ -97,14 +132,26 @@ class DeltronSpecMapperService
                     $sec = strtoupper(trim(rtrim($cellTexts[0], ':')));
                     $sub = strtoupper(trim(rtrim($cellTexts[1], ':')));
                     $k = strtoupper(trim(rtrim($cellTexts[count($cellTexts) - 2], ':')));
+                    if ($sec !== '') {
+                        $currentSection = $sec;
+                    }
 
                     if ($k !== '' && $v !== '') {
-                        $specs[$k] = $v;
+                        if (!($k === 'CAPACIDAD' && (str_contains($sec, 'VIDEO') || str_contains($sub, 'VIDEO')) && isset($specs['CAPACIDAD']))) {
+                            $specs[$k] = $v;
+                        }
                         $specs[$sec . ' ' . $k] = $v;
                         $specs[$sub . ' ' . $k] = $v;
-                        if (str_contains($sec, 'ALMACEN') || str_contains($sub, 'ALMACEN')) {
-                            $specs['ALMACENAMIENTO'] = $v;
-                            $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                        if ((str_contains($sec, 'ALMACEN') || str_contains($sub, 'ALMACEN')) && !str_contains($k, 'COMENTARIO') && !str_contains($k, 'EXPANSI')) {
+                            if ($k === 'CAPACIDAD' || !isset($specs['ALMACENAMIENTO'])) {
+                                $specs['ALMACENAMIENTO'] = $v;
+                                $specs['CAPACIDAD DE ALMACENAMIENTO'] = $v;
+                            }
+                        }
+                        if ((str_contains($sec, 'MEMORIA') || str_contains($sub, 'MEMORIA')) && !str_contains($sec, 'LECTOR') && !str_contains($sub, 'LECTOR') && !str_contains($k, 'COMENTARIO') && !str_contains($k, 'EXPANSI')) {
+                            if ($k === 'CAPACIDAD' || !isset($specs['MEMORIA RAM'])) {
+                                $specs['MEMORIA RAM'] = $v;
+                            }
                         }
                     }
                 }
@@ -156,6 +203,25 @@ class DeltronSpecMapperService
             }
         }
 
+        // 4. Bloques estructurados [MEMORIA] y [ALMACENAMIENTO] con "- CAPACIDAD: ..."
+        if (preg_match('/\[MEMORIA[^\]]*\](.*?)(?:\n\s*\[|\z)/si', $text, $mMemBlk)) {
+            if (preg_match('/^[ \t]*-[ \t]*CAPACIDAD[ \t]*:[ \t]*([^\r\n]+)/mi', $mMemBlk[1], $mMemCap)) {
+                $valMem = trim($mMemCap[1]);
+                if ($valMem !== '') {
+                    $specs['MEMORIA RAM'] = $valMem;
+                }
+            }
+        }
+        if (preg_match('/\[ALMACENAMIENTO[^\]]*\](.*?)(?:\n\s*\[|\z)/si', $text, $mAlmBlk)) {
+            if (preg_match('/^[ \t]*-[ \t]*CAPACIDAD[ \t]*:[ \t]*([^\r\n]+)/mi', $mAlmBlk[1], $mAlmCap)) {
+                $valAlm = trim($mAlmCap[1]);
+                if ($valAlm !== '') {
+                    $specs['ALMACENAMIENTO'] = $valAlm;
+                    $specs['CAPACIDAD DE ALMACENAMIENTO'] = $valAlm;
+                }
+            }
+        }
+
         return $specs;
     }
 
@@ -192,6 +258,11 @@ class DeltronSpecMapperService
             'MEMORIA RAM' => 5,
             'CAPACIDAD DE MEMORIA' => 5,
             'RAM' => 5,
+            'TIPO DE RAM' => 80,
+            'TIPO DE MEMORIA' => 80,
+            'TIPO MEMORIA' => 80,
+            'MEMORIA SOPORTADA' => 80,
+            'SOPORTE DE MEMORIA' => 80,
 
             // Almacenamiento
             'ALMACENAMIENTO' => 6,
@@ -215,6 +286,8 @@ class DeltronSpecMapperService
             'CONEXION INALAMBRICA' => 9,
             'INALÁMBRICO' => 9,
             'INALAMBRICO' => 9,
+            'WI-FI' => 9,
+            'WIFI' => 9,
             'BLUETOOTH' => 9,
             'VERSIÓN DE BLUETOOTH' => 9,
             'VERSION DE BLUETOOTH' => 9,
@@ -237,6 +310,12 @@ class DeltronSpecMapperService
             'BATERÍA' => 16,
             'BATERÍA (CAPACIDAD)' => 16,
             'CAPACIDAD DE BATERÍA' => 16,
+            'DURACIÓN DE BATERÍA' => 16,
+            'DURACION DE BATERIA' => 16,
+            'AUTONOMÍA' => 16,
+            'AUTONOMIA' => 16,
+            'TIEMPO DE REPRODUCCIÓN' => 16,
+            'TIEMPO DE REPRODUCCION' => 16,
 
             // Puertos
             'PUERTOS' => 17,
@@ -264,6 +343,9 @@ class DeltronSpecMapperService
             'TIPO DE CABLE' => 26,
             'LONGITUD DE CABLE' => 27,
             'LONGITUD DEL CABLE' => 27,
+            'LONGITUD DE CABLE (MT)' => 27,
+            'LONGITUD DE CABLE (M)' => 27,
+            'CONECTOR' => 9,
             'CANTIDAD DE TECLAS' => 28,
             'NÚMERO DE TECLAS' => 28,
             'FORMATO' => 29,
@@ -293,9 +375,12 @@ class DeltronSpecMapperService
             'EMPAQUE (ALTO x ANCHO x LARGO)' => 51,
             'DIMENSIONES DE EMPAQUE' => 51,
             'DIMENSIONES(PAQUETE)' => 51,
+            'DIMENSIONES' => 51,
             'PESO BRUTO' => 52,
             'PESO(PAQUETE)' => 52,
             'PESO DEL PAQUETE' => 52,
+            'PRESENTACION' => 88,
+            'PRESENTACIÓN' => 88,
 
             // Componentes PC / Case
             'FUENTE DE PODER' => 70,
@@ -310,6 +395,18 @@ class DeltronSpecMapperService
             'COOLER' => 78,
             'COOLERS' => 78,
             'VENTILADORES ARGB INCLUIDOS' => 78,
+
+            // Audio / Auriculares
+            'IMPEDANCIA' => 64,
+            'RESPUESTA DE FRECUENCIA' => 68,
+            'RANGO DE FRECUENCIA' => 68,
+            'FRECUENCIA DE RESPUESTA' => 68,
+            'DRIVER' => 66,
+            'ALTAVOZ' => 66,
+            'TIPO DE MICRÓFONO' => 65,
+            'TIPO DE MICROFONO' => 65,
+            'SENSIBILIDAD DE MICRÓFONO' => 65,
+            'SENSIBILIDAD DE MICROFONO' => 65,
 
             // Procesador & Segmento
             'CANTIDAD DE NÚCLEOS' => 90,
@@ -582,7 +679,11 @@ class DeltronSpecMapperService
 
         // 3. Extraer y mapear especificaciones
         $rawSpecsHtml = $ficha ? $this->parseSpecsHtml($ficha['specs_html'] ?? '') : [];
-        $rawSpecsText = $ficha ? $this->parseSpecsText(($ficha['descripcion_completa'] ?? '') . "\n" . ($ficha['specs_texto'] ?? '')) : [];
+        $rawSpecsText = $this->parseSpecsText(
+            ($ficha['descripcion_completa'] ?? '') . "\n" .
+            ($ficha['specs_texto'] ?? '') . "\n" .
+            ($producto->descripcionProducto ?? '')
+        );
         $rawSpecs = array_merge($rawSpecsText, $rawSpecsHtml);
 
         $textoCompleto = ($producto->nombreProducto ?? '') . "\n" .
@@ -609,6 +710,40 @@ class DeltronSpecMapperService
                 'insertadas' => 0,
                 'actualizadas' => 0
             ];
+        }
+
+        // 3.1 Resolver dinámicamente características por nombre en caso de IDs distintos entre entornos (ej. "Tipo de Ram", "PRESENTACION")
+        if (!empty($specsMapeadas[80])) {
+            $idTipoRamGrupo = \App\Models\Catalogo\Caracteristicas_Grupo::where('idGrupoProducto', $producto->idGrupo)
+                ->whereHas('Caracteristicas', function ($q) {
+                    $q->whereRaw('LOWER(especificacion) LIKE ?', ['%tipo de ram%'])
+                      ->orWhereRaw('LOWER(especificacion) LIKE ?', ['%tipo memoria%']);
+                })
+                ->value('idCaracteristica');
+
+            if ($idTipoRamGrupo && (int) $idTipoRamGrupo !== 80) {
+                if (empty($specsMapeadas[(int) $idTipoRamGrupo])) {
+                    $specsMapeadas[(int) $idTipoRamGrupo] = $specsMapeadas[80];
+                }
+                // Evitar duplicar "Tipo Memoria" (80) y "Tipo de Ram" en el mismo producto
+                unset($specsMapeadas[80]);
+            }
+        }
+
+        if (!empty($specsMapeadas[88])) {
+            $idPresGrupo = \App\Models\Catalogo\Caracteristicas_Grupo::where('idGrupoProducto', $producto->idGrupo)
+                ->whereHas('Caracteristicas', function ($q) {
+                    $q->whereRaw('LOWER(especificacion) LIKE ?', ['%presentacion%'])
+                      ->orWhereRaw('LOWER(especificacion) LIKE ?', ['%presentación%']);
+                })
+                ->value('idCaracteristica');
+
+            if ($idPresGrupo && (int) $idPresGrupo !== 88) {
+                if (empty($specsMapeadas[(int) $idPresGrupo])) {
+                    $specsMapeadas[(int) $idPresGrupo] = $specsMapeadas[88];
+                }
+                unset($specsMapeadas[88]);
+            }
         }
 
         // 4. Filtrar por características permitidas (Grupo, Módulo Hijo, Existentes, Universales)
@@ -642,6 +777,17 @@ class DeltronSpecMapperService
         }
 
         // 5. Persistir en Caracteristicas_Producto
+        if ($forceOverwrite && (int) $producto->idGrupo === 50 && empty($specsMapeadas[4])) {
+            Caracteristicas_Producto::where('idProducto', $producto->idProducto)
+                ->where('idCaracteristica', 4)
+                ->where(function ($q) {
+                    $q->where('caracteristicaProducto', 'like', '%WI-FI%')
+                      ->orWhere('caracteristicaProducto', 'like', '%WIFI%')
+                      ->orWhere('caracteristicaProducto', 'like', '%BLUETOOTH%');
+                })
+                ->delete();
+        }
+
         $insertadas = 0;
         $actualizadas = 0;
         $conservadas = 0;
@@ -649,10 +795,20 @@ class DeltronSpecMapperService
 
         foreach ($specsMapeadas as $idCar => $valor) {
             $carMaster = Caracteristicas::find($idCar);
-            if (!$carMaster || $carMaster->tipo === 'INVALIDO') continue;
+            if (!$carMaster || ($carMaster->tipo === 'INVALIDO' && !in_array((int) $idCar, $idsGrupo, true))) continue;
 
             $valor = mb_substr(trim((string) $valor), 0, 100);
             if ($valor === '') continue;
+
+            if ($carMaster->tipo === 'FILTRO') {
+                $estaDeshabilitada = Caracteristicas_Sugerencias::where('idCaracteristica', $idCar)
+                    ->whereRaw('LOWER(sugerencia) = ?', [strtolower($valor)])
+                    ->where('estado', 0)
+                    ->exists();
+                if ($estaDeshabilitada) {
+                    continue;
+                }
+            }
 
             $existente = Caracteristicas_Producto::where('idProducto', $producto->idProducto)
                 ->where('idCaracteristica', $idCar)

@@ -48,7 +48,7 @@
                 <select class="form-select tom-select-filtro" name="updatecaracteristicas[{{ $car->idCaracteristica }}]">
                     <option value="">-Elige un valor-</option>
                     @php
-                    $sugerencias = $car->Caracteristicas->Caracteristicas_Sugerencias->sortBy('sugerencia');
+                    $sugerencias = $car->Caracteristicas->Caracteristicas_Sugerencias->where('estado', 1)->sortBy('sugerencia');
                     $currentValue = $car->caracteristicaProducto;
                     $found = false;
                     @endphp
@@ -79,10 +79,10 @@
                     <select class="form-select" id="caracteristicaSelect" aria-label="">
                         <option value="none" selected>Caracteristica</option>
                         @foreach($options as $car)
-                        <option value="{{$car->idCaracteristica}}" data-tipo="{{$car->Caracteristicas->tipo}}" data-filtros='@json($car->Caracteristicas->Caracteristicas_Sugerencias->sortBy(' sugerencia'))'>{{$car->Caracteristicas->especificacion}}</option>
+                        <option value="{{$car->idCaracteristica}}" data-tipo="{{$car->Caracteristicas->tipo}}" data-filtros="{{ json_encode($car->Caracteristicas->Caracteristicas_Sugerencias->where('estado', 1)->sortBy('sugerencia')->values()) }}">{{$car->Caracteristicas->especificacion}}</option>
                         @endforeach
                     </select>
-                    <button class="btn btn-outline-secondary" onclick="addDiv()" id="btnAddDetail" type="button">Agregar</button>
+                    <button class="btn btn-outline-secondary" id="btnAddDetail" type="button">Agregar</button>
                 </div>
             </div>
         </div>
