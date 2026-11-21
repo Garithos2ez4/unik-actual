@@ -40,7 +40,7 @@ interface ProductoRepositoryInterface
     public function tieneVentaConGarantiaVigente(int $idProducto, int $mesesGarantia = 12): bool;
     public function queryReemplazables(int $mesesGarantiaLaptop = 12);
     public function queryLaptopsGarantiaVencida(int $meses = 12);
-    public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12);
-    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int;
-    public function obtenerSiguienteFantasmaAutoReciclable(int $mesesGarantiaLaptop = 12): ?\App\Models\Catalogo\Producto;
+    public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null);
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null): int;
+    public function obtenerSiguienteFantasmaAutoReciclable(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null): ?\App\Models\Catalogo\Producto;
 }

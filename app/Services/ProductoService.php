@@ -715,9 +715,9 @@ class ProductoService implements ProductoServiceInterface
         return $this->productoRepository->tieneVentaConGarantiaVigente((int) $prodModel->idProducto, $meses);
     }
 
-    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null): int
     {
-        return $this->productoRepository->countFantasmasAutoReciclables($mesesGarantiaLaptop);
+        return $this->productoRepository->countFantasmasAutoReciclables($mesesGarantiaLaptop, $createdBefore);
     }
 
     public function esLaptopConGarantiaVencida($producto, int $meses = 12): bool

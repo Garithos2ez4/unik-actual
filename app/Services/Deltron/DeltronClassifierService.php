@@ -39,8 +39,8 @@ class DeltronClassifierService
             new ImpresorasCategoryMapper(),                    // Cat 6
             new RedesCategoryMapper(),                         // Cat 7
             new SmartphonesCategoryMapper(),                   // Cat 9
-            new CablesCategoryMapper(),                        // Cat 10
             new PerifericosCategoryMapper(),                   // Cat 4
+            new CablesCategoryMapper(),                        // Cat 10
             new BellezaCategoryMapper(),                       // Cat 5
             new RepuestosLaptopCategoryMapper(),               // Cat 11
             new RepuestosImpresoraTintaCategoryMapper(),       // Cat 12

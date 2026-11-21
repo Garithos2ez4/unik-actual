@@ -252,12 +252,16 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
             return self::GRUPO_ALFOMBRILLAS;
         }
 
+        $sku = strtoupper($context['item']['sku'] ?? '');
+
         // 8. Teclados
         if (
             str_contains($catDeltron, 'TECLADO') ||
             str_contains($subDeltron, 'TECLADO') ||
             str_contains($titulo, 'TECLADO') ||
-            str_contains($titulo, 'KEYBOARD')
+            str_contains($titulo, 'KEYBOARD') ||
+            str_starts_with($sku, 'KB') ||
+            str_starts_with($name, 'KB ')
         ) {
             return self::GRUPO_TECLADOS;
         }
@@ -268,7 +272,9 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
             str_contains($subDeltron, 'MOUSE') ||
             str_contains($titulo, 'MOUSE') ||
             str_contains($titulo, 'RATON') ||
-            str_contains($titulo, 'RATÓN')
+            str_contains($titulo, 'RATÓN') ||
+            str_starts_with($sku, 'MS') ||
+            str_starts_with($name, 'MS ')
         ) {
             return self::GRUPO_MOUSES;
         }

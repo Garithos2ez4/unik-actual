@@ -40,9 +40,11 @@ class DeltronSpecMapperService
             return [];
         }
 
+        $htmlClean = preg_replace('/<br\s*\/?>/i', ' ', $html) ?? $html;
+
         $dom = new \DOMDocument();
         libxml_use_internal_errors(true);
-        $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>' . $htmlClean, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
 
         $xpath = new \DOMXPath($dom);
@@ -292,9 +294,16 @@ class DeltronSpecMapperService
             'VERSIÓN DE BLUETOOTH' => 9,
             'VERSION DE BLUETOOTH' => 9,
 
-            // Peso
+            // Peso y Dimensiones individuales
             'PESO NETO' => 10,
             'PESO' => 10,
+            'PESO (KG)' => 10,
+            'ALTO' => 11,
+            'ALTURA' => 11,
+            'ANCHO' => 12,
+            'LARGO' => 13,
+            'PROFUNDIDAD' => 13,
+            'PROFUNDO' => 13,
 
             // Color
             'COLOR' => 14,

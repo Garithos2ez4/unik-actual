@@ -128,13 +128,18 @@ class ProductoRepository implements ProductoRepositoryInterface
     //Devuelve marcas asociadas a productos que coinciden con un termino de busqueda
     public function getMarcasBySearchTerm($query)
     {
-        return MarcaProducto::query()->whereIn('idMarca', function ($subquery) use ($query) {
+        $cleanId = ltrim(trim((string) $query), '#');
+        return MarcaProducto::query()->whereIn('idMarca', function ($subquery) use ($query, $cleanId) {
             $subquery->select('idMarca')
                 ->from('Producto')
                 ->where('nombreProducto', 'LIKE', '%' . $query . '%', 'and')
                 ->orWhere('modelo', 'LIKE', '%' . $query . '%', 'and')
                 ->orWhere('codigoProducto', 'LIKE', '%' . $query . '%', 'and')
                 ->orWhere('partNumber', 'LIKE', '%' . $query . '%', 'and');
+
+            if ($cleanId !== '' && ctype_digit($cleanId)) {
+                $subquery->orWhere('idProducto', '=', (int) $cleanId);
+            }
         }, 'and', false)->get()->sortBy('nombreMarca');
     }
 
@@ -231,7 +236,8 @@ class ProductoRepository implements ProductoRepositoryInterface
             ->select('Producto.*');
 
         // Limpiar el término y separar por espacios
-        $words = array_filter(explode(' ', trim($searchTerm)));
+        $trimmedTerm = trim((string) $searchTerm);
+        $words = array_filter(explode(' ', $trimmedTerm));
 
         if (empty($words)) {
             $this->applyFilters($query, $filtros);
@@ -240,16 +246,26 @@ class ProductoRepository implements ProductoRepositoryInterface
 
         $query->where(function ($q) use ($words) {
             foreach ($words as $word) {
-                $q->where(function ($sq) use ($word) {
+                $cleanId = ltrim($word, '#');
+                $q->where(function ($sq) use ($word, $cleanId) {
                     $sq->where('Producto.nombreProducto', 'LIKE', '%' . $word . '%')
                         ->orWhere('Producto.modelo', 'LIKE', '%' . $word . '%')
                         ->orWhere('Producto.codigoProducto', 'LIKE', '%' . $word . '%')
                         ->orWhere('Producto.partNumber', 'LIKE', '%' . $word . '%')
                         ->orWhere('Producto.UPC', 'LIKE', '%' . $word . '%')
                         ->orWhere('MarcaProducto.nombreMarca', 'LIKE', '%' . $word . '%');
+
+                    if ($cleanId !== '' && ctype_digit($cleanId)) {
+                        $sq->orWhere('Producto.idProducto', '=', (int) $cleanId);
+                    }
                 });
             }
         });
+
+        $cleanFullId = ltrim($trimmedTerm, '#');
+        if ($cleanFullId !== '' && ctype_digit($cleanFullId)) {
+            $query->orderByRaw('CASE WHEN Producto.idProducto = ? THEN 0 ELSE 1 END', [(int) $cleanFullId]);
+        }
 
         $this->applyFilters($query, $filtros);
 
@@ -579,8 +595,12 @@ class ProductoRepository implements ProductoRepositoryInterface
             });
     }
 
-    public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12)
+    public function queryFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null)
     {
+        $fechaLimiteCreacion = $createdBefore
+            ? \Carbon\Carbon::parse($createdBefore)->format('Y-m-d H:i:s')
+            : now()->subMonths($mesesGarantiaLaptop)->format('Y-m-d H:i:s');
+
         return $this->queryReemplazables($mesesGarantiaLaptop)
             ->whereNull('Producto.idProductoPadre')
             // Garantizar que sea un fantasma puro sin historial de compras ni ventas
@@ -593,6 +613,28 @@ class ProductoRepository implements ProductoRepositoryInterface
                 $q->select(DB::raw(1))
                     ->from('DetalleVenta as dv')
                     ->whereColumn('dv.idProducto', 'Producto.idProducto');
+            })
+            // Candado Deltron / created_at: nunca reciclar productos creados por el catálogo de Deltron
+            // (o con registro reciente en inventario_proveedor_skus / DetalleProducto según created_at)
+            ->whereNotExists(function ($sub) use ($fechaLimiteCreacion) {
+                $sub->select(DB::raw(1))
+                    ->from('Inventario_Proveedor as ip')
+                    ->join('inventario_proveedor_skus as ips', 'ips.idInventarioProveedor', '=', 'ip.idInventarioProveedor')
+                    ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                    ->whereNotNull('ips.sku_proveedor')
+                    ->where('ips.sku_proveedor', '!=', '')
+                    ->where(function ($q) use ($fechaLimiteCreacion) {
+                        $q->where('ip.stock', '>', 0)
+                            ->orWhereNull('ips.created_at')
+                            ->orWhere('ips.created_at', '>=', $fechaLimiteCreacion);
+                    });
+            })
+            ->whereNotExists(function ($sub) use ($fechaLimiteCreacion) {
+                $sub->select(DB::raw(1))
+                    ->from('DetalleProducto as dp')
+                    ->whereColumn('dp.idProducto', 'Producto.idProducto')
+                    ->whereNotNull('dp.created_at')
+                    ->where('dp.created_at', '>=', $fechaLimiteCreacion);
             })
             ->where(function ($q) {
                 $q->whereIn('Producto.estadoProductoWeb', ['AGOTADO', 'DESCONTINUADO'])
@@ -613,14 +655,14 @@ class ProductoRepository implements ProductoRepositoryInterface
             });
     }
 
-    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null): int
     {
-        return (int) $this->queryFantasmasAutoReciclables($mesesGarantiaLaptop)->count();
+        return (int) $this->queryFantasmasAutoReciclables($mesesGarantiaLaptop, $createdBefore)->count();
     }
 
-    public function obtenerSiguienteFantasmaAutoReciclable(int $mesesGarantiaLaptop = 12): ?Producto
+    public function obtenerSiguienteFantasmaAutoReciclable(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null): ?Producto
     {
-        return $this->queryFantasmasAutoReciclables($mesesGarantiaLaptop)
+        return $this->queryFantasmasAutoReciclables($mesesGarantiaLaptop, $createdBefore)
             ->orderByRaw("CASE WHEN estadoProductoWeb IN ('AGOTADO','DESCONTINUADO') THEN 0 ELSE 1 END")
             ->orderBy('idProducto', 'asc')
             ->first();

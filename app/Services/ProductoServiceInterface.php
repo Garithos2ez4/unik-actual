@@ -39,5 +39,5 @@ interface ProductoServiceInterface
     public function getFechaUltimoIngreso(int $idProducto): ?\Carbon\Carbon;
     public function getFechaUltimaVenta(int $idProducto): ?\Carbon\Carbon;
     public function tieneVentaConGarantiaVigente($producto, int $mesesGarantia = 12): bool;
-    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12): int;
+    public function countFantasmasAutoReciclables(int $mesesGarantiaLaptop = 12, ?string $createdBefore = null): int;
 }

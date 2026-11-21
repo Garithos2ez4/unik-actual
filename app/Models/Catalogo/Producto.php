@@ -12,13 +12,10 @@ use App\Models\Inventario\Liquidacion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Sluggable\HasSlug;
-use Spatie\Sluggable\SlugOptions;
+use Illuminate\Support\Str;
 
 class Producto extends Model
 {
-    use HasSlug;
-
     public $timestamps = false;
 
     protected $table = 'Producto';
@@ -84,11 +81,29 @@ class Producto extends Model
         'usar_tc_fijo' => true, // Por defecto usa el TC de la API de SUNAT
     ];
 
-    public function getSlugOptions(): SlugOptions
+    protected static function generarSlugUnico(?string $nombre, ?string $modelo = null, ?int $ignoreId = null): string
     {
-        return SlugOptions::create()
-            ->generateSlugsFrom(fn ($model) => $model->nombreProducto ?: 'producto')
-            ->saveSlugsTo('slugProducto');
+        $baseSlug = Str::slug($nombre ?: 'producto') ?: 'producto';
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (static::where('slugProducto', $slug)
+            ->when($ignoreId, fn ($q) => $q->where('idProducto', '!=', $ignoreId))
+            ->exists()
+        ) {
+            if (!empty($modelo)) {
+                $slugConModelo = $baseSlug . '-' . Str::slug($modelo);
+                if (!static::where('slugProducto', $slugConModelo)
+                    ->when($ignoreId, fn ($q) => $q->where('idProducto', '!=', $ignoreId))
+                    ->exists()
+                ) {
+                    return $slugConModelo;
+                }
+            }
+            $slug = $baseSlug . '-' . (++$counter);
+        }
+
+        return $slug;
     }
 
     public static function boot()
@@ -101,6 +116,20 @@ class Producto extends Model
             }
             if (!isset($producto->UPC) || $producto->UPC === null || $producto->UPC === '') {
                 $producto->UPC = '0';
+            }
+            $producto->slugProducto = static::generarSlugUnico(
+                $producto->nombreProducto,
+                $producto->modelo ?? null
+            );
+        });
+
+        static::updating(function ($producto) {
+            if ($producto->isDirty('nombreProducto') || empty($producto->slugProducto)) {
+                $producto->slugProducto = static::generarSlugUnico(
+                    $producto->nombreProducto,
+                    $producto->modelo ?? null,
+                    (int) $producto->idProducto
+                );
             }
         });
 
@@ -346,15 +375,62 @@ class Producto extends Model
      * tengan stock proveedor en 0, o sean productos antiguos sin SKU Deltron vinculado.
      * Nunca pisa productos activos recién importados de Deltron con stock.
      */
-    public function scopeFantasmasAutoReciclables($query)
+    public function scopeFantasmasAutoReciclables($query, int $mesesGarantiaLaptop = 12, ?string $createdBefore = null)
     {
+        $fechaLimiteCreacion = $createdBefore
+            ? \Carbon\Carbon::parse($createdBefore)->format('Y-m-d H:i:s')
+            : now()->subMonths($mesesGarantiaLaptop)->format('Y-m-d H:i:s');
+
         return $query->reemplazables()
             ->whereNull('Producto.idProductoPadre')
+            ->whereNotExists(function ($sub) use ($fechaLimiteCreacion) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('Inventario_Proveedor as ip')
+                    ->join('inventario_proveedor_skus as ips', 'ips.idInventarioProveedor', '=', 'ip.idInventarioProveedor')
+                    ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                    ->whereNotNull('ips.sku_proveedor')
+                    ->where('ips.sku_proveedor', '!=', '')
+                    ->where(function ($q) use ($fechaLimiteCreacion) {
+                        $q->where('ip.stock', '>', 0)
+                            ->orWhereNull('ips.created_at')
+                            ->orWhere('ips.created_at', '>=', $fechaLimiteCreacion);
+                    });
+            })
+            ->whereNotExists(function ($sub) use ($fechaLimiteCreacion) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('DetalleProducto as dp')
+                    ->whereColumn('dp.idProducto', 'Producto.idProducto')
+                    ->whereNotNull('dp.created_at')
+                    ->where('dp.created_at', '>=', $fechaLimiteCreacion);
+            })
             ->where(function ($q) {
                 $q->whereIn('Producto.estadoProductoWeb', ['AGOTADO', 'DESCONTINUADO'])
-                    ->orWhereDoesntHave('Inventario_Proveedor', fn ($ip) => $ip->conStock())
-                    ->orWhereDoesntHave('Inventario_Proveedor', fn ($ip) => $ip->conSkuVinculado());
+                    ->orWhereNotExists(function ($sub) {
+                        $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                            ->from('Inventario_Proveedor as ip')
+                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                            ->where('ip.stock', '>', 0);
+                    })
+                    ->orWhereNotExists(function ($sub) {
+                        $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                            ->from('Inventario_Proveedor as ip')
+                            ->join('inventario_proveedor_skus as ips', 'ips.idInventarioProveedor', '=', 'ip.idInventarioProveedor')
+                            ->whereColumn('ip.idProducto', 'Producto.idProducto')
+                            ->whereNotNull('ips.sku_proveedor')
+                            ->where('ips.sku_proveedor', '!=', '');
+                    });
             });
+    }
+
+    public function estadoColor()
+    {
+        if ($this->estadoProductoWeb == 'DISPONIBLE') {
+            return 'text-success';
+        } elseif ($this->estadoProductoWeb == 'OFERTA') {
+            return 'text-danger';
+        } else {
+            return 'text-danger text-decoration-line-through';
+        }
     }
 
     /**

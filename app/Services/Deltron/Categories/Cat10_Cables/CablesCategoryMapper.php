@@ -70,19 +70,60 @@ class CablesCategoryMapper extends AbstractCategorySpecMapper
     public function classify(array $context): ?int
     {
         $catDeltron = $context['catDeltron'] ?? '';
+        $subDeltron = $context['subDeltron'] ?? '';
         $titulo     = $context['titulo'] ?? '';
+        $name       = $context['name'] ?? '';
+        $sku        = strtoupper($context['item']['sku'] ?? '');
 
-        if (str_contains($catDeltron, 'CABLEADO') || str_contains($titulo, 'CABLE') || str_contains($titulo, 'PATCH CORD')) {
-            if (str_contains($titulo, 'PODER')) return self::GRUPO_CABLE_PODER;
-            if (str_contains($titulo, 'AUDIO') || str_contains($titulo, 'VIDEO') || str_contains($titulo, 'HDMI')) return self::GRUPO_CABLE_AUDIO_VIDEO;
+        // Candado: nunca clasificar periféricos (teclados, mouses, audio, webcams, etc.) como cables
+        // solo porque su título diga "con cable USB" o "cableado".
+        $esPeriferico = (
+            str_contains($catDeltron, 'TECLADO') ||
+            str_contains($catDeltron, 'MOUSE') ||
+            str_contains($catDeltron, 'AUDIO') ||
+            str_contains($catDeltron, 'VIDEOCONFERENCIA') ||
+            str_contains($subDeltron, 'TECLADO') ||
+            str_contains($subDeltron, 'MOUSE') ||
+            str_contains($titulo, 'TECLADO') ||
+            str_contains($titulo, 'KEYBOARD') ||
+            str_contains($titulo, 'MOUSE') ||
+            str_contains($titulo, 'RATON') ||
+            str_contains($titulo, 'RATÓN') ||
+            str_contains($titulo, 'AURICULAR') ||
+            str_contains($titulo, 'AUDIFONO') ||
+            str_contains($titulo, 'AUDÍFONO') ||
+            str_contains($titulo, 'HEADSET') ||
+            str_contains($titulo, 'PARLANTE') ||
+            str_contains($titulo, 'SPEAKER') ||
+            str_contains($titulo, 'MICROFONO') ||
+            str_contains($titulo, 'MICRÓFONO') ||
+            str_contains($titulo, 'WEBCAM') ||
+            str_contains($titulo, 'GAMEPAD') ||
+            str_contains($titulo, 'JOYSTICK') ||
+            str_starts_with($sku, 'KB') ||
+            str_starts_with($sku, 'MS') ||
+            str_starts_with($name, 'KB ') ||
+            str_starts_with($name, 'MS ')
+        );
+
+        if ($esPeriferico) {
+            return null;
+        }
+
+        // Ignorar la frase "CON CABLE" al evaluar si el producto es un cable
+        $tituloSinConCable = trim(preg_replace('/\bCON\s+CABLE(?:\s+USB(?:\s+\d+(?:\.\d+)?)?)?\b/iu', ' ', $titulo) ?? $titulo);
+
+        if (str_contains($catDeltron, 'CABLEADO') || str_contains($tituloSinConCable, 'CABLE') || str_contains($tituloSinConCable, 'PATCH CORD')) {
+            if (str_contains($tituloSinConCable, 'PODER')) return self::GRUPO_CABLE_PODER;
+            if (str_contains($tituloSinConCable, 'AUDIO') || str_contains($tituloSinConCable, 'VIDEO') || str_contains($tituloSinConCable, 'HDMI')) return self::GRUPO_CABLE_AUDIO_VIDEO;
             return self::GRUPO_CABLES_DATOS;
         }
 
-        if (str_contains($titulo, 'ADAPTADOR') || str_contains($titulo, 'HUB') || str_contains($titulo, 'MULTIPUERTO')) {
-            if (str_contains($titulo, 'RED') || str_contains($titulo, 'ETHERNET') || str_contains($titulo, 'RJ45')) return self::GRUPO_ADAPTADOR_RED;
-            if (str_contains($titulo, 'HDMI') || str_contains($titulo, 'VGA') || str_contains($titulo, 'DISPLAYPORT')) return self::GRUPO_ADAPTADOR_VIDEO;
-            if (str_contains($titulo, 'AUDIO') || str_contains($titulo, 'JACK')) return self::GRUPO_ADAPTADOR_AUDIO;
-            if (str_contains($titulo, 'HUB') || str_contains($titulo, 'MULTIPUERTO')) return self::GRUPO_MULTIPUERTOS;
+        if (str_contains($tituloSinConCable, 'ADAPTADOR') || str_contains($tituloSinConCable, 'HUB') || str_contains($tituloSinConCable, 'MULTIPUERTO')) {
+            if (str_contains($tituloSinConCable, 'RED') || str_contains($tituloSinConCable, 'ETHERNET') || str_contains($tituloSinConCable, 'RJ45')) return self::GRUPO_ADAPTADOR_RED;
+            if (str_contains($tituloSinConCable, 'HDMI') || str_contains($tituloSinConCable, 'VGA') || str_contains($tituloSinConCable, 'DISPLAYPORT')) return self::GRUPO_ADAPTADOR_VIDEO;
+            if (str_contains($tituloSinConCable, 'AUDIO') || str_contains($tituloSinConCable, 'JACK')) return self::GRUPO_ADAPTADOR_AUDIO;
+            if (str_contains($tituloSinConCable, 'HUB') || str_contains($tituloSinConCable, 'MULTIPUERTO')) return self::GRUPO_MULTIPUERTOS;
             return self::GRUPO_CABLES_DATOS;
         }
 

@@ -230,7 +230,7 @@ class ImpresoraMapper implements FalabellaCategoryMapper
             'K' => $context['saleStart'],
             'L' => $context['saleEnd'],
             'M' => '2026',
-            'N' => $d['caractMap']['Resolución de impresión'] ?? $d['caractMap']['Resolucion'] ?? '',
+            'N' => $d['caractMap']['Resolución de imp.'] ?? $d['caractMap']['Resolución de impresión'] ?? $d['caractMap']['Resolucion'] ?? '',
             'O' => $tipoImpresora,
             'R' => $conectividad ?: ($d['caractMap']['Tipo de conexión'] ?? ''),
             'S' => $d['dim'],
