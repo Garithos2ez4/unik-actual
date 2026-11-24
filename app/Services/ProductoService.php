@@ -265,9 +265,13 @@ class ProductoService implements ProductoServiceInterface
             if (!empty($array['codigoProducto'])) {
                 $array['codigoProducto'] = $this->generarCodigo($array['codigoProducto']);
             } else {
-                $grupoObj = \App\Models\Catalogo\GrupoProducto::find($nuevoGrupoId);
+                $grupoObj = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')->find($nuevoGrupoId);
                 $classifier = app(\App\Services\Deltron\DeltronClassifierService::class);
-                $array['codigoProducto'] = $classifier->generarSiguienteCodigoProducto($nuevoGrupoId, $grupoObj ? $grupoObj->nombreGrupo : 'General');
+                $array['codigoProducto'] = $classifier->generarSiguienteCodigoProducto(
+                    $nuevoGrupoId,
+                    $grupoObj ? $grupoObj->nombreGrupo : 'General',
+                    $grupoObj && $grupoObj->CategoriaProducto ? $grupoObj->CategoriaProducto->nombreCategoria : null
+                );
             }
         }
 
@@ -651,16 +655,28 @@ class ProductoService implements ProductoServiceInterface
 
     private function generarCodigo($string)
     {
-        $category = substr($string, 0, 6);
+        $prefix = strtoupper(substr($string, 0, 6));
 
-        // Si el código recibido es un prefijo de 6 caracteres o menos (primer producto del grupo)
         if (strlen($string) <= 6) {
-            return $category . "0001";
+            $prefix = str_pad($prefix, 6, 'X');
         }
 
-        $number = substr($string, 6, 10);
-        $newnumber = str_pad((int)$number + 1, strlen($number), "0", STR_PAD_LEFT);
-        return $category . $newnumber;
+        $numerosUsados = \App\Models\Catalogo\Producto::where('codigoProducto', 'like', $prefix . '%')
+            ->pluck('codigoProducto')
+            ->map(function ($code) use ($prefix) {
+                $sufijo = substr($code, strlen($prefix));
+                return is_numeric($sufijo) ? (int) $sufijo : null;
+            })
+            ->filter(fn ($n) => $n !== null && $n > 0)
+            ->all();
+
+        $usadosMap = array_flip($numerosUsados);
+        $siguienteNum = 1;
+        while (isset($usadosMap[$siguienteNum])) {
+            $siguienteNum++;
+        }
+
+        return $prefix . str_pad($siguienteNum, 4, '0', STR_PAD_LEFT);
     }
     public function getYoutubeVideoId(?string $url): ?string
     {

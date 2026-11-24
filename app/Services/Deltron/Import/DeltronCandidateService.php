@@ -256,8 +256,9 @@ class DeltronCandidateService
         $pnBase = strtoupper(trim(DeltronTextHelper::limpiarSufijoPartNumber($pn)));
         $pnBaseClean = preg_replace('/[^A-Z0-9]/', '', $pnBase);
 
-        // Obtener el atributo modelo oficial de Deltron
-        $modeloReal = DeltronTextHelper::extraerModeloDesdeItem($item);
+        // Obtener el atributo modelo oficial de Deltron (incluyendo distintivo de RAM/Almacenamiento en laptops o Color en variantes)
+        $modeloBase = DeltronTextHelper::extraerModeloDesdeItem($item);
+        $modeloReal = DeltronTextHelper::formatearModeloSiLaptop($modeloBase, $item) ?? $modeloBase;
         $modClean = $modeloReal ? preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($modeloReal))) : '';
 
         if (isset($indices['skus'][$sku]) || isset($indices['modelos'][$sku])) {

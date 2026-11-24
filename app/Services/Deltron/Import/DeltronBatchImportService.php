@@ -69,7 +69,7 @@ class DeltronBatchImportService
         $imgService = new ImageService();
         $destinationPath = DeltronTextHelper::getDestinationPathProductos();
 
-        $grupos = GrupoProducto::all()->keyBy('idGrupoProducto');
+        $grupos = GrupoProducto::with('CategoriaProducto')->get()->keyBy('idGrupoProducto');
         $almacenes = Almacen::all();
 
         $importados = [];
@@ -105,6 +105,7 @@ class DeltronBatchImportService
                     }
                     $grupoObj = $grupos->get($idGrupo);
                     $nombreGrupo = $grupoObj ? $grupoObj->nombreGrupo : 'General';
+                    $nombreCategoria = $grupoObj && $grupoObj->CategoriaProducto ? $grupoObj->CategoriaProducto->nombreCategoria : null;
 
                     $idMarca = (int) ($itemData['idMarca'] ?? 1);
                     $pn = substr(DeltronTextHelper::cleanDeltronText($itemData['part_number'] ?? $sku), 0, 50);
@@ -115,7 +116,32 @@ class DeltronBatchImportService
                     $modeloFinal = mb_substr(trim($modeloFinal), 0, 70);
 
                     if ($modeloFinal !== '' && app(ProductoServiceInterface::class)->existsByModelo($modeloFinal, $replaceTargetId)) {
-                        throw new Exception("El modelo '{$modeloFinal}' ya se encuentra registrado en otro producto.");
+                        // Si el modelo genérico ya existe pero pertenece a otro Part Number distinto, diferenciarlo con el Part Number
+                        $conflictoMismoPn = false;
+                        if ($pn !== '' && $pn !== '0') {
+                            $cleanPnActual = preg_replace('/[^A-Z0-9]/', '', strtoupper($pn));
+                            $existentes = Producto::whereRaw('LOWER(modelo) = ?', [strtolower($modeloFinal)])
+                                ->when($replaceTargetId, fn ($q) => $q->where('idProducto', '!=', $replaceTargetId))
+                                ->pluck('partNumber');
+
+                            foreach ($existentes as $pnExistente) {
+                                $cleanPnEx = preg_replace('/[^A-Z0-9]/', '', strtoupper((string) $pnExistente));
+                                if ($cleanPnEx === '' || $cleanPnEx === '0' || $cleanPnEx === $cleanPnActual) {
+                                    $conflictoMismoPn = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$conflictoMismoPn && !str_contains(strtoupper($modeloFinal), strtoupper($pn))) {
+                                $sufijoPn = ' - ' . strtoupper($pn);
+                                $maxBasePn = max(10, 70 - mb_strlen($sufijoPn));
+                                $modeloFinal = rtrim(mb_substr($modeloFinal, 0, $maxBasePn), " -/") . $sufijoPn;
+                            }
+                        }
+
+                        if (app(ProductoServiceInterface::class)->existsByModelo($modeloFinal, $replaceTargetId)) {
+                            throw new Exception("El modelo '{$modeloFinal}' ya se encuentra registrado en otro producto.");
+                        }
                     }
 
                     // Asegurar título comercial limpio
@@ -143,7 +169,8 @@ class DeltronBatchImportService
                         $nombre,
                         $precioDolar,
                         $itemsAImportar,
-                        $almacenes
+                        $almacenes,
+                        $nombreCategoria
                     );
 
                     // Resolver si reciclamos un Producto Fantasma o creamos un ID nuevo
@@ -156,12 +183,12 @@ class DeltronBatchImportService
                         if ((int) $ghostProd->idGrupo === $idGrupo && !empty($ghostProd->codigoProducto)) {
                             $codigo = $ghostProd->codigoProducto;
                         } else {
-                            $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+                            $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo, $nombreCategoria);
                         }
                     } else {
                         $lastId = Producto::max('idProducto') ?? 0;
                         $idProducto = $lastId + 1;
-                        $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+                        $codigo = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo, $nombreCategoria);
                     }
 
                     // Descargar Foto 1 (Principal) en WebP 800x800
@@ -335,7 +362,8 @@ class DeltronBatchImportService
         string $nombre,
         float $precioDolar,
         array $itemsAImportar,
-        $almacenes
+        $almacenes,
+        ?string $nombreCategoria = null
     ): ?Producto {
         $esVariante = !empty($itemData['es_variante']) && !empty($itemData['valor_variante']);
         if (!$esVariante) {
@@ -367,7 +395,7 @@ class DeltronBatchImportService
 
         $lastIdPadre = Producto::max('idProducto') ?? 0;
         $idPadre = $lastIdPadre + 1;
-        $codigoPadre = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+        $codigoPadre = $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo, $nombreCategoria);
 
         $descPadre = !empty($itemData['description']) ? DeltronTextHelper::cleanDeltronText($itemData['description']) : $nombrePadre;
         $descPadre = DeltronTextHelper::recortarTextoEnLinea($descPadre, 5000);

@@ -254,7 +254,6 @@ class DeltronSpecMapperService
             // Procesador
             'PROCESADOR' => 4,
             'CPU' => 4,
-            'CHIPSET' => 4,
 
             // Memoria RAM
             'MEMORIA RAM' => 5,
@@ -611,6 +610,11 @@ class DeltronSpecMapperService
                 $textoAnalisis,
                 $sugerenciasPorChar
             );
+        }
+
+        // Regla: Placas Madre (idGrupo 50) son componentes de integración; nunca incluyen Procesador (4) ni Memoria RAM (5) instalada
+        if ($idGrupo === 50) {
+            unset($resultado[4], $resultado[5]);
         }
 
         return $resultado;

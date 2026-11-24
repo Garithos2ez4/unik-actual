@@ -231,7 +231,7 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
 
         return match ($idGrupo) {
             self::GRUPO_PROCESADORES   => [4, 9, 10, 11, 12, 13, 37, 48, 51, 52, 63, 90, 91],
-            self::GRUPO_PLACAS_MADRE   => [4, 5, 9, 17, 37, 46, 51, 52, 63, 76, 77, 80, 88],
+            self::GRUPO_PLACAS_MADRE   => [9, 17, 37, 46, 51, 52, 63, 76, 77, 80, 88, 94],
             self::GRUPO_MEMORIAS_RAM   => [5, 46, 49, 50, 51, 52, 80, 81],
             self::GRUPO_DISCOS_DURO,
             self::GRUPO_DISCO_SOLIDO   => [6, 45, 46, 47, 48, 49, 50, 51, 52],
@@ -415,18 +415,15 @@ class ComponentesPcCategoryMapper extends AbstractCategorySpecMapper
             }
         }
 
-        // Tipo de RAM / Tipo Memoria (80): DDR5 / DDR4 / DDR3
-        if (empty($specs[80]) && preg_match('/\b(DDR5|DDR4|DDR3)\b/i', $textoAnalisis, $mram)) {
-            $specs[80] = strtoupper($mram[1]);
+        // Tipo de RAM / Tipo Memoria (80 y 94): DDR5 / DDR4 / DDR3
+        if (preg_match('/\b(DDR5|DDR4|DDR3)\b/i', $textoAnalisis, $mram)) {
+            $tipoRam = strtoupper($mram[1]);
+            $specs[80] = $tipoRam;
+            $specs[94] = $tipoRam;
         }
 
-        // Evitar que Wi-Fi se meta por error en Procesador (4)
-        if (!empty($specs[4]) && (stripos($specs[4], 'WI-FI') !== false || stripos($specs[4], 'WIFI') !== false || stripos($specs[4], 'BLUETOOTH') !== false)) {
-            unset($specs[4]);
-        }
-        if (empty($specs[4]) && preg_match('/(?:SOCKET|CHIPSET)\s*:\s*([^\r\n]+)/i', $textoAnalisis, $msoc)) {
-            $specs[4] = trim($msoc[1]);
-        }
+        // Una placa madre es un componente independiente: no incluye procesador (4) ni memoria RAM (5) instalada
+        unset($specs[4], $specs[5]);
 
         return $specs;
     }

@@ -410,7 +410,31 @@ class DeltronTextHelper
         }
 
         if (!self::esItemLaptop($item, $idGrupo)) {
-            return $modelo;
+            $colorValor = trim((string) ($item['valor_variante'] ?? ''));
+            $colorToken = '';
+            if ($colorValor === '') {
+                $varInfo = DeltronClassifierService::detectarVarianteDeltron($item);
+                if (!empty($varInfo['valor'])) {
+                    $colorValor = trim((string) $varInfo['valor']);
+                    $colorToken = trim((string) ($varInfo['token'] ?? ''));
+                }
+            }
+
+            if ($colorValor !== '') {
+                $colorUpper = mb_strtoupper($colorValor, 'UTF-8');
+                $modeloUpper = mb_strtoupper($modelo, 'UTF-8');
+                $yaTieneColor = str_contains($modeloUpper, $colorUpper)
+                    || ($colorToken !== '' && strlen($colorToken) >= 3 && (bool) preg_match('/(?:^|[\s\-_\/])' . preg_quote(strtoupper($colorToken), '/') . '(?:$|[\s\-_\/])/i', $modelo));
+
+                if (!$yaTieneColor) {
+                    $sufijoColor = ' - ' . $colorUpper;
+                    $maxBaseColor = max(10, 70 - mb_strlen($sufijoColor));
+                    $baseColor = rtrim(mb_substr($modelo, 0, $maxBaseColor), " -/");
+                    return $baseColor . $sufijoColor;
+                }
+            }
+
+            return mb_substr($modelo, 0, 70);
         }
 
         ['ram' => $ram, 'storage' => $storage] = self::extraerRamYAlmacenamientoLaptop($item);

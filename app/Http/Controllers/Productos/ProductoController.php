@@ -1,13 +1,15 @@
 <?php
 
 namespace App\Http\Controllers\Productos;
-use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Controller;
+use App\Models\Catalogo\DetalleProducto;
 use App\Models\Catalogo\Producto;
 use Illuminate\Http\Request;
 use App\Services\HeaderServiceInterface;
 use App\Services\CalculadoraServiceInterface;
-
+use App\Models\Catalogo\GrupoProducto;
+use App\Models\Catalogo\MarcaProducto;
 use App\Services\ProductoServiceInterface;
 use Exception;
 
@@ -181,7 +183,7 @@ class ProductoController extends Controller
 
                                 if (!empty($deltronData['brand_name'])) {
                                     $brandSearch = trim($deltronData['brand_name']);
-                                    $matchedMarca = \App\Models\Catalogo\MarcaProducto::where('nombreMarca', 'LIKE', "%{$brandSearch}%")->first();
+                                    $matchedMarca = MarcaProducto::where('nombreMarca', 'LIKE', "%{$brandSearch}%")->first();
                                     if ($matchedMarca) {
                                         $deltronMarcaId = $matchedMarca->idMarca;
                                     }
@@ -341,9 +343,9 @@ class ProductoController extends Controller
         $queryBuilder = Producto::query()
             ->where(function ($q) use ($query) {
                 $q->where('modelo', 'LIKE', '%' . $query . '%')
-                  ->orWhere('nombreProducto', 'LIKE', '%' . $query . '%')
-                  ->orWhere('codigoProducto', 'LIKE', '%' . $query . '%')
-                  ->orWhere('partNumber', 'LIKE', '%' . $query . '%');
+                    ->orWhere('nombreProducto', 'LIKE', '%' . $query . '%')
+                    ->orWhere('codigoProducto', 'LIKE', '%' . $query . '%')
+                    ->orWhere('partNumber', 'LIKE', '%' . $query . '%');
             });
 
         if ($request->boolean('vendibles', false) || $request->boolean('no_padre', false)) {
@@ -430,7 +432,7 @@ class ProductoController extends Controller
                 if ($nombre && str_starts_with($nombre, 'B64:')) {
                     $nombre = base64_decode(substr($nombre, 4));
                 }
-                
+
                 $upc = $request->input('upc');
                 $modelo = $request->input('modelo');
                 $partnumber = $request->input('partnumber');
@@ -440,12 +442,12 @@ class ProductoController extends Controller
                 $estado = $request->input('estado');
                 $stockproveedor = $request->input('stockproveedor');
                 $proveedor = $request->input('proveedor');
-                
+
                 $descripcion = $request->input('desc');
                 if ($descripcion && str_starts_with($descripcion, 'B64:')) {
                     $descripcion = base64_decode(substr($descripcion, 4));
                 }
-                
+
                 $codigo = $request->input('codigo');
                 $tipoprecio = $request->input('tipoprecio');
                 $stockminimo = $request->input('stockminimo');
@@ -611,7 +613,7 @@ class ProductoController extends Controller
                                 if ($request->has('mostrarPrecioWeb') || $request->has('precio_pase')) {
                                     $mostrarWeb = $request->input('mostrarPrecioWeb') == '1' ? true : false;
                                     $precioPase = $request->input('precio_pase') ? floatval($request->input('precio_pase')) : null;
-            
+
                                     \App\Models\Catalogo\DetalleProducto::updateOrCreate(
                                         ['idProducto' => $idProducto],
                                         [
@@ -719,12 +721,12 @@ class ProductoController extends Controller
                 $stock = $request->input('stock');
                 $stockproveedor = $request->input('stockproveedor');
                 $proveedor = $request->input('proveedor');
-                
+
                 $descripcion = $request->input('descripcion');
                 if ($descripcion && str_starts_with($descripcion, 'B64:')) {
                     $descripcion = base64_decode(substr($descripcion, 4));
                 }
-                
+
                 $tipoprecio = $request->input('tipoprecio');
                 $stockminimo = $request->input('stockminimo');
                 //videos
@@ -979,7 +981,7 @@ class ProductoController extends Controller
                     $configService = app(\App\Services\ConfiguracionServiceInterface::class);
                     $configService->createGrupoProducto($categoria, $grupo, $tipo, $img);
 
-                    $newGrupo = \App\Models\Catalogo\GrupoProducto::orderBy('idGrupoProducto', 'desc')->first();
+                    $newGrupo = GrupoProducto::orderBy('idGrupoProducto', 'desc')->first();
 
                     if ($newGrupo) {
                         return response()->json([
@@ -1024,9 +1026,13 @@ class ProductoController extends Controller
             'idGrupo' => 'required|integer',
         ]);
 
-        $grupo = \App\Models\Catalogo\GrupoProducto::findOrFail($request->input('idGrupo'));
+        $grupo = GrupoProducto::with('CategoriaProducto')->findOrFail($request->input('idGrupo'));
         $deltronService = app()->make(\App\Services\Deltron\DeltronApiService::class);
-        $codigoPadre = $deltronService->generarSiguienteCodigoProducto($grupo->idGrupoProducto, $grupo->nombreGrupo);
+        $codigoPadre = $deltronService->generarSiguienteCodigoProducto(
+            $grupo->idGrupoProducto,
+            $grupo->nombreGrupo,
+            $grupo->CategoriaProducto ? $grupo->CategoriaProducto->nombreCategoria : null
+        );
 
         $lastId = (int) Producto::max('idProducto');
         $idNuevoPadre = $lastId + 1;
@@ -1079,7 +1085,7 @@ class ProductoController extends Controller
                 $colorNombre = trim($request->input('color_actual', ''));
                 $colorHex = trim($request->input('color_hex_actual', '#6c757d'));
 
-                \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+                DetalleProducto::updateOrCreate(
                     ['idProducto' => $hijo->idProducto],
                     [
                         'tipo_variante' => 'COLOR',
@@ -1130,7 +1136,7 @@ class ProductoController extends Controller
         $producto->idProductoPadre = null;
         $producto->save();
 
-        \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+        DetalleProducto::updateOrCreate(
             ['idProducto' => $producto->idProducto],
             [
                 'mostrarPrecioWeb' => true,
@@ -1190,7 +1196,7 @@ class ProductoController extends Controller
         $padre->save();
 
         // Asegurar DetalleProducto para el padre si no existe
-        \App\Models\Catalogo\DetalleProducto::firstOrCreate(
+        DetalleProducto::firstOrCreate(
             ['idProducto' => $padre->idProducto],
             [
                 'tipo_variante' => 'COLOR',
@@ -1200,7 +1206,7 @@ class ProductoController extends Controller
             ]
         );
 
-        \App\Models\Catalogo\DetalleProducto::updateOrCreate(
+        DetalleProducto::updateOrCreate(
             ['idProducto' => $hijo->idProducto],
             [
                 'tipo_variante' => 'COLOR',
@@ -1234,4 +1240,3 @@ class ProductoController extends Controller
         return back();
     }
 }
-

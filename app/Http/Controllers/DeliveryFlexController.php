@@ -83,10 +83,15 @@ class DeliveryFlexController extends Controller
             }
 
             $plazoMaximo = '—';
-            if (isset($payload['shipment']['shipping_option']['estimated_delivery_limit']['date'])) {
-                $fechaLimiteStr = $payload['shipment']['shipping_option']['estimated_delivery_limit']['date'];
+            $shippingOption = $payload['shipment']['shipping_option'] ?? [];
+            $fechaLimiteStr = $shippingOption['estimated_delivery_limit']['date']
+                ?? $shippingOption['estimated_delivery_time']['date']
+                ?? $shippingOption['estimated_delivery_final']['date']
+                ?? (!empty($shippingOption['buffering']['date']) ? substr($shippingOption['buffering']['date'], 0, 10) : null);
+
+            if (!empty($fechaLimiteStr)) {
                 try {
-                    $fechaLimite = \Carbon\Carbon::parse($fechaLimiteStr)->timezone('America/Lima');
+                    $fechaLimite = \Carbon\Carbon::parse($fechaLimiteStr, 'America/Lima')->timezone('America/Lima');
                     if ($fechaLimite->isToday()) {
                         $plazoMaximo = 'Hoy';
                     } elseif ($fechaLimite->isTomorrow()) {

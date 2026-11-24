@@ -1056,9 +1056,9 @@ class DeltronApiService
         return $this->classifierService->emparejarMarca($deltronBrand, $marcas);
     }
 
-    public function generarSiguienteCodigoProducto(int $idGrupo, string $nombreGrupo): string
+    public function generarSiguienteCodigoProducto(int $idGrupo, ?string $nombreGrupo = null, ?string $nombreCategoria = null): string
     {
-        return $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo);
+        return $this->classifierService->generarSiguienteCodigoProducto($idGrupo, $nombreGrupo, $nombreCategoria);
     }
 
     public static function detectarVarianteDeltron(array $item): ?array

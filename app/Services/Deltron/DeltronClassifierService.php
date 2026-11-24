@@ -196,21 +196,82 @@ class DeltronClassifierService
         return 1;
     }
 
-    /**
-     * Genera el siguiente codigo de producto correlativo de 10 caracteres para un grupo.
-     */
-    public function generarSiguienteCodigoProducto(int $idGrupo, string $nombreGrupo): string
+    protected static array $codigosReservadosSesion = [];
+
+    public static function limpiarCodigosReservados(): void
     {
-        $maxCode = Producto::where('idGrupo', $idGrupo)->max('codigoProducto');
-        if ($maxCode && strlen($maxCode) >= 10) {
-            $prefix = substr($maxCode, 0, 6);
-            $num = (int) substr($maxCode, 6);
-            return $prefix . str_pad($num + 1, 4, '0', STR_PAD_LEFT);
+        self::$codigosReservadosSesion = [];
+    }
+
+    /**
+     * Genera el siguiente codigo de producto correlativo de 10 caracteres para un grupo,
+     * reutilizando huecos/codigos huerfanos si existen o avanzando secuencialmente.
+     * Regla: 3 caracteres del Grupo + 3 caracteres de la Categoría (o el prefijo existente del grupo) + 4 dígitos correlativos.
+     */
+    public function generarSiguienteCodigoProducto(int $idGrupo, ?string $nombreGrupo = null, ?string $nombreCategoria = null): string
+    {
+        if (empty($nombreGrupo) || empty($nombreCategoria)) {
+            $grupoObj = \App\Models\Catalogo\GrupoProducto::with('CategoriaProducto')->find($idGrupo);
+            if ($grupoObj) {
+                $nombreGrupo = $nombreGrupo ?: $grupoObj->nombreGrupo;
+                $nombreCategoria = $nombreCategoria ?: ($grupoObj->CategoriaProducto ? $grupoObj->CategoriaProducto->nombreCategoria : '');
+            }
         }
 
-        $clean = strtoupper(preg_replace('/[^A-Z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nombreGrupo)));
-        $prefix = str_pad(substr($clean, 0, 6), 6, '0');
-        return $prefix . '0001';
+        // Limpiar caracteres alfanuméricos manteniendo mayúsculas
+        $cleanGrupo = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', (string) $nombreGrupo)));
+        $cleanCat   = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', (string) $nombreCategoria)));
+
+        $prefGrupo = substr($cleanGrupo, 0, 3);
+        $prefCat   = substr($cleanCat, 0, 3);
+
+        if (strlen($prefGrupo) < 3) {
+            $prefGrupo = str_pad($prefGrupo, 3, 'X');
+        }
+        if (strlen($prefCat) < 3) {
+            $extraGrupo = substr($cleanGrupo, 3, 3 - strlen($prefCat));
+            $prefCat = str_pad($prefCat . $extraGrupo, 3, 'X');
+        }
+
+        $defaultPrefix = substr($prefGrupo . $prefCat, 0, 6);
+
+        // Obtener los códigos existentes en el grupo para determinar el prefijo en uso
+        $codigosGrupo = Producto::where('idGrupo', $idGrupo)
+            ->whereNotNull('codigoProducto')
+            ->where('codigoProducto', '!=', '')
+            ->pluck('codigoProducto');
+
+        // Descartar prefijos corruptos conocidos (ej. M00000 o letra única seguida de ceros)
+        $codigosValidos = $codigosGrupo->filter(function ($code) {
+            return strlen($code) >= 10 && !preg_match('/^[A-Z]0{4,5}/', $code);
+        });
+
+        $prefix = $codigosValidos->isNotEmpty()
+            ? substr($codigosValidos->last(), 0, 6)
+            : $defaultPrefix;
+
+        // Buscar todos los números usados con este prefijo a nivel global en Producto
+        $numerosUsados = Producto::where('codigoProducto', 'like', $prefix . '%')
+            ->pluck('codigoProducto')
+            ->map(function ($code) use ($prefix) {
+                $sufijo = substr($code, strlen($prefix));
+                return is_numeric($sufijo) ? (int) $sufijo : null;
+            })
+            ->filter(fn ($n) => $n !== null && $n > 0)
+            ->all();
+
+        $usadosMap = array_flip($numerosUsados);
+
+        // Encontrar el primer número correlativo disponible (rellenando huecos huérfanos)
+        $siguienteNum = 1;
+        while (true) {
+            $candidatoCodigo = $prefix . str_pad($siguienteNum, 4, '0', STR_PAD_LEFT);
+            if (!isset($usadosMap[$siguienteNum]) && !isset(self::$codigosReservadosSesion[$candidatoCodigo])) {
+                self::$codigosReservadosSesion[$candidatoCodigo] = true;
+                return $candidatoCodigo;
+            }
+            $siguienteNum++;
+        }
     }
 
     /**

@@ -66,26 +66,110 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
             str_contains($catDeltron, 'ACCESORIOS DE NOTEBOOK') ||
             str_contains($catDeltron, 'ACCESORIOS NOTEBOOK') ||
             str_contains($subDeltron, 'NOTEBOOK, ACCESORIOS') ||
-            str_contains($subDeltron, 'ACCESORIOS NOTEBOOK')
+            str_contains($subDeltron, 'ACCESORIOS NOTEBOOK') ||
+            str_contains($subDeltron, 'NOTEBOOK, ACC')
         ) {
-            if (str_contains($titulo, 'HUB') || str_contains($name, 'HUB') || str_contains($titulo, 'MULTIPUERTO') || str_contains($titulo, 'DOCKING')) {
+            $fuenteAcc = $titulo . ' ' . $name;
+
+            // 1. Mousepads / Alfombrillas que Deltron lista en "NOTEBOOK, ACCESORIOS DE"
+            if (
+                str_contains($fuenteAcc, 'MOUSEPAD') ||
+                str_contains($fuenteAcc, 'MOUSE PAD') ||
+                str_contains($fuenteAcc, 'TECLADO PAD') ||
+                str_contains($fuenteAcc, 'ALFOMBRILLA')
+            ) {
+                return 31; // Alfombrillas (Perifericos)
+            }
+
+            // 2. Extensores de pantalla / Monitores portátiles para laptop
+            if (
+                str_contains($fuenteAcc, 'EXTENSOR DE PANTALLA') ||
+                str_contains($fuenteAcc, 'EXTENSOR DE MONITOR') ||
+                str_contains($fuenteAcc, 'MONITOR PORTATIL') ||
+                str_contains($fuenteAcc, 'MONITOR PORTÁTIL')
+            ) {
+                return 82; // Monitor Portátil (Monitores)
+            }
+
+            // 3. Hubs, Docks y Estaciones de acoplamiento
+            if (
+                str_contains($fuenteAcc, 'HUB') ||
+                str_contains($fuenteAcc, 'MULTIPUERTO') ||
+                str_contains($fuenteAcc, 'DOCK') ||
+                str_contains($fuenteAcc, 'ESTACION DE ACOPLAMIENTO') ||
+                str_contains($fuenteAcc, 'ESTACIÓN DE ACOPLAMIENTO') ||
+                str_contains($fuenteAcc, 'ESTACION DE CONEXION') ||
+                str_contains($fuenteAcc, 'ESTACIÓN DE CONEXIÓN') ||
+                str_contains($fuenteAcc, 'CONCENTRADOR DE PUERTOS') ||
+                (str_contains($fuenteAcc, 'ADAPTADOR') && str_contains($fuenteAcc, 'HDMI') && (str_contains($fuenteAcc, 'RJ45') || str_contains($fuenteAcc, 'LAN')))
+            ) {
                 return 87; // Multipuertos (Cables)
             }
-            if (str_contains($titulo, 'CARGADOR') || str_contains($titulo, 'ADAPTADOR') || str_contains($subDeltron, 'CARGADOR') || str_contains($name, 'ADAP')) {
+
+            // 4. Cargadores y adaptadores de corriente/poder de laptop (no confundir con adaptadores de video/red)
+            $esAdaptadorCorriente = str_contains($fuenteAcc, 'CARGADOR') ||
+                str_contains($subDeltron, 'CARGADOR') ||
+                str_contains($fuenteAcc, 'POWER ADAPTER') ||
+                str_contains($fuenteAcc, 'AC ADAPTER') ||
+                str_contains($fuenteAcc, 'ADAPTADOR DE PODER') ||
+                str_contains($fuenteAcc, 'ADAPTADOR DE CORRIENTE') ||
+                ((str_contains($fuenteAcc, 'ADAPTADOR') || str_contains($fuenteAcc, 'ADAPTER')) && (bool) preg_match('/\b\d{2,3}\s*W\b/i', $fuenteAcc));
+
+            if ($esAdaptadorCorriente) {
                 return self::GRUPO_CARGADORES_LAPTOP;
             }
-            if (str_contains($titulo, 'COOLER') || str_contains($titulo, 'BASE') || str_contains($titulo, 'PAD DE ENFRIAMIENTO') || str_contains($titulo, 'STAND')) {
+
+            // 5. Coolers y soportes para laptop
+            if (
+                str_contains($fuenteAcc, 'COOLER') ||
+                str_contains($fuenteAcc, 'REFRIGERACION') ||
+                str_contains($fuenteAcc, 'REFRIGERACIÓN') ||
+                str_contains($fuenteAcc, 'PAD DE ENFRIAMIENTO') ||
+                str_contains($fuenteAcc, 'STAND') ||
+                str_contains($fuenteAcc, 'SOPORTE')
+            ) {
                 return self::GRUPO_COOLER_LAPTOP;
             }
-            if (str_contains($titulo, 'FUNDA') || str_contains($titulo, 'CASE') || str_contains($titulo, 'SLEEVE')) {
+
+            // 6. Fundas / Sleeves (dejar que Mochilas y Maletines pasen a PerifericosCategoryMapper)
+            if (
+                (str_contains($fuenteAcc, 'FUNDA') || str_contains($fuenteAcc, 'SLEEVE')) &&
+                !str_contains($fuenteAcc, 'MOCHILA') &&
+                !str_contains($fuenteAcc, 'MALETIN') &&
+                !str_contains($fuenteAcc, 'MALETÍN')
+            ) {
                 return self::GRUPO_FUNDAS_LAPTOP;
             }
-            if (str_contains($titulo, 'LAPIZ') || str_contains($titulo, 'STYLUS') || str_contains($titulo, 'PEN')) {
+
+            // 7. Lápiz táctil / Stylus
+            if (str_contains($fuenteAcc, 'LAPIZ') || str_contains($fuenteAcc, 'LÁPIZ') || str_contains($fuenteAcc, 'STYLUS') || preg_match('/\bPEN\b/i', $fuenteAcc)) {
                 return self::GRUPO_LAPIZ_TACTIL;
             }
-            if (str_contains($titulo, 'BATERIA') || str_contains($titulo, 'BATERÍA')) {
+
+            // 8. Baterías de laptop
+            if (str_contains($fuenteAcc, 'BATERIA') || str_contains($fuenteAcc, 'BATERÍA') || str_contains($fuenteAcc, 'BATTERY')) {
                 return self::GRUPO_BATERIA_LAPTOP;
             }
+
+            // 9. Mochilas y Maletines dentro de accesorios de notebook
+            if (str_contains($fuenteAcc, 'MALETIN') || str_contains($fuenteAcc, 'MALETÍN') || str_contains($fuenteAcc, 'MALETA') || str_contains($fuenteAcc, 'BRIEFCASE')) {
+                return 36; // Maletas (Perifericos)
+            }
+            if (str_contains($fuenteAcc, 'MOCHILA') || str_contains($fuenteAcc, 'BACKPACK') || str_contains($subDeltron, 'MOCHILA')) {
+                return 35; // Mochilas (Perifericos)
+            }
+
+            // 10. Adaptadores de video o red dentro de accesorios de notebook
+            if (str_contains($fuenteAcc, 'ADAPTADOR')) {
+                if (str_contains($fuenteAcc, 'HDMI') || str_contains($fuenteAcc, 'VGA') || str_contains($fuenteAcc, 'DISPLAYPORT')) {
+                    return 74; // Adaptador de Video (Cables)
+                }
+                if (str_contains($fuenteAcc, 'RJ45') || str_contains($fuenteAcc, 'ETHERNET') || str_contains($fuenteAcc, 'RED') || str_contains($fuenteAcc, 'GIGABIT')) {
+                    return 72; // Adaptador de Red (Cables)
+                }
+                return 68; // Cables de datos (Cables)
+            }
+
             return self::GRUPO_REPUESTOS_LAPTOP;
         }
 
@@ -103,6 +187,8 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
         // 1. Candado estricto: NUNCA clasificar componentes de PC (Cases, Placas, GPUs), monitores,
         // periféricos, audio, consolas o redes como Laptops, aunque contengan palabras como Gaming, TUF, ROG o Legion.
         $esOtraCategoria = (
+            str_contains($catDeltron, 'ACCESORIO') ||
+            str_contains($subDeltron, 'ACCESORIO') ||
             str_contains($catDeltron, 'CASES') ||
             str_contains($subDeltron, 'CASES') ||
             str_contains($catDeltron, 'MOTHERBOARD') ||
@@ -236,7 +322,35 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
     {
         if (in_array($idGrupo, [self::GRUPO_LAPTOP_GAMER, self::GRUPO_LAPTOP_EMPRESARIAL, self::GRUPO_LAPTOP_HOGAR], true)) {
             return [
-                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 25, 29, 37, 51, 52, 63, 67, 69, 90, 91,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                21,
+                25,
+                29,
+                37,
+                51,
+                52,
+                63,
+                67,
+                69,
+                90,
+                91,
             ];
         }
 
@@ -255,7 +369,7 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
         }
 
         $textoAnalisis = $textoCompleto . "\n" . implode("\n", array_map(
-            fn ($k, $v) => "{$k}: {$v}",
+            fn($k, $v) => "{$k}: {$v}",
             array_keys($rawSpecs),
             array_values($rawSpecs)
         ));
@@ -735,4 +849,3 @@ class LaptopsCategoryMapper extends AbstractCategorySpecMapper
         return $specs;
     }
 }
-
