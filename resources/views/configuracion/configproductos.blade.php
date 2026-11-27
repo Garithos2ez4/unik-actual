@@ -229,5 +229,5 @@
         </div>
     </form>
 </div>
-<script src="{{asset('js/configproductos.js')}}"></script>
+<script src="{{asset('js/config/configproductos.js')}}"></script>
 @endsection

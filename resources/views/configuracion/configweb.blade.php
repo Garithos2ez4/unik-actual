@@ -502,5 +502,5 @@
         </div>
     </form>
 </div>
-<script src="{{asset('js/configweb.js')}}"></script>
+<script src="{{asset('js/config/configweb.js')}}"></script>
 @endsection

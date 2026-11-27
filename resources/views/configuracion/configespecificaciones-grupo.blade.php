@@ -130,5 +130,5 @@
 <script>
     var dataSpects = Object.values(@json($caracteristicas));
 </script>
-<script src="{{asset('js/configCaracteristicas_grupo.js')}}"></script>
+<script src="{{asset('js/config/configCaracteristicas_grupo.js')}}"></script>
 @endsection

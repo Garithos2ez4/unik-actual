@@ -413,7 +413,7 @@
         </div>
     </form>
 </div>
-<script src="{{ asset('js/config-calculos-scripts.js') }}?v=1.00"></script>
+<script src="{{ asset('js/config/config-calculos-scripts.js') }}?v=1.00"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 

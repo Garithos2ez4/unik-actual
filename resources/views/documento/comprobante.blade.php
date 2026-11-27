@@ -457,6 +457,6 @@
         almacenes: @json($ubicaciones)
     };
 </script>
-<script src="{{ asset('js/documento-scripts.js') }}?v=1.01"></script>
-<script src="{{ asset('js/documento.js') }}?v=1.01"></script>
+<script src="{{ asset('js/documento/documento-scripts.js') }}?v=1.01"></script>
+<script src="{{ asset('js/documento/documento.js') }}?v=1.01"></script>
 @endsection

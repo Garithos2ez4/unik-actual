@@ -179,5 +179,5 @@
         </div>
     </form>
 </div>
-<script src="{{asset('js/configinventario.js')}}"></script>
+<script src="{{asset('js/config/configinventario.js')}}"></script>
 @endsection

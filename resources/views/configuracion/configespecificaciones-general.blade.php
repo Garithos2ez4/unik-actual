@@ -156,5 +156,5 @@
         <input type="hidden" name="type" value="" id="hidden-delete-sugerencia-type">
     </form>
 </div>
-<script src="{{asset('js/configCaracteristicas_general.js')}}"></script>
+<script src="{{asset('js/config/configCaracteristicas_general.js')}}"></script>
 @endsection

@@ -104,6 +104,6 @@
         <x-lista_documentos :documentos="$documentos" :container="'container-lista-doc'"/>
     </div>
 </div>
-<script src="{{asset('js/documentos.js')}}"></script>
+<script src="{{asset('js/documento/documentos.js')}}"></script>
 <script src="{{asset('js/filtro_componente.js')}}"></script>
 @endsection
