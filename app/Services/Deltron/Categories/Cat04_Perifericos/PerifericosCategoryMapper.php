@@ -296,13 +296,27 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
             self::GRUPO_UPS,
             self::GRUPO_ESTABILIZADORES => [16, 17, 42, 45, 55],
             self::GRUPO_WEBCAM          => [1, 3, 23, 37, 67],
-            self::GRUPO_ALFOMBRILLAS    => [29, 69],
+            self::GRUPO_ALFOMBRILLAS    => [10, 11, 12, 13, 14, 29, 51, 52, 53, 69, 72, 91],
+            self::GRUPO_SILLAS_GAMER    => [10, 11, 12, 13, 14, 51, 52, 53, 69, 72, 91],
             self::GRUPO_MOCHILAS,
-            self::GRUPO_MALETAS         => [2, 17, 29, 45],
+            self::GRUPO_MALETAS         => [2, 10, 11, 12, 13, 14, 17, 29, 45, 51, 52, 53, 72, 91],
+            self::GRUPO_MESA_PORTATIL   => [10, 11, 12, 13, 14, 51, 52, 53, 72, 91],
             self::GRUPO_MEMORIAS_USB,
             self::GRUPO_MEMORIAS_SD     => [45, 48],
             default                     => [],
         };
+
+        if (in_array($idGrupo, [
+            self::GRUPO_SILLAS_GAMER,
+            self::GRUPO_MOCHILAS,
+            self::GRUPO_MALETAS,
+            self::GRUPO_ALFOMBRILLAS,
+            self::GRUPO_MESA_PORTATIL,
+            self::GRUPO_MEMORIAS_USB,
+            self::GRUPO_MEMORIAS_SD,
+        ], true)) {
+            return $especificas;
+        }
 
         return array_values(array_unique(array_merge($base, $especificas)));
     }
@@ -324,13 +338,60 @@ class PerifericosCategoryMapper extends AbstractCategorySpecMapper
         $specsMapeadas[14] = $this->normalizarColorPeriferico((string)($specsMapeadas[14] ?? ($rawSpecs['COLOR'] ?? '')), $textoAnalisis);
 
         // 2. Conexión (72)
-        $con = ($specsMapeadas[72] ?? '') . ' ' . $textoAnalisis;
-        if (stripos($con, 'bluetooth') !== false || preg_match('/\bbt\b/i', $con)) {
-            $specsMapeadas[72] = 'Bluetooth';
-        } elseif (stripos($con, 'inalambric') !== false || stripos($con, 'wireless') !== false || stripos($con, '2.4') !== false) {
-            $specsMapeadas[72] = 'Inalámbrico';
+        $gruposSinConexionPorDefecto = [
+            self::GRUPO_SILLAS_GAMER,
+            self::GRUPO_MOCHILAS,
+            self::GRUPO_MALETAS,
+            self::GRUPO_ALFOMBRILLAS,
+            self::GRUPO_MESA_PORTATIL,
+            self::GRUPO_MEMORIAS_SD,
+            self::GRUPO_MEMORIAS_USB,
+        ];
+
+        if (in_array($idGrupo, $gruposSinConexionPorDefecto, true)) {
+            // Solo asignar Conexión si el producto cuenta explícitamente con iluminación LED/RGB o alimentación/puerto USB
+            $tieneLedOElectronica = (bool) preg_match('/\b(LED|RGB|LUCES|LIGHTING|ILUMINACI[ÓO]N|MASAJE|AUDIO)\b/i', $textoAnalisis);
+            $tieneUsbExplicito = (bool) preg_match('/\b(PUERTO\s+USB|CONECTOR\s+USB|SALIDA\s+USB|CABLE\s+USB|CONEXI[ÓO]N\s+USB)\b/i', $textoAnalisis);
+
+            if ($idGrupo === self::GRUPO_SILLAS_GAMER) {
+                if ($tieneLedOElectronica || $tieneUsbExplicito) {
+                    $specsMapeadas[72] = 'USB';
+                    if (empty($specsMapeadas[69])) $specsMapeadas[69] = 'RGB';
+                } else {
+                    unset($specsMapeadas[72], $specsMapeadas[26], $specsMapeadas[27], $specsMapeadas[9]);
+                }
+            } elseif ($idGrupo === self::GRUPO_ALFOMBRILLAS) {
+                if ($tieneLedOElectronica || $tieneUsbExplicito) {
+                    $specsMapeadas[72] = 'USB';
+                    if (empty($specsMapeadas[69])) $specsMapeadas[69] = 'RGB';
+                } else {
+                    unset($specsMapeadas[72], $specsMapeadas[26], $specsMapeadas[27], $specsMapeadas[9]);
+                }
+            } elseif ($idGrupo === self::GRUPO_MOCHILAS || $idGrupo === self::GRUPO_MALETAS) {
+                if ($tieneUsbExplicito) {
+                    $specsMapeadas[72] = 'USB';
+                } else {
+                    unset($specsMapeadas[72], $specsMapeadas[26], $specsMapeadas[27], $specsMapeadas[9]);
+                }
+            } elseif ($idGrupo === self::GRUPO_MESA_PORTATIL) {
+                if ($tieneUsbExplicito || preg_match('/\b(COOLER|VENTILADOR|FAN)\b/i', $textoAnalisis)) {
+                    $specsMapeadas[72] = 'USB';
+                } else {
+                    unset($specsMapeadas[72], $specsMapeadas[26], $specsMapeadas[27], $specsMapeadas[9]);
+                }
+            } else {
+                unset($specsMapeadas[72], $specsMapeadas[26], $specsMapeadas[27], $specsMapeadas[9]);
+            }
         } else {
-            $specsMapeadas[72] = 'USB';
+            // Periféricos electrónicos estándar (Mouses, Teclados, Auriculares, Parlantes, etc.)
+            $con = ($specsMapeadas[72] ?? '') . ' ' . $textoAnalisis;
+            if (stripos($con, 'bluetooth') !== false || preg_match('/\bbt\b/i', $con)) {
+                $specsMapeadas[72] = 'Bluetooth';
+            } elseif (stripos($con, 'inalambric') !== false || stripos($con, 'wireless') !== false || stripos($con, '2.4') !== false) {
+                $specsMapeadas[72] = 'Inalámbrico';
+            } else {
+                $specsMapeadas[72] = 'USB';
+            }
         }
 
         // 3. Segmento (91)

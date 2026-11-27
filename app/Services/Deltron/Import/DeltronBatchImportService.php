@@ -448,7 +448,7 @@ class DeltronBatchImportService
     {
         if (!empty($itemData['replace_id'])) {
             $candGhost = Producto::find((int) $itemData['replace_id']);
-            if ($candGhost && $candGhost->esReemplazable()) {
+            if ($candGhost && app(ProductoServiceInterface::class)->esReemplazable($candGhost)) {
                 return $candGhost;
             }
             return null;
@@ -484,8 +484,10 @@ class DeltronBatchImportService
             })
             ->delete();
 
-        // Desactivar cualquier publicación residual con ventas históricas
-        Publicacion::where('idProducto', $idProducto)->update(['estado' => 0]);
+        // Desactivar cualquier publicación residual activa con ventas históricas (respetando las que ya están en Borrado -1)
+        Publicacion::where('idProducto', $idProducto)
+            ->where('estado', 1)
+            ->update(['estado' => 0]);
     }
 
     protected function persistirInventarioYProveedor(

@@ -481,7 +481,7 @@ class UnionPackService implements UnionPackServiceInterface
                 ->whereHas('DetalleComprobante', function ($q) use ($pack) {
                     $q->where('idProducto', $pack->idProductoHijo);
                 })
-                ->with('DetalleComprobante', 'Almacen')
+                ->with('DetalleComprobante.Comprobante', 'Almacen')
                 ->get();
 
             $componentes[] = [
@@ -495,6 +495,7 @@ class UnionPackService implements UnionPackServiceInterface
                         'numeroSerie' => $r->numeroSerie,
                         'almacen'     => $r->Almacen->descripcion ?? 'Sin almacén',
                         'costo'       => $r->DetalleComprobante->precioUnitario ?? 0,
+                        'moneda'      => $r->DetalleComprobante->Comprobante->moneda ?? 'SOL',
                     ];
                 })->values()->toArray(),
             ];

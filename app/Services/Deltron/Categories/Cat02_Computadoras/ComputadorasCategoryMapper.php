@@ -313,10 +313,21 @@ class ComputadorasCategoryMapper extends AbstractCategorySpecMapper
 
         // 6. SO (15)
         if (empty($enriched[15])) {
-            if (str_contains($specsTexto, 'WINDOWS 11 PRO') || str_contains($specsTexto, 'WIN 11 PRO')) {
+            $fuenteSo = $specsTexto;
+            if (preg_match('/\[SISTEMA\s+OPERATIVO\](.*?)(?:\n\s*\[|\z)/si', $textoCompleto, $mBloqueSo)) {
+                $fuenteSo = strtoupper($mBloqueSo[1]) . "\n" . $specsTexto;
+            }
+
+            if (preg_match('/\b(?:WINDOWS|WIN)\s*11\s*PRO\b/i', $fuenteSo)) {
                 $enriched[15] = 'Windows 11 Pro';
-            } elseif (str_contains($specsTexto, 'WINDOWS 11 HOME') || str_contains($specsTexto, 'WIN 11 HOME') || str_contains($specsTexto, 'WINDOWS 11')) {
+            } elseif (preg_match('/\b(?:WINDOWS|WIN)\s*11(?:\s*HOME)?\b/i', $fuenteSo)) {
                 $enriched[15] = 'Windows 11 Home';
+            } elseif (preg_match('/\b(?:WINDOWS|WIN)\s*10(?:\s*PRO)?\b/i', $fuenteSo)) {
+                $enriched[15] = stripos($fuenteSo, 'PRO') !== false ? 'Windows 10 Pro' : 'Windows 10';
+            } elseif (preg_match('/\b(?:LINUX|UBUNTU|FEDORA|DEBIAN|ENDLESS\s*OS)\b/i', $fuenteSo)) {
+                $enriched[15] = 'Linux';
+            } elseif (preg_match('/\bCHROME\s*OS\b/i', $fuenteSo)) {
+                $enriched[15] = 'Chrome OS';
             } elseif ($esBarebone) {
                 $enriched[15] = 'Compatible con Windows 11 / Linux';
             } else {

@@ -373,8 +373,9 @@ document.addEventListener('click', function (e) {
         const options = comp.disponibles.map(d => {
             const yaUsado = wizardData.componentesRequeridos[ci].slots.includes(d.idRegistro)
                          && wizardData.componentesRequeridos[ci].slots[slot] !== d.idRegistro;
+            const simbolo = d.moneda === 'DOLAR' ? '$' : 'S/';
             return `<option value="${d.idRegistro}" ${yaUsado ? 'disabled' : ''}>
-                        Serie: ${d.numeroSerie} | ${d.almacen} | S/ ${parseFloat(d.costo).toFixed(2)}
+                        Serie: ${d.numeroSerie} | ${d.almacen} | ${simbolo} ${parseFloat(d.costo).toFixed(2)}
                     </option>`;
         }).join('');
         return `<div class="card-body py-2">

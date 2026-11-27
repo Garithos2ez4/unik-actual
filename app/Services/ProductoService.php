@@ -296,7 +296,23 @@ class ProductoService implements ProductoServiceInterface
             \App\Models\Inventario\Liquidacion::where('idProducto', $idProducto)->delete();
             \App\Models\Precios\PrecioTienda::where('idProducto', $idProducto)->delete();
             \App\Models\Precios\HistorialPrecioTienda::where('idProducto', $idProducto)->delete();
-            \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)->delete();
+            // Eliminar solo publicaciones sin ventas históricas asociadas para evitar violar la FK de EgresoProducto/DetalleVenta
+            \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)
+                ->whereNotExists(function ($q) {
+                    $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('EgresoProducto as ep')
+                        ->whereColumn('ep.idPublicacion', 'Publicacion.idPublicacion');
+                })
+                ->whereNotExists(function ($q) {
+                    $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('DetalleVenta as dv')
+                        ->whereColumn('dv.idPublicacion', 'Publicacion.idPublicacion');
+                })
+                ->delete();
+
+            \App\Models\Catalogo\Publicacion::where('idProducto', $idProducto)
+                ->where('estado', 1)
+                ->update(['estado' => 0]);
 
             \App\Models\Catalogo\DetalleProducto::updateOrCreate(
                 ['idProducto' => $idProducto],
@@ -787,16 +803,18 @@ class ProductoService implements ProductoServiceInterface
             return false;
         }
 
-        // Candado estructural: Si tiene publicaciones con ventas históricas, no puede ser reemplazado para no violar FK
+        // Candado estructural: Si tiene publicaciones activas con ventas históricas, no puede ser reemplazado para no violar FK
         if (\Illuminate\Support\Facades\DB::table('Publicacion as pub')
             ->join('EgresoProducto as ep', 'ep.idPublicacion', '=', 'pub.idPublicacion')
             ->where('pub.idProducto', $prodModel->idProducto)
+            ->where('pub.estado', 1)
             ->exists()) {
             return false;
         }
         if (\Illuminate\Support\Facades\DB::table('Publicacion as pub')
             ->join('DetalleVenta as dv', 'dv.idPublicacion', '=', 'pub.idPublicacion')
             ->where('pub.idProducto', $prodModel->idProducto)
+            ->where('pub.estado', 1)
             ->exists()) {
             return false;
         }

@@ -489,18 +489,20 @@ class ProductoRepository implements ProductoRepositoryInterface
                     ->where('dv.estado', 'COMPLETADO')
                     ->whereRaw('COALESCE(v.fechaVenta, dv.created_at) >= ?', [$fechaLimite]);
             })
-            // Candado estructural: NUNCA permitir reemplazar un producto cuyas publicaciones tengan ventas históricas (evita violaciones de FK y preserva trazabilidad)
+            // Candado estructural: NUNCA permitir reemplazar un producto cuyas publicaciones activas tengan ventas históricas (evita violaciones de FK y preserva trazabilidad)
             ->whereNotExists(function ($qPubEgreso) {
                 $qPubEgreso->select(DB::raw(1))
                     ->from('Publicacion as pub')
                     ->join('EgresoProducto as ep', 'ep.idPublicacion', '=', 'pub.idPublicacion')
-                    ->whereColumn('pub.idProducto', 'Producto.idProducto');
+                    ->whereColumn('pub.idProducto', 'Producto.idProducto')
+                    ->where('pub.estado', 1);
             })
             ->whereNotExists(function ($qPubVenta) {
                 $qPubVenta->select(DB::raw(1))
                     ->from('Publicacion as pub')
                     ->join('DetalleVenta as dv', 'dv.idPublicacion', '=', 'pub.idPublicacion')
-                    ->whereColumn('pub.idProducto', 'Producto.idProducto');
+                    ->whereColumn('pub.idProducto', 'Producto.idProducto')
+                    ->where('pub.estado', 1);
             })
             ->where(function ($sub) use ($fechaLimite) {
                 // Caso 1: Nunca tuvo ningún ingreso en IngresoProducto
@@ -580,18 +582,20 @@ class ProductoRepository implements ProductoRepositoryInterface
                     ->where('dv.estado', 'COMPLETADO')
                     ->whereRaw('COALESCE(v.fechaVenta, dv.created_at) >= ?', [$fechaLimite]);
             })
-            // Candado estructural: NUNCA permitir reemplazar un producto cuyas publicaciones tengan ventas históricas (evita violaciones de FK y preserva trazabilidad)
+            // Candado estructural: NUNCA permitir reemplazar un producto cuyas publicaciones activas tengan ventas históricas (evita violaciones de FK y preserva trazabilidad)
             ->whereNotExists(function ($qPubEgreso) {
                 $qPubEgreso->select(DB::raw(1))
                     ->from('Publicacion as pub')
                     ->join('EgresoProducto as ep', 'ep.idPublicacion', '=', 'pub.idPublicacion')
-                    ->whereColumn('pub.idProducto', 'Producto.idProducto');
+                    ->whereColumn('pub.idProducto', 'Producto.idProducto')
+                    ->where('pub.estado', 1);
             })
             ->whereNotExists(function ($qPubVenta) {
                 $qPubVenta->select(DB::raw(1))
                     ->from('Publicacion as pub')
                     ->join('DetalleVenta as dv', 'dv.idPublicacion', '=', 'pub.idPublicacion')
-                    ->whereColumn('pub.idProducto', 'Producto.idProducto');
+                    ->whereColumn('pub.idProducto', 'Producto.idProducto')
+                    ->where('pub.estado', 1);
             });
     }
 
@@ -603,17 +607,6 @@ class ProductoRepository implements ProductoRepositoryInterface
 
         return $this->queryReemplazables($mesesGarantiaLaptop)
             ->whereNull('Producto.idProductoPadre')
-            // Garantizar que sea un fantasma puro sin historial de compras ni ventas
-            ->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('DetalleComprobante as dc')
-                    ->whereColumn('dc.idProducto', 'Producto.idProducto');
-            })
-            ->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('DetalleVenta as dv')
-                    ->whereColumn('dv.idProducto', 'Producto.idProducto');
-            })
             // Candado Deltron / created_at: nunca reciclar productos creados por el catálogo de Deltron
             // (o con registro reciente en inventario_proveedor_skus / DetalleProducto según created_at)
             ->whereNotExists(function ($sub) use ($fechaLimiteCreacion) {

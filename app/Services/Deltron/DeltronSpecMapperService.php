@@ -374,6 +374,8 @@ class DeltronSpecMapperService
 
             // Empaque y Dimensiones
             'MATERIAL' => 53,
+            'MATERIAL DEL TAPIZADO' => 53,
+            'MATERIAL TAPIZADO' => 53,
             'POTENCIA' => 42,
             'CONSUMO' => 42,
             'CAPACIDAD' => 45,
